@@ -9,25 +9,26 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 ## Current position
 
 **Phase:** Phase 1 — Dual-purpose foundations
-**Completed item:** #1 Actions as the universal write primitive — **all 4 steps done**
-**Next item:** #2 Bidirectional lineage / active provenance graph
+**Completed item:** #2 Bidirectional lineage / active provenance graph — **backend complete**
+**Next item:** #3 Evals as immutable, first-class artifacts
 
 ## Next session starts here
 
-> Read this worklog, then read `~/.claude/plans/staged-booping-globe.md` pattern #2 for full context. Begin scoping by:
+> Pattern #2 backend is complete. If frontend lineage visualization is needed, build it as part of the Phase 3 governance view.
 >
-> 1. Read `backend/app/models.py` to see the existing neuron provenance fields (source_type, source_origin, citation, NeuronSourceLink). These are the backward chain — already solid.
-> 2. Read `backend/app/services/executor.py` around the scoring + assembly section to understand where firing data is currently captured. It lives inside `Query.results_json` as a JSON blob — not queryable.
-> 3. Design a `FiringRecord` table that links Query ↔ Neuron ↔ run metadata (score, rank, position in assembled prompt). This is the forward chain that's currently missing.
-> 4. Propose the schema + a lineage query endpoint before writing code (e.g., "given a source document, which recent query answers cited neurons from it?").
+> Read this worklog, then read `~/.claude/plans/staged-booping-globe.md` pattern #3 for full context. Begin scoping by:
 >
-> The action bus is fully operational (6 registered kinds, zero direct-write bypasses in routers, AIP-1 lint enforcement active). Pattern #2 benefits from actions because every neuron mutation is now auditable — the lineage graph can join the actions table with firing records for end-to-end traceability.
+> 1. Read `backend/app/models.py` — `EvalScore` exists but slot results are JSON blobs in `Query.results_json`. No frozen eval run artifact.
+> 2. Design an `EvalRun` table that snapshots {query set, model versions, scoring-engine version, results, verdicts}. Append-only.
+> 3. The `NeuronScoreOverride` system (added in Pattern #2) gives manual tuning levers — eval runs should capture which overrides were active at run time.
+>
+> Pattern #2 delivered: enriched firing records (full score breakdown per query), 3 lineage endpoints (neuron forward, source impact, query trace), NeuronScoreOverride for manual graph tuning integrated into the scoring engine. End-to-end traceability: answer → firings → neurons → sources → actions.
 
 ## Checklist
 
 ### Phase 1 — Dual-purpose foundations
 - [DONE] #1 Actions as the universal write primitive
-- [ ] #2 Bidirectional lineage / active provenance graph
+- [DONE] #2 Bidirectional lineage / active provenance graph
 - [ ] #3 Evals as immutable, first-class artifacts
 
 ### Phase 2a — Defense-sale track
@@ -126,3 +127,23 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 - AIP-1 lint rule is guideline-tier, not strict — gives teams time to address any edge cases before hard-blocking.
 
 **Pattern #1 complete.** All governed model types (Neuron, NeuronRefinement, NeuronEdge, EvalScore) now flow through the action bus. 6 registered action kinds, zero direct-write bypasses in routers, AIP-1 lint enforcement active.
+
+### 2026-04-10 — Pattern #2: Bidirectional lineage + score overrides
+- Enriched `NeuronFiring` table with 11 new columns: `rank`, `combined_score`, `burst`, `impact`, `precision`, `novelty`, `recency`, `relevance`, `spread_boost`, `prompt_position`, `was_included`. Every firing now captures the full score breakdown at query time — queryable, not buried in JSON blobs.
+- Added `NeuronScoreOverride` table for manual graph tuning: per-neuron, per-signal floor/ceiling/multiplier. Unique constraint on (neuron_id, signal). Integrated into the scoring engine via `apply_score_overrides()` — applied after vectorized scoring, before sort. Enables direct manipulation of neuron behavior without touching neuron content.
+- Modified `_update_counters_and_fire` in `executor.py` to pass `NeuronScoreBreakdown` data + rank + prompt position into `record_firing`. The `was_included` flag marks whether the neuron made it into the assembled prompt vs just being scored.
+- Created `backend/app/routers/lineage.py` with 6 routes:
+  - `GET /lineage/neuron/{id}/forward` — which queries used this neuron (with full score history)
+  - `GET /lineage/source/{id}/impact` — which queries were influenced by a source document (end-to-end: SourceDoc → NeuronSourceLink → Neuron → NeuronFiring → Query)
+  - `GET /lineage/query/{id}/trace` — full provenance trace for a query answer (fired neurons + scores + source documents + action counts)
+  - `GET /lineage/neuron/{id}/overrides` — list score overrides
+  - `POST /lineage/neuron/{id}/overrides` — create/upsert score override
+  - `DELETE /lineage/overrides/{id}` — soft-delete override
+- Created Alembic migration `008_enrich_firings_and_score_overrides.py` (applied to corvus_aero).
+- Extracted `_assemble_top_slice` from `prepare_context` in executor.py to bring it under the JPL-4 100-line hard limit.
+- Extracted `_load_trace_context` and `_override_to_out` helpers in lineage.py for JPL-4 compliance.
+- NASA linter: zero strict violations on all touched files. Pre-existing guideline warnings unchanged.
+- Full pytest suite: 107/107 passing.
+- Smoke-tested lineage router import: 6 routes registered.
+
+**Pattern #2 complete.** Forward chain is now queryable: for any query, you can trace back to fired neurons (with scores), their source documents, and the actions that created/refined them. Score overrides give direct tuning levers for the graph without touching neuron content.

@@ -666,6 +666,8 @@ from app.routers import tool_definitions
 app.include_router(tool_definitions.router)
 from app.routers import fluent
 app.include_router(fluent.router)
+from app.routers import lineage
+app.include_router(lineage.router)
 
 
 @app.get("/tenant")

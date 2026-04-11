@@ -305,6 +305,59 @@ def compute_score(
     )
 
 
+def _apply_single_override(
+    value: float, override: dict,
+) -> float:
+    """Apply multiplier, floor, ceiling to a signal value."""
+    if override.get("multiplier") is not None:
+        value *= override["multiplier"]
+    if override.get("floor") is not None:
+        value = max(value, override["floor"])
+    if override.get("ceiling") is not None:
+        value = min(value, override["ceiling"])
+    return value
+
+
+def apply_score_overrides(
+    scores: list[NeuronScoreBreakdown],
+    overrides_by_neuron: dict[int, list[dict]],
+) -> list[NeuronScoreBreakdown]:
+    """Apply per-neuron signal overrides to scored candidates.
+
+    overrides_by_neuron: {neuron_id: [{signal, floor, ceiling, multiplier}, ...]}
+    Mutates scores in place and recalculates combined when individual signals change.
+    """
+    if not overrides_by_neuron:
+        return scores
+    signal_fields = ("burst", "impact", "precision", "novelty", "recency", "relevance")
+    for score in scores:
+        neuron_overrides = overrides_by_neuron.get(score.neuron_id)
+        if not neuron_overrides:
+            continue
+        changed = False
+        for ov in neuron_overrides:
+            sig = ov["signal"]
+            if sig in signal_fields:
+                old = getattr(score, sig)
+                new = _apply_single_override(old, ov)
+                if new != old:
+                    setattr(score, sig, round(new, 4))
+                    changed = True
+            elif sig == "combined":
+                score.combined = round(
+                    _apply_single_override(score.combined, ov), 4,
+                )
+        if changed:
+            score.combined = round(
+                _compute_gated_combined(
+                    score.burst, score.impact, score.precision,
+                    score.novelty, score.recency, score.relevance,
+                ) + score.spread_boost,
+                4,
+            )
+    return scores
+
+
 def update_impact_ema(current_avg: float, new_utility: float) -> float:
     """Update Impact signal using EMA: new_avg = alpha * new + (1-alpha) * old"""
     alpha = settings.impact_ema_alpha

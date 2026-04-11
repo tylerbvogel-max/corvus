@@ -283,26 +283,9 @@ async def prepare_context(
 
     resolved_regulations = await _resolve_fired_engrams(db, scored_engrams, effective_budget, _emit)
 
-    if settings.hierarchy_selection_enabled:
-        top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
-    else:
-        top_slice = all_scored[:effective_top_k]
-    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice])
-
-    # Load prior neuron context for conversation continuity in prompt assembly
-    prior_neuron_map: dict[int, Neuron] | None = None
-    if prior_neuron_ids:
-        missing_ids = [nid for nid in prior_neuron_ids if nid not in neuron_map]
-        if missing_ids:
-            extra = await _load_neuron_map(db, missing_ids)
-            prior_neuron_map = {**neuron_map, **extra}
-        else:
-            prior_neuron_map = neuron_map
-
-    system_prompt = assemble_prompt(
-        intent, top_slice, neuron_map, budget_tokens=effective_budget,
-        prior_neuron_ids=prior_neuron_ids, prior_neuron_map=prior_neuron_map,
-        resolved_regulations=resolved_regulations,
+    top_slice, neuron_map, system_prompt = await _assemble_top_slice(
+        db, all_scored, effective_top_k, intent, effective_budget,
+        prior_neuron_ids, resolved_regulations,
     )
     await _emit("assemble_prompt", {"status": "done", "detail": {"neurons_activated": min(len(all_scored), effective_top_k), "engrams_resolved": len(resolved_regulations), "assembled_prompt": system_prompt}})
 
@@ -325,6 +308,39 @@ async def prepare_context(
     assert result.neurons_activated >= 0, \
         f"neurons_activated must be non-negative, got {result.neurons_activated}"
     return result
+
+
+async def _assemble_top_slice(
+    db: AsyncSession,
+    all_scored: list[NeuronScoreBreakdown],
+    effective_top_k: int,
+    intent: str,
+    effective_budget: int,
+    prior_neuron_ids: list[int] | None,
+    resolved_regulations: list,
+) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str]:
+    """Select top-k neurons, load their data, and assemble the system prompt."""
+    if settings.hierarchy_selection_enabled:
+        top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
+    else:
+        top_slice = all_scored[:effective_top_k]
+    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice])
+
+    prior_neuron_map: dict[int, Neuron] | None = None
+    if prior_neuron_ids:
+        missing_ids = [nid for nid in prior_neuron_ids if nid not in neuron_map]
+        if missing_ids:
+            extra = await _load_neuron_map(db, missing_ids)
+            prior_neuron_map = {**neuron_map, **extra}
+        else:
+            prior_neuron_map = neuron_map
+
+    system_prompt = assemble_prompt(
+        intent, top_slice, neuron_map, budget_tokens=effective_budget,
+        prior_neuron_ids=prior_neuron_ids, prior_neuron_map=prior_neuron_map,
+        resolved_regulations=resolved_regulations,
+    )
+    return top_slice, neuron_map, system_prompt
 
 
 # Each slot is a dict: {mode, model, neurons, response, input_tokens, output_tokens, cost_usd}
@@ -754,8 +770,17 @@ async def _update_counters_and_fire(
     state.total_queries += 1
 
     if needs_neurons:
-        for score in all_scored:
-            await record_firing(db, score.neuron_id, query.id, state.global_token_counter, global_query_offset=state.total_queries)
+        included_k = settings.top_k_neurons
+        for idx, score in enumerate(all_scored):
+            await record_firing(
+                db, score.neuron_id, query.id,
+                state.global_token_counter,
+                global_query_offset=state.total_queries,
+                score=score,
+                rank=idx + 1,
+                prompt_position=idx if idx < included_k else None,
+                was_included=idx < included_k,
+            )
             await propagate_activation(db, score.neuron_id, score.combined, query.id)
         cofire_neurons = [s for s in all_scored if s.combined >= settings.min_cofire_score]
         cofire_ids = [s.neuron_id for s in cofire_neurons]

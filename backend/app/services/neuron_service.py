@@ -8,9 +8,10 @@ from sqlalchemy import select, func, and_, text, literal_column, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import Neuron, NeuronFiring, SystemState
+from app.models import Neuron, NeuronFiring, NeuronScoreOverride, SystemState
 from app.services.scoring_engine import (
     compute_score, calc_relevance, calc_hybrid_relevance, NeuronScoreBreakdown,
+    apply_score_overrides,
     calc_burst_batch, calc_impact_batch, calc_precision_batch,
     calc_novelty_batch, calc_recency_batch,
 )
@@ -236,6 +237,29 @@ async def _resolve_semantic_map(
     return dict(zip(neuron_ids_with_emb, similarities))
 
 
+async def _load_active_overrides(
+    db: AsyncSession, candidate_ids: list[int],
+) -> dict[int, list[dict]]:
+    """Load active score overrides for a set of neuron IDs."""
+    if not candidate_ids:
+        return {}
+    result = await db.execute(
+        select(NeuronScoreOverride).where(
+            NeuronScoreOverride.neuron_id.in_(candidate_ids),
+            NeuronScoreOverride.is_active.is_(True),
+        )
+    )
+    overrides: dict[int, list[dict]] = {}
+    for ov in result.scalars().all():
+        overrides.setdefault(ov.neuron_id, []).append({
+            "signal": ov.signal,
+            "floor": ov.floor,
+            "ceiling": ov.ceiling,
+            "multiplier": ov.multiplier,
+        })
+    return overrides
+
+
 def _score_single_candidate(
     neuron: Neuron | NeuronCandidate,
     total_queries: int,
@@ -333,6 +357,12 @@ async def score_candidates(
         classified_departments, classified_role_keys,
         hybrid_map,
     )
+
+    # Apply per-neuron score overrides (manual tuning)
+    overrides_by_neuron = await _load_active_overrides(db, candidate_ids)
+    if overrides_by_neuron:
+        scores = apply_score_overrides(scores, overrides_by_neuron)
+
     scores.sort(key=lambda s: s.combined, reverse=True)
 
     assert all(s.combined >= 0 for s in scores), "All combined scores must be non-negative"
@@ -888,8 +918,12 @@ async def record_firing(
     global_token_offset: int,
     context_type: str = "direct",
     global_query_offset: int = 0,
+    score: NeuronScoreBreakdown | None = None,
+    rank: int | None = None,
+    prompt_position: int | None = None,
+    was_included: bool | None = None,
 ) -> NeuronFiring:
-    """Record a neuron firing event."""
+    """Record a neuron firing event with optional score breakdown."""
     assert neuron_id > 0, f"neuron_id must be positive, got {neuron_id}"
     assert query_id > 0, f"query_id must be positive, got {query_id}"
     firing = NeuronFiring(
@@ -898,6 +932,17 @@ async def record_firing(
         context_type=context_type,
         global_token_offset=global_token_offset,
         global_query_offset=global_query_offset,
+        rank=rank,
+        combined_score=score.combined if score else None,
+        burst=score.burst if score else None,
+        impact=score.impact if score else None,
+        precision=score.precision if score else None,
+        novelty=score.novelty if score else None,
+        recency=score.recency if score else None,
+        relevance=score.relevance if score else None,
+        spread_boost=score.spread_boost if score else None,
+        prompt_position=prompt_position,
+        was_included=was_included,
     )
     db.add(firing)
 

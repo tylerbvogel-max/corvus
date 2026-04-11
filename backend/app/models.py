@@ -72,11 +72,48 @@ class NeuronFiring(Base):
     outcome: Mapped[str | None] = mapped_column(String(50), nullable=True)
     global_token_offset: Mapped[int] = mapped_column(Integer, default=0)
     global_query_offset: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    # Enriched scoring data (Pattern #2 — bidirectional lineage)
+    rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    combined_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    burst: Mapped[float | None] = mapped_column(Float, nullable=True)
+    impact: Mapped[float | None] = mapped_column(Float, nullable=True)
+    precision: Mapped[float | None] = mapped_column(Float, nullable=True)
+    novelty: Mapped[float | None] = mapped_column(Float, nullable=True)
+    recency: Mapped[float | None] = mapped_column(Float, nullable=True)
+    relevance: Mapped[float | None] = mapped_column(Float, nullable=True)
+    spread_boost: Mapped[float | None] = mapped_column(Float, nullable=True)
+    prompt_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    was_included: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
 
     neuron: Mapped["Neuron"] = relationship("Neuron", back_populates="firings")
+
+
+class NeuronScoreOverride(Base):
+    """Per-neuron signal overrides for manual graph tuning.
+
+    Each row applies a floor, ceiling, or multiplier to one scoring signal
+    for a specific neuron. Multiple overrides can target the same neuron
+    (one per signal). Applied by the scoring engine at scoring time.
+    """
+    __tablename__ = "neuron_score_overrides"
+    __table_args__ = (
+        Index("ix_nso_neuron_signal", "neuron_id", "signal", unique=True),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    neuron_id: Mapped[int] = mapped_column(Integer, ForeignKey("neurons.id"), nullable=False, index=True)
+    signal: Mapped[str] = mapped_column(String(20), nullable=False)  # burst|impact|precision|novelty|recency|relevance|combined
+    floor: Mapped[float | None] = mapped_column(Float, nullable=True)       # minimum value for this signal
+    ceiling: Mapped[float | None] = mapped_column(Float, nullable=True)     # maximum value for this signal
+    multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)  # scale factor (applied before floor/ceiling)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class NeuronEdge(Base):
