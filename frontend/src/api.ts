@@ -1652,6 +1652,11 @@ export function fetchProposalStats(): Promise<ProposalStats> {
   return json<ProposalStats>('/admin/proposals/stats');
 }
 
+export interface Whoami { user_id: string; role: string; source: string; }
+export function fetchWhoami(): Promise<Whoami> {
+  return json<Whoami>('/admin/proposals/whoami');
+}
+
 export function fetchNeuronProvenance(neuronId: number): Promise<Record<string, unknown>> {
   return json<Record<string, unknown>>(`/admin/neurons/${neuronId}/provenance`);
 }

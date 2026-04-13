@@ -1,6 +1,7 @@
 /** Access key management for the access gate middleware. */
 
 const STORAGE_KEY = 'corvus-access-key';
+const REVIEWER_KEY = 'corvus-reviewer-name';
 
 export function getAccessKey(): string | null {
   return localStorage.getItem(STORAGE_KEY);
@@ -14,12 +15,26 @@ export function clearAccessKey(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+export function getReviewerName(): string {
+  return localStorage.getItem(REVIEWER_KEY) || '';
+}
+
+export function setReviewerName(name: string): void {
+  const trimmed = name.trim();
+  if (trimmed) localStorage.setItem(REVIEWER_KEY, trimmed);
+  else localStorage.removeItem(REVIEWER_KEY);
+}
+
 export function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
   const key = getAccessKey();
-  if (key) {
-    return { Authorization: `Bearer ${key}` };
-  }
-  return {};
+  if (key) headers.Authorization = `Bearer ${key}`;
+  // Sent on every request: in RBAC disabled/header modes this sets the
+  // resolved identity's user_id, which the server uses as authoritative
+  // reviewed_by / applied_by on proposals. In azure_ad mode the JWT wins.
+  const reviewer = getReviewerName();
+  if (reviewer) headers['X-Corvus-User'] = reviewer;
+  return headers;
 }
 
 /** Authenticated fetch wrapper — injects access key header automatically. */

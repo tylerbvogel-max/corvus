@@ -80,8 +80,11 @@ def _role_from_claims(claims: dict) -> str:
 # ── Resolve identity by mode ──
 
 def _resolve_disabled(request: Request) -> UserIdentity:
-    """Disabled mode: everyone is admin."""
-    return UserIdentity(user_id="anonymous", role="admin", source="disabled")
+    """Disabled mode: everyone is admin. Honors X-Corvus-User header when
+    present so single-user dev setups can still record a meaningful
+    reviewer/applied_by name on proposals and action-bus lineage."""
+    user_id = request.headers.get("X-Corvus-User", "anonymous").strip() or "anonymous"
+    return UserIdentity(user_id=user_id, role="admin", source="disabled")
 
 
 def _resolve_header(request: Request) -> UserIdentity:

@@ -195,13 +195,32 @@ async def get_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
     return _proposal_detail(p)
 
 
+@router.get("/whoami")
+async def whoami(identity: UserIdentity = Depends(resolve_identity)):
+    """Return the resolved identity for the current request.
+
+    Frontend uses this to prefill the reviewer name so the free-text field
+    on the proposal row is guaranteed equal to the auth user — meaning
+    proposal-level audit (reviewed_by/applied_by) matches neuron-level
+    action-bus lineage. No divergence possible.
+    """
+    return {"user_id": identity.user_id, "role": identity.role, "source": identity.source}
+
+
 @router.post("/{proposal_id}/review", response_model=ProposalDetailOut)
 async def review_proposal(
     proposal_id: int,
     req: ProposalReviewRequest,
     db: AsyncSession = Depends(get_db),
+    identity: UserIdentity = Depends(resolve_identity),
 ):
-    """Approve or reject a proposal. Only 'proposed' state proposals can be reviewed."""
+    """Approve or reject a proposal. Only 'proposed' state proposals can be reviewed.
+
+    `reviewed_by` is taken from the resolved auth identity, not the request
+    body — this makes the proposal-level audit trail tamper-proof and keeps
+    it aligned with action-bus lineage at apply time. The `reviewer` field
+    in the request body is accepted for backward compat but ignored.
+    """
     p = await db.get(AutopilotProposal, proposal_id)
     if not p:
         raise HTTPException(404, "Proposal not found")
@@ -209,7 +228,7 @@ async def review_proposal(
         raise HTTPException(400, f"Cannot review proposal in state '{p.state}'")
 
     p.state = "approved" if req.action == "approve" else "rejected"
-    p.reviewed_by = req.reviewer
+    p.reviewed_by = identity.user_id
     p.reviewed_at = datetime.utcnow()
     p.review_notes = req.notes
 
@@ -370,7 +389,7 @@ async def apply_proposal(
         source_proposal_id=p.id,
         input_data={
             "proposal_id": p.id, "item_count": len(items),
-            "applied_by": req.applied_by,
+            "applied_by": identity.user_id,
         },
     )
     if root_result.state != "applied":
@@ -384,10 +403,10 @@ async def apply_proposal(
 
     p.state = "applied"
     p.applied_at = datetime.utcnow()
-    p.applied_by = req.applied_by
+    p.applied_by = identity.user_id
 
     if p.gap_source and p.gap_source.startswith("integrity_"):
-        await _resolve_integrity_findings(db, p.id, req.applied_by)
+        await _resolve_integrity_findings(db, p.id, identity.user_id)
 
     await db.commit()
 

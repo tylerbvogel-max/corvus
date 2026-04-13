@@ -485,12 +485,15 @@ class ProposalDetailOut(BaseModel):
 
 class ProposalReviewRequest(BaseModel):
     action: str = Field(..., pattern="^(approve|reject)$")
-    reviewer: str = Field(..., min_length=1, max_length=100)
+    # Advisory only — server uses resolved auth identity for the audit trail.
+    # Kept optional for backward compat with older clients.
+    reviewer: str = Field(default="", max_length=100)
     notes: str = ""
 
 
 class ProposalApplyRequest(BaseModel):
-    applied_by: str = Field(..., min_length=1, max_length=100)
+    # Advisory only — server uses resolved auth identity.
+    applied_by: str = Field(default="", max_length=100)
 
 
 class ProposalStatsOut(BaseModel):
