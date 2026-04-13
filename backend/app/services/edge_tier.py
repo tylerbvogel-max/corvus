@@ -65,7 +65,7 @@ async def upsert_weak_edge(
             "UPDATE neurons "
             "SET weak_edges = jsonb_set("
             "  COALESCE(weak_edges, '{}'::jsonb), "
-            "  ARRAY[:key], :val::jsonb"
+            "  ARRAY[:key], CAST(:val AS jsonb)"
             ") WHERE id = :hid"
         ),
         {"hid": hid, "key": str(pid), "val": _dumps(data)},

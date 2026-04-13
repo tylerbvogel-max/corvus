@@ -10,12 +10,20 @@ without changing call sites — e.g. {"haiku":"azure-gpt4o-mini"} in GovCloud.
 Free-tier models are prioritized in the registry ordering for UI display.
 """
 
+import asyncio
 import json
 import logging
+import os
 from dataclasses import dataclass
 from types import MappingProxyType
 
 from app.config import settings
+
+# Claude CLI path — personal subscription, no API credits consumed.
+_CLAUDE_CLI_PATH = os.environ.get(
+    "CLAUDE_CLI_PATH",
+    os.path.expanduser("~/.config/nvm/versions/node/v20.20.0/bin/claude"),
+)
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +152,7 @@ def _provider_available(provider: str) -> bool:
     """Check if a provider's API key is configured."""
     assert isinstance(provider, str), "provider must be a string"
     key_map = MappingProxyType({
-        "anthropic": settings.anthropic_api_key,
+        "anthropic": "cli" if os.path.exists(_CLAUDE_CLI_PATH) else "",
         "google": settings.google_api_key,
         "groq": settings.groq_api_key,
         "azure_openai": settings.azure_openai_api_key,
@@ -184,44 +192,47 @@ def get_valid_model_names() -> set[str]:
 async def _anthropic_chat(
     system_prompt: str, user_message: str, max_tokens: int, model_info: ModelInfo,
 ) -> dict:
-    """Call Anthropic API via the official SDK."""
-    import anthropic
-
-    assert settings.anthropic_api_key, "ANTHROPIC_API_KEY not configured"
+    """Call Claude via the local Claude CLI (personal subscription, no API credits)."""
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    try:
-        response = await client.messages.create(
-            model=model_info.api_id,
-            max_tokens=max_tokens,
-            system=system_prompt if system_prompt else anthropic.NOT_GIVEN,
-            messages=[{"role": "user", "content": user_message}],
-        )
-    finally:
-        await client.close()
+    args = [
+        _CLAUDE_CLI_PATH, "-p", user_message,
+        "--model", model_info.api_id,
+        "--output-format", "json",
+    ]
+    if system_prompt:
+        args.extend(["--append-system-prompt", system_prompt])
 
-    text = response.content[0].text if response.content else ""
-    usage = response.usage
-    base_input = usage.input_tokens
-    cache_create = getattr(usage, "cache_creation_input_tokens", 0) or 0
-    cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
-    output_tokens = usage.output_tokens
-
-    cost = _estimate_cost_anthropic(
-        model_info, base_input, cache_create, cache_read, output_tokens,
+    # Strip CLAUDECODE/CLAUDE_CODE_* from env — the CLI refuses to launch nested
+    # inside another Claude Code session. See CLAUDE.md "Claude CLI nested session".
+    child_env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDECODE") and not k.startswith("CLAUDE_CODE_")}
+    proc = await asyncio.create_subprocess_exec(
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        env=child_env,
+    )
+    stdout, stderr = await proc.communicate()
+    assert proc.returncode == 0, (
+        f"claude CLI failed (exit {proc.returncode}): {stderr.decode(errors='replace')[:500]}"
     )
 
-    assert base_input >= 0, f"base_input must be non-negative, got {base_input}"
+    payload = json.loads(stdout.decode())
+    text = payload.get("result") or payload.get("text") or ""
+    usage = payload.get("usage") or {}
+    input_tokens = int(usage.get("input_tokens", 0) or 0)
+    cache_create = int(usage.get("cache_creation_input_tokens", 0) or 0)
+    cache_read = int(usage.get("cache_read_input_tokens", 0) or 0)
+    output_tokens = int(usage.get("output_tokens", 0) or 0)
+
+    assert input_tokens >= 0, f"input_tokens must be non-negative, got {input_tokens}"
     assert output_tokens >= 0, f"output_tokens must be non-negative, got {output_tokens}"
     return {
         "text": text,
-        "input_tokens": base_input,
+        "input_tokens": input_tokens,
         "cache_creation_tokens": cache_create,
         "cache_read_tokens": cache_read,
         "output_tokens": output_tokens,
-        "cost_usd": cost,
-        "model_version": response.model,
+        "cost_usd": 0.0,
+        "model_version": payload.get("model") or model_info.api_id,
     }
 
 

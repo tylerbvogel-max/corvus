@@ -9,33 +9,49 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 ## Current position
 
 **Phase:** Phase 1 — Dual-purpose foundations
-**Completed item:** #2 Bidirectional lineage / active provenance graph — **backend complete**
+**Completed items:** #1 Action bus, #2 Bidirectional lineage + score overrides
 **Next item:** #3 Evals as immutable, first-class artifacts
+**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below.
+
+## Revised sequencing (2026-04-12)
+
+The three-leg GTM pivot (tool-call endpoint + remote MCP + admin UI, detailed in Master Corvus → Strategy → Positioning) changes priority ordering downstream of Pattern #3. Rationale: once Corvus sits behind a customer's LLM frontend (Fluent, Claude Enterprise, MCP clients), every answer leaves the API into a third-party context. That surface needs runtime output gates *before* anything else ships.
+
+**Changes vs. original:**
+1. **Pattern #7 (runtime output policy gates) moved from Phase 2a to a new Phase 1.5.** It's now a GTM blocker, not a defense-track item. Small surface, sibling of `input_guard.py`, unblocks the tool-call and MCP surfaces being safe to ship externally.
+2. **Two new non-AIP items added:** external tool-call endpoint hardening and remote MCP server (HTTP+SSE + OAuth2). These are infrastructure, not governance patterns, but they're gated by #2 (lineage_id in responses) and #7 (output gates). Tracked as "GTM Surfaces" alongside the AIP patterns.
+3. **Patterns #4, #5, #6, #8 unchanged.** Phase 2a still defense-track (now just #4), Phase 2b still correctness (#5, #6, #8).
 
 ## Next session starts here
 
-> Pattern #2 backend is complete. If frontend lineage visualization is needed, build it as part of the Phase 3 governance view.
+> Pattern #2 complete. Next: Pattern #3 (immutable eval artifacts), then Pattern #7 (output gates), then GTM Surfaces (tool-call endpoint + remote MCP).
 >
-> Read this worklog, then read `~/.claude/plans/staged-booping-globe.md` pattern #3 for full context. Begin scoping by:
+> Read this worklog, then read `~/.claude/plans/staged-booping-globe.md` for full context. Begin scoping Pattern #3 by:
 >
 > 1. Read `backend/app/models.py` — `EvalScore` exists but slot results are JSON blobs in `Query.results_json`. No frozen eval run artifact.
 > 2. Design an `EvalRun` table that snapshots {query set, model versions, scoring-engine version, results, verdicts}. Append-only.
 > 3. The `NeuronScoreOverride` system (added in Pattern #2) gives manual tuning levers — eval runs should capture which overrides were active at run time.
->
-> Pattern #2 delivered: enriched firing records (full score breakdown per query), 3 lineage endpoints (neuron forward, source impact, query trace), NeuronScoreOverride for manual graph tuning integrated into the scoring engine. End-to-end traceability: answer → firings → neurons → sources → actions.
+> 4. Every eval run gets an immutable ID — this becomes the `eval_run_id` that pairs with `lineage_id` in tool-call / MCP responses, making "here is what certified this answer's pipeline" an auditable claim.
 
 ## Checklist
 
 ### Phase 1 — Dual-purpose foundations
 - [DONE] #1 Actions as the universal write primitive
 - [DONE] #2 Bidirectional lineage / active provenance graph
-- [ ] #3 Evals as immutable, first-class artifacts
+- [ ] #3 Evals as immutable, first-class artifacts ← **NEXT**
+
+### Phase 1.5 — GTM gate (NEW, 2026-04-12)
+These unlock shipping tool-call and MCP surfaces externally. Ordered.
+- [ ] #7 Runtime output policy gates (moved up from Phase 2a)
+- [ ] GTM-A: External tool-call endpoint hardening (`/v1/query` with auth, rate limiting, streaming, `{answer, citations, lineage_id, eval_run_id}` response contract)
+- [ ] GTM-B: Remote MCP server (HTTP+SSE transport + OAuth2 on top of existing stdio `.mcp.json`)
 
 ### Phase 2a — Defense-sale track
+Pull forward if customer conversation / ATO question / classified-data requirement surfaces.
 - [ ] #4 Row-level markings / classification
-- [ ] #7 Runtime output policy gates
 
 ### Phase 2b — Correctness / experimentation track
+Pull forward if pipeline iteration speed is the near-term pain.
 - [ ] #5 Typed pipeline DAG with observable stages
 - [ ] #6 Ontology branching for safe experimentation
 - [ ] #8 Unified autopilot as a typed agent
@@ -46,7 +62,17 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 
 ## Open questions / blockers
 
-- None yet.
+- **JSONB action queries may need denormalization.** The lineage trace queries `input_json->>'target_neuron_id'` on the actions table. No index on this expression yet. If action volume grows past ~10k rows, add a materialized `source_neuron_id` column or a GIN index.
+
+## Lessons learned
+
+1. **Enrich existing tables before creating new ones.** Plan called for a new `FiringRecord` table, but `NeuronFiring` already had the right relationships. Adding columns preserved existing infrastructure (consolidation, synaptic learning, burst calcs) without migration risk.
+2. **Observability without control levers is incomplete.** Pure lineage (see what happened) is less valuable than lineage + tuning (change what happens). Pairing enriched firings with `NeuronScoreOverride` in the same pattern made it actionable, not just auditable.
+3. **The forward chain gap was data quality, not data absence.** `NeuronFiring` existed but only stored IDs and offsets. The 8-signal score breakdown was computed every query and discarded into JSON blobs. Fix was populating fields that should have been there from the start.
+4. **Alembic revision IDs must be under 32 chars.** `alembic_version.version_num` is varchar(32). Descriptive IDs fail at migration time.
+5. **JPL-4 extractions pay forward.** Extracting `_assemble_top_slice` from `prepare_context` isolated the assembly step — exactly what Pattern #5 (typed pipeline DAG) will refactor into a named stage.
+6. **Post-scoring override application keeps the hot path clean.** Overrides apply after vectorized numpy scoring. Only neurons with active overrides take the Python recomputation path — preserves 10-50x speedup for the common case.
+7. **Pattern sequencing validated — #2 depends on #1.** Lineage trace joins firing records with action counts. Without the action bus, you couldn't answer "how many times was this neuron modified and by whom?"
 
 ## Session log
 
@@ -147,3 +173,12 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 - Smoke-tested lineage router import: 6 routes registered.
 
 **Pattern #2 complete.** Forward chain is now queryable: for any query, you can trace back to fired neurons (with scores), their source documents, and the actions that created/refined them. Score overrides give direct tuning levers for the graph without touching neuron content.
+
+### 2026-04-12 — Re-sequenced from three-leg GTM pivot
+- **Context:** Strategic conversation clarified that Corvus sits behind customer LLM frontends (Fluent, Claude Enterprise, MCP clients) — three integration legs: (1) OpenAI-compatible tool-call endpoint, (2) remote MCP server, (3) Corvus admin UI. Captured in Master Corvus → Strategy → Positioning.
+- **No code changes this entry.** Sequencing update only.
+- **Decisions:**
+  - Pattern #7 (runtime output policy gates) moved from Phase 2a → new Phase 1.5. Once external LLM frontends call Corvus, every response leaves the API into third-party context. Output gates must precede external surface hardening.
+  - Added two non-AIP items as "GTM Surfaces": GTM-A (external tool-call endpoint `/v1/query`) and GTM-B (remote MCP transport + OAuth2). Both are infrastructure, gated by Patterns #2 and #7.
+  - Pattern #3 remains next. After #3, sequence is #7 → GTM-A → GTM-B → Phase 2a/2b.
+- **Files updated:** `ROADMAP-WORKLOG.md` (this file, checklist + next-session block), `~/.claude/plans/staged-booping-globe.md` (appended re-sequencing note), `master-corvus/src/components/system-docs/AIPGovernanceRoadmap.tsx` (new Phase 1.5 panel, GTM-Surfaces section, status indicators on every step).

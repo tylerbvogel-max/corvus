@@ -454,6 +454,8 @@ class ProposalOut(BaseModel):
     applied_at: str | None = None
     applied_by: str | None = None
     item_count: int = 0
+    origin: str = "manual"  # autopilot | integrity | document | manual
+    is_autopilot: bool = False
     created_at: str | None = None
 
 

@@ -749,10 +749,6 @@ async def _classify_observation(
     Returns (department, role_key) or (None, None) on failure.
     """
     try:
-        import anthropic
-
-        client = anthropic.AsyncAnthropic()
-
         # LLM PROMPT INTENT: Classify a Corvus observation into an organizational department and
         #   role_key to determine where in the neuron graph hierarchy the observation belongs.
         #   This is a lightweight classification step (Haiku) run before semantic similarity search.
@@ -780,16 +776,15 @@ async def _classify_observation(
             user_msg += f"App: {app_context}\n"
         user_msg += f"Text: {text[:500]}"
 
-        response = await client.messages.create(
-            model="claude-haiku-4-5-20251001",
+        response = await llm_chat(
+            system_prompt=system,
+            user_message=user_msg,
             max_tokens=100,
-            temperature=0.0,
-            system=system,
-            messages=[{"role": "user", "content": user_msg}],
+            model="haiku",
         )
 
         import json
-        result = json.loads(response.content[0].text)
+        result = json.loads(response["text"])
         return result.get("department"), result.get("role_key")
     except Exception as e:
         print(f"[Corvus] Observation classification failed: {e}")

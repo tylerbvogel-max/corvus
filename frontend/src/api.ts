@@ -1550,6 +1550,8 @@ export interface ProposalSummary {
   applied_at: string | null;
   applied_by: string | null;
   item_count: number;
+  origin: string; // "autopilot" | "integrity" | "document" | "manual"
+  is_autopilot: boolean;
   created_at: string | null;
 }
 
@@ -1615,10 +1617,13 @@ export interface ProposalStats {
   total: number;
 }
 
-export function fetchProposals(state?: string, gapSource?: string): Promise<ProposalSummary[]> {
+export function fetchProposals(
+  state?: string, gapSource?: string, origin?: string,
+): Promise<ProposalSummary[]> {
   const parts: string[] = [];
   if (state) parts.push(`state=${state}`);
   if (gapSource) parts.push(`gap_source=${gapSource}`);
+  if (origin) parts.push(`origin=${origin}`);
   const qs = parts.length ? `?${parts.join('&')}` : '';
   return json<ProposalSummary[]>(`/admin/proposals/${qs}`);
 }

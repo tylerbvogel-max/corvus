@@ -13,7 +13,7 @@ import {
 } from '../api';
 
 type StateFilter = 'all' | 'proposed' | 'approved' | 'rejected' | 'applied';
-type SourceFilter = 'all' | 'directive' | 'document_ingest' | 'integrity';
+type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'manual';
 
 const STATE_COLORS: Record<string, string> = {
   proposed: '#e8a838',
@@ -22,11 +22,19 @@ const STATE_COLORS: Record<string, string> = {
   applied: '#2196f3',
 };
 
-const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
-  { key: 'all', label: 'All Sources' },
-  { key: 'directive', label: 'Autopilot' },
-  { key: 'document_ingest', label: 'Document Ingest' },
+const ORIGIN_COLORS: Record<string, string> = {
+  autopilot: '#9b59b6',
+  integrity: '#2196f3',
+  document: '#4caf50',
+  manual: '#7f8c8d',
+};
+
+const SOURCE_OPTIONS: { key: OriginFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'autopilot', label: 'Autopilot' },
   { key: 'integrity', label: 'Integrity' },
+  { key: 'document', label: 'Document' },
+  { key: 'manual', label: 'Manual' },
 ];
 
 const selectStyle: React.CSSProperties = {
@@ -43,7 +51,7 @@ export default function ProposalQueuePage() {
   const [stats, setStats] = useState<ProposalStats | null>(null);
   const [selected, setSelected] = useState<ProposalDetail | null>(null);
   const [filter, setFilter] = useState<StateFilter>('all');
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<OriginFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewer, setReviewer] = useState('');
@@ -55,17 +63,12 @@ export default function ProposalQueuePage() {
     setLoading(true);
     setError(null);
     try {
-      // For exact-match sources, pass to backend; for "integrity" group, filter client-side
-      const apiSource = sourceFilter === 'directive' || sourceFilter === 'document_ingest'
-        ? sourceFilter : undefined;
+      const originParam = sourceFilter === 'all' ? undefined : sourceFilter;
       const [p, s] = await Promise.all([
-        fetchProposals(filter === 'all' ? undefined : filter, apiSource),
+        fetchProposals(filter === 'all' ? undefined : filter, undefined, originParam),
         fetchProposalStats(),
       ]);
-      const filtered = sourceFilter === 'integrity'
-        ? p.filter(x => x.gap_source?.startsWith('integrity_'))
-        : sourceFilter === 'all' ? p : p;
-      setProposals(filtered);
+      setProposals(p);
       setStats(s);
     } catch (e) {
       setError(String(e));
@@ -209,18 +212,31 @@ export default function ProposalQueuePage() {
                     border: `1px solid ${selected?.id === p.id ? 'var(--accent)' : 'var(--border)'}`,
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
                     <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>#{p.id}</span>
-                    <span style={{
-                      fontSize: '0.65rem', padding: '1px 5px', borderRadius: 8,
-                      background: STATE_COLORS[p.state] + '22', color: STATE_COLORS[p.state],
-                      fontWeight: 600,
-                    }}>
-                      {p.state}
+                    <span style={{ display: 'flex', gap: 4 }}>
+                      <span style={{
+                        fontSize: '0.6rem', padding: '1px 5px', borderRadius: 8,
+                        background: (ORIGIN_COLORS[p.origin] || '#7f8c8d') + '22',
+                        color: ORIGIN_COLORS[p.origin] || '#7f8c8d',
+                        fontWeight: 600, textTransform: 'uppercase',
+                      }}>
+                        {p.origin}
+                      </span>
+                      <span style={{
+                        fontSize: '0.65rem', padding: '1px 5px', borderRadius: 8,
+                        background: STATE_COLORS[p.state] + '22', color: STATE_COLORS[p.state],
+                        fontWeight: 600,
+                      }}>
+                        {p.state}
+                      </span>
                     </span>
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: 2 }}>
-                    {p.gap_source || 'directive'} &middot; {p.item_count} items
+                    {p.gap_source || 'directive'} &middot;{' '}
+                    <span style={{ color: p.item_count === 0 ? '#e8a838' : 'var(--text-dim)' }}>
+                      {p.item_count} items{p.item_count === 0 ? ' (empty)' : ''}
+                    </span>
                   </div>
                   {p.created_at && (
                     <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: 1 }}>

@@ -12,6 +12,19 @@ Unified, multi-tenant neuron graph for prompt preparation. Two-stage Haiku pipel
 - All domain-specific content (prompts, patterns, seed data, concepts, regulatory trees) is in tenant dirs
 - Service code is domain-agnostic — reads from `tenant.*` properties
 
+## LLM Provider Policy
+**All LLM calls route through the Claude CLI** (personal subscription — no API credits). Never use the `anthropic` Python SDK directly. The `_anthropic_chat` function in `backend/app/services/llm_provider.py` shells out to `claude -p --output-format json` via subprocess.
+
+### Gotcha: "Claude Code cannot be launched inside another Claude Code session"
+When Corvus is developed or run from inside a Claude Code session, the CLI subprocess inherits `CLAUDECODE=1` (and `CLAUDE_CODE_*` vars), which the CLI treats as a nested-session signal and refuses to launch.
+
+**Fix:** Strip `CLAUDECODE*` and `CLAUDE_CODE_*` from the child process env before spawning the CLI. `llm_provider._anthropic_chat` already does this — apply the same pattern to any new subprocess-based LLM integration.
+
+```python
+child_env = {k: v for k, v in os.environ.items()
+             if not k.startswith("CLAUDECODE") and not k.startswith("CLAUDE_CODE_")}
+```
+
 ## Stack
 - Python FastAPI + PostgreSQL (async SQLAlchemy + asyncpg) + Anthropic Python SDK
 - Alembic for schema migrations

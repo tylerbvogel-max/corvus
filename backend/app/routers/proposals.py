@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db, async_session
@@ -27,8 +27,24 @@ from app.middleware.rbac import UserIdentity, resolve_identity
 router = APIRouter(prefix="/admin/proposals", tags=["proposals"])
 
 
+def _classify_origin(p: AutopilotProposal) -> str:
+    """Classify proposal origin for UI filter pills.
+
+    Precedence: autopilot_run_id link > integrity_* prefix > document_ingest > manual.
+    """
+    if p.autopilot_run_id is not None:
+        return "autopilot"
+    src = p.gap_source or ""
+    if src.startswith("integrity_"):
+        return "integrity"
+    if src == "document_ingest":
+        return "document"
+    return "manual"
+
+
 def _proposal_summary(p: AutopilotProposal) -> ProposalOut:
     """Convert proposal model to summary schema."""
+    origin = _classify_origin(p)
     return ProposalOut(
         id=p.id,
         autopilot_run_id=p.autopilot_run_id,
@@ -44,6 +60,8 @@ def _proposal_summary(p: AutopilotProposal) -> ProposalOut:
         applied_at=p.applied_at.isoformat() if p.applied_at else None,
         applied_by=p.applied_by,
         item_count=len(p.items) if p.items else 0,
+        origin=origin,
+        is_autopilot=(origin == "autopilot"),
         created_at=p.created_at.isoformat() if p.created_at else None,
     )
 
@@ -109,15 +127,43 @@ def _proposal_detail(p: AutopilotProposal) -> ProposalDetailOut:
 async def list_proposals(
     state: str | None = None,
     gap_source: str | None = None,
+    origin: str | None = None,
     limit: int = 50,
     db: AsyncSession = Depends(get_db),
 ):
-    """List proposals, optionally filtered by state or gap_source."""
+    """List proposals, optionally filtered by state, gap_source, or origin.
+
+    `origin` is the high-level bucket shown in the UI filter pills:
+      - autopilot: autopilot_run_id IS NOT NULL
+      - integrity: gap_source LIKE 'integrity_%'
+      - document:  gap_source == 'document_ingest'
+      - manual:    everything else (no autopilot link, no integrity/document source)
+    """
+    assert limit > 0, "limit must be positive"
     stmt = select(AutopilotProposal).order_by(AutopilotProposal.id.desc())
     if state:
         stmt = stmt.where(AutopilotProposal.state == state)
     if gap_source:
         stmt = stmt.where(AutopilotProposal.gap_source == gap_source)
+    if origin == "autopilot":
+        stmt = stmt.where(AutopilotProposal.autopilot_run_id.isnot(None))
+    elif origin == "integrity":
+        stmt = stmt.where(AutopilotProposal.gap_source.like("integrity_%"))
+    elif origin == "document":
+        stmt = stmt.where(AutopilotProposal.gap_source == "document_ingest")
+    elif origin == "manual":
+        stmt = stmt.where(
+            AutopilotProposal.autopilot_run_id.is_(None),
+            or_(
+                AutopilotProposal.gap_source.is_(None),
+                and_(
+                    ~AutopilotProposal.gap_source.like("integrity_%"),
+                    AutopilotProposal.gap_source != "document_ingest",
+                ),
+            ),
+        )
+    elif origin is not None:
+        raise HTTPException(400, f"Unknown origin: {origin!r}")
     stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return [_proposal_summary(p) for p in result.scalars().all()]
