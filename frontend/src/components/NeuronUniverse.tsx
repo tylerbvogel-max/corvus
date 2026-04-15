@@ -3,6 +3,8 @@ import ForceGraph3D from 'react-force-graph-3d';
 import { fetchGraph3D, type Graph3DNode, type Graph3DEdge } from '../api';
 import { DEPT_COLORS } from '../constants';
 import * as THREE from 'three';
+import { useUrlSync, codecs, type UrlSchema } from '../hooks/useUrlSync';
+import { UniverseSearchOverlay } from './UniverseSearchOverlay';
 
 interface GraphNode extends Graph3DNode {
   x?: number; y?: number; z?: number;
@@ -41,6 +43,8 @@ export default function NeuronUniverse() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [minWeight, setMinWeight] = useState(0.3);
   const [maxEdges, setMaxEdges] = useState(5000);
   const [colorBy, setColorBy] = useState<'department' | 'layer'>('department');
@@ -50,6 +54,17 @@ export default function NeuronUniverse() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  // Snapshot of original force strength functions, captured once
+  const forceSnapshotRef = useRef<{ chargeStrength: any; linkStrength: any } | null>(null);
+  // Whether the A2 warp has been applied (so we know whether to restore on deselect)
+  const warpAppliedRef = useRef(false);
+  // Currently-attached hover ring (so we can remove it cleanly on hover change)
+  const hoverRingRef = useRef<{ nodeId: number; mesh: THREE.Mesh; parent: THREE.Object3D } | null>(null);
+  // Camera position to restore from URL hash after data load
+  const pendingCamRef = useRef<number[] | null>(null);
+  // Pending selection id to apply once neurons load (from URL restore)
+  const pendingSelIdRef = useRef<number | null>(null);
 
   // Track container size
   useEffect(() => {
@@ -83,6 +98,87 @@ export default function NeuronUniverse() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── G1 URL sync ──
+  // Fields round-trip through the hash `#universe?sel=...&dept=...&...`.
+  // Selection is change-push (browser back/forward walks prior selections);
+  // filter changes are replace (no history spam).
+  const urlState = useMemo(() => ({
+    sel: selectedNode?.id ?? null,
+    dept: deptFilter,
+    min: minWeight,
+    max: maxEdges,
+    color: colorBy as string,
+    edges: showEdges,
+    connected: hideDisconnected,
+    cam: [] as number[],  // camera written on demand below
+  }), [selectedNode, deptFilter, minWeight, maxEdges, colorBy, showEdges, hideDisconnected]);
+
+  const urlSchema: UrlSchema<typeof urlState> = {
+    sel: codecs.nullableInt,
+    dept: codecs.str,
+    min: codecs.num,
+    max: codecs.int,
+    color: codecs.str,
+    edges: codecs.bool,
+    connected: codecs.bool,
+    cam: codecs.numArray,
+  };
+
+  const handleRestore = useCallback((r: Partial<typeof urlState>) => {
+    if (r.dept !== undefined) setDeptFilter(r.dept);
+    if (r.min !== undefined) setMinWeight(r.min);
+    if (r.max !== undefined) setMaxEdges(r.max);
+    if (r.color !== undefined && (r.color === 'department' || r.color === 'layer')) setColorBy(r.color);
+    if (r.edges !== undefined) setShowEdges(r.edges);
+    if (r.connected !== undefined) setHideDisconnected(r.connected);
+    if (r.sel !== undefined) {
+      if (r.sel === null) {
+        setSelectedNode(null);
+      } else if (neurons.length > 0) {
+        const node = neurons.find(n => n.id === r.sel);
+        if (node) setSelectedNode(node);
+      } else {
+        // Data not loaded yet — stash for the post-load hook
+        pendingSelIdRef.current = r.sel;
+      }
+    }
+    if (r.cam !== undefined && Array.isArray(r.cam) && r.cam.length === 6) {
+      if (fgRef.current && !loading && neurons.length > 0) {
+        const [x, y, z, tx, ty, tz] = r.cam;
+        fgRef.current.cameraPosition?.({ x, y, z }, { x: tx, y: ty, z: tz }, 600);
+      } else {
+        pendingCamRef.current = r.cam;
+      }
+    }
+  }, [neurons, loading]);
+
+  useUrlSync('universe', urlState, urlSchema, {
+    pushOnKeys: ['sel'],
+    onRestore: handleRestore,
+  });
+
+  // Write camera into the hash occasionally (on idle / when user stops interacting).
+  // Polling every 2s is cheap and avoids listening to every mouse/wheel event.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || loading) return;
+    const interval = window.setInterval(() => {
+      const pos = fg.cameraPosition?.();
+      if (!pos) return;
+      const cam = [pos.x, pos.y, pos.z, pos.lookAt?.x ?? 0, pos.lookAt?.y ?? 0, pos.lookAt?.z ?? 0];
+      // Merge into hash without rewriting everything
+      const hash = window.location.hash;
+      if (!hash.startsWith('#universe')) return;
+      const qIdx = hash.indexOf('?');
+      const qs = qIdx >= 0 ? hash.slice(qIdx + 1) : '';
+      const parts = qs ? qs.split('&').filter(p => !p.startsWith('cam=')) : [];
+      parts.push('cam=' + cam.map(n => (Number.isFinite(n) ? +n.toFixed(2) : 0)).join(','));
+      const nextHash = '#universe?' + parts.join('&');
+      if (nextHash !== hash) window.history.replaceState(null, '', nextHash);
+    }, 2000);
+    return () => window.clearInterval(interval);
+  }, [loading]);
+
   // Available departments for filter (derived from loaded neurons)
   const departments = useMemo(() => {
     const depts = new Set<string>();
@@ -90,14 +186,81 @@ export default function NeuronUniverse() {
     return Array.from(depts).sort();
   }, [neurons]);
 
+  // Volume-distributed fixed positions for concept neurons.
+  // Uses a 3D Halton sequence (bases 2/3/5) to pick low-discrepancy points inside
+  // a cube, then rejects candidates within MIN_DIST of an already-placed concept.
+  // These positions are pinned via fx/fy/fz so concepts stay put during simulation,
+  // sidestepping the edge-attraction clumping and the alpha=1 reheat blast pattern.
+  const conceptTargets = useMemo(() => {
+    const targets = new Map<number, { x: number; y: number; z: number }>();
+    const conceptList = neurons.filter(n => n.node_type === 'concept' && n.layer === -1);
+    if (conceptList.length === 0) return targets;
+
+    const HALF = 1200;       // cube half-side: positions span [-1200, 1200]
+    const MIN_DIST = 360;    // minimum separation between concepts
+    const MAX_TRIES = 2000;
+
+    const halton = (i: number, base: number) => {
+      let f = 1, r = 0, idx = i;
+      while (idx > 0) {
+        f /= base;
+        r += f * (idx % base);
+        idx = Math.floor(idx / base);
+      }
+      return r;
+    };
+
+    const placed: Array<{ x: number; y: number; z: number }> = [];
+    let haltonIdx = 1;
+    for (const c of conceptList) {
+      let chosen: { x: number; y: number; z: number } | null = null;
+      for (let tries = 0; tries < MAX_TRIES; tries++) {
+        const p = {
+          x: (halton(haltonIdx, 2) * 2 - 1) * HALF,
+          y: (halton(haltonIdx, 3) * 2 - 1) * HALF,
+          z: (halton(haltonIdx, 5) * 2 - 1) * HALF,
+        };
+        haltonIdx++;
+        let ok = true;
+        for (const q of placed) {
+          const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
+          if (dx * dx + dy * dy + dz * dz < MIN_DIST * MIN_DIST) { ok = false; break; }
+        }
+        if (ok) { chosen = p; break; }
+      }
+      if (!chosen) {
+        // Fallback: use the raw Halton point regardless of spacing
+        chosen = {
+          x: (halton(haltonIdx, 2) * 2 - 1) * HALF,
+          y: (halton(haltonIdx, 3) * 2 - 1) * HALF,
+          z: (halton(haltonIdx, 5) * 2 - 1) * HALF,
+        };
+        haltonIdx++;
+      }
+      placed.push(chosen);
+      targets.set(c.id, chosen);
+    }
+    return targets;
+  }, [neurons]);
+
+  // Pin concepts via fx/fy/fz — d3-force treats these as fixed coordinates, so
+  // no force-engine tweaks and no reheat are needed to keep them in place.
+  const neuronsPositioned = useMemo(() => {
+    if (!neurons.length || conceptTargets.size === 0) return neurons;
+    return neurons.map(n => {
+      const t = conceptTargets.get(n.id);
+      return t ? { ...n, x: t.x, y: t.y, z: t.z, fx: t.x, fy: t.y, fz: t.z } : n;
+    });
+  }, [neurons, conceptTargets]);
+
   // Build graph data for force-graph (applies dept filter + connectivity filter + dept gravity)
   const graphData = useMemo(() => {
-    if (!neurons.length) return { nodes: [], links: [] };
+    if (!neuronsPositioned.length) return { nodes: [], links: [] };
 
     // Apply department filter: keep matching neurons + concept neurons (always visible)
     const filtered = deptFilter
-      ? neurons.filter(n => n.department === deptFilter || (n.node_type === 'concept' && n.layer === -1))
-      : neurons;
+      ? neuronsPositioned.filter(n => n.department === deptFilter || (n.node_type === 'concept' && n.layer === -1))
+      : neuronsPositioned;
     const nodeIds = new Set(filtered.map(n => n.id));
 
     const links: GraphLink[] = edges
@@ -144,7 +307,22 @@ export default function NeuronUniverse() {
       connectedIds.add(typeof l.target === 'number' ? l.target : l.target.id);
     });
     return { nodes: filtered.filter(n => connectedIds.has(n.id)) as GraphNode[], links };
-  }, [neurons, edges, hideDisconnected, deptFilter]);
+  }, [neuronsPositioned, edges, hideDisconnected, deptFilter]);
+
+  // 1-hop adjacency map, excluding phantom gravity links. Used by A1/A2/B2.
+  const adjacencyMap = useMemo(() => {
+    const adj = new Map<number, Set<number>>();
+    for (const link of graphData.links as GraphLink[]) {
+      if (link._phantom) continue;
+      const src = typeof link.source === 'number' ? link.source : link.source.id;
+      const tgt = typeof link.target === 'number' ? link.target : link.target.id;
+      if (!adj.has(src)) adj.set(src, new Set());
+      if (!adj.has(tgt)) adj.set(tgt, new Set());
+      adj.get(src)!.add(tgt);
+      adj.get(tgt)!.add(src);
+    }
+    return adj;
+  }, [graphData]);
 
   const layerColors = ['#2dd4bf', '#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#facc15'];
 
@@ -170,6 +348,14 @@ export default function NeuronUniverse() {
     return baseSize + invoBoost;
   }, []);
 
+  // Stamp a material's baseOpacity so the A1/B2 dim effect can scale it later
+  // without losing the original design intent (different glow shells have
+  // different native opacities).
+  function withBase<M extends THREE.Material & { opacity: number }>(m: M): M {
+    m.userData.baseOpacity = m.opacity;
+    return m;
+  }
+
   // Custom node rendering with glow
   const nodeThreeObject = useCallback((node: GraphNode) => {
     const color = getNodeColor(node);
@@ -182,67 +368,71 @@ export default function NeuronUniverse() {
       // ── Black hole effect for concept neurons ──
       // Dark core — nearly black with faint purple tint
       const coreGeo = new THREE.SphereGeometry(size, 32, 24);
-      const coreMat = new THREE.MeshPhongMaterial({
+      const coreMat = withBase(new THREE.MeshPhongMaterial({
         color: new THREE.Color('#08050e'),
         emissive: new THREE.Color('#1a0a2e'),
         emissiveIntensity: 0.3,
         transparent: true,
         opacity: 0.97,
-      });
+      }));
       group.add(new THREE.Mesh(coreGeo, coreMat));
 
       // Event horizon glow — thin bright ring at the surface
       const horizonGeo = new THREE.RingGeometry(size * 0.95, size * 1.15, 64);
-      const horizonMat = new THREE.MeshBasicMaterial({
+      const horizonMat = withBase(new THREE.MeshBasicMaterial({
         color: new THREE.Color(CONCEPT_COLOR),
         transparent: true,
         opacity: 0.7,
         side: THREE.DoubleSide,
-      });
+      }));
       const horizon = new THREE.Mesh(horizonGeo, horizonMat);
       group.add(horizon);
 
       // Second ring rotated perpendicular — accretion disk effect
       const diskGeo = new THREE.RingGeometry(size * 1.3, size * 1.7, 64);
-      const diskMat = new THREE.MeshBasicMaterial({
+      const diskMat = withBase(new THREE.MeshBasicMaterial({
         color: new THREE.Color(CONCEPT_COLOR),
         transparent: true,
         opacity: 0.2,
         side: THREE.DoubleSide,
-      });
+      }));
       const disk = new THREE.Mesh(diskGeo, diskMat);
       disk.rotation.x = Math.PI / 2;
       group.add(disk);
 
       // Outer diffuse glow
       const glowGeo = new THREE.SphereGeometry(size * 2.2, 16, 12);
-      const glowMat = new THREE.MeshBasicMaterial({
+      const glowMat = withBase(new THREE.MeshBasicMaterial({
         color: new THREE.Color(CONCEPT_COLOR),
         transparent: true,
         opacity: 0.06,
-      });
+      }));
       group.add(new THREE.Mesh(glowGeo, glowMat));
     } else {
       // ── Standard neuron rendering ──
       const geometry = new THREE.SphereGeometry(size, 16, 12);
-      const material = new THREE.MeshPhongMaterial({
+      const material = withBase(new THREE.MeshPhongMaterial({
         color: new THREE.Color(color),
         emissive: new THREE.Color(color),
         emissiveIntensity: 0.4,
         transparent: true,
         opacity: 0.9,
-      });
+      }));
       group.add(new THREE.Mesh(geometry, material));
 
       // Outer glow
       const glowGeometry = new THREE.SphereGeometry(size * 1.6, 12, 8);
-      const glowMaterial = new THREE.MeshBasicMaterial({
+      const glowMaterial = withBase(new THREE.MeshBasicMaterial({
         color: new THREE.Color(color),
         transparent: true,
         opacity: 0.08,
-      });
+      }));
       group.add(new THREE.Mesh(glowGeometry, glowMaterial));
     }
+
+    // Cache the node's primary size + color on the group so effects can reuse them
+    group.userData.baseSize = size;
+    group.userData.baseColor = color;
 
     return group;
   }, [getNodeColor, getNodeSize]);
@@ -266,14 +456,205 @@ export default function NeuronUniverse() {
     </div>`;
   }, []);
 
+  // ── A1 dim-and-glow / B2 hover-preview dim ──
+  // Scales each material's opacity relative to its baseOpacity. Selection dim
+  // (0.10 on non-neighbors) wins over hover dim (0.35 on non-neighbors).
+  useEffect(() => {
+    if (!graphData.nodes.length) return;
+    const selId = selectedNode?.id ?? null;
+    const hovId = hoveredNode?.id ?? null;
+    const selNeighbors = selId !== null ? adjacencyMap.get(selId) : null;
+    const hovNeighbors = hovId !== null ? adjacencyMap.get(hovId) : null;
+
+    for (const n of graphData.nodes as GraphNode[]) {
+      const obj = n.__threeObj;
+      if (!obj) continue;
+
+      let dim = 1.0;
+      if (selId !== null) {
+        if (n.id !== selId && !(selNeighbors && selNeighbors.has(n.id))) dim = 0.10;
+      } else if (hovId !== null) {
+        if (n.id !== hovId && !(hovNeighbors && hovNeighbors.has(n.id))) dim = 0.35;
+      }
+
+      obj.traverse((child: THREE.Object3D) => {
+        // Skip the hover ring (it manages its own opacity)
+        if ((child as THREE.Mesh).userData?.isHoverRing) return;
+        const mesh = child as THREE.Mesh;
+        const mat = mesh.material as THREE.Material & { opacity: number };
+        if (!mat || typeof mat.opacity !== 'number') return;
+        const base = mat.userData?.baseOpacity;
+        if (typeof base !== 'number') return;
+        mat.opacity = base * dim;
+        mat.transparent = true;
+      });
+    }
+  }, [selectedNode, hoveredNode, adjacencyMap, graphData]);
+
+  // ── A2 gravity warp ──
+  // On selection: link strength ×3 for incident edges, charge ×1.5 on non-neighbors
+  // (more repulsion away from the cluster). On deselect: restore originals and let
+  // the layout relax back. Only reheats on actual apply/restore transitions —
+  // never on initial mount or unrelated graphData changes (which would disrupt
+  // the initial force-directed warmup, especially under StrictMode double-invoke).
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || !graphData.nodes.length) return;
+
+    const chargeForce: any = fg.d3Force ? fg.d3Force('charge') : null;
+    const linkForce: any = fg.d3Force ? fg.d3Force('link') : null;
+    if (!chargeForce || !linkForce) return;
+
+    const selId = selectedNode?.id ?? null;
+    const applying = selId !== null;
+    const restoring = selId === null && warpAppliedRef.current;
+
+    // No-op path: nothing to apply, nothing to restore. Don't touch forces or reheat.
+    if (!applying && !restoring) return;
+
+    // Snapshot originals the first time we ever touch the forces
+    if (!forceSnapshotRef.current) {
+      forceSnapshotRef.current = {
+        chargeStrength: chargeForce.strength(),
+        linkStrength: linkForce.strength(),
+      };
+    }
+    const snap = forceSnapshotRef.current;
+
+    if (applying) {
+      const selNeighbors = adjacencyMap.get(selId as number);
+      const baseCharge = (node: any) => (
+        typeof snap.chargeStrength === 'function' ? snap.chargeStrength(node) : snap.chargeStrength ?? -30
+      );
+      const baseLink = (link: any) => (
+        typeof snap.linkStrength === 'function' ? snap.linkStrength(link) : snap.linkStrength ?? 1
+      );
+      linkForce.strength((link: any) => {
+        const src = typeof link.source === 'number' ? link.source : link.source?.id;
+        const tgt = typeof link.target === 'number' ? link.target : link.target?.id;
+        const incident = src === selId || tgt === selId;
+        const b = baseLink(link);
+        return incident ? b * 3 : b;
+      });
+      chargeForce.strength((node: any) => {
+        const isNeighbor = node.id === selId || (selNeighbors && selNeighbors.has(node.id));
+        const b = baseCharge(node);
+        return isNeighbor ? b : b * 1.5;
+      });
+      warpAppliedRef.current = true;
+    } else {
+      // restoring
+      linkForce.strength(snap.linkStrength);
+      chargeForce.strength(snap.chargeStrength);
+      warpAppliedRef.current = false;
+    }
+    fg.d3ReheatSimulation?.();
+  }, [selectedNode, adjacencyMap, graphData]);
+
+  // ── B1 hover ring ──
+  // One ring mesh, re-parented on hover change. Rotated by the animation loop below.
+  useEffect(() => {
+    // Remove previous ring
+    const prev = hoverRingRef.current;
+    if (prev) {
+      prev.parent.remove(prev.mesh);
+      prev.mesh.geometry.dispose();
+      (prev.mesh.material as THREE.Material).dispose();
+      hoverRingRef.current = null;
+    }
+    if (!hoveredNode || !hoveredNode.__threeObj) return;
+
+    const size = (hoveredNode.__threeObj.userData?.baseSize as number) || getNodeSize(hoveredNode);
+    const color = (hoveredNode.__threeObj.userData?.baseColor as string) || getNodeColor(hoveredNode);
+    const thickness = Math.max(0.15, size * 0.08);
+    const geo = new THREE.TorusGeometry(size * 1.8, thickness, 12, 48);
+    const mat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      transparent: true,
+      opacity: 0.65,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.userData.isHoverRing = true;
+    hoveredNode.__threeObj.add(mesh);
+    hoverRingRef.current = { nodeId: hoveredNode.id, mesh, parent: hoveredNode.__threeObj };
+  }, [hoveredNode, getNodeColor, getNodeSize]);
+
+  // rAF loop: spin the hover ring (if any) around Y. One loop for the life of the component.
+  useEffect(() => {
+    let raf = 0;
+    let lastT = performance.now();
+    function tick(t: number) {
+      const dt = (t - lastT) / 1000;
+      lastT = t;
+      const ring = hoverRingRef.current;
+      if (ring) {
+        ring.mesh.rotation.y += 0.5 * dt;
+        ring.mesh.rotation.x += 0.2 * dt;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // ── D1 Ctrl+F search trigger ──
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+        return;
+      }
+      if (e.key === 'Escape') {
+        // If search is open, the overlay handles Esc itself. Otherwise clear selection.
+        if (!isSearchOpen && selectedNode) setSelectedNode(null);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isSearchOpen, selectedNode]);
+
+  // Camera fly-to for overlay selection
+  const flyToNode = useCallback((nodeId: number) => {
+    const fg = fgRef.current;
+    if (!fg) return;
+    const node = (graphData.nodes as GraphNode[]).find(n => n.id === nodeId);
+    if (!node || node.x === undefined || node.y === undefined || node.z === undefined) return;
+    const dist = 80;
+    const nr = Math.hypot(node.x, node.y, node.z) || 1;
+    fg.cameraPosition?.(
+      { x: node.x * (1 + dist / nr), y: node.y * (1 + dist / nr), z: node.z * (1 + dist / nr) },
+      node,
+      800,
+    );
+  }, [graphData]);
+
   // Zoom to fit on first load
   useEffect(() => {
     if (!loading && fgRef.current && neurons.length > 0) {
       setTimeout(() => {
-        fgRef.current?.zoomToFit?.(800, 60);
+        // If a camera position is pending from URL restore, skip zoomToFit
+        if (pendingCamRef.current) {
+          const [x, y, z, tx, ty, tz] = pendingCamRef.current;
+          pendingCamRef.current = null;
+          fgRef.current?.cameraPosition?.(
+            { x, y, z },
+            { x: tx, y: ty, z: tz },
+            0,
+          );
+        } else {
+          fgRef.current?.zoomToFit?.(800, 60);
+        }
+        // Apply pending selection if any
+        if (pendingSelIdRef.current !== null) {
+          const id = pendingSelIdRef.current;
+          pendingSelIdRef.current = null;
+          const node = neurons.find(n => n.id === id) || null;
+          if (node) setSelectedNode(node);
+        }
       }, 2000);
     }
-  }, [loading, neurons.length]);
+  }, [loading, neurons]);
 
   // Stats
   const deptCounts = useMemo(() => {
@@ -321,8 +702,9 @@ export default function NeuronUniverse() {
         linkColor={() => '#334155'}
         linkVisibility={(link: any) => link._phantom ? false : showEdges}
         linkDirectionalParticles={0}
-        onNodeHover={() => {}}
+        onNodeHover={(node: any) => setHoveredNode(node ?? null)}
         onNodeClick={(node: any) => setSelectedNode(node?.id === selectedNode?.id ? null : node)}
+        onBackgroundClick={() => setSelectedNode(null)}
         backgroundColor="#0a0e17"
         showNavInfo={false}
         d3AlphaDecay={0.02}
@@ -514,8 +896,24 @@ export default function NeuronUniverse() {
         position: 'absolute', bottom: 12, right: 12, color: '#c8d0dc44',
         fontSize: '0.65rem', textAlign: 'right',
       }}>
-        Left-drag: rotate · Right-drag: pan · Scroll: zoom · Click: select
+        Left-drag: rotate · Right-drag: pan · Scroll: zoom · Click: select · Ctrl+F: search
       </div>
+
+      {/* D1 Search overlay */}
+      {isSearchOpen && (
+        <UniverseSearchOverlay
+          neurons={graphData.nodes as GraphNode[]}
+          onClose={() => setIsSearchOpen(false)}
+          onSelect={(nodeId) => {
+            const node = (graphData.nodes as GraphNode[]).find(n => n.id === nodeId);
+            if (node) {
+              setSelectedNode(node);
+              flyToNode(nodeId);
+            }
+            setIsSearchOpen(false);
+          }}
+        />
+      )}
       </>}
     </div>
   );
