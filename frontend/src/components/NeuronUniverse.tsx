@@ -249,7 +249,7 @@ export default function NeuronUniverse() {
     if (!neurons.length || conceptTargets.size === 0) return neurons;
     return neurons.map(n => {
       const t = conceptTargets.get(n.id);
-      return t ? { ...n, x: t.x, y: t.y, z: t.z, fx: t.x, fy: t.y, fz: t.z } : n;
+      return t ? { ...n, x: t.x, y: t.y, z: t.z } : n;
     });
   }, [neurons, conceptTargets]);
 
@@ -529,12 +529,16 @@ export default function NeuronUniverse() {
       const baseLink = (link: any) => (
         typeof snap.linkStrength === 'function' ? snap.linkStrength(link) : snap.linkStrength ?? 1
       );
+      // On selection: non-incident edges go weightless (strength 0) so the selected
+      // neuron's local neighborhood dominates the gravity. Incident edges keep the
+      // A2 ×3 boost. Net effect: unrelated bulk of the graph becomes inert and
+      // gets out of the way.
       linkForce.strength((link: any) => {
         const src = typeof link.source === 'number' ? link.source : link.source?.id;
         const tgt = typeof link.target === 'number' ? link.target : link.target?.id;
         const incident = src === selId || tgt === selId;
         const b = baseLink(link);
-        return incident ? b * 3 : b;
+        return incident ? b * 3 : 0;
       });
       chargeForce.strength((node: any) => {
         const isNeighbor = node.id === selId || (selNeighbors && selNeighbors.has(node.id));
@@ -550,6 +554,59 @@ export default function NeuronUniverse() {
     }
     fg.d3ReheatSimulation?.();
   }, [selectedNode, adjacencyMap, graphData]);
+
+  // ── Concept anti-gravity ──
+  // Custom O(n²) repulsion force that only acts between concept neurons. The
+  // default charge force uses Barnes-Hut with one strength per node, so it can't
+  // selectively amplify concept↔concept repulsion without also over-repelling
+  // concept↔regular. Running our own force just over the ~49 concepts costs
+  // ~2k ops/tick — negligible — and keeps concepts from re-clumping when edge
+  // attraction pulls them toward the mass center.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || !graphData.nodes.length || !fg.d3Force) return;
+
+    const conceptIds = new Set<number>(
+      (graphData.nodes as GraphNode[])
+        .filter(n => n.node_type === 'concept' && n.layer === -1)
+        .map(n => n.id)
+    );
+    if (conceptIds.size === 0) return;
+
+    let conceptNodes: any[] = [];
+    const force: any = (alpha: number) => {
+      // Linear spring-style push below MIN_DIST only. Capped per-tick delta so
+      // we can't eject nodes during alpha=1 warmup/reheat ticks.
+      const STRENGTH = 0.15;        // fraction of (MIN_DIST - d) applied per tick
+      const MIN_DIST = 1200;
+      const MAX_STEP = 8;           // hard cap on per-tick velocity delta per axis
+      for (let i = 0; i < conceptNodes.length; i++) {
+        const a = conceptNodes[i];
+        for (let j = i + 1; j < conceptNodes.length; j++) {
+          const b = conceptNodes[j];
+          const dx = (a.x ?? 0) - (b.x ?? 0);
+          const dy = (a.y ?? 0) - (b.y ?? 0);
+          const dz = (a.z ?? 0) - (b.z ?? 0);
+          const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.01;
+          if (d >= MIN_DIST) continue;
+          const overlap = MIN_DIST - d;
+          const mag = Math.min(MAX_STEP, overlap * STRENGTH * alpha);
+          const ux = dx / d, uy = dy / d, uz = dz / d;
+          a.vx = (a.vx ?? 0) + ux * mag;
+          a.vy = (a.vy ?? 0) + uy * mag;
+          a.vz = (a.vz ?? 0) + uz * mag;
+          b.vx = (b.vx ?? 0) - ux * mag;
+          b.vy = (b.vy ?? 0) - uy * mag;
+          b.vz = (b.vz ?? 0) - uz * mag;
+        }
+      }
+    };
+    force.initialize = (nodes: any[]) => {
+      conceptNodes = nodes.filter(n => conceptIds.has(n.id));
+    };
+
+    fg.d3Force('conceptRepel', force);
+  }, [graphData]);
 
   // ── B1 hover ring ──
   // One ring mesh, re-parented on hover change. Rotated by the animation loop below.
