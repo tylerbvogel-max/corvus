@@ -78,6 +78,18 @@ class TenantConfig:
     def reseed_threshold(self) -> int:
         return self._yaml.get("reseed_threshold", 150)
 
+    @property
+    def output_policies(self) -> dict:
+        """Runtime output-policy-gate configuration (Pattern #7).
+
+        Returns the raw policy dict keyed by rule_id. Missing rules default
+        to disabled so a tenant can opt-in per policy. output_guard is the
+        sole consumer; never read this from pipeline code directly.
+        """
+        raw = self._yaml.get("output_policies") or {}
+        assert isinstance(raw, dict), "output_policies must be a mapping"
+        return raw
+
     # ── Domain module properties ──
 
     @property

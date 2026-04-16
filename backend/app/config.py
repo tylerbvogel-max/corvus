@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     rbac_azure_tenant_id: str = ""
     rbac_admin_claim: str = "corvus-admin"
     rbac_reviewer_claim: str = "corvus-reviewer"
+    # GTM-A external endpoint rate limit (per-tenant,user token bucket)
+    v1_rate_limit_capacity: int = 30      # burst allowance
+    v1_rate_limit_refill_per_sec: float = 0.5  # sustained rate (~30 req/min)
     port: int = 8002
     tenant_id: str = "corvus-aero"
     cors_origins: str = ""  # Comma-separated; empty = auto from port

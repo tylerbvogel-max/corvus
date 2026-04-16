@@ -22,3 +22,32 @@ seed_prompts:
     text: "A machined part failed dimensional inspection. Walk me through the root cause analysis process."
   - label: "Cost proposal review"
     text: "What does DCAA look for when auditing an incurred cost submission?"
+
+# Output policy gates (Pattern #7 — Phase 1.5 GTM). Each policy block is
+# optional; missing keys fall back to safe defaults in output_guard.
+output_policies:
+  citation:
+    enabled: true
+    min_citations: 1          # at least one NeuronFiring cited for the response
+    action: flag              # flag | redact | block
+    severity: warn
+  pii:
+    enabled: true
+    action: redact            # PII gets masked in-place
+    severity: error
+  export_control:
+    enabled: true
+    action: block             # ITAR keyword hit halts the response
+    severity: critical
+    # Aero-specific controlled-tech vocabulary. Not a substitute for
+    # human export-control review; this is a tripwire.
+    terms:
+      - "ITAR"
+      - "USML"
+      - "EAR99"
+      - "classified"
+      - "propulsion"
+      - "guidance system"
+      - "missile"
+      - "warhead"
+      - "restricted data"

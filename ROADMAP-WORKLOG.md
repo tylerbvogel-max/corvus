@@ -8,10 +8,11 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 
 ## Current position
 
-**Phase:** Phase 1 — Dual-purpose foundations
+**Phase:** Phase 1.5 code shipped — verification pending on each sub-item
 **Completed items:** #1 Action bus, #2 Bidirectional lineage + score overrides
-**Next item:** #3 Evals as immutable, first-class artifacts
-**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below.
+**Active items (code written, walking verification checklists):** #7 Runtime output policy gates, GTM-A external `/v1/query`, GTM-B remote MCP HTTP+SSE. Checklists live on the `gov-aip-p1_5` node in `master-corvus/public/roadmap-state.json` and on each pattern card in `AIPGovernanceRoadmap.tsx` — walk them before flipping to `done`.
+**Next item:** after Phase 1.5 verification closes, #3 Evals as immutable, first-class artifacts (returning to Phase 1 sequence).
+**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below. Phase 1.5 was pulled ahead of #3 in this session on explicit user direction ("we have to get all of it eventually, ready to go").
 
 ## Revised sequencing (2026-04-12)
 
@@ -24,14 +25,15 @@ The three-leg GTM pivot (tool-call endpoint + remote MCP + admin UI, detailed in
 
 ## Next session starts here
 
-> Pattern #2 complete. Next: Pattern #3 (immutable eval artifacts), then Pattern #7 (output gates), then GTM Surfaces (tool-call endpoint + remote MCP).
+> Phase 1.5 complete — Pattern #7 + GTM-A + GTM-B shipped together. Next: Pattern #3 (immutable eval artifacts). After #3, the sequencing returns to Phase 2a/2b per the roadmap tree; re-evaluate when customer traffic lands because real-world data from #7 + GTM-A may reshape priorities.
 >
 > Read this worklog, then read `~/.claude/plans/staged-booping-globe.md` for full context. Begin scoping Pattern #3 by:
 >
 > 1. Read `backend/app/models.py` — `EvalScore` exists but slot results are JSON blobs in `Query.results_json`. No frozen eval run artifact.
 > 2. Design an `EvalRun` table that snapshots {query set, model versions, scoring-engine version, results, verdicts}. Append-only.
 > 3. The `NeuronScoreOverride` system (added in Pattern #2) gives manual tuning levers — eval runs should capture which overrides were active at run time.
-> 4. Every eval run gets an immutable ID — this becomes the `eval_run_id` that pairs with `lineage_id` in tool-call / MCP responses, making "here is what certified this answer's pipeline" an auditable claim.
+> 4. Every eval run gets an immutable ID — this becomes the `eval_run_id` that pairs with `lineage_id` in `/v1/query` responses (`V1QueryResponse.eval_run_id` is already reserved as `None` — just needs populating), making "here is what certified this answer's pipeline" an auditable claim.
+> 5. `OutputViolation` rows produced by Pattern #7 are a natural input for eval-run scoring — a run that produced N `block`-severity violations on a canary set should be visible in the EvalRun summary.
 
 ## Checklist
 
@@ -40,11 +42,11 @@ The three-leg GTM pivot (tool-call endpoint + remote MCP + admin UI, detailed in
 - [DONE] #2 Bidirectional lineage / active provenance graph
 - [ ] #3 Evals as immutable, first-class artifacts ← **NEXT**
 
-### Phase 1.5 — GTM gate (NEW, 2026-04-12)
-These unlock shipping tool-call and MCP surfaces externally. Ordered.
-- [ ] #7 Runtime output policy gates (moved up from Phase 2a)
-- [ ] GTM-A: External tool-call endpoint hardening (`/v1/query` with auth, rate limiting, streaming, `{answer, citations, lineage_id, eval_run_id}` response contract)
-- [ ] GTM-B: Remote MCP server (HTTP+SSE transport + OAuth2 on top of existing stdio `.mcp.json`)
+### Phase 1.5 — GTM gate (NEW, 2026-04-12; code shipped 2026-04-13, verification pending)
+These unlock shipping tool-call and MCP surfaces externally. Ordered. Code is written; each sub-item flips to `DONE` only after its verification checklist on the roadmap flowchart node (`gov-aip-p1_5` in `master-corvus/public/roadmap-state.json`) passes end-to-end.
+- [ACTIVE] #7 Runtime output policy gates (moved up from Phase 2a) — code shipped, verification checklist queued
+- [ACTIVE] GTM-A: External tool-call endpoint hardening (`/v1/query` with auth, rate limiting, `{answer, fragment_labels, fragments, lineage_id, eval_run_id, blocked, violations}` response contract) — code shipped, verification checklist queued
+- [ACTIVE] GTM-B: Remote MCP server (HTTP+SSE transport via `StreamableHTTPSessionManager`; RBAC gate reused from `/v1/query`) — code shipped, verification checklist queued
 
 ### Phase 2a — Defense-sale track
 Pull forward if customer conversation / ATO question / classified-data requirement surfaces.
@@ -182,3 +184,49 @@ Pull forward if pipeline iteration speed is the near-term pain.
   - Added two non-AIP items as "GTM Surfaces": GTM-A (external tool-call endpoint `/v1/query`) and GTM-B (remote MCP transport + OAuth2). Both are infrastructure, gated by Patterns #2 and #7.
   - Pattern #3 remains next. After #3, sequence is #7 → GTM-A → GTM-B → Phase 2a/2b.
 - **Files updated:** `ROADMAP-WORKLOG.md` (this file, checklist + next-session block), `~/.claude/plans/staged-booping-globe.md` (appended re-sequencing note), `master-corvus/src/components/system-docs/AIPGovernanceRoadmap.tsx` (new Phase 1.5 panel, GTM-Surfaces section, status indicators on every step).
+
+### 2026-04-13 — Phase 1.5 delivered: #7 + GTM-A + GTM-B in one session
+
+User directive: "Lets kick off with all in the priority you deem to result in the best quality output. We have to get all of it eventually, ready to go." Three items shipped together in the planned order (#7 → GTM-A → GTM-B) so the external surfaces land with gates already in place.
+
+**Pattern #7 — Runtime output policy gates.** New `OutputViolation` model + Alembic migration `009_add_output_violations.py`. New `app.governance` package:
+- `policies/__init__.py` with `PolicyContext`, `OutputRuleDraft`, and `OutputPolicy` protocol
+- `policies/citation.py` — flags answers with zero `NeuronFiring.was_included=True` rows
+- `policies/pii.py` — regex-based email/SSN/phone detection with redaction spans
+- `policies/export_control.py` — tenant-configurable ITAR/EAR keyword block list
+- `output_guard.py::run_guards(db, query_id, response_text, firings, actor)` — orchestrator that runs all enabled policies, applies redactions in-order, persists `OutputViolation` rows, and submits one `output.policy.check` action per invocation
+- Wired into `routers/query.py` via `_run_output_gate(db, result, identity)` called right after `execute_query` — legacy `OutputCheckOut` eval-only path preserved alongside as `_legacy_output_checks`
+- Per-tenant config via new `tenant.output_policies` property that reads `output_policies:` block from `tenant.yaml` (empty = all disabled)
+- New `output.policy.check` action kind registered in `init_actions_registry()` — every guard run produces an audit row regardless of outcome
+
+**GTM-A — External `/v1/query`.** New `routers/v1.py` behind `require_role("reader")`:
+- `V1QueryRequest` / `V1ContextFragment` / `V1QueryResponse` schemas in `schemas.py`
+- In-memory token-bucket rate limiter at `middleware/rate_limit.py` (`_MAX_KEYS=4096` JPL-2 bound, OrderedDict LRU, `asyncio.Lock`, `time.monotonic`)
+- Per-tenant+user rate key `f"{tenant_id}|{user_id}"`; 429 on exhaustion
+- `compact` mode returns `{answer, fragment_labels, lineage_id, eval_run_id, blocked, violations}`; `full` mode adds `fragments[]` with `neuron_id`, `label`, `snippet`, `source`, `combined_score`
+- `lineage_id` = `NeuronFiring`-backed `query_id` from the executor; `eval_run_id` reserved as `None` until Pattern #3
+- Reuses `_apply_output_guards` from `routers/query.py` via lazy import; blocking violations surface as HTTP 422 with `blocking_violations[]` so callers can treat them as hard failures
+- New settings: `v1_rate_limit_capacity=30`, `v1_rate_limit_refill_per_sec=0.5`
+- `_run_v1_pipeline` extracted as helper to stay under the JPL-4 60-line guideline
+
+**GTM-B — Remote MCP HTTP+SSE.** New `app/mcp_http.py`:
+- `session_manager = StreamableHTTPSessionManager(app=mcp._mcp_server, stateless=True, json_response=False)` — stateless mode so multi-worker deploys don't need sticky sessions
+- `mcp_lifespan()` asynccontextmanager slotted into `app.main.lifespan` (SDK requires `session_manager.run()` be called exactly once)
+- `MCPAsgiEndpoint` class with `async __call__(scope, receive, send)` — implemented as a class (not a function) so Starlette's `Route` detection treats it as a raw ASGI app rather than wrapping it via `request_response()`
+- Mounted via `app.mount("/mcp", mcp_asgi_endpoint)` in `main.py`; RBAC gate via `_reader_identity_or_none(request)` before delegating to `session_manager.handle_request`
+- `/mcp` (no trailing slash) → `RedirectResponse` 307 to `/mcp/` so both URLs work (Starlette `Mount` only matches the trailing-slash form)
+- `_api_prefixes` in `main.py` extended with `"/v1"` and `"/mcp"` so the SPA catch-all doesn't intercept them
+
+**Verification.**
+- `backend/tests/test_output_guard.py` — 8 tests covering citation/PII/export_control policies plus the `run_guards` orchestrator (redact mutation, audit submission). All pass in 0.71s.
+- Live smoke: `POST /v1/query` with a prompt matching the tenant's export-control term list returns HTTP 422 with `blocking_violations`; `POST /mcp/` `initialize` returns server capabilities; `tools/list` returns all 7 Corvus tools; bare `/mcp` returns 307 to `/mcp/`.
+- NASA linter: strict checks pass on every new file. Guideline warnings only on pre-existing `query.py` functions untouched in this session.
+
+**Phase 1.5 limitations (intentional).**
+- `rate_limit.py` is in-memory per-process — fine for single-worker dev, will need Redis when we scale horizontally.
+- OAuth2/JWT validation in `middleware/rbac.py` still depends on existing `azure_ad` mode; no new identity-provider code was added (deferred until customer #1's IdP is known — likely Azure AD GovCloud).
+- Progressive tool disclosure for GTM-B (`corvus_catalog` as single entry tool) is deferred — all 7 tools are exposed in the HTTP transport just as they are in stdio.
+- `eval_run_id` in `V1QueryResponse` is always `None` until Pattern #3 lands.
+
+**Files updated.** `backend/app/models.py`, `backend/app/config.py`, `backend/app/schemas.py`, `backend/app/main.py`, `backend/app/tenant.py`, `backend/app/routers/query.py`, `backend/app/services/actions/__init__.py`, `backend/tenants/corvus-aero/tenant.yaml`, `master-corvus/src/components/system-docs/AIPGovernanceRoadmap.tsx` (#7, GTM-A, GTM-B statuses flipped `pending` → `done`).
+**Files added.** `backend/app/governance/` (package), `backend/app/routers/v1.py`, `backend/app/middleware/rate_limit.py`, `backend/app/mcp_http.py`, `backend/app/services/actions/output_policy_check.py`, `backend/alembic/versions/009_add_output_violations.py`, `backend/tests/test_output_guard.py`.

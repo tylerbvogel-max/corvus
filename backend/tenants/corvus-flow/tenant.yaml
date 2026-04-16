@@ -21,3 +21,18 @@ seed_prompts:
     text: "What type of backflow preventer do I need for a commercial irrigation connection?"
   - label: "Code compliance"
     text: "What are the IPC requirements for trap arm length on a 2-inch drain?"
+
+# Output policy gates (Pattern #7 — Phase 1.5 GTM).
+# Flow has no export-control surface; only citation + PII guards are active.
+output_policies:
+  citation:
+    enabled: true
+    min_citations: 1
+    action: flag
+    severity: warn
+  pii:
+    enabled: true
+    action: redact
+    severity: error
+  export_control:
+    enabled: false

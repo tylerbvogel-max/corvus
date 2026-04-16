@@ -118,9 +118,13 @@ export function useUrlSync<T extends Record<string, unknown>>(
     onRestore?: (restored: Partial<T>) => void;
     pushOnKeys?: (keyof T)[];
     debounceMs?: number;
+    /** Hash params outside the schema that writes must not strip (e.g. camera
+     *  coords managed by a separate interval). Read live from the URL on each
+     *  write and re-appended so they survive state-driven hash rewrites. */
+    preserveKeys?: string[];
   } = {},
 ) {
-  const { onRestore, pushOnKeys = [], debounceMs = 150 } = options;
+  const { onRestore, pushOnKeys = [], debounceMs = 150, preserveKeys = [] } = options;
   const restoredRef = useRef(false);
   const lastWrittenRef = useRef<string>('');
   const lastPushValsRef = useRef<Record<string, string | null>>({});
@@ -148,17 +152,30 @@ export function useUrlSync<T extends Record<string, unknown>>(
     if (!restoredRef.current) return;
     const handle = window.setTimeout(() => {
       const pairs = encodeAll(state, schema);
+      // Re-read and append any preserved (out-of-schema) params so we don't
+      // strip them on every state-driven write.
+      if (preserveKeys.length) {
+        const existing = parseHash(window.location.hash, namespace);
+        for (const k of preserveKeys) {
+          const v = existing.get(k);
+          if (v !== undefined) pairs.push([k, v]);
+        }
+      }
       const next = serialize(namespace, pairs);
       if (next === lastWrittenRef.current) return;
 
-      // Determine push vs replace based on pushOnKeys
+      // Determine push vs replace based on pushOnKeys. Skip push when the new
+      // value is null — transitioning *to* "no value" (e.g. deselect) should
+      // be a replace so back-button walks real state, not null bounces.
       const pushMap = new Map(pairs);
       const curPushVals: Record<string, string | null> = {};
       for (const k of pushOnKeys) curPushVals[String(k)] = pushMap.get(String(k)) ?? null;
 
       const prev = lastPushValsRef.current;
       const firstWrite = Object.keys(prev).length === 0;
-      const shouldPush = !firstWrite && pushOnKeys.some(k => prev[String(k)] !== curPushVals[String(k)]);
+      const shouldPush = !firstWrite && pushOnKeys.some(
+        k => prev[String(k)] !== curPushVals[String(k)] && curPushVals[String(k)] !== null
+      );
 
       if (shouldPush) window.history.pushState(null, '', next);
       else window.history.replaceState(null, '', next);

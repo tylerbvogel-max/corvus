@@ -590,7 +590,10 @@ async def lifespan(app: FastAPI):
     await _auto_embed_neurons()
     await _seed_engrams()
     await _seed_corvus_and_compliance()
-    yield
+    # AIP Phase 1.5 GTM-B: start remote MCP session manager
+    from app.mcp_http import mcp_lifespan
+    async with mcp_lifespan():
+        yield
 
 
 app = FastAPI(
@@ -668,6 +671,25 @@ from app.routers import fluent
 app.include_router(fluent.router)
 from app.routers import lineage
 app.include_router(lineage.router)
+from app.routers import v1
+app.include_router(v1.router)
+# AIP Phase 1.5 GTM-B: remote MCP transport at /mcp.
+# Mount as raw ASGI — the MCP session manager writes the full HTTP
+# response itself, so we cannot use a request-handler-style route
+# (would double-send). `app.mount` binds the path prefix to the ASGI
+# app directly without any request wrapping. Mount's path regex only
+# matches ``/mcp/`` (trailing slash + suffix), so we add a method-
+# agnostic 307 redirect from ``/mcp`` → ``/mcp/`` for MCP clients that
+# configure the bare URL.
+from fastapi.responses import RedirectResponse
+from app.mcp_http import mcp_asgi_endpoint
+app.mount("/mcp", mcp_asgi_endpoint)
+
+
+@app.api_route("/mcp", methods=["GET", "POST", "DELETE"], include_in_schema=False)
+async def _mcp_slash_redirect() -> RedirectResponse:
+    """Preserve method (307) when forwarding bare ``/mcp`` to ``/mcp/``."""
+    return RedirectResponse(url="/mcp/", status_code=307)
 
 
 @app.get("/tenant")
@@ -725,7 +747,7 @@ if frontend_dist.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
     # SPA catch-all — must NOT match API prefixes
-    _api_prefixes = ("/neurons", "/queries", "/query", "/context", "/eval-scores", "/admin", "/health", "/tenant", "/tenants", "/docs", "/openapi", "/ingest", "/corvus", "/models", "/chat", "/learning-analytics")
+    _api_prefixes = ("/neurons", "/queries", "/query", "/context", "/eval-scores", "/admin", "/health", "/tenant", "/tenants", "/docs", "/openapi", "/ingest", "/corvus", "/models", "/chat", "/learning-analytics", "/v1", "/mcp")
 
     def _is_api_path(path: str) -> bool:
         return bool(path) and any(path.startswith(p.lstrip("/")) for p in _api_prefixes)

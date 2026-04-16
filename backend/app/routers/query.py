@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.models import Query, NeuronFiring, Neuron, EvalScore, NeuronRefinement, SynapticLearningEvent
+from app.models import Query, NeuronFiring, Neuron, EvalScore, NeuronRefinement, SynapticLearningEvent, OutputViolation
 from app.schemas import (
     QueryRequest, QueryResponse, QuerySummary, QueryDetail, NeuronHit,
     EvalRequest, EvalResponse, EvalScoreOut, EvalScoreSummary,
@@ -16,8 +16,10 @@ from app.schemas import (
     RefineRequest, RefineResponse, NeuronUpdateSuggestion, NewNeuronSuggestion,
     ApplyRefineRequest, ApplyRefineResponse, RefinementOut,
     LearningEventOut, LearningAnalytics,
+    OutputViolationOut,
     SlotResult,  # For backward-compat: parsing legacy multi-slot query data
 )
+from app.governance.output_guard import GuardResult, run_guards
 from app.services.executor import execute_query, prepare_context
 from app.services.llm_provider import llm_chat, estimate_cost, MODEL_REGISTRY
 from app.services import action_bus
@@ -371,11 +373,138 @@ async def get_query_detail(query_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 
+async def _load_included_firings(
+    db: AsyncSession, query_id: int,
+) -> list[NeuronFiring]:
+    """Fetch NeuronFiring rows for a query so output policies can inspect them."""
+    result = await db.execute(
+        select(NeuronFiring).where(NeuronFiring.query_id == query_id)
+    )
+    return list(result.scalars())
+
+
+def _violation_to_out(row: OutputViolation) -> OutputViolationOut:
+    """Serialize a persisted OutputViolation row for the API response."""
+    return OutputViolationOut(
+        id=row.id,
+        rule_id=row.rule_id,
+        severity=row.severity,
+        action=row.action,
+        matched_span=row.matched_span,
+        redaction=row.redaction,
+        detail=row.detail,
+    )
+
+
+async def _apply_output_guards(
+    db: AsyncSession,
+    query_id: int,
+    slots: list[dict],
+    actor: UserIdentity,
+) -> tuple[list[OutputViolationOut], bool]:
+    """Run Pattern #7 output policies against every slot's response.
+
+    Returns ``(violations_out, blocked)``. Redactions are applied in place
+    to each slot's ``response`` field AND mirrored onto the persisted
+    ``queries.response_text`` / ``queries.opus_response_text`` columns
+    so the governed text — not the raw LLM output — is what remains on
+    the audit record. Caller owns the commit.
+    """
+    assert len(slots) <= 16, "slot count exceeds sanity cap (JPL-2)"
+    firings = await _load_included_firings(db, query_id)
+    out: list[OutputViolationOut] = []
+    blocked = False
+    query_row: Query | None = None
+    for slot in slots:
+        text = slot.get("response") or ""
+        if not text:
+            continue
+        guard: GuardResult = await run_guards(
+            db,
+            query_id=query_id,
+            response_text=text,
+            firings=firings,
+            actor=actor,
+        )
+        if guard.final_text != text:
+            slot["response"] = guard.final_text
+            # Mirror the redaction back onto the persisted Query row so
+            # queries.response_text reflects the governed text, not the
+            # raw LLM output. Load lazily to avoid a query when nothing
+            # is being redacted.
+            if query_row is None:
+                query_row = await db.get(Query, query_id)
+            if query_row is not None:
+                mode = slot.get("mode")
+                if mode == "haiku_neuron" and query_row.response_text == text:
+                    query_row.response_text = guard.final_text
+                elif mode == "opus_raw" and query_row.opus_response_text == text:
+                    query_row.opus_response_text = guard.final_text
+        out.extend(_violation_to_out(v) for v in guard.violations)
+        if guard.blocked:
+            blocked = True
+    return out, blocked
+
+
+async def _run_output_gate(
+    db: AsyncSession,
+    result: dict,
+    identity: UserIdentity,
+) -> None:
+    """Run Pattern #7 output policies; mutate ``result`` or raise 422.
+
+    Attaches ``result["output_violations"]`` for non-blocked runs; raises
+    ``HTTPException(422)`` if any policy had ``action="block"``.
+    """
+    query_id = result.get("query_id")
+    if query_id is None:
+        return
+    violations, blocked = await _apply_output_guards(
+        db, query_id, result.get("slots", []), identity,
+    )
+    await db.commit()  # persist violations + audit action regardless of block
+    result["output_violations"] = [v.model_dump() for v in violations]
+    if blocked:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Response blocked by output policy",
+                "blocking_violations": [
+                    v.model_dump() for v in violations if v.action == "block"
+                ],
+            },
+        )
+
+
+def _legacy_output_checks(result: dict) -> list[dict]:
+    """Risk-flag + grounding check on combined response text (legacy path)."""
+    response_text = result.get("response_text", "")
+    if not response_text:
+        return []
+    risk_flags = check_output_risk(response_text)
+    if result.get("neuron_scores"):
+        grounding = check_output_grounding(
+            response_text,
+            result.get("assembled_prompt"),
+        )
+    else:
+        grounding = {"grounded": None, "confidence": None, "reason": "No neuron context"}
+    return [{
+        "mode": "direct",
+        "risk_flags": risk_flags,
+        "grounding": grounding,
+    }]
+
+
 @router.post("/query", response_model=QueryResponse)
-async def post_query(req: QueryRequest, db: AsyncSession = Depends(get_db)):
+async def post_query(
+    req: QueryRequest,
+    db: AsyncSession = Depends(get_db),
+    identity: UserIdentity = Depends(resolve_identity),
+):
     """Execute a query through the neuron pipeline.
 
-    classify → score → assemble → execute (per-slot, parallel).
+    classify → score → assemble → execute (per-slot, parallel) → output gate.
     """
     # JPL Rule 5: message must be non-empty (defense-in-depth beyond Pydantic)
     assert req.message and req.message.strip(), "Query message must be non-empty"
@@ -392,11 +521,7 @@ async def post_query(req: QueryRequest, db: AsyncSession = Depends(get_db)):
         )
 
     try:
-        # Convert QuerySlotRequest list to dict list for executor
-        slot_dicts = None
-        if req.slots:
-            slot_dicts = [s.model_dump() for s in req.slots]
-
+        slot_dicts = [s.model_dump() for s in req.slots] if req.slots else None
         result = await execute_query(
             db, req.message,
             slots=slot_dicts,
@@ -409,24 +534,10 @@ async def post_query(req: QueryRequest, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query execution failed: {e}")
 
-    # ── Output Checks: risk tagging + grounding ──
-    output_checks: list[dict] = []
-    response_text = result.get("response_text", "")
-    if response_text:
-        risk_flags = check_output_risk(response_text)
-        grounding = check_output_grounding(
-            response_text,
-            result.get("assembled_prompt"),
-        ) if result.get("neuron_scores") else {"grounded": None, "confidence": None, "reason": "No neuron context"}
-        output_checks.append({
-            "mode": "direct",
-            "risk_flags": risk_flags,
-            "grounding": grounding,
-        })
+    await _run_output_gate(db, result, identity)
 
-    # Attach guard and output checks to response
     result["input_guard"] = guard_result.to_dict()
-    result["output_checks"] = output_checks
+    result["output_checks"] = _legacy_output_checks(result)
 
     return QueryResponse(**result)
 

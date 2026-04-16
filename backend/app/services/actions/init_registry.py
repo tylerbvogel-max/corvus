@@ -29,6 +29,10 @@ from app.services.actions.edge_link import (
     EdgeLinkInput,
     handle_edge_link,
 )
+from app.services.actions.output_policy_check import (
+    OutputPolicyCheckInput,
+    handle_output_policy_check,
+)
 
 
 def init_actions_registry() -> None:
@@ -67,5 +71,11 @@ def init_actions_registry() -> None:
         kind="edge.link",
         schema=EdgeLinkInput,
         handler=handle_edge_link,
+        requires_approval=False,
+    )
+    register_action(
+        kind="output.policy.check",
+        schema=OutputPolicyCheckInput,
+        handler=handle_output_policy_check,
         requires_approval=False,
     )

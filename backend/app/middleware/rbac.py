@@ -88,10 +88,19 @@ def _resolve_disabled(request: Request) -> UserIdentity:
 
 
 def _resolve_header(request: Request) -> UserIdentity:
-    """Header mode: read role from X-Corvus-Role header."""
-    role = request.headers.get("X-Corvus-Role", "admin").lower()
+    """Header mode: require X-Corvus-Role header; 401 if absent.
+
+    Previously this defaulted to ``admin`` when the header was missing,
+    which defeated the point of header-mode gating on externally-reachable
+    surfaces like ``/v1/query``. Missing/invalid role now rejects the
+    request outright.
+    """
+    raw = request.headers.get("X-Corvus-Role")
+    if raw is None:
+        raise HTTPException(status_code=401, detail="X-Corvus-Role header required")
+    role = raw.strip().lower()
     if role not in ROLE_LEVELS:
-        role = "reader"
+        raise HTTPException(status_code=401, detail=f"Unknown role: {raw!r}")
     user_id = request.headers.get("X-Corvus-User", "dev-user")
     return UserIdentity(user_id=user_id, role=role, source="header")
 

@@ -55,7 +55,7 @@ export default function NeuronUniverse() {
   const [hideDisconnected, setHideDisconnected] = useState(true);
   const [deptFilter, setDeptFilter] = useState<string>('');
   const [conceptSpread, setConceptSpread] = useState(1200);
-  const [warpIntensity, setWarpIntensity] = useState(3);
+  const [warpIntensity, setWarpIntensity] = useState(4);
   const [bloomEnabled, setBloomEnabled] = useState(true);
   const [bfsDepth, setBfsDepth] = useState(2);
   // Refs so the force closures can read live values without re-registering
@@ -118,6 +118,8 @@ export default function NeuronUniverse() {
   // Fields round-trip through the hash `#universe?sel=...&dept=...&...`.
   // Selection is change-push (browser back/forward walks prior selections);
   // filter changes are replace (no history spam).
+  // `cam` is intentionally NOT in the schema — it's managed by a separate
+  // polling interval below (see preserveKeys on the useUrlSync call).
   const urlState = useMemo(() => ({
     sel: selectedNode?.id ?? null,
     dept: deptFilter,
@@ -130,7 +132,6 @@ export default function NeuronUniverse() {
     warp: warpIntensity,
     bloom: bloomEnabled,
     bfsDepth: bfsDepth,
-    cam: [] as number[],  // camera written on demand below
   }), [selectedNode, deptFilter, minWeight, maxEdges, colorBy, showEdges, hideDisconnected, conceptSpread, warpIntensity, bloomEnabled, bfsDepth]);
 
   const urlSchema: UrlSchema<typeof urlState> = {
@@ -145,7 +146,6 @@ export default function NeuronUniverse() {
     warp: codecs.num,
     bloom: codecs.bool,
     bfsDepth: codecs.int,
-    cam: codecs.numArray,
   };
 
   const handleRestore = useCallback((r: Partial<typeof urlState>) => {
@@ -158,7 +158,8 @@ export default function NeuronUniverse() {
     if (r.spread !== undefined) setConceptSpread(r.spread);
     if (r.warp !== undefined) setWarpIntensity(r.warp);
     if (r.bloom !== undefined) setBloomEnabled(r.bloom);
-    if (r.bfsDepth !== undefined) setBfsDepth(r.bfsDepth);
+    // Bounds-check defensive clamp — URL could carry any integer.
+    if (r.bfsDepth !== undefined) setBfsDepth(Math.max(2, Math.min(4, r.bfsDepth)));
     if (r.sel !== undefined) {
       if (r.sel === null) {
         setSelectedNode(null);
@@ -170,20 +171,30 @@ export default function NeuronUniverse() {
         pendingSelIdRef.current = r.sel;
       }
     }
-    if (r.cam !== undefined && Array.isArray(r.cam) && r.cam.length === 6) {
-      if (fgRef.current && !loading && neurons.length > 0) {
-        const [x, y, z, tx, ty, tz] = r.cam;
-        fgRef.current.cameraPosition?.({ x, y, z }, { x: tx, y: ty, z: tz }, 600);
-      } else {
-        pendingCamRef.current = r.cam;
-      }
-    }
-  }, [neurons, loading]);
+  }, [neurons]);
 
   useUrlSync('universe', urlState, urlSchema, {
     pushOnKeys: ['sel'],
+    preserveKeys: ['cam'],
     onRestore: handleRestore,
   });
+
+  // Parse the initial `cam` param directly from the hash on mount (it's not
+  // managed by useUrlSync). Stash into pendingCamRef; applied by the post-load
+  // zoom-to-fit effect once neurons are loaded.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#universe')) return;
+    const qIdx = hash.indexOf('?');
+    if (qIdx < 0) return;
+    const params = new URLSearchParams(hash.slice(qIdx + 1));
+    const camStr = params.get('cam');
+    if (!camStr) return;
+    const parts = camStr.split(',').map(s => parseFloat(s));
+    if (parts.length === 6 && parts.every(Number.isFinite)) {
+      pendingCamRef.current = parts;
+    }
+  }, []);
 
   // Write camera into the hash occasionally (on idle / when user stops interacting).
   // Polling every 2s is cheap and avoids listening to every mouse/wheel event.
@@ -281,14 +292,78 @@ export default function NeuronUniverse() {
     });
   }, [neurons, conceptTargets]);
 
-  // Build graph data for force-graph (applies dept filter + connectivity filter + dept gravity)
+  // Full adjacency map over the UNFILTERED edge set — selection BFS uses this
+  // so the "what relates to this?" subgraph can cross dept-filter boundaries.
+  // The filter is then overridden for display (see graphData below) to reveal
+  // everything the BFS reaches.
+  const fullAdjacencyMap = useMemo(() => {
+    const adj = new Map<number, Set<number>>();
+    for (const e of edges) {
+      if (!adj.has(e.source)) adj.set(e.source, new Set());
+      if (!adj.has(e.target)) adj.set(e.target, new Set());
+      adj.get(e.source)!.add(e.target);
+      adj.get(e.target)!.add(e.source);
+    }
+    return adj;
+  }, [edges]);
+
+  const conceptIdSet = useMemo(
+    () => new Set(neurons.filter(n => n.node_type === 'concept' && n.layer === -1).map(n => n.id)),
+    [neurons],
+  );
+
+  // BFS-bounded subgraph from the selected node. Concepts are terminals (their
+  // neighbors are not expanded) unless the selected root is itself a concept.
+  // Traverses the full adjacency so selection can pull in cofiring neurons
+  // outside the current dept filter.
+  const selectionBFS = useMemo(() => {
+    const result = new Map<number, number>();
+    if (!selectedNode) return result;
+    const rootId = selectedNode.id;
+    const rootIsConcept = conceptIdSet.has(rootId);
+    result.set(rootId, 0);
+    const queue: Array<[number, number]> = [[rootId, 0]];
+    while (queue.length) {
+      const [id, hop] = queue.shift()!;
+      if (hop >= bfsDepth) continue;
+      if (!rootIsConcept && id !== rootId && conceptIdSet.has(id)) continue;
+      const neighbors = fullAdjacencyMap.get(id);
+      if (!neighbors) continue;
+      for (const nb of neighbors) {
+        if (!result.has(nb)) {
+          result.set(nb, hop + 1);
+          queue.push([nb, hop + 1]);
+        }
+      }
+    }
+    return result;
+  }, [selectedNode, fullAdjacencyMap, bfsDepth, conceptIdSet]);
+
+  // Build graph data for force-graph (applies dept filter + connectivity filter
+  // + dept gravity). When a selection is active, nodes in the BFS subgraph are
+  // forced in regardless of dept filter so the "what relates to this?" view is
+  // complete.
   const graphData = useMemo(() => {
     if (!neuronsPositioned.length) return { nodes: [], links: [] };
 
     // Apply department filter: keep matching neurons + concept neurons (always visible)
-    const filtered = deptFilter
+    let filtered = deptFilter
       ? neuronsPositioned.filter(n => n.department === deptFilter || (n.node_type === 'concept' && n.layer === -1))
       : neuronsPositioned;
+
+    // Selection overrides filter: union in every BFS node that isn't already
+    // included. This is what makes selection "cross filter boundaries".
+    if (selectedNode && selectionBFS.size > 0 && deptFilter) {
+      const present = new Set(filtered.map(n => n.id));
+      const extras: GraphNode[] = [];
+      for (const id of selectionBFS.keys()) {
+        if (present.has(id)) continue;
+        const n = neuronsPositioned.find(x => x.id === id);
+        if (n) extras.push(n);
+      }
+      if (extras.length) filtered = filtered.concat(extras);
+    }
+
     const nodeIds = new Set(filtered.map(n => n.id));
 
     const links: GraphLink[] = edges
@@ -335,9 +410,11 @@ export default function NeuronUniverse() {
       connectedIds.add(typeof l.target === 'number' ? l.target : l.target.id);
     });
     return { nodes: filtered.filter(n => connectedIds.has(n.id)) as GraphNode[], links };
-  }, [neuronsPositioned, edges, hideDisconnected, deptFilter]);
+  }, [neuronsPositioned, edges, hideDisconnected, deptFilter, selectedNode, selectionBFS]);
 
-  // 1-hop adjacency map, excluding phantom gravity links. Used by A1/A2/B2.
+  // 1-hop adjacency map over the CURRENTLY-RENDERED graph (post dept filter,
+  // excluding phantom gravity links). Used by B2 hover-and-dim effects — they
+  // want "what's visibly connected right now", which is filter-aware.
   const adjacencyMap = useMemo(() => {
     const adj = new Map<number, Set<number>>();
     for (const link of graphData.links as GraphLink[]) {
@@ -351,36 +428,6 @@ export default function NeuronUniverse() {
     }
     return adj;
   }, [graphData]);
-
-  const conceptIdSet = useMemo(
-    () => new Set(neurons.filter(n => n.node_type === 'concept' && n.layer === -1).map(n => n.id)),
-    [neurons],
-  );
-
-  // BFS-bounded subgraph from the selected node. Concepts are terminals (their
-  // neighbors are not expanded) unless the selected root is itself a concept.
-  const selectionBFS = useMemo(() => {
-    const result = new Map<number, number>();
-    if (!selectedNode) return result;
-    const rootId = selectedNode.id;
-    const rootIsConcept = conceptIdSet.has(rootId);
-    result.set(rootId, 0);
-    const queue: Array<[number, number]> = [[rootId, 0]];
-    while (queue.length) {
-      const [id, hop] = queue.shift()!;
-      if (hop >= bfsDepth) continue;
-      if (!rootIsConcept && id !== rootId && conceptIdSet.has(id)) continue;
-      const neighbors = adjacencyMap.get(id);
-      if (!neighbors) continue;
-      for (const nb of neighbors) {
-        if (!result.has(nb)) {
-          result.set(nb, hop + 1);
-          queue.push([nb, hop + 1]);
-        }
-      }
-    }
-    return result;
-  }, [selectedNode, adjacencyMap, bfsDepth, conceptIdSet]);
 
   const layerColors = ['#2dd4bf', '#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#facc15'];
 
@@ -502,9 +549,12 @@ export default function NeuronUniverse() {
     </div>`;
   }, []);
 
-  // ── A1 dim-and-glow / B2 hover-preview dim ──
-  // Scales each material's opacity relative to its baseOpacity. Selection dim
-  // (0.10 on non-neighbors) wins over hover dim (0.35 on non-neighbors).
+  // ── A1 selection dim + B2 hover-preview dim ──
+  // Scales each material's opacity relative to its baseOpacity and toggles
+  // visibility per BFS hop tier. Selection hides out-of-set nodes entirely and
+  // scales in-set nodes by hop (root 1.4×, hop-1 1.25×, hop-2 1.10×, hop-3 1.0×)
+  // with matching opacity dimming. Hover path is the original non-neighbor 0.35
+  // dim, used only when nothing is selected.
   useEffect(() => {
     if (!graphData.nodes.length) return;
     const selId = selectedNode?.id ?? null;
@@ -548,11 +598,12 @@ export default function NeuronUniverse() {
   }, [selectedNode, hoveredNode, adjacencyMap, graphData, selectionBFS]);
 
   // ── A2 gravity warp ──
-  // On selection: link strength ×3 for incident edges, charge ×1.5 on non-neighbors
-  // (more repulsion away from the cluster). On deselect: restore originals and let
-  // the layout relax back. Only reheats on actual apply/restore transitions —
-  // never on initial mount or unrelated graphData changes (which would disrupt
-  // the initial force-directed warmup, especially under StrictMode double-invoke).
+  // On selection: link strength scales with warpIntensity for BFS-incident edges
+  // (b × warp) and √warp for other in-set edges; out-of-set links go to 0.
+  // Charge strength stays ~baseline for in-set nodes and is boosted ×1.5 on
+  // hidden nodes (cheap extra shove; they're invisible anyway). On deselect:
+  // restore originals and let the layout relax. Only reheats on actual apply/
+  // restore transitions — never on initial mount or unrelated graphData changes.
   useEffect(() => {
     const fg = fgRef.current;
     if (!fg || !graphData.nodes.length) return;
@@ -587,14 +638,17 @@ export default function NeuronUniverse() {
       );
       // On selection: only links fully inside the BFS subgraph retain any gravity.
       // Links touching hidden nodes go weightless so the subgraph settles on its
-      // own. Edges directly incident to the focus get the warp boost.
+      // own. Incident edges (hop 0↔1) get full warp pulling planets tight to the
+      // sun; outer-shell edges (hop 1↔2+) get sqrt(warp) so moons tag along with
+      // their planets rather than being yanked to the center.
       linkForce.strength((link: any) => {
         const src = typeof link.source === 'number' ? link.source : link.source?.id;
         const tgt = typeof link.target === 'number' ? link.target : link.target?.id;
         if (!selectionBFS.has(src) || !selectionBFS.has(tgt)) return 0;
         const incident = src === selId || tgt === selId;
         const b = baseLink(link);
-        return incident ? b * warpIntensityRef.current : b;
+        const w = warpIntensityRef.current;
+        return incident ? b * w : b * Math.sqrt(Math.max(1, w));
       });
       chargeForce.strength((node: any) => {
         const isNeighbor = node.id === selId || (selNeighbors && selNeighbors.has(node.id));
@@ -610,6 +664,76 @@ export default function NeuronUniverse() {
     }
     fg.d3ReheatSimulation?.();
   }, [selectedNode, adjacencyMap, graphData, warpIntensity, selectionBFS]);
+
+  // ── Focus pinning ──
+  // Pin the selected neuron at its current position so it behaves as a stable
+  // "sun". Release it on deselect. d3-force honors fx/fy/fz by skipping the
+  // usual velocity integration for that node. We track by id (not by node ref)
+  // so graphData re-renders that swap node object identity still unpin/re-pin
+  // the correct live node rather than mutating a stale reference.
+  const pinnedFocusIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const prevId = pinnedFocusIdRef.current;
+    if (prevId !== null) {
+      const stale: any = (graphData.nodes as GraphNode[]).find(n => n.id === prevId);
+      if (stale) { stale.fx = undefined; stale.fy = undefined; stale.fz = undefined; }
+      pinnedFocusIdRef.current = null;
+    }
+    if (!selectedNode) return;
+    const target: any = (graphData.nodes as GraphNode[]).find(n => n.id === selectedNode.id);
+    if (!target) return;
+    target.fx = target.x ?? 0;
+    target.fy = target.y ?? 0;
+    target.fz = target.z ?? 0;
+    pinnedFocusIdRef.current = selectedNode.id;
+  }, [selectedNode, graphData]);
+
+  // ── Solar pull ──
+  // Per-tick force pulling in-set nodes toward the pinned focus. Strength scales
+  // with (warp - 1) and 1/hop so hop-1 neighbors collapse into tight orbit while
+  // hop-2+ gets a gentler nudge and still orbits its local planet. At warp=1 this
+  // contributes nothing (baseline behavior preserved). Reads refs so slider ticks
+  // don't re-register the force.
+  const solarPullRef = useRef<{ selId: number | null; bfs: Map<number, number>; warp: number }>({
+    selId: null, bfs: new Map(), warp: 1,
+  });
+  useEffect(() => {
+    solarPullRef.current = {
+      selId: selectedNode?.id ?? null,
+      bfs: selectionBFS,
+      warp: warpIntensity,
+    };
+  }, [selectedNode, selectionBFS, warpIntensity]);
+
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || !graphData.nodes.length || !fg.d3Force) return;
+    let allNodes: any[] = [];
+    const force: any = (alpha: number) => {
+      const s = solarPullRef.current;
+      if (s.selId == null || s.warp <= 1) return;
+      const sun = allNodes.find(n => n.id === s.selId);
+      if (!sun) return;
+      const k = (s.warp - 1) * 0.008;  // tuned: warp=10 → k=0.072, noticeable collapse
+      const MAX_STEP = 5;
+      for (const n of allNodes) {
+        if (n.id === s.selId) continue;
+        const hop = s.bfs.get(n.id);
+        if (hop === undefined) continue;
+        const hopMul = 1 / hop;  // hop1:1.0, hop2:0.5, hop3:0.33
+        const dx = (sun.x ?? 0) - (n.x ?? 0);
+        const dy = (sun.y ?? 0) - (n.y ?? 0);
+        const dz = (sun.z ?? 0) - (n.z ?? 0);
+        const pull = k * hopMul * alpha;
+        const vx = dx * pull, vy = dy * pull, vz = dz * pull;
+        n.vx = (n.vx ?? 0) + Math.max(-MAX_STEP, Math.min(MAX_STEP, vx));
+        n.vy = (n.vy ?? 0) + Math.max(-MAX_STEP, Math.min(MAX_STEP, vy));
+        n.vz = (n.vz ?? 0) + Math.max(-MAX_STEP, Math.min(MAX_STEP, vz));
+      }
+    };
+    force.initialize = (nodes: any[]) => { allNodes = nodes; };
+    fg.d3Force('solarPull', force);
+  }, [graphData]);
 
   // ── Concept anti-gravity ──
   // Custom O(n²) repulsion force that only acts between concept neurons. The
@@ -828,31 +952,33 @@ export default function NeuronUniverse() {
     );
   }, [graphData]);
 
-  // Zoom to fit on first load
+  // Zoom to fit on first load. Under React StrictMode the effect double-invokes;
+  // we clear the previous timeout in cleanup so zoomToFit only runs once per
+  // real mount (avoiding a jarring second snap after the user has moved the cam).
   useEffect(() => {
-    if (!loading && fgRef.current && neurons.length > 0) {
-      setTimeout(() => {
-        // If a camera position is pending from URL restore, skip zoomToFit
-        if (pendingCamRef.current) {
-          const [x, y, z, tx, ty, tz] = pendingCamRef.current;
-          pendingCamRef.current = null;
-          fgRef.current?.cameraPosition?.(
-            { x, y, z },
-            { x: tx, y: ty, z: tz },
-            0,
-          );
-        } else {
-          fgRef.current?.zoomToFit?.(800, 60);
-        }
-        // Apply pending selection if any
-        if (pendingSelIdRef.current !== null) {
-          const id = pendingSelIdRef.current;
-          pendingSelIdRef.current = null;
-          const node = neurons.find(n => n.id === id) || null;
-          if (node) setSelectedNode(node);
-        }
-      }, 2000);
-    }
+    if (loading || !fgRef.current || neurons.length === 0) return;
+    const handle = window.setTimeout(() => {
+      // If a camera position is pending from URL restore, skip zoomToFit
+      if (pendingCamRef.current) {
+        const [x, y, z, tx, ty, tz] = pendingCamRef.current;
+        pendingCamRef.current = null;
+        fgRef.current?.cameraPosition?.(
+          { x, y, z },
+          { x: tx, y: ty, z: tz },
+          0,
+        );
+      } else {
+        fgRef.current?.zoomToFit?.(800, 60);
+      }
+      // Apply pending selection if any
+      if (pendingSelIdRef.current !== null) {
+        const id = pendingSelIdRef.current;
+        pendingSelIdRef.current = null;
+        const node = neurons.find(n => n.id === id) || null;
+        if (node) setSelectedNode(node);
+      }
+    }, 2000);
+    return () => window.clearTimeout(handle);
   }, [loading, neurons]);
 
   // Stats
@@ -1009,7 +1135,7 @@ export default function NeuronUniverse() {
         <label style={{ display: 'block', marginBottom: 8, fontSize: '0.75rem', color: '#c8d0dc' }}>
           Selection warp: {warpIntensity.toFixed(1)}×
           <input
-            type="range" min={1} max={6} step={0.5} value={warpIntensity}
+            type="range" min={1} max={10} step={0.5} value={warpIntensity}
             onChange={e => setWarpIntensity(parseFloat(e.target.value))}
             style={{ width: '100%', marginTop: 4 }}
           />

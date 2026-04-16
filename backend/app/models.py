@@ -829,3 +829,47 @@ class Action(Base):
     )
 
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class OutputViolation(Base):
+    """Runtime policy-gate violation record.
+
+    Written once per (query, rule) match when an output_guard policy flags
+    the LLM response at generation time. Distinct from OutputCheckOut
+    (eval-time, advisory) — these are load-bearing: ``action="block"``
+    halts the response (422), ``redact`` mutates it in place, ``flag``
+    attaches for auditor review without altering the answer.
+
+    Pattern #7 — Runtime output policy gates (Phase 1.5 GTM gate).
+    """
+
+    __tablename__ = "output_violations"
+    __table_args__ = (
+        Index("ix_output_violations_query_severity", "query_id", "severity"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Provenance
+    query_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("queries.id"), nullable=True, index=True,
+    )
+
+    # Policy identity
+    rule_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    severity: Mapped[str] = mapped_column(String(20), nullable=False)
+    # "info" | "warn" | "error" | "critical"
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
+    # "flag" | "redact" | "block"
+
+    # What matched + optional structured detail
+    matched_span: Mapped[str | None] = mapped_column(Text, nullable=True)
+    redaction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    detail: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Audit link to the action_bus "output.policy.check" call
+    action_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("actions.id"), nullable=True, index=True,
+    )
+
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())

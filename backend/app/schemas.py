@@ -70,6 +70,18 @@ class OutputCheckOut(BaseModel):
     grounding: GroundingOut | None = None
 
 
+class OutputViolationOut(BaseModel):
+    """Serialized runtime policy-gate violation (Pattern #7)."""
+
+    id: int
+    rule_id: str
+    severity: str
+    action: str
+    matched_span: str | None = None
+    redaction: str | None = None
+    detail: dict | None = None
+
+
 class QueryResponse(BaseModel):
     query_id: int
     intent: str | None = None
@@ -85,6 +97,7 @@ class QueryResponse(BaseModel):
     total_cost: float = 0
     input_guard: InputGuardOut | None = None
     output_checks: list[OutputCheckOut] = []
+    output_violations: list[OutputViolationOut] = []
 
 
 class EvalRequest(BaseModel):
@@ -516,3 +529,42 @@ class ObservationBatchEvalRequest(BaseModel):
 class ObservationApplyRequest(BaseModel):
     update_indices: list[int] = []
     new_neuron_indices: list[int] = []
+
+
+# ── GTM-A external /v1/query contract ─────────────────────────────────
+
+class V1QueryRequest(BaseModel):
+    """Request DTO for the hardened external ``POST /v1/query`` endpoint."""
+
+    message: str = Field(..., min_length=1, max_length=5000)
+    mode: str = Field("compact", pattern="^(compact|full)$")
+    token_budget: int = Field(8000, ge=1000, le=32000)
+    top_k: int = Field(60, ge=1, le=500)
+
+
+class V1ContextFragment(BaseModel):
+    """One retrieved neuron as exposed to an external LLM frontend."""
+
+    neuron_id: int
+    label: str
+    snippet: str
+    source: str | None = None  # department / role_key hint
+    combined_score: float = 0.0
+
+
+class V1QueryResponse(BaseModel):
+    """Formal contract returned by ``POST /v1/query`` (compact or full).
+
+    ``fragments`` is populated only when ``mode='full'``. ``lineage_id``
+    is the underlying ``Query.id`` — every ``NeuronFiring`` with this
+    ``query_id`` reconstructs the full provenance trail. ``eval_run_id``
+    is reserved for Pattern #3 and is ``None`` today.
+    """
+
+    answer: str
+    fragment_labels: list[str] = []
+    fragments: list[V1ContextFragment] = []
+    lineage_id: int
+    eval_run_id: int | None = None
+    blocked: bool = False
+    violations: list[OutputViolationOut] = []
