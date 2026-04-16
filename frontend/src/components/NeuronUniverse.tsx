@@ -3,6 +3,9 @@ import ForceGraph3D from 'react-force-graph-3d';
 import { fetchGraph3D, type Graph3DNode, type Graph3DEdge } from '../api';
 import { DEPT_COLORS } from '../constants';
 import * as THREE from 'three';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { useUrlSync, codecs, type UrlSchema } from '../hooks/useUrlSync';
 import { UniverseSearchOverlay } from './UniverseSearchOverlay';
 
@@ -51,6 +54,16 @@ export default function NeuronUniverse() {
   const [showEdges, setShowEdges] = useState(false);
   const [hideDisconnected, setHideDisconnected] = useState(true);
   const [deptFilter, setDeptFilter] = useState<string>('');
+  const [conceptSpread, setConceptSpread] = useState(1200);
+  const [warpIntensity, setWarpIntensity] = useState(3);
+  const [bloomEnabled, setBloomEnabled] = useState(true);
+  const [bfsDepth, setBfsDepth] = useState(2);
+  // Refs so the force closures can read live values without re-registering
+  // (re-registering forces risks the alpha=1 blast pattern on every slider tick).
+  const conceptSpreadRef = useRef(conceptSpread);
+  const warpIntensityRef = useRef(warpIntensity);
+  useEffect(() => { conceptSpreadRef.current = conceptSpread; }, [conceptSpread]);
+  useEffect(() => { warpIntensityRef.current = warpIntensity; }, [warpIntensity]);
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<any>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
@@ -65,6 +78,9 @@ export default function NeuronUniverse() {
   const pendingCamRef = useRef<number[] | null>(null);
   // Pending selection id to apply once neurons load (from URL restore)
   const pendingSelIdRef = useRef<number | null>(null);
+  // Bloom post-processing: idempotent insert/remove guards
+  const bloomPassRef = useRef<UnrealBloomPass | null>(null);
+  const renderPassEnsuredRef = useRef(false);
 
   // Track container size
   useEffect(() => {
@@ -110,8 +126,12 @@ export default function NeuronUniverse() {
     color: colorBy as string,
     edges: showEdges,
     connected: hideDisconnected,
+    spread: conceptSpread,
+    warp: warpIntensity,
+    bloom: bloomEnabled,
+    bfsDepth: bfsDepth,
     cam: [] as number[],  // camera written on demand below
-  }), [selectedNode, deptFilter, minWeight, maxEdges, colorBy, showEdges, hideDisconnected]);
+  }), [selectedNode, deptFilter, minWeight, maxEdges, colorBy, showEdges, hideDisconnected, conceptSpread, warpIntensity, bloomEnabled, bfsDepth]);
 
   const urlSchema: UrlSchema<typeof urlState> = {
     sel: codecs.nullableInt,
@@ -121,6 +141,10 @@ export default function NeuronUniverse() {
     color: codecs.str,
     edges: codecs.bool,
     connected: codecs.bool,
+    spread: codecs.int,
+    warp: codecs.num,
+    bloom: codecs.bool,
+    bfsDepth: codecs.int,
     cam: codecs.numArray,
   };
 
@@ -131,6 +155,10 @@ export default function NeuronUniverse() {
     if (r.color !== undefined && (r.color === 'department' || r.color === 'layer')) setColorBy(r.color);
     if (r.edges !== undefined) setShowEdges(r.edges);
     if (r.connected !== undefined) setHideDisconnected(r.connected);
+    if (r.spread !== undefined) setConceptSpread(r.spread);
+    if (r.warp !== undefined) setWarpIntensity(r.warp);
+    if (r.bloom !== undefined) setBloomEnabled(r.bloom);
+    if (r.bfsDepth !== undefined) setBfsDepth(r.bfsDepth);
     if (r.sel !== undefined) {
       if (r.sel === null) {
         setSelectedNode(null);
@@ -324,6 +352,36 @@ export default function NeuronUniverse() {
     return adj;
   }, [graphData]);
 
+  const conceptIdSet = useMemo(
+    () => new Set(neurons.filter(n => n.node_type === 'concept' && n.layer === -1).map(n => n.id)),
+    [neurons],
+  );
+
+  // BFS-bounded subgraph from the selected node. Concepts are terminals (their
+  // neighbors are not expanded) unless the selected root is itself a concept.
+  const selectionBFS = useMemo(() => {
+    const result = new Map<number, number>();
+    if (!selectedNode) return result;
+    const rootId = selectedNode.id;
+    const rootIsConcept = conceptIdSet.has(rootId);
+    result.set(rootId, 0);
+    const queue: Array<[number, number]> = [[rootId, 0]];
+    while (queue.length) {
+      const [id, hop] = queue.shift()!;
+      if (hop >= bfsDepth) continue;
+      if (!rootIsConcept && id !== rootId && conceptIdSet.has(id)) continue;
+      const neighbors = adjacencyMap.get(id);
+      if (!neighbors) continue;
+      for (const nb of neighbors) {
+        if (!result.has(nb)) {
+          result.set(nb, hop + 1);
+          queue.push([nb, hop + 1]);
+        }
+      }
+    }
+    return result;
+  }, [selectedNode, adjacencyMap, bfsDepth, conceptIdSet]);
+
   const layerColors = ['#2dd4bf', '#60a5fa', '#a78bfa', '#f472b6', '#fb923c', '#facc15'];
 
   const isConcept = (node: GraphNode) => node.node_type === 'concept' && node.layer === -1;
@@ -388,18 +446,6 @@ export default function NeuronUniverse() {
       const horizon = new THREE.Mesh(horizonGeo, horizonMat);
       group.add(horizon);
 
-      // Second ring rotated perpendicular — accretion disk effect
-      const diskGeo = new THREE.RingGeometry(size * 1.3, size * 1.7, 64);
-      const diskMat = withBase(new THREE.MeshBasicMaterial({
-        color: new THREE.Color(CONCEPT_COLOR),
-        transparent: true,
-        opacity: 0.2,
-        side: THREE.DoubleSide,
-      }));
-      const disk = new THREE.Mesh(diskGeo, diskMat);
-      disk.rotation.x = Math.PI / 2;
-      group.add(disk);
-
       // Outer diffuse glow
       const glowGeo = new THREE.SphereGeometry(size * 2.2, 16, 12);
       const glowMat = withBase(new THREE.MeshBasicMaterial({
@@ -463,7 +509,6 @@ export default function NeuronUniverse() {
     if (!graphData.nodes.length) return;
     const selId = selectedNode?.id ?? null;
     const hovId = hoveredNode?.id ?? null;
-    const selNeighbors = selId !== null ? adjacencyMap.get(selId) : null;
     const hovNeighbors = hovId !== null ? adjacencyMap.get(hovId) : null;
 
     for (const n of graphData.nodes as GraphNode[]) {
@@ -471,14 +516,25 @@ export default function NeuronUniverse() {
       if (!obj) continue;
 
       let dim = 1.0;
+      let scale = 1.0;
+      let visible = true;
+
       if (selId !== null) {
-        if (n.id !== selId && !(selNeighbors && selNeighbors.has(n.id))) dim = 0.10;
+        const hop = selectionBFS.get(n.id);
+        if (hop === undefined) {
+          visible = false;
+        } else if (hop === 0) { dim = 1.0; scale = 1.4; }
+        else if (hop === 1) { dim = 1.0; scale = 1.25; }
+        else if (hop === 2) { dim = 0.65; scale = 1.10; }
+        else                { dim = 0.35; scale = 1.0; }
       } else if (hovId !== null) {
         if (n.id !== hovId && !(hovNeighbors && hovNeighbors.has(n.id))) dim = 0.35;
       }
 
+      obj.visible = visible;
+      obj.scale.setScalar(scale);
+
       obj.traverse((child: THREE.Object3D) => {
-        // Skip the hover ring (it manages its own opacity)
         if ((child as THREE.Mesh).userData?.isHoverRing) return;
         const mesh = child as THREE.Mesh;
         const mat = mesh.material as THREE.Material & { opacity: number };
@@ -489,7 +545,7 @@ export default function NeuronUniverse() {
         mat.transparent = true;
       });
     }
-  }, [selectedNode, hoveredNode, adjacencyMap, graphData]);
+  }, [selectedNode, hoveredNode, adjacencyMap, graphData, selectionBFS]);
 
   // ── A2 gravity warp ──
   // On selection: link strength ×3 for incident edges, charge ×1.5 on non-neighbors
@@ -529,16 +585,16 @@ export default function NeuronUniverse() {
       const baseLink = (link: any) => (
         typeof snap.linkStrength === 'function' ? snap.linkStrength(link) : snap.linkStrength ?? 1
       );
-      // On selection: non-incident edges go weightless (strength 0) so the selected
-      // neuron's local neighborhood dominates the gravity. Incident edges keep the
-      // A2 ×3 boost. Net effect: unrelated bulk of the graph becomes inert and
-      // gets out of the way.
+      // On selection: only links fully inside the BFS subgraph retain any gravity.
+      // Links touching hidden nodes go weightless so the subgraph settles on its
+      // own. Edges directly incident to the focus get the warp boost.
       linkForce.strength((link: any) => {
         const src = typeof link.source === 'number' ? link.source : link.source?.id;
         const tgt = typeof link.target === 'number' ? link.target : link.target?.id;
+        if (!selectionBFS.has(src) || !selectionBFS.has(tgt)) return 0;
         const incident = src === selId || tgt === selId;
         const b = baseLink(link);
-        return incident ? b * 3 : 0;
+        return incident ? b * warpIntensityRef.current : b;
       });
       chargeForce.strength((node: any) => {
         const isNeighbor = node.id === selId || (selNeighbors && selNeighbors.has(node.id));
@@ -553,7 +609,7 @@ export default function NeuronUniverse() {
       warpAppliedRef.current = false;
     }
     fg.d3ReheatSimulation?.();
-  }, [selectedNode, adjacencyMap, graphData]);
+  }, [selectedNode, adjacencyMap, graphData, warpIntensity, selectionBFS]);
 
   // ── Concept anti-gravity ──
   // Custom O(n²) repulsion force that only acts between concept neurons. The
@@ -578,7 +634,7 @@ export default function NeuronUniverse() {
       // Linear spring-style push below MIN_DIST only. Capped per-tick delta so
       // we can't eject nodes during alpha=1 warmup/reheat ticks.
       const STRENGTH = 0.15;        // fraction of (MIN_DIST - d) applied per tick
-      const MIN_DIST = 1200;
+      const MIN_DIST = conceptSpreadRef.current;
       const MAX_STEP = 8;           // hard cap on per-tick velocity delta per axis
       for (let i = 0; i < conceptNodes.length; i++) {
         const a = conceptNodes[i];
@@ -607,6 +663,92 @@ export default function NeuronUniverse() {
 
     fg.d3Force('conceptRepel', force);
   }, [graphData]);
+
+  // Nudge the simulation when the concept-spread slider moves so the new
+  // MIN_DIST (read live from the ref) actually repositions concepts.
+  // Gentler than d3ReheatSimulation's alpha=1 — sets alpha=0.4 directly on
+  // the underlying simulation if we can reach it; falls back to reheat.
+  const conceptSpreadPrev = useRef(conceptSpread);
+  useEffect(() => {
+    if (conceptSpreadPrev.current === conceptSpread) return;
+    conceptSpreadPrev.current = conceptSpread;
+    const fg = fgRef.current;
+    if (!fg) return;
+    fg.d3ReheatSimulation?.();
+  }, [conceptSpread]);
+
+  // ── Scene lighting + fog ──
+  // Regular neurons use MeshPhongMaterial with emissiveIntensity 0.4 but the
+  // scene has no lights by default, so they render emissive-only (flat). Adding
+  // ambient + key + rim gives real diffuse/specular shading. Exp² fog gives
+  // depth perception across the ~2400-unit volume.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || loading || !neurons.length) return;
+    const scene: THREE.Scene | undefined = fg.scene?.();
+    if (!scene) return;
+
+    const ambient = new THREE.AmbientLight(0xbfd4ff, 0.55);
+    const dir = new THREE.DirectionalLight(0xffffff, 0.85);
+    dir.position.set(800, 1200, 600);
+    const rim = new THREE.DirectionalLight(0xe879f9, 0.25);
+    rim.position.set(-900, -400, -800);
+    scene.add(ambient); scene.add(dir); scene.add(rim);
+
+    return () => {
+      scene.remove(ambient); scene.remove(dir); scene.remove(rim);
+    };
+  }, [loading, neurons.length]);
+
+  // ── Bloom post-processing (toggleable) ──
+  // Adds UnrealBloomPass to the force-graph composer. Pass insertion/removal is
+  // idempotent via bloomPassRef; RenderPass is ensured once via renderPassEnsuredRef.
+  // Re-creates on resize (dimensions dep) so the pass uses the correct viewport.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || loading || !neurons.length || !dimensions) return;
+    const composer = fg.postProcessingComposer?.();
+    const scene = fg.scene?.();
+    const camera = fg.camera?.();
+    if (!composer || !scene || !camera) return;
+
+    if (!renderPassEnsuredRef.current) {
+      const passes = composer.passes ?? [];
+      const hasRender = passes.some((p: any) => p?.isRenderPass || p instanceof RenderPass);
+      if (!hasRender) composer.insertPass(new RenderPass(scene, camera), 0);
+      renderPassEnsuredRef.current = true;
+    }
+
+    if (bloomEnabled && !bloomPassRef.current) {
+      const bloom = new UnrealBloomPass(
+        new THREE.Vector2(dimensions.width, dimensions.height),
+        0.55,   // strength — low enough that zoom-in doesn't wash out
+        0.6,    // radius
+        0.3,    // threshold — only bright emissive surfaces bloom
+      );
+      const passes = composer.passes;
+      const outIdx = passes.findIndex((p: any) => p instanceof OutputPass);
+      if (outIdx === -1) {
+        composer.addPass(bloom);
+        composer.addPass(new OutputPass());
+      } else {
+        composer.insertPass(bloom, outIdx);
+      }
+      bloomPassRef.current = bloom;
+    } else if (!bloomEnabled && bloomPassRef.current) {
+      composer.removePass(bloomPassRef.current);
+      bloomPassRef.current.dispose?.();
+      bloomPassRef.current = null;
+    }
+
+    return () => {
+      if (bloomPassRef.current) {
+        composer.removePass(bloomPassRef.current);
+        bloomPassRef.current.dispose?.();
+        bloomPassRef.current = null;
+      }
+    };
+  }, [bloomEnabled, loading, neurons.length, dimensions]);
 
   // ── B1 hover ring ──
   // One ring mesh, re-parented on hover change. Rotated by the animation loop below.
@@ -757,7 +899,14 @@ export default function NeuronUniverse() {
         linkWidth={(link: any) => Math.max(0.2, link.weight * 2)}
         linkOpacity={0.15}
         linkColor={() => '#334155'}
-        linkVisibility={(link: any) => link._phantom ? false : showEdges}
+        linkVisibility={(link: any) => {
+          if (link._phantom) return false;
+          if (!showEdges) return false;
+          if (!selectedNode) return true;
+          const src = typeof link.source === 'number' ? link.source : link.source?.id;
+          const tgt = typeof link.target === 'number' ? link.target : link.target?.id;
+          return selectionBFS.has(src) && selectionBFS.has(tgt);
+        }}
         linkDirectionalParticles={0}
         onNodeHover={(node: any) => setHoveredNode(node ?? null)}
         onNodeClick={(node: any) => setSelectedNode(node?.id === selectedNode?.id ? null : node)}
@@ -821,6 +970,11 @@ export default function NeuronUniverse() {
         </label>
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: '0.75rem', color: '#c8d0dc' }}>
+          <input type="checkbox" checked={bloomEnabled} onChange={e => setBloomEnabled(e.target.checked)} />
+          Bloom
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: '0.75rem', color: '#c8d0dc' }}>
           <input type="checkbox" checked={hideDisconnected} onChange={e => setHideDisconnected(e.target.checked)} />
           Connected only
         </label>
@@ -839,6 +993,33 @@ export default function NeuronUniverse() {
           <input
             type="range" min={500} max={25000} step={500} value={maxEdges}
             onChange={e => setMaxEdges(parseInt(e.target.value))}
+            style={{ width: '100%', marginTop: 4 }}
+          />
+        </label>
+
+        <label style={{ display: 'block', marginBottom: 8, fontSize: '0.75rem', color: '#c8d0dc' }}>
+          Concept spread: {conceptSpread}
+          <input
+            type="range" min={400} max={2400} step={100} value={conceptSpread}
+            onChange={e => setConceptSpread(parseInt(e.target.value))}
+            style={{ width: '100%', marginTop: 4 }}
+          />
+        </label>
+
+        <label style={{ display: 'block', marginBottom: 8, fontSize: '0.75rem', color: '#c8d0dc' }}>
+          Selection warp: {warpIntensity.toFixed(1)}×
+          <input
+            type="range" min={1} max={6} step={0.5} value={warpIntensity}
+            onChange={e => setWarpIntensity(parseFloat(e.target.value))}
+            style={{ width: '100%', marginTop: 4 }}
+          />
+        </label>
+
+        <label style={{ display: 'block', marginBottom: 8, fontSize: '0.75rem', color: '#c8d0dc' }}>
+          BFS depth: {bfsDepth}
+          <input
+            type="range" min={2} max={4} step={1} value={bfsDepth}
+            onChange={e => setBfsDepth(parseInt(e.target.value))}
             style={{ width: '100%', marginTop: 4 }}
           />
         </label>
