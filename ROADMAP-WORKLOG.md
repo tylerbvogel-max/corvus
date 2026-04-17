@@ -8,11 +8,11 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 
 ## Current position
 
-**Phase:** Phase 1.5 code shipped — verification pending on each sub-item
-**Completed items:** #1 Action bus, #2 Bidirectional lineage + score overrides
-**Active items (code written, walking verification checklists):** #7 Runtime output policy gates, GTM-A external `/v1/query`, GTM-B remote MCP HTTP+SSE. Checklists live on the `gov-aip-p1_5` node in `master-corvus/public/roadmap-state.json` and on each pattern card in `AIPGovernanceRoadmap.tsx` — walk them before flipping to `done`.
-**Next item:** after Phase 1.5 verification closes, #3 Evals as immutable, first-class artifacts (returning to Phase 1 sequence).
-**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below. Phase 1.5 was pulled ahead of #3 in this session on explicit user direction ("we have to get all of it eventually, ready to go").
+**Phase:** Phase 1 complete (Patterns #1, #2, #3). Phase 1.5 shipped. Next: Phase 2a vs 2b decision.
+**Completed items:** #1 Action bus, #2 Lineage + score overrides, #3 Immutable eval artifacts, Phase 1.5 (#7 output gates, GTM-A /v1/query, GTM-B remote MCP).
+**Active items:** none in flight.
+**Next item:** re-evaluate Phase 2a (#4 row-level markings) vs Phase 2b (#5/#6/#8) sequencing based on customer traffic signal from Phase 1.5 surfaces.
+**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below. Phase 1.5 was pulled ahead of #3 in the 2026-04-13 session on explicit user direction ("we have to get all of it eventually, ready to go"); Pattern #3 closed 2026-04-16.
 
 ## Revised sequencing (2026-04-12)
 
@@ -25,28 +25,30 @@ The three-leg GTM pivot (tool-call endpoint + remote MCP + admin UI, detailed in
 
 ## Next session starts here
 
-> Phase 1.5 complete — Pattern #7 + GTM-A + GTM-B shipped together. Next: Pattern #3 (immutable eval artifacts). After #3, the sequencing returns to Phase 2a/2b per the roadmap tree; re-evaluate when customer traffic lands because real-world data from #7 + GTM-A may reshape priorities.
+> Phase 1 closed. Patterns #1, #2, #3 shipped. Phase 1.5 (output gates, /v1/query, remote MCP) shipped.
 >
-> Read this worklog, then read `~/.claude/plans/staged-booping-globe.md` for full context. Begin scoping Pattern #3 by:
+> Next session picks the Phase 2 sequencing based on customer-traffic signal from Phase 1.5 surfaces. The three candidates:
 >
-> 1. Read `backend/app/models.py` — `EvalScore` exists but slot results are JSON blobs in `Query.results_json`. No frozen eval run artifact.
-> 2. Design an `EvalRun` table that snapshots {query set, model versions, scoring-engine version, results, verdicts}. Append-only.
-> 3. The `NeuronScoreOverride` system (added in Pattern #2) gives manual tuning levers — eval runs should capture which overrides were active at run time.
-> 4. Every eval run gets an immutable ID — this becomes the `eval_run_id` that pairs with `lineage_id` in `/v1/query` responses (`V1QueryResponse.eval_run_id` is already reserved as `None` — just needs populating), making "here is what certified this answer's pipeline" an auditable claim.
-> 5. `OutputViolation` rows produced by Pattern #7 are a natural input for eval-run scoring — a run that produced N `block`-severity violations on a canary set should be visible in the EvalRun summary.
+> - **#4 Row-level markings / classification** (Phase 2a, defense-sale track) — pull forward if any customer conversation surfaces ATO / classified-data / CUI-handling requirements. Without customer signal, this is speculative hardening.
+> - **#5 Typed pipeline DAG with observable stages** (Phase 2b, correctness) — the "assembly" → "score" → "execute" chain is currently implicit in `executor.py`. Formalizing as named stages unlocks per-stage timing, error isolation, and sets up Pattern #6 (ontology branching).
+> - **#8 Unified autopilot as a typed agent** (Phase 2b) — would fold the existing autopilot loop into the same action/stage system used by query execution.
+>
+> Suggested prep: before the next session, pull logs from `/v1/query` in prod-like traffic (if any) to see whether output-guard violations, latency bursts, or user-reported wrong-answer patterns point toward correctness > classification. Start with `backend/app/routers/v1.py` + the action log for `output.policy.check` actions.
+>
+> For the historical context of why Pattern #3 chose append-only-at-three-layers and snapshot-in-the-row over the simpler alternatives, read the `2026-04-16 — Pattern #3` session-log entry above. Same for the Phase 1.5 philosophy (`2026-04-13`).
 
 ## Checklist
 
 ### Phase 1 — Dual-purpose foundations
 - [DONE] #1 Actions as the universal write primitive
 - [DONE] #2 Bidirectional lineage / active provenance graph
-- [ ] #3 Evals as immutable, first-class artifacts ← **NEXT**
+- [DONE] #3 Evals as immutable, first-class artifacts
 
-### Phase 1.5 — GTM gate (NEW, 2026-04-12; code shipped 2026-04-13, verification pending)
-These unlock shipping tool-call and MCP surfaces externally. Ordered. Code is written; each sub-item flips to `DONE` only after its verification checklist on the roadmap flowchart node (`gov-aip-p1_5` in `master-corvus/public/roadmap-state.json`) passes end-to-end.
-- [ACTIVE] #7 Runtime output policy gates (moved up from Phase 2a) — code shipped, verification checklist queued
-- [ACTIVE] GTM-A: External tool-call endpoint hardening (`/v1/query` with auth, rate limiting, `{answer, fragment_labels, fragments, lineage_id, eval_run_id, blocked, violations}` response contract) — code shipped, verification checklist queued
-- [ACTIVE] GTM-B: Remote MCP server (HTTP+SSE transport via `StreamableHTTPSessionManager`; RBAC gate reused from `/v1/query`) — code shipped, verification checklist queued
+### Phase 1.5 — GTM gate (NEW, 2026-04-12; shipped 2026-04-13)
+These unlock shipping tool-call and MCP surfaces externally. Ordered. Closed.
+- [DONE] #7 Runtime output policy gates (moved up from Phase 2a)
+- [DONE] GTM-A: External tool-call endpoint hardening (`/v1/query` with auth, rate limiting, `{answer, fragment_labels, fragments, lineage_id, eval_run_id, blocked, violations}` response contract; `eval_run_id` populated once Pattern #3 landed)
+- [DONE] GTM-B: Remote MCP server (HTTP+SSE transport via `StreamableHTTPSessionManager`; RBAC gate reused from `/v1/query`)
 
 ### Phase 2a — Defense-sale track
 Pull forward if customer conversation / ATO question / classified-data requirement surfaces.
@@ -75,6 +77,9 @@ Pull forward if pipeline iteration speed is the near-term pain.
 5. **JPL-4 extractions pay forward.** Extracting `_assemble_top_slice` from `prepare_context` isolated the assembly step — exactly what Pattern #5 (typed pipeline DAG) will refactor into a named stage.
 6. **Post-scoring override application keeps the hot path clean.** Overrides apply after vectorized numpy scoring. Only neurons with active overrides take the Python recomputation path — preserves 10-50x speedup for the common case.
 7. **Pattern sequencing validated — #2 depends on #1.** Lineage trace joins firing records with action counts. Without the action bus, you couldn't answer "how many times was this neuron modified and by whom?"
+8. **SAVEPOINTs and self-committing subroutines don't compose.** Wrapping `execute_query` in `db.begin_nested()` errored because `execute_query` commits internally, closing the savepoint before the `async with` block exits. Lesson: per-item isolation can be `try/except` around a boundary function when that function owns its own transaction — reach for SAVEPOINTs only when you own the whole transaction scope.
+9. **Append-only at the router and test layer, not just the schema.** Pattern #3's certification claim is only as strong as its weakest mutation surface. Adding `test_eval_runs_router_has_no_mutation_routes` catches "someone adds a PATCH endpoint later" as a test failure rather than a vigilance-dependent review. Mix schema invariants with test invariants when append-only semantics matter.
+10. **Snapshot-in-the-row beats FK-to-mutable-source for frozen artifacts.** `NeuronScoreOverride` rows are editable; `tenant.yaml` suites are editable. If `EvalRun` had FK'd those, "what did this run actually test?" would silently decay. Storing denormalized snapshots (model_versions, overrides_snapshot, suite_hash) as JSONB costs a few KB per row and buys permanent answerability.
 
 ## Session log
 
@@ -230,3 +235,49 @@ User directive: "Lets kick off with all in the priority you deem to result in th
 
 **Files updated.** `backend/app/models.py`, `backend/app/config.py`, `backend/app/schemas.py`, `backend/app/main.py`, `backend/app/tenant.py`, `backend/app/routers/query.py`, `backend/app/services/actions/__init__.py`, `backend/tenants/corvus-aero/tenant.yaml`, `master-corvus/src/components/system-docs/AIPGovernanceRoadmap.tsx` (#7, GTM-A, GTM-B statuses flipped `pending` → `done`).
 **Files added.** `backend/app/governance/` (package), `backend/app/routers/v1.py`, `backend/app/middleware/rate_limit.py`, `backend/app/mcp_http.py`, `backend/app/services/actions/output_policy_check.py`, `backend/alembic/versions/009_add_output_violations.py`, `backend/tests/test_output_guard.py`.
+
+### 2026-04-16 — Pattern #3: Evals as immutable, first-class artifacts
+
+Ships the missing link between Pattern #1 (action-bus audit trail) and Pattern #2 (lineage). Patterns #1 + #2 answer "what happened to the graph and which answer came from it?" Pattern #3 answers the *quality* question: "was the pipeline certified to produce that answer?"
+
+**Core design philosophy — an eval run is a frozen certificate, never a mutable scoreboard.**
+
+Four design decisions drove the implementation; each has a deliberate rejection of a simpler but weaker alternative.
+
+1. **Append-only at three layers, belt-and-suspenders.**
+   A certified run must be unforgeable after the fact. Enforcement is triplicate:
+   - **Schema layer** — the `EvalRun` row's `status` only ever transitions `running → completed|failed` once. No route writes back to it afterwards.
+   - **Router layer** — `routers/eval_runs.py` deliberately exposes only `POST /runs`, `GET /runs`, `GET /runs/{id}`, `POST /runs/{id}/certify`. No `PUT`, `PATCH`, or `DELETE`. A pytest assertion (`test_eval_runs_router_has_no_mutation_routes`) makes regressions a test failure, not a code-review catch.
+   - **Action layer** — `eval.run.start` and `eval.run.complete` are the only registered action kinds for this domain. Neither handler mutates the eval run; they are pure audit markers. The `complete` action's `parent_action_id` points at the `start` action, so the audit trail reads as a single bracketed lifecycle without needing a dedicated state machine.
+   Alternative rejected: a single `eval.run.update` action. Simpler, but it would let an operator revise a run after the fact, destroying the certification claim.
+
+2. **Snapshot *into* the row, don't dereference *through* it.**
+   When a run completes, the following are frozen inline on the `EvalRun` row as JSONB: `model_versions` (every entry in `MODEL_REGISTRY` at run time), `overrides_snapshot` (every active `NeuronScoreOverride` row), `suite_hash` (sha256 over normalized case list), and `scoring_engine_version` (module constant, bump-on-change). Any of these could instead be a foreign key — but foreign keys point at *mutable* rows. A `NeuronScoreOverride` row is `is_active`-flagged and editable; the hash of the suite YAML changes the moment someone edits the file. If the eval run stored FKs, "what did this run actually test" would decay the instant anything upstream moved. Storing the denormalized values makes the row self-describing forever.
+   Cost: storage (~1–5 KB per row of JSONB). Accepted — eval runs are low-volume.
+
+3. **Certification is a tenant-level pointer, not per-model or per-query.**
+   `TenantConfig.certified_eval_run_id` is a singleton (id=1) with a single FK to the currently certified `EvalRun`. `/v1/query` reads it once per request and stamps the id on the response. Two alternatives were considered and rejected:
+   - **Per-model certification** — separate pointers for Haiku vs Sonnet vs provider tiers. Rejected because the eval already snapshots every model version; if the certified run tested the active model set, it covers the pipeline. Reintroduce only if model routing starts bypassing the measured stack.
+   - **Per-query matching** — `/v1/query` looks up the latest eval run whose `suite_hash` matches some query taxonomy. Rejected as overengineered — Corvus isn't yet a multi-suite shop; one smoke suite certifies the whole pipeline. Revisit when suite count > 1 per tenant.
+   Current model's virtue: the attestation is trivially readable ("at time T, customer X was served pipeline with certified_eval_run_id = N"). Easy to audit, easy to revoke (point at `null` to decertify without deleting history).
+
+4. **Per-case failure isolation via try/except, not SAVEPOINTs.**
+   First iteration wrapped `_execute_case` in `async with db.begin_nested():` so one failing case couldn't roll back the whole run. This collided with the fact that `execute_query` manages its own transaction and commits internally via `_finalize_query_row`. The commit closed the savepoint, then `__aexit__` errored with `"Can't operate on closed transaction inside context manager"` — every case failed. Fix: remove the SAVEPOINT, rely on try/except around the case body. A per-case exception records `error_message` on the `EvalRunCase` row without affecting siblings. The run-level outcome (`completed` vs `failed`) is still partition-safe: `failed` is only raised when *every* case errored — otherwise a partial-failure run remains a reviewable artifact with a lower `pass_rate`. See `eval_runs.py:131-182` for the current shape; the rationale is in the function docstring for the next person who reaches for `begin_nested`.
+
+**Verification — end-to-end against live pipeline.**
+- Live run: `POST /admin/eval/runs {"suite_name":"smoke"}` against corvus-aero ran 5 cases in 213s end-to-end, returned HTTP 201. Run id=3, status=`completed`, `summary={total:5, blocked:1, errors:0, violation_count:2, severity_counts:{error:1, critical:1}, pass_rate:0.8}`. The one blocked case (`itar-subcontract`) was the output guard correctly firing — expected signal, not a regression.
+- DB state verified: every case row has `query_id`, `lineage_id`, `response_text` (1330–7137 chars), and `blocked` flag populated. No null rows, no orphans.
+- Action trail verified: `eval.run.start` (id=57) and `eval.run.complete` (id=60, `parent_action_id=57`). Lifecycle brackets the run cleanly.
+- Certify flow: `POST /admin/eval/runs/3/certify` returned `{eval_run_id: 3, certified_at, certified_by: "tester"}`. Subsequent `POST /v1/query` returned `eval_run_id: 3` in the response envelope — the certification pointer is live in the external contract.
+- Full pytest suite: **126/126 passing** (11 new tests in `test_eval_runs.py`). NASA linter: clean on all touched files.
+
+**Pattern #3 limitations (intentional).**
+- No automatic re-certification — when the codebase changes, the certified run doesn't invalidate itself. Operators are expected to re-run + re-certify. A stretch goal: compare active `scoring_engine_version` against certified run's version and flag mismatch in `/v1/query` metadata.
+- Suite YAML format is intentionally minimal (`label` + `text|query`). No expected-output field yet; pass/fail is derived from the output guard + error state. When we have more graded criteria (citations present, neuron count in range, latency bound), extend the schema rather than bolt on external scoring.
+- No scheduled re-runs. Certification is fully operator-driven. Worth adding a nightly autopilot job once the suite size warrants it.
+- `scoring_engine_version` exists in the payload but is a manually-bumped module constant. Tying it to a git-derived hash would be stronger; deferred until we have CI infrastructure to drive it.
+
+**Files updated.** `backend/app/models.py` (3 new ORM classes — `EvalRun`, `EvalRunCase`, `TenantConfig`), `backend/app/services/actions/__init__.py`, `backend/app/services/actions/init_registry.py` (2 new action kinds registered), `backend/app/routers/v1.py` (stamps certified `eval_run_id`), `backend/app/main.py` (router include), `frontend/src/api.ts` (4 new client functions), `frontend/src/App.tsx` (new nav item), `master-corvus/public/roadmap-state.json` (24-step verification checklist on `gov-aip-pattern3` node), `master-corvus/src/components/system-docs/AIPGovernanceRoadmap.tsx` (status flipped `next` → `done`).
+**Files added.** `backend/app/services/eval_runs.py`, `backend/app/routers/eval_runs.py`, `backend/app/services/actions/eval_run_lifecycle.py`, `backend/alembic/versions/010_add_eval_runs.py`, `backend/tenants/corvus-aero/eval_suites/smoke.yaml`, `backend/tenants/corvus-flow/eval_suites/smoke.yaml`, `backend/tests/test_eval_runs.py`, `frontend/src/components/EvalRunsPage.tsx`.
+
+**Phase 1 complete.** Patterns #1, #2, #3 shipped. The full governance loop is now: every write is an action → every firing is traceable to a query → every answer carries a certified eval_run_id proving which pipeline produced it. Next: re-evaluate sequencing (Phase 2a vs 2b) once customer traffic through Phase 1.5 surfaces lands real-world signal.

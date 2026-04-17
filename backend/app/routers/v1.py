@@ -29,6 +29,7 @@ from app.config import settings
 from app.database import get_db
 from app.middleware.rate_limit import RateLimiter
 from app.middleware.rbac import UserIdentity, require_role
+from app.models import TenantConfig
 from app.schemas import (
     OutputViolationOut,
     V1ContextFragment,
@@ -106,6 +107,7 @@ def _build_v1_response(
     mode: str,
     blocked: bool,
     violations: list[OutputViolationOut],
+    eval_run_id: int | None,
 ) -> V1QueryResponse:
     """Shape the executor output + guard result into the external contract."""
     labels, fragments = _build_fragments(result.get("neuron_scores", []), mode)
@@ -114,10 +116,20 @@ def _build_v1_response(
         fragment_labels=labels,
         fragments=fragments,
         lineage_id=int(result["query_id"]),
-        eval_run_id=None,  # reserved for Pattern #3
+        eval_run_id=eval_run_id,
         blocked=blocked,
         violations=violations,
     )
+
+
+async def _certified_eval_run_id(db: AsyncSession) -> int | None:
+    """Return the tenant's currently-certified EvalRun id (Pattern #3).
+
+    ``None`` when no run has been promoted yet — callers treat that as
+    "uncertified" and may surface a warning upstream.
+    """
+    config = await db.get(TenantConfig, 1)
+    return config.certified_eval_run_id if config else None
 
 
 async def _run_v1_pipeline(
@@ -186,4 +198,5 @@ async def v1_query(
             },
         )
 
-    return _build_v1_response(result, req.mode, blocked, violations)
+    eval_run_id = await _certified_eval_run_id(db)
+    return _build_v1_response(result, req.mode, blocked, violations, eval_run_id)

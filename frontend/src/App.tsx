@@ -4,6 +4,7 @@ import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
 import EvaluationPage from './components/EvaluationPage'
+import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
 import AutopilotPage from './components/AutopilotPage'
 import CirclePacking from './components/CirclePacking'
@@ -31,7 +32,7 @@ import { fetchTenantConfig, fetchAllTenants } from './config'
 import type { TenantConfig, TenantSummary } from './config'
 import { checkAccess, setAccessKey, getAccessKey } from './auth'
 
-type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -164,6 +165,7 @@ function buildNavGroups(tenantId: string | undefined): NavGroup[] {
         { key: 'performance', label: 'Performance', description: 'Pipeline latency and throughput metrics' },
         { key: 'fairness', label: 'Fairness', description: 'Bias detection across departments and roles' },
         { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history' },
+        { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query' },
       ],
     },
     {
@@ -461,6 +463,7 @@ export default function App() {
         {tab === 'layer-heatmap' && <LayerHeatmap />}
         <div style={{ display: tab === 'query' ? 'contents' : 'none' }}><QueryLab onNavigateToNeuron={navigateToNeuron} /></div>
         {tab === 'evaluation' && <EvaluationPage />}
+        {tab === 'eval-runs' && <EvalRunsPage />}
         {tab === 'refinements' && <RefinementHistory />}
         {tab === 'samples' && <SampleQueries />}
         {tab === 'autopilot' && <AutopilotPage />}

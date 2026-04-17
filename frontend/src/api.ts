@@ -1900,3 +1900,67 @@ export function bulkResolveIntegrityFindings(
     body: JSON.stringify({ finding_ids: findingIds, resolution, reviewer, notes: notes || '' }),
   });
 }
+
+// ── Pattern #3: immutable eval runs ──
+
+export interface EvalRunSummary {
+  id: number;
+  suite_name: string;
+  suite_hash: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  started_by: string;
+  tenant_id: string;
+  summary: {
+    total: number;
+    blocked: number;
+    errors: number;
+    violation_count: number;
+    severity_counts: Record<string, number>;
+    pass_rate: number;
+  } | null;
+  is_certified: boolean;
+}
+
+export interface EvalRunCase {
+  id: number;
+  case_label: string;
+  query_text: string;
+  query_id: number | null;
+  lineage_id: number | null;
+  blocked: boolean;
+  response_text: string | null;
+  violations: Array<Record<string, unknown>>;
+  scores: Record<string, unknown> | null;
+  error_message: string | null;
+}
+
+export interface EvalRunDetail extends EvalRunSummary {
+  model_versions: Record<string, unknown>;
+  scoring_engine_version: string;
+  overrides_snapshot: Record<string, unknown> | null;
+  cases: EvalRunCase[];
+}
+
+export function listEvalRuns(limit = 50): Promise<EvalRunSummary[]> {
+  return json<EvalRunSummary[]>(`/admin/eval/runs?limit=${limit}`);
+}
+
+export function getEvalRun(id: number): Promise<EvalRunDetail> {
+  return json<EvalRunDetail>(`/admin/eval/runs/${id}`);
+}
+
+export function startEvalRun(suiteName: string): Promise<EvalRunSummary> {
+  return json<EvalRunSummary>('/admin/eval/runs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ suite_name: suiteName }),
+  });
+}
+
+export function certifyEvalRun(id: number): Promise<{
+  eval_run_id: number; certified_at: string; certified_by: string;
+}> {
+  return json(`/admin/eval/runs/${id}/certify`, { method: 'POST' });
+}

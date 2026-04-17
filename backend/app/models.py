@@ -873,3 +873,106 @@ class OutputViolation(Base):
     )
 
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class EvalRun(Base):
+    """Immutable, append-only eval run artifact.
+
+    Pattern #3 — Evals as immutable, first-class artifacts.
+
+    One row per suite execution. Captures the full snapshot a safety
+    reviewer would ask for: which suite, which model versions, which
+    scoring-engine version, which NeuronScoreOverride rows were active,
+    and aggregate verdicts. Paired with EvalRunCase children (one per
+    query). Once status transitions out of ``running``, fields are never
+    updated — re-runs create new rows. The ``eval_run_id`` exposed on
+    ``/v1/query`` responses is the currently-certified run (see
+    TenantConfig.certified_eval_run_id).
+    """
+
+    __tablename__ = "eval_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    suite_name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    suite_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+
+    # Snapshotted versioning context — what produced these results
+    model_versions: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    scoring_engine_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    overrides_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    tenant_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+
+    # Aggregate results — pass/fail/blocked counts, violations by severity
+    summary_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Lifecycle — running -> completed | failed. Append-only beyond that.
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="running",
+        server_default="running", index=True,
+    )
+    started_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), nullable=False,
+    )
+    completed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    started_by: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    # Audit link to the action_bus "eval.run.start" call
+    action_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("actions.id"), nullable=True, index=True,
+    )
+
+    cases: Mapped[list["EvalRunCase"]] = relationship(
+        "EvalRunCase", back_populates="run", lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+
+class EvalRunCase(Base):
+    """One query result within an EvalRun. Append-only after run completes."""
+
+    __tablename__ = "eval_run_cases"
+    __table_args__ = (
+        Index("ix_eval_run_cases_run_label", "eval_run_id", "case_label"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    eval_run_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("eval_runs.id"), nullable=False, index=True,
+    )
+    case_label: Mapped[str] = mapped_column(String(200), nullable=False)
+    query_text: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Execution result
+    query_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("queries.id"), nullable=True, index=True,
+    )
+    response_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lineage_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    violations_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    scores_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+
+    run: Mapped["EvalRun"] = relationship("EvalRun", back_populates="cases", lazy="select")
+
+
+class TenantConfig(Base):
+    """Single-row per-tenant runtime config. Currently holds the certified
+    EvalRun pointer (Pattern #3); future: other per-tenant live pointers.
+
+    One DB == one tenant in this architecture, so id is fixed at 1.
+    """
+
+    __tablename__ = "tenant_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    certified_eval_run_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("eval_runs.id"), nullable=True,
+    )
+    certified_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    certified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(),
+    )

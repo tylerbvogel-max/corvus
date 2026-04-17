@@ -33,6 +33,12 @@ from app.services.actions.output_policy_check import (
     OutputPolicyCheckInput,
     handle_output_policy_check,
 )
+from app.services.actions.eval_run_lifecycle import (
+    EvalRunCompleteInput,
+    EvalRunStartInput,
+    handle_eval_run_complete,
+    handle_eval_run_start,
+)
 
 
 def init_actions_registry() -> None:
@@ -77,5 +83,17 @@ def init_actions_registry() -> None:
         kind="output.policy.check",
         schema=OutputPolicyCheckInput,
         handler=handle_output_policy_check,
+        requires_approval=False,
+    )
+    register_action(
+        kind="eval.run.start",
+        schema=EvalRunStartInput,
+        handler=handle_eval_run_start,
+        requires_approval=False,
+    )
+    register_action(
+        kind="eval.run.complete",
+        schema=EvalRunCompleteInput,
+        handler=handle_eval_run_complete,
         requires_approval=False,
     )

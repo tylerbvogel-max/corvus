@@ -673,6 +673,8 @@ from app.routers import lineage
 app.include_router(lineage.router)
 from app.routers import v1
 app.include_router(v1.router)
+from app.routers import eval_runs as eval_runs_router
+app.include_router(eval_runs_router.router)
 # AIP Phase 1.5 GTM-B: remote MCP transport at /mcp.
 # Mount as raw ASGI — the MCP session manager writes the full HTTP
 # response itself, so we cannot use a request-handler-style route
