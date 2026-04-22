@@ -23,7 +23,7 @@ import EngramPage from './components/EngramPage'
 import AdvisorPanel from './components/AdvisorPanel'
 import useScreenCapture from './hooks/useScreenCapture'
 import AdvisorToast from './components/AdvisorToast'
-import ProposalQueuePage from './components/ProposalQueuePage'
+import ProposalQueuePage, { type ProposalProducerTarget, type OriginFilter } from './components/ProposalQueuePage'
 import DocumentIngestPage from './components/DocumentIngestPage'
 import IntegrityPage from './components/IntegrityPage'
 import GroupLandingPage from './components/GroupLandingPage'
@@ -31,6 +31,31 @@ import GroupLandingPage from './components/GroupLandingPage'
 import { fetchTenantConfig, fetchAllTenants } from './config'
 import type { TenantConfig, TenantSummary } from './config'
 import { checkAccess, setAccessKey, getAccessKey } from './auth'
+import { fetchProposalStats } from './api'
+
+type OriginKey = 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
+
+// Which tab each origin navigates back to when a Proposal Queue row's
+// reverse link is clicked. Kept in App.tsx because the producer-page
+// components don't know about each other.
+const ORIGIN_TO_TAB: Record<OriginKey, Tab> = {
+  autopilot: 'autopilot',
+  integrity: 'integrity',
+  document: 'document-ingest',
+  emergent: 'emergent-queue',
+  manual: 'proposal-queue',
+};
+
+// Nav-item key → origin it represents in the pending-proposal count.
+// Proposal Queue itself aggregates all pending; the four producer tabs
+// each show their own origin's pending count.
+const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
+  'autopilot': 'autopilot',
+  'integrity': 'integrity',
+  'document-ingest': 'document',
+  'emergent-queue': 'emergent',
+  'proposal-queue': 'all',
+};
 
 type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
@@ -137,7 +162,7 @@ function buildNavGroups(tenantId: string | undefined): NavGroup[] {
         { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve autopilot proposals' },
         { key: 'emergent-queue', label: 'Emergent Queue', description: 'Unresolved patterns awaiting classification' },
         { key: 'document-ingest', label: 'Document Ingest', description: 'Upload documents for bulk knowledge extraction' },
-        { key: 'integrity', label: 'Integrity', description: 'Graph consistency audits and findings' },
+        { key: 'integrity', label: 'Integrity', description: 'Graph consistency audits, agents, and findings' },
       ],
     },
     {
@@ -194,6 +219,9 @@ function getInitialTheme(): Theme {
 export default function App() {
   const [tab, setTab] = useState<Tab>('home');
   const [explorerNeuronId, setExplorerNeuronId] = useState<number | null>(null);
+  const [proposedByOrigin, setProposedByOrigin] = useState<Record<string, number>>({});
+  const [totalProposed, setTotalProposed] = useState(0);
+  const [queueInitialOrigin, setQueueInitialOrigin] = useState<OriginFilter | undefined>(undefined);
   const [collapsed, setCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
@@ -234,6 +262,43 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('corvus-theme', theme);
   }, [theme]);
+
+  // Poll proposal stats so each producer nav item can show its pending count.
+  // 30s cadence: fast enough to feel live after an approval, slow enough not
+  // to hammer the backend. Bounded — one HTTP call per tick.
+  useEffect(() => {
+    if (authStatus !== 'open' && authStatus !== 'valid') return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const s = await fetchProposalStats();
+        if (cancelled) return;
+        setProposedByOrigin(s.proposed_by_origin ?? {});
+        setTotalProposed(s.proposed ?? 0);
+      } catch {
+        // Swallow — stats are advisory; a failed poll just leaves stale counts.
+      }
+    };
+    void tick();
+    const handle = window.setInterval(tick, 30_000);
+    return () => { cancelled = true; window.clearInterval(handle); };
+  }, [authStatus]);
+
+  // Reverse deep-link: Proposal Queue row → producer page.
+  const navigateToProducer = useCallback((target: ProposalProducerTarget) => {
+    const origin = target.origin as OriginKey;
+    const nextTab = ORIGIN_TO_TAB[origin] ?? 'proposal-queue';
+    setTab(nextTab);
+    // Future: stash target.autopilot_run_id / finding_id / scan_id in
+    // a per-page focus state so the producer page can highlight the row.
+    // For now the tab switch alone is the deep-link payload.
+  }, []);
+
+  // Forward deep-link: producer nav badge → Proposal Queue filtered to origin.
+  const navigateToFilteredQueue = useCallback((origin: OriginKey | 'all') => {
+    setQueueInitialOrigin(origin === 'all' ? undefined : (origin as OriginFilter));
+    setTab('proposal-queue');
+  }, []);
 
   function setTheme(t: Theme) {
     setThemeState(t);
@@ -348,15 +413,59 @@ export default function App() {
                 </button>
                 {expandedGroups.has(group.label) && (
                   <div className="sidebar-group-items">
-                    {group.items.map(item => (
-                      <button
-                        key={item.key}
-                        className={`sidebar-item${tab === item.key ? ' active' : ''}${item.className ? ' ' + item.className : ''}`}
-                        onClick={() => setTab(item.key)}
-                      >
-                        {item.labelColor ? <span style={{ color: item.labelColor }}>{item.label}</span> : item.label}
-                      </button>
-                    ))}
+                    {group.items.map(item => {
+                      const originForTab = TAB_TO_ORIGIN[item.key];
+                      const count = originForTab === 'all'
+                        ? totalProposed
+                        : (originForTab ? (proposedByOrigin[originForTab] ?? 0) : 0);
+                      return (
+                        <button
+                          key={item.key}
+                          className={`sidebar-item${tab === item.key ? ' active' : ''}${item.className ? ' ' + item.className : ''}`}
+                          onClick={() => {
+                            // Click body of nav item goes to the page itself. Badge
+                            // has its own click handler (see below) that deep-links
+                            // to the filtered Proposal Queue.
+                            setQueueInitialOrigin(undefined);
+                            setTab(item.key);
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
+                        >
+                          <span style={{ color: item.labelColor }}>{item.label}</span>
+                          {count > 0 && item.key !== 'proposal-queue' && originForTab && originForTab !== 'all' && (
+                            <span
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                navigateToFilteredQueue(originForTab);
+                              }}
+                              title={`${count} pending in Proposal Queue — click to filter`}
+                              style={{
+                                fontSize: 10, fontWeight: 700,
+                                padding: '1px 6px', borderRadius: 10,
+                                background: 'var(--accent, #c87533)', color: '#fff',
+                                minWidth: 18, textAlign: 'center',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {count}
+                            </span>
+                          )}
+                          {count > 0 && item.key === 'proposal-queue' && (
+                            <span
+                              title={`${count} pending proposals`}
+                              style={{
+                                fontSize: 10, fontWeight: 700,
+                                padding: '1px 6px', borderRadius: 10,
+                                background: 'var(--accent, #c87533)', color: '#fff',
+                                minWidth: 18, textAlign: 'center',
+                              }}
+                            >
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -467,7 +576,12 @@ export default function App() {
         {tab === 'refinements' && <RefinementHistory />}
         {tab === 'samples' && <SampleQueries />}
         {tab === 'autopilot' && <AutopilotPage />}
-        {tab === 'proposal-queue' && <ProposalQueuePage />}
+        {tab === 'proposal-queue' && (
+          <ProposalQueuePage
+            initialOriginFilter={queueInitialOrigin}
+            onNavigateToProducer={navigateToProducer}
+          />
+        )}
         {tab === 'emergent-queue' && <EmergentQueuePage />}
         {tab === 'document-ingest' && <DocumentIngestPage />}
         {tab === 'integrity' && <IntegrityPage />}

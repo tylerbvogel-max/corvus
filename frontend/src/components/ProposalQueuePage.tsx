@@ -11,12 +11,14 @@ import {
   type ProposalStats,
   type ProposalItem,
   type GapEvidence,
+  type DocumentEvidence,
   type Whoami,
 } from '../api';
 import { getReviewerName, setReviewerName } from '../auth';
+import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
 
 type StateFilter = 'all' | 'proposed' | 'approved' | 'rejected' | 'applied';
-type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'manual';
+export type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
 
 const STATE_COLORS: Record<string, string> = {
   proposed: '#e8a838',
@@ -29,6 +31,7 @@ const ORIGIN_COLORS: Record<string, string> = {
   autopilot: '#9b59b6',
   integrity: '#2196f3',
   document: '#4caf50',
+  emergent: '#e8a838',
   manual: '#7f8c8d',
 };
 
@@ -37,6 +40,7 @@ const SOURCE_OPTIONS: { key: OriginFilter; label: string }[] = [
   { key: 'autopilot', label: 'Autopilot' },
   { key: 'integrity', label: 'Integrity' },
   { key: 'document', label: 'Document' },
+  { key: 'emergent', label: 'Emergent' },
   { key: 'manual', label: 'Manual' },
 ];
 
@@ -61,12 +65,38 @@ function groupLabel(p: ProposalSummary): string {
   return `${p.origin} · ${p.gap_source || 'directive'}`;
 }
 
-export default function ProposalQueuePage() {
+export interface ProposalProducerTarget {
+  origin: string;
+  autopilot_run_id?: number | null;
+  finding_id?: number | null;
+  scan_id?: number | null;
+  gap_source?: string | null;
+}
+
+interface ProposalQueuePageProps {
+  initialOriginFilter?: OriginFilter;
+  onNavigateToProducer?: (target: ProposalProducerTarget) => void;
+}
+
+export default function ProposalQueuePage({
+  initialOriginFilter,
+  onNavigateToProducer,
+}: ProposalQueuePageProps = {}) {
   const [proposals, setProposals] = useState<ProposalSummary[]>([]);
   const [stats, setStats] = useState<ProposalStats | null>(null);
   const [selected, setSelected] = useState<ProposalDetail | null>(null);
   const [filter, setFilter] = useState<StateFilter>('all');
-  const [sourceFilter, setSourceFilter] = useState<OriginFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<OriginFilter>(initialOriginFilter ?? 'all');
+
+  useEffect(() => {
+    if (initialOriginFilter && initialOriginFilter !== sourceFilter) {
+      setSourceFilter(initialOriginFilter);
+    }
+    // Intentionally depend only on initialOriginFilter — a parent that
+    // passes a new value means "pre-seed to this filter now". Including
+    // sourceFilter would clobber the user's manual filter changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialOriginFilter]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewer, setReviewer] = useState(() => getReviewerName());
@@ -255,17 +285,7 @@ export default function ProposalQueuePage() {
       if (e.key === '?') { e.preventDefault(); setShowCheatsheet(s => !s); return; }
       if (e.key === '/') { e.preventDefault(); filterSelectRef.current?.focus(); return; }
 
-      if (e.key === 'j' || e.key === 'k') {
-        e.preventDefault();
-        if (proposals.length === 0) return;
-        const curIdx = selected ? proposals.findIndex(p => p.id === selected.id) : -1;
-        const nextIdx = e.key === 'j'
-          ? Math.min(proposals.length - 1, curIdx + 1)
-          : Math.max(0, curIdx < 0 ? 0 : curIdx - 1);
-        const target = proposals[nextIdx];
-        if (target) void selectProposal(target.id);
-        return;
-      }
+      // j/k navigation is handled by useListKeyboardNav below.
 
       if (e.key === 'x' && selected) {
         e.preventDefault();
@@ -294,7 +314,14 @@ export default function ProposalQueuePage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [proposals, selected, reviewer, showCheatsheet, diffItem, selectProposal, handleReview, handleApply, toggleSelectId]);
+  }, [selected, reviewer, showCheatsheet, diffItem, handleReview, handleApply, toggleSelectId]);
+
+  useListKeyboardNav({
+    items: proposals,
+    selectedId: selected?.id ?? null,
+    onSelect: (id) => { void selectProposal(id as number); },
+    enabled: !diffItem && !showCheatsheet,
+  });
 
   const pendingCount = stats?.proposed ?? 0;
 
@@ -488,6 +515,13 @@ export default function ProposalQueuePage() {
                   isChecked={selectedIds.has(p.id)}
                   onOpen={() => selectProposal(p.id)}
                   onCheck={() => toggleSelectId(p.id)}
+                  onProducerClick={onNavigateToProducer ? (row) => onNavigateToProducer({
+                    origin: row.origin,
+                    autopilot_run_id: row.autopilot_run_id,
+                    finding_id: row.finding_id,
+                    scan_id: row.scan_id,
+                    gap_source: row.gap_source,
+                  }) : undefined}
                 />
               ))}
 
@@ -527,6 +561,13 @@ export default function ProposalQueuePage() {
                             isChecked={selectedIds.has(p.id)}
                             onOpen={() => selectProposal(p.id)}
                             onCheck={() => toggleSelectId(p.id)}
+                            onProducerClick={onNavigateToProducer ? (row) => onNavigateToProducer({
+                              origin: row.origin,
+                              autopilot_run_id: row.autopilot_run_id,
+                              finding_id: row.finding_id,
+                              scan_id: row.scan_id,
+                              gap_source: row.gap_source,
+                            }) : undefined}
                             compact
                           />
                         ))}
@@ -737,8 +778,16 @@ const kbdInline: React.CSSProperties = {
   fontFamily: 'monospace', color: '#fff', opacity: 0.8,
 };
 
+function producerLabel(p: ProposalSummary): string | null {
+  if (p.origin === 'autopilot' && p.autopilot_run_id) return `run #${p.autopilot_run_id}`;
+  if (p.origin === 'integrity' && p.finding_id) return `finding #${p.finding_id}`;
+  if (p.origin === 'document') return 'Document ingest';
+  if (p.origin === 'emergent') return 'Emergent queue';
+  return null;
+}
+
 function ProposalRow({
-  p, isFocused, isChecked, onOpen, onCheck, compact,
+  p, isFocused, isChecked, onOpen, onCheck, compact, onProducerClick,
 }: {
   p: ProposalSummary;
   isFocused: boolean;
@@ -746,7 +795,9 @@ function ProposalRow({
   onOpen: () => void;
   onCheck: () => void;
   compact?: boolean;
+  onProducerClick?: (p: ProposalSummary) => void;
 }) {
+  const prodLabel = producerLabel(p);
   return (
     <div
       style={{
@@ -792,6 +843,20 @@ function ProposalRow({
             </span>
           </div>
         )}
+        {!compact && prodLabel && onProducerClick && (
+          <div
+            onClick={(ev) => { ev.stopPropagation(); onProducerClick(p); }}
+            title={`Open ${p.origin} producer page`}
+            style={{
+              fontSize: '0.65rem', color: ORIGIN_COLORS[p.origin] || 'var(--text-dim)',
+              marginTop: 2, cursor: 'pointer',
+              textDecoration: 'underline', textDecorationStyle: 'dotted',
+              display: 'inline-block',
+            }}
+          >
+            from {prodLabel} &rarr;
+          </div>
+        )}
         {!compact && p.created_at && (
           <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: 1 }}>
             {new Date(p.created_at).toLocaleString()}
@@ -811,7 +876,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function EvidenceCard({ evidence }: { evidence: GapEvidence | Record<string, unknown> }) {
+function EvidenceCard({ evidence }: { evidence: GapEvidence | DocumentEvidence | Record<string, unknown> }) {
   const isGapEvidence = 'signal' in evidence && 'metric_value' in evidence;
   const isDocEvidence = 'source' in evidence && 'document' in evidence;
 

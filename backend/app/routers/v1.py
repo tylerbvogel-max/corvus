@@ -37,6 +37,7 @@ from app.schemas import (
     V1QueryResponse,
 )
 from app.services.executor import execute_query
+from app.services.pipeline import PipelineStageError
 from app.tenant import tenant
 
 router = APIRouter(prefix="/v1", tags=["external-v1"])
@@ -147,6 +148,15 @@ async def _run_v1_pipeline(
         )
     except HTTPException:
         raise
+    except PipelineStageError as pse:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": f"Pipeline stage '{pse.stage_name}' failed",
+                "failed_stage": pse.stage_name,
+                "cause": str(pse.original),
+            },
+        ) from pse
     except RuntimeError as exc:
         raise HTTPException(status_code=504, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover — defensive envelope

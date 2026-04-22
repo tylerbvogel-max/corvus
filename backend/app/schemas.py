@@ -82,6 +82,15 @@ class OutputViolationOut(BaseModel):
     detail: dict | None = None
 
 
+class StageTelemetryOut(BaseModel):
+    """Per-stage timing + status for the query-prep pipeline (Pattern #5)."""
+    stage: str
+    status: str  # "done" | "error" | "skipped"
+    duration_ms: float
+    detail: dict | None = None
+    error_message: str | None = None
+
+
 class QueryResponse(BaseModel):
     query_id: int
     intent: str | None = None
@@ -98,6 +107,8 @@ class QueryResponse(BaseModel):
     input_guard: InputGuardOut | None = None
     output_checks: list[OutputCheckOut] = []
     output_violations: list[OutputViolationOut] = []
+    stage_telemetry: list[StageTelemetryOut] = []
+    failed_stage: str | None = None  # populated on hard-fail responses
 
 
 class EvalRequest(BaseModel):
@@ -410,6 +421,9 @@ class AutopilotRunOut(BaseModel):
     status: str
     error_message: str | None = None
     created_at: str | None = None
+    # Pattern #8: per-stage timing + status from the autopilot-tick runner.
+    # Shape: list[{stage, status, duration_ms, detail?, error_message?}]
+    stage_telemetry: list[dict] | None = None
 
 
 class AutopilotTickResponse(BaseModel):
@@ -470,6 +484,12 @@ class ProposalOut(BaseModel):
     origin: str = "manual"  # autopilot | integrity | document | manual
     is_autopilot: bool = False
     created_at: str | None = None
+    # Deep-link identifiers extracted from gap_evidence_json at summary time
+    # so the UI can render "from Integrity finding #N" without re-parsing the
+    # evidence JSON client-side. Populated only when the relevant origin
+    # carries a server-side identifier; None otherwise.
+    finding_id: int | None = None
+    scan_id: int | None = None
 
 
 class ProposalDetailOut(BaseModel):
@@ -515,6 +535,10 @@ class ProposalStatsOut(BaseModel):
     rejected: int = 0
     applied: int = 0
     total: int = 0
+    # Pending-proposal counts grouped by producer origin. Keys match the
+    # values returned by _classify_origin: autopilot | integrity | document |
+    # manual. Used by the frontend to render per-producer nav badges.
+    proposed_by_origin: dict[str, int] = Field(default_factory=dict)
 
 
 class ObservationEvalRequest(BaseModel):

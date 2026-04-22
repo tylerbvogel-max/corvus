@@ -14,15 +14,20 @@ import {
   runAgingScan,
   applyHomeostasisScan,
   fetchStats,
+  listIntegrityRuns,
+  listAgents,
+  getAgentRun,
+  triggerAgentRun,
 } from '../api';
 import type {
   IntegrityDashboard,
   IntegrityFinding,
   IntegrityFindingDetail,
-  IntegrityScanSummary,
   IntegrityScanResponse,
   IntegrityWeightDistribution,
 } from '../types';
+import type { IntegrityRun, AgentSummary, AgentRunDetail } from '../api';
+import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
 
 type Panel = 'dashboard' | 'scan' | 'findings';
 
@@ -84,10 +89,6 @@ const selectStyle: React.CSSProperties = {
   borderRadius: 4, padding: '4px 8px', fontSize: '0.8rem',
 };
 
-const inputStyle: React.CSSProperties = {
-  ...selectStyle, width: 80, boxSizing: 'border-box' as const,
-};
-
 const btnStyle: React.CSSProperties = {
   padding: '4px 12px', borderRadius: 4, border: '1px solid var(--border)',
   background: 'var(--bg-card)', color: 'var(--text)', cursor: 'pointer',
@@ -122,15 +123,156 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Dashboard Panel ──────────────────────────────────────────────
 
+function KindBadge({ kind }: { kind: string }) {
+  // "scan:<type>" in warm, "agent:<name>" in accent.
+  const isAgent = kind.startsWith('agent:');
+  const color = isAgent ? 'var(--accent)' : '#f59e0b';
+  const label = isAgent
+    ? `agent · ${kind.slice(6)}`
+    : `scan · ${SCAN_TYPE_LABELS[kind.slice(5)] || kind.slice(5)}`;
+  return (
+    <span style={{
+      display: 'inline-block', padding: '1px 8px', borderRadius: 4,
+      fontSize: '0.7rem', fontWeight: 600,
+      background: `${color}22`, color, border: `1px solid ${color}44`,
+    }}>
+      {label}
+    </span>
+  );
+}
+
+function outcomeLabel(row: IntegrityRun): string {
+  if (row.kind.startsWith('scan:')) {
+    const n = row.findings_count;
+    return n === null || n === undefined ? '—' : `${n} finding${n === 1 ? '' : 's'}`;
+  }
+  if (row.kind.startsWith('agent:')) {
+    const parts: string[] = [];
+    if (row.tool_calls !== null && row.tool_calls !== undefined) parts.push(`${row.tool_calls} calls`);
+    if (row.mutations !== null && row.mutations !== undefined) parts.push(`${row.mutations} mutations`);
+    if (row.errors !== null && row.errors !== undefined && row.errors > 0) parts.push(`${row.errors} errors`);
+    return parts.length > 0 ? parts.join(', ') : '—';
+  }
+  return '—';
+}
+
+function RunDetailModal({ row, onClose }: { row: IntegrityRun; onClose: () => void }) {
+  const [detail, setDetail] = useState<AgentRunDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const isAgent = row.kind.startsWith('agent:');
+
+  useEffect(() => {
+    if (!isAgent) return;
+    setLoading(true);
+    getAgentRun(row.id)
+      .then(d => { setDetail(d); setErr(null); })
+      .catch(e => setErr(String(e)))
+      .finally(() => setLoading(false));
+  }, [isAgent, row.id]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--bg-card)', color: 'var(--text)',
+          border: '1px solid var(--border)', borderRadius: 10,
+          width: '86%', maxWidth: 960, maxHeight: '86vh',
+          overflow: 'auto', padding: 20,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Run #{row.id}</span>
+            <KindBadge kind={row.kind} />
+            <StatusBadge status={row.state} />
+          </div>
+          <button onClick={onClose} style={btnStyle}>Close</button>
+        </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 12 }}>
+          Initiated by <strong style={{ color: 'var(--text)' }}>{row.initiated_by}</strong>
+          {row.completed_at && <> · completed {new Date(row.completed_at).toLocaleString()}</>}
+          {isAgent && (
+            <> · {row.turns ?? '—'} turns · {row.tool_calls ?? '—'} calls · {row.mutations ?? '—'} mutations · {row.errors ?? '—'} errors</>
+          )}
+          {!isAgent && row.scan_scope && <> · scope <code>{row.scan_scope}</code> · {row.findings_count ?? 0} findings</>}
+        </div>
+        {row.summary && (
+          <div style={{ fontStyle: 'italic', color: 'var(--text-dim)', fontSize: '0.8rem', marginBottom: 12 }}>
+            {row.summary}
+          </div>
+        )}
+
+        {isAgent && (
+          <div>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 6 }}>Tool-call trace</div>
+            {loading && <div style={{ color: 'var(--text-dim)', fontSize: '0.78rem' }}>Loading trace...</div>}
+            {err && <div style={{ color: '#e74c3c', fontSize: '0.78rem' }}>{err}</div>}
+            {detail && (
+              <table className="score-table" style={{ width: '100%', fontSize: '0.72rem' }}>
+                <thead>
+                  <tr>
+                    <th>#</th><th>Tool</th><th>State</th><th>Reason</th><th>Input</th><th>Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detail.child_actions.map((c, i) => (
+                    <tr key={c.action_id}>
+                      <td>{i + 1}</td>
+                      <td><code>{c.tool}</code></td>
+                      <td><StatusBadge status={c.state} /></td>
+                      <td style={{ maxWidth: 200, color: 'var(--text-dim)' }}>{c.reason || '—'}</td>
+                      <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <code style={{ fontSize: '0.68rem' }}>{JSON.stringify(c.input)}</code>
+                      </td>
+                      <td style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {c.error
+                          ? <span style={{ color: '#e74c3c' }}>{c.error}</span>
+                          : <code style={{ fontSize: '0.68rem' }}>{JSON.stringify(c.result)}</code>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {!isAgent && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+            Scan row — no tool-call trace. Open the Findings Queue tab to inspect findings from this scan.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DashboardPanel() {
   const [data, setData] = useState<IntegrityDashboard | null>(null);
+  const [runs, setRuns] = useState<IntegrityRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRun, setSelectedRun] = useState<IntegrityRun | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setData(await fetchIntegrityDashboard());
+      const [dash, runList] = await Promise.all([
+        fetchIntegrityDashboard(),
+        listIntegrityRuns(50),
+      ]);
+      setData(dash);
+      setRuns(runList);
       setError(null);
     } catch (e) {
       setError(String(e));
@@ -189,36 +331,55 @@ function DashboardPanel() {
         })}
       </div>
 
-      {/* Recent scans */}
+      {/* Unified recent runs */}
       <div>
-        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Recent Scans</div>
-        {data.recent_scans.length === 0 ? (
-          <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>No scans yet.</div>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8,
+        }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Recent runs</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+            Scans and agent runs, newest first
+          </div>
+        </div>
+        {runs.length === 0 ? (
+          <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>No runs yet.</div>
         ) : (
           <table className="score-table" style={{ width: '100%', fontSize: '0.75rem' }}>
             <thead>
               <tr>
-                <th>Type</th>
-                <th>Scope</th>
-                <th>Findings</th>
-                <th>Status</th>
-                <th>Date</th>
+                <th>#</th>
+                <th>When</th>
+                <th>Kind</th>
+                <th>Initiated by</th>
+                <th>State</th>
+                <th>Outcome</th>
               </tr>
             </thead>
             <tbody>
-              {data.recent_scans.map((s: IntegrityScanSummary) => (
-                <tr key={s.id}>
-                  <td>{SCAN_TYPE_LABELS[s.scan_type] || s.scan_type}</td>
-                  <td>{s.scope}</td>
-                  <td>{s.findings_count}</td>
-                  <td><StatusBadge status={s.status} /></td>
-                  <td>{s.completed_at ? new Date(s.completed_at).toLocaleString() : '-'}</td>
+              {runs.map(r => (
+                <tr
+                  key={`${r.kind}-${r.id}`}
+                  onClick={() => setSelectedRun(r)}
+                  style={{
+                    cursor: 'pointer',
+                    background: r.errors && r.errors > 0 ? 'rgba(245, 158, 11, 0.08)' : undefined,
+                  }}
+                >
+                  <td>{r.id}</td>
+                  <td>{r.completed_at ? new Date(r.completed_at).toLocaleString()
+                       : r.started_at ? new Date(r.started_at).toLocaleString() : '—'}</td>
+                  <td><KindBadge kind={r.kind} /></td>
+                  <td>{r.initiated_by}</td>
+                  <td><StatusBadge status={r.state} /></td>
+                  <td>{outcomeLabel(r)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {selectedRun && <RunDetailModal row={selectedRun} onClose={() => setSelectedRun(null)} />}
     </div>
   );
 }
@@ -345,7 +506,105 @@ function ToggleSwitch({ label, checked, onChange, hint }: {
   );
 }
 
-function ScanPanel() {
+function AgentsCard({ onRan }: { onRan: () => void }) {
+  const [agents, setAgents] = useState<AgentSummary[]>([]);
+  const [triggering, setTriggering] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    listAgents()
+      .then(setAgents)
+      .catch(e => setErr(String(e)));
+  }, []);
+
+  const onRun = async (name: string) => {
+    setTriggering(name);
+    setErr(null);
+    setMsg(null);
+    try {
+      const r = await triggerAgentRun(name, {});
+      setMsg(`Run #${r.action_id} — ${r.summary || '(no summary)'}.`);
+      onRan();
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setTriggering(null);
+    }
+  };
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+      padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+      display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700 }}>Available agents</div>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: 1 }}>
+            Autonomous maintenance agents. Each run lands as an Action with a full tool-call trace.
+          </div>
+        </div>
+      </div>
+      {err && (
+        <div style={{
+          color: '#e74c3c', fontSize: '0.78rem', padding: '6px 10px',
+          background: '#e74c3c11', borderRadius: 6, border: '1px solid #e74c3c33',
+        }}>{err}</div>
+      )}
+      {msg && (
+        <div style={{
+          color: '#4caf50', fontSize: '0.78rem', padding: '6px 10px',
+          background: '#4caf5011', borderRadius: 6, border: '1px solid #4caf5033',
+        }}>{msg}</div>
+      )}
+      {agents.length === 0 && !err && (
+        <div style={{ color: 'var(--text-dim)', fontSize: '0.78rem' }}>No agents registered.</div>
+      )}
+      {agents.length > 0 && (
+        <table className="score-table" style={{ width: '100%', fontSize: '0.75rem' }}>
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Role</th>
+              <th>Description</th>
+              <th>Model</th>
+              <th>Tools</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {agents.map(a => (
+              <tr key={a.name}>
+                <td><code>{a.name}</code></td>
+                <td>{a.role}</td>
+                <td style={{ color: 'var(--text-dim)', maxWidth: 320 }}>{a.description}</td>
+                <td style={{ color: 'var(--text-dim)' }}>{a.model}</td>
+                <td>{a.tool_count}</td>
+                <td>
+                  <button
+                    onClick={() => onRun(a.name)}
+                    disabled={!a.manual_trigger || triggering === a.name}
+                    style={{
+                      padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      fontSize: '0.75rem', fontWeight: 600,
+                      background: 'var(--accent)', color: '#fff',
+                    }}
+                  >
+                    {triggering === a.name ? 'Running...' : 'Run now'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function ScanPanel({ onAgentRan }: { onAgentRan: () => void }) {
   const [running, setRunning] = useState<string | null>(null);
   const [results, setResults] = useState<Record<string, IntegrityScanResponse | null>>({});
   const [applyMsg, setApplyMsg] = useState<string | null>(null);
@@ -468,6 +727,9 @@ function ScanPanel() {
           background: '#e74c3c11', borderRadius: 6, border: '1px solid #e74c3c33',
         }}>{error}</div>
       )}
+
+      {/* Available agents */}
+      <AgentsCard onRan={onAgentRan} />
 
       {/* Shared Scope Selector */}
       <div style={{
@@ -647,6 +909,7 @@ function FindingsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [queueCollapsed, setQueueCollapsed] = useState(false);
+  const [agentRunModal, setAgentRunModal] = useState<IntegrityRun | null>(null);
 
   // Filters
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -689,6 +952,13 @@ function FindingsPanel() {
       setError(String(e));
     }
   };
+
+  useListKeyboardNav({
+    items: findings,
+    selectedId: selected?.id ?? null,
+    onSelect: (id) => { void selectFinding(id as number); },
+    enabled: !agentRunModal,
+  });
 
   const [proposeMsg, setProposeMsg] = useState<string | null>(null);
 
@@ -901,6 +1171,33 @@ function FindingsPanel() {
               </div>
             </div>
 
+            {/* Auto-proposed banner */}
+            {selected.created_by_agent_run_id && (
+              <div style={{
+                padding: '8px 12px', borderRadius: 6, fontSize: '0.78rem',
+                background: 'var(--accent)' + '15',
+                border: '1px solid ' + 'var(--accent)' + '55',
+                color: 'var(--text)',
+              }}>
+                Auto-proposed by{' '}
+                <code style={{ fontWeight: 600 }}>{selected.created_by_agent_name || 'agent'}</code>
+                {' — '}
+                <a
+                  onClick={() => setAgentRunModal({
+                    id: selected.created_by_agent_run_id!,
+                    kind: `agent:${selected.created_by_agent_name || 'agent'}`,
+                    started_at: null, completed_at: null,
+                    initiated_by: 'agent', state: 'applied',
+                    summary: null, scan_scope: null, findings_count: null,
+                    turns: null, tool_calls: null, mutations: null, errors: null,
+                  })}
+                  style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  view run #{selected.created_by_agent_run_id}
+                </a>
+              </div>
+            )}
+
             {/* Description */}
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>Description</div>
@@ -1061,6 +1358,10 @@ function FindingsPanel() {
           </div>
         )}
       </div>
+
+      {agentRunModal && (
+        <RunDetailModal row={agentRunModal} onClose={() => setAgentRunModal(null)} />
+      )}
     </div>
   );
 }
@@ -1096,7 +1397,7 @@ export default function IntegrityPage() {
       {/* Panel content */}
       <div style={{ flex: 1, overflow: 'auto', padding: '0 4px' }}>
         {panel === 'dashboard' && <DashboardPanel />}
-        {panel === 'scan' && <ScanPanel />}
+        {panel === 'scan' && <ScanPanel onAgentRan={() => setPanel('dashboard')} />}
         {panel === 'findings' && <FindingsPanel />}
       </div>
     </div>

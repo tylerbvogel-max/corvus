@@ -366,7 +366,9 @@ export function submitQueryStream(
         } else if (eventType === 'result') {
           finalResult = parsed as QueryResponse;
         } else if (eventType === 'error') {
-          throw new Error(parsed.message);
+          const err = new Error(parsed.message) as Error & { failedStage?: string };
+          if (parsed.failed_stage) err.failedStage = parsed.failed_stage;
+          throw err;
         }
       }
     }
@@ -1550,9 +1552,14 @@ export interface ProposalSummary {
   applied_at: string | null;
   applied_by: string | null;
   item_count: number;
-  origin: string; // "autopilot" | "integrity" | "document" | "manual"
+  origin: string; // "autopilot" | "integrity" | "document" | "emergent" | "manual"
   is_autopilot: boolean;
   created_at: string | null;
+  // Server-extracted source identifiers for reverse deep-linking back
+  // to the upstream producer. Populated only when the origin carries a
+  // retrievable id (currently integrity → finding_id + scan_id).
+  finding_id: number | null;
+  scan_id: number | null;
 }
 
 export interface GapEvidence {
@@ -1615,6 +1622,9 @@ export interface ProposalStats {
   rejected: number;
   applied: number;
   total: number;
+  // Pending counts keyed by origin bucket (autopilot | integrity | document |
+  // emergent | manual). Powers per-producer badges in the sidebar nav.
+  proposed_by_origin: Record<string, number>;
 }
 
 export function fetchProposals(
@@ -1963,4 +1973,112 @@ export function certifyEvalRun(id: number): Promise<{
   eval_run_id: number; certified_at: string; certified_by: string;
 }> {
   return json(`/admin/eval/runs/${id}/certify`, { method: 'POST' });
+}
+
+// ── AIP Phase 4 Pattern #208: agents surface ──
+
+export interface AgentSummary {
+  name: string;
+  role: string;
+  description: string;
+  model: string;
+  max_turns: number;
+  tool_count: number;
+  manual_trigger: boolean;
+  schedule_enabled: boolean;
+}
+
+export interface AgentDetail extends AgentSummary {
+  tool_allow_list: string[];
+  system_prompt_preview: string;
+}
+
+export interface AgentRun {
+  action_id: number;
+  agent_name: string;
+  triggered_by: string;
+  started_at: string | null;
+  completed_at: string | null;
+  state: string;
+  turns: number | null;
+  tool_calls: number | null;
+  mutations: number | null;
+  errors: number | null;
+  summary: string | null;
+}
+
+export interface AgentRunDetail extends AgentRun {
+  child_actions: Array<{
+    action_id: number;
+    kind: string;
+    tool: string;
+    input: Record<string, unknown>;
+    reason: string | null;
+    state: string;
+    result: Record<string, unknown> | null;
+    error: string | null;
+    applied_at: string | null;
+  }>;
+}
+
+export function listAgents(): Promise<AgentSummary[]> {
+  return json<AgentSummary[]>('/v1/agents');
+}
+
+export function getAgent(name: string): Promise<AgentDetail> {
+  return json<AgentDetail>(`/v1/agents/${encodeURIComponent(name)}`);
+}
+
+export function listAgentRuns(agentName?: string, limit = 50): Promise<AgentRun[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (agentName) params.set('agent_name', agentName);
+  return json<AgentRun[]>(`/v1/agents/runs?${params.toString()}`);
+}
+
+export function getAgentRun(actionId: number): Promise<AgentRunDetail> {
+  return json<AgentRunDetail>(`/v1/agents/runs/${actionId}`);
+}
+
+export function triggerAgentRun(
+  name: string,
+  inputContext?: Record<string, unknown>,
+): Promise<{
+  action_id: number;
+  agent_name: string;
+  summary: string;
+  turns: number;
+  tool_calls: number;
+  mutations: number;
+  errors: number;
+}> {
+  return json(`/v1/agents/${encodeURIComponent(name)}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input_context: inputContext || {} }),
+  });
+}
+
+export interface IntegrityRun {
+  id: number;
+  kind: string;                 // "scan:<scan_type>" | "agent:<agent_name>"
+  started_at: string | null;
+  completed_at: string | null;
+  initiated_by: string;
+  state: string;
+  summary: string | null;
+  scan_scope: string | null;
+  findings_count: number | null;
+  turns: number | null;
+  tool_calls: number | null;
+  mutations: number | null;
+  errors: number | null;
+}
+
+export function listIntegrityRuns(
+  limit: number = 50,
+  kindFilter?: 'scan' | 'agent',
+): Promise<IntegrityRun[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (kindFilter) params.set('kind_filter', kindFilter);
+  return json<IntegrityRun[]>(`/admin/integrity/runs?${params.toString()}`);
 }

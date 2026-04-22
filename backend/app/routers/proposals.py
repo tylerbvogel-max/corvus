@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import ValidationError
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,21 +31,54 @@ router = APIRouter(prefix="/admin/proposals", tags=["proposals"])
 def _classify_origin(p: AutopilotProposal) -> str:
     """Classify proposal origin for UI filter pills.
 
-    Precedence: autopilot_run_id link > integrity_* prefix > document_ingest > manual.
+    Precedence: integrity_* > document_ingest > emergent_queue > autopilot link > manual.
+    Source-string classifications take precedence over the autopilot FK
+    because integrity/document/emergent proposals are created inside autopilot
+    ticks and still carry an autopilot_run_id — but the user-facing producer
+    is the upstream source, not the autopilot tick that wrapped it.
     """
-    if p.autopilot_run_id is not None:
-        return "autopilot"
     src = p.gap_source or ""
     if src.startswith("integrity_"):
         return "integrity"
     if src == "document_ingest":
         return "document"
+    if src == "emergent_queue":
+        return "emergent"
+    if p.autopilot_run_id is not None:
+        return "autopilot"
     return "manual"
+
+
+def _extract_source_ids(p: AutopilotProposal) -> tuple[int | None, int | None]:
+    """Pull (finding_id, scan_id) out of gap_evidence_json for integrity rows.
+
+    Integrity-backed proposals embed the upstream finding_id + scan_id in the
+    first evidence dict (see services/integrity/proposals.py). Extracting them
+    server-side lets the UI render reverse deep-links without re-parsing JSON.
+    Returns (None, None) for non-integrity rows or malformed evidence.
+    """
+    if not p.gap_evidence_json:
+        return None, None
+    try:
+        raw = json.loads(p.gap_evidence_json)
+    except (json.JSONDecodeError, TypeError):
+        return None, None
+    if not isinstance(raw, list) or not raw:
+        return None, None
+    first = raw[0]
+    if not isinstance(first, dict):
+        return None, None
+    fid = first.get("finding_id")
+    sid = first.get("scan_id")
+    finding_id = int(fid) if isinstance(fid, int) else None
+    scan_id = int(sid) if isinstance(sid, int) else None
+    return finding_id, scan_id
 
 
 def _proposal_summary(p: AutopilotProposal) -> ProposalOut:
     """Convert proposal model to summary schema."""
     origin = _classify_origin(p)
+    finding_id, scan_id = _extract_source_ids(p)
     return ProposalOut(
         id=p.id,
         autopilot_run_id=p.autopilot_run_id,
@@ -63,6 +97,8 @@ def _proposal_summary(p: AutopilotProposal) -> ProposalOut:
         origin=origin,
         is_autopilot=(origin == "autopilot"),
         created_at=p.created_at.isoformat() if p.created_at else None,
+        finding_id=finding_id,
+        scan_id=scan_id,
     )
 
 
@@ -73,10 +109,20 @@ def _proposal_detail(p: AutopilotProposal) -> ProposalDetailOut:
         try:
             raw = json.loads(p.gap_evidence_json)
             for e in raw:
+                # Integrity-backed proposals write evidence dicts that have a
+                # "signal" field but not the full GapEvidenceOut schema. Fall
+                # through to the plain-dict branch on validation failure so
+                # the proposal detail endpoint stays functional.
                 if "signal" in e:
-                    evidence.append(GapEvidenceOut(**e))
+                    try:
+                        evidence.append(GapEvidenceOut(**e))
+                    except ValidationError:
+                        evidence.append(e)
                 elif "source" in e and "document" in e:
-                    evidence.append(DocumentEvidenceOut(**e))
+                    try:
+                        evidence.append(DocumentEvidenceOut(**e))
+                    except ValidationError:
+                        evidence.append(e)
                 else:
                     evidence.append(e)
         except (json.JSONDecodeError, TypeError):
@@ -123,6 +169,37 @@ def _proposal_detail(p: AutopilotProposal) -> ProposalDetailOut:
     )
 
 
+def _apply_origin_filter(stmt, origin: str):
+    """Attach the SQL WHERE clause matching _classify_origin precedence.
+
+    Mirrors the Python classifier exactly so list-filtering and badge counts
+    agree on which origin a row belongs to.
+    """
+    is_integrity = AutopilotProposal.gap_source.like("integrity_%")
+    is_document = AutopilotProposal.gap_source == "document_ingest"
+    is_emergent = AutopilotProposal.gap_source == "emergent_queue"
+    if origin == "integrity":
+        return stmt.where(is_integrity)
+    if origin == "document":
+        return stmt.where(is_document)
+    if origin == "emergent":
+        return stmt.where(is_emergent)
+    if origin == "autopilot":
+        return stmt.where(
+            AutopilotProposal.autopilot_run_id.isnot(None),
+            ~is_integrity, ~is_document, ~is_emergent,
+        )
+    if origin == "manual":
+        return stmt.where(
+            AutopilotProposal.autopilot_run_id.is_(None),
+            or_(
+                AutopilotProposal.gap_source.is_(None),
+                and_(~is_integrity, ~is_document, ~is_emergent),
+            ),
+        )
+    raise HTTPException(400, f"Unknown origin: {origin!r}")
+
+
 @router.get("/", response_model=list[ProposalOut])
 async def list_proposals(
     state: str | None = None,
@@ -134,10 +211,11 @@ async def list_proposals(
     """List proposals, optionally filtered by state, gap_source, or origin.
 
     `origin` is the high-level bucket shown in the UI filter pills:
-      - autopilot: autopilot_run_id IS NOT NULL
       - integrity: gap_source LIKE 'integrity_%'
       - document:  gap_source == 'document_ingest'
-      - manual:    everything else (no autopilot link, no integrity/document source)
+      - emergent:  gap_source == 'emergent_queue'
+      - autopilot: autopilot_run_id IS NOT NULL and none of the above
+      - manual:    no autopilot link and none of the above source strings
     """
     assert limit > 0, "limit must be positive"
     stmt = select(AutopilotProposal).order_by(AutopilotProposal.id.desc())
@@ -145,25 +223,8 @@ async def list_proposals(
         stmt = stmt.where(AutopilotProposal.state == state)
     if gap_source:
         stmt = stmt.where(AutopilotProposal.gap_source == gap_source)
-    if origin == "autopilot":
-        stmt = stmt.where(AutopilotProposal.autopilot_run_id.isnot(None))
-    elif origin == "integrity":
-        stmt = stmt.where(AutopilotProposal.gap_source.like("integrity_%"))
-    elif origin == "document":
-        stmt = stmt.where(AutopilotProposal.gap_source == "document_ingest")
-    elif origin == "manual":
-        stmt = stmt.where(
-            AutopilotProposal.autopilot_run_id.is_(None),
-            or_(
-                AutopilotProposal.gap_source.is_(None),
-                and_(
-                    ~AutopilotProposal.gap_source.like("integrity_%"),
-                    AutopilotProposal.gap_source != "document_ingest",
-                ),
-            ),
-        )
-    elif origin is not None:
-        raise HTTPException(400, f"Unknown origin: {origin!r}")
+    if origin is not None:
+        stmt = _apply_origin_filter(stmt, origin)
     stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return [_proposal_summary(p) for p in result.scalars().all()]
@@ -171,19 +232,53 @@ async def list_proposals(
 
 @router.get("/stats", response_model=ProposalStatsOut)
 async def proposal_stats(db: AsyncSession = Depends(get_db)):
-    """Aggregate counts by proposal state."""
+    """Aggregate counts by proposal state, plus pending counts per origin.
+
+    `proposed_by_origin` powers per-producer badges in the frontend nav.
+    Runs over the pending set only (state='proposed') so idle producers
+    do not advertise stale approved/applied work. Bounded: iterates finite
+    rows returned by a single indexed query.
+    """
     result = await db.execute(
         select(AutopilotProposal.state, func.count(AutopilotProposal.id))
         .group_by(AutopilotProposal.state)
     )
     counts = {row[0]: row[1] for row in result.all()}
+    pending_rows = (await db.execute(
+        select(
+            AutopilotProposal.autopilot_run_id,
+            AutopilotProposal.gap_source,
+        ).where(AutopilotProposal.state == "proposed")
+    )).all()
+    origin_counts: dict[str, int] = {}
+    for run_id, src in pending_rows:
+        origin = _classify_origin_tuple(run_id, src)
+        origin_counts[origin] = origin_counts.get(origin, 0) + 1
     return ProposalStatsOut(
         proposed=counts.get("proposed", 0),
         approved=counts.get("approved", 0),
         rejected=counts.get("rejected", 0),
         applied=counts.get("applied", 0),
         total=sum(counts.values()),
+        proposed_by_origin=origin_counts,
     )
+
+
+def _classify_origin_tuple(run_id: int | None, src: str | None) -> str:
+    """Same rules as _classify_origin but against a (run_id, gap_source) tuple.
+
+    Used by /stats so it can aggregate without materializing full ORM rows.
+    """
+    s = src or ""
+    if s.startswith("integrity_"):
+        return "integrity"
+    if s == "document_ingest":
+        return "document"
+    if s == "emergent_queue":
+        return "emergent"
+    if run_id is not None:
+        return "autopilot"
+    return "manual"
 
 
 @router.get("/{proposal_id}", response_model=ProposalDetailOut)

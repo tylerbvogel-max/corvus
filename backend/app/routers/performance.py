@@ -10,6 +10,11 @@ import numpy as np
 from scipy import stats as sp_stats
 
 from app.database import get_db
+from app.services.llm_provider import MODEL_REGISTRY
+
+# Minimum sample size before a mode's aggregate stats are published to the UI.
+# Below this, point estimates are too unstable to be useful evidence.
+MIN_MODE_N = 10
 
 
 def _num(val):
@@ -23,12 +28,11 @@ def _num(val):
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-# Pricing per million tokens (current Anthropic rates as of 2025)
-# Haiku 4.5, Sonnet 4.6, Opus 4.6
+# Per-million-token prices sourced from MODEL_REGISTRY (single source of truth
+# shared with llm_provider._estimate_cost_anthropic and the backfill script).
 PRICING = MappingProxyType({
-    "haiku":  {"input": 1.00, "output": 5.00},
-    "sonnet": {"input": 3.00, "output": 15.00},
-    "opus":   {"input": 5.00, "output": 25.00},
+    name: {"input": MODEL_REGISTRY[name].input_price, "output": MODEL_REGISTRY[name].output_price}
+    for name in ("haiku", "sonnet", "opus")
 })
 
 
@@ -148,6 +152,9 @@ async def _cost_modeling(db: AsyncSession) -> dict:
 
 
 async def _quality_by_mode(db: AsyncSession) -> dict:
+    # Gate on HAVING COUNT(*) >= MIN_MODE_N so 1-2 sample exploratory modes
+    # (gemini/groq/or-*) do not appear as headline evidence alongside modes
+    # with hundreds of evaluations.
     rows = (await db.execute(text("""
         SELECT answer_mode, COUNT(*) as n,
             ROUND(AVG(accuracy)::numeric, 2) as acc,
@@ -155,8 +162,10 @@ async def _quality_by_mode(db: AsyncSession) -> dict:
             ROUND(AVG(clarity)::numeric, 2) as clar,
             ROUND(AVG(faithfulness)::numeric, 2) as faith,
             ROUND(AVG(overall)::numeric, 2) as overall
-        FROM eval_scores GROUP BY answer_mode ORDER BY overall DESC
-    """))).fetchall()
+        FROM eval_scores GROUP BY answer_mode
+        HAVING COUNT(*) >= :min_n
+        ORDER BY overall DESC
+    """), {"min_n": MIN_MODE_N})).fetchall()
 
     quality_by_mode = [
         {

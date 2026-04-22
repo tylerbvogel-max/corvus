@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db, async_session
@@ -24,10 +25,12 @@ from app.models import (
 from app.schemas import (
     AutopilotConfigOut, AutopilotConfigUpdate, AutopilotRunOut, AutopilotTickResponse,
 )
+from app.services.autopilot_pipeline import AutopilotState, build_autopilot_pipeline
 from app.services.executor import execute_query
 from app.services.llm_provider import llm_chat
 from app.services.neuron_service import get_system_state
 from app.services.gap_detector import detect_gap, detect_gaps_scored, GapTarget, ScoredGap
+from app.services.pipeline import PipelineContext, PipelineStageError, run_pipeline
 from app.services import action_bus
 from app.middleware.rbac import UserIdentity
 
@@ -233,6 +236,7 @@ async def list_runs(db: AsyncSession = Depends(get_db)):
             status=r.status,
             error_message=r.error_message,
             created_at=r.created_at.isoformat() if r.created_at else None,
+            stage_telemetry=r.stage_telemetry_json,
         )
         for r in runs
     ]
@@ -428,121 +432,102 @@ async def _record_run(status: str, **kwargs) -> AutopilotRun:
     return run
 
 
+async def _persist_tick_telemetry(run_id: int | None, telemetry: list[dict]) -> None:
+    """Attach the pipeline's stage telemetry to an already-persisted AutopilotRun.
+
+    The PersistenceStage creates the run row before the final telemetry entry
+    (for PersistenceStage itself) exists, so we UPDATE the row after the
+    pipeline completes. Swallowing errors here matches the rest of the error
+    handlers — telemetry is observational, never a reason to drop a tick.
+    """
+    if run_id is None:
+        return
+    try:
+        async with async_session() as s:
+            run = await s.get(AutopilotRun, run_id)
+            if run is not None:
+                run.stage_telemetry_json = telemetry
+                await s.commit()
+    except SQLAlchemyError:
+        pass
+
+
 async def _handle_cancelled(
-    generated_query: str, total_cost: float, run_fields: dict,
+    state: AutopilotState, ctx: PipelineContext,
 ) -> AutopilotTickResponse:
     _reset_tick_state()
     try:
-        run_fields.update(eval_text=run_fields["eval_text"] or None)
-        run_fields.update(refine_reasoning=run_fields["refine_reasoning"] or None)
-        await _record_run("cancelled", generated_query=generated_query, cost_usd=total_cost, **run_fields)
-    except Exception:
+        await _record_run(
+            "cancelled",
+            generated_query=state.generated_query,
+            cost_usd=state.total_cost,
+            stage_telemetry_json=ctx.telemetry_json(),
+            **state.run_fields(),
+        )
+    except SQLAlchemyError:
         pass
     return AutopilotTickResponse(status="cancelled", message="Tick cancelled by user")
 
 
 async def _handle_error(
-    exc: Exception, generated_query: str, total_cost: float, run_fields: dict,
+    exc: BaseException, state: AutopilotState, ctx: PipelineContext,
 ) -> AutopilotTickResponse:
     _reset_tick_state()
     try:
         await _record_run(
-            "error", generated_query=generated_query, cost_usd=total_cost,
-            directive=run_fields["directive"], focus_neuron_label=run_fields["focus_neuron_label"],
-            gap_source=run_fields["gap_source"], gap_target=run_fields["gap_target"],
+            "error",
+            generated_query=state.generated_query,
+            cost_usd=state.total_cost,
+            directive=state.config.directive,
+            focus_neuron_label=state.focus_label,
+            gap_source=state.gap_source,
+            gap_target=state.gap_target_desc,
             neurons_activated=0, updates_applied=0, neurons_created=0, eval_overall=0,
             error_message=f"{type(exc).__name__}: {exc}\n{traceback.format_exc()[-500:]}",
+            stage_telemetry_json=ctx.telemetry_json(),
         )
-    except Exception:
+    except SQLAlchemyError:
         pass
     return AutopilotTickResponse(status="error", message=str(exc))
 
 
 async def _run_tick(db: AsyncSession, config: AutopilotConfig) -> AutopilotTickResponse:
-    """Run one gap-driven autopilot cycle."""
+    """Run one gap-driven autopilot cycle through the typed pipeline DAG.
+
+    Pattern #8: the tick is a composition of `Stage` instances executed by the
+    same `run_pipeline` runner the query-prep flow uses. Cancellation is
+    checked via the `on_stage` callback after each stage completes; any stage
+    exception bubbles as `PipelineStageError` and is recorded with telemetry.
+    """
+    assert config is not None, "config is required"
+    assert db is not None, "db session is required"
+
     global _cancel_requested, _tick_running, _current_step
     _cancel_requested = False
     _tick_running = True
     _current_step = ""
 
-    total_cost = 0.0
-    generated_query = "(generation failed)"
-    run_fields: dict = dict(
-        directive=config.directive, focus_neuron_label=None, gap_source=None,
-        gap_target=None, query_id=None, neurons_activated=0, updates_applied=0,
-        neurons_created=0, eval_overall=0, eval_text="", refine_reasoning="",
-    )
+    state = AutopilotState(config=config)
+
+    async def _on_stage(_name: str, _payload: dict) -> None:
+        _check_cancel()
+
+    ctx = PipelineContext(db=db, on_stage=_on_stage)
 
     try:
-        gap, scored_gap, focus_label, focus_ctx, recent_qs, gap_src, gap_desc = (
-            await _detect_and_gather_context(config.focus_neuron_id)
-        )
-        run_fields.update(focus_neuron_label=focus_label, gap_source=gap_src, gap_target=gap_desc)
-        _check_cancel()
-
-        _set_step("generate", "Generating targeted query from gap analysis...")
-        generated_query, gen_cost = await _generate_query(config.directive, recent_qs, focus_ctx, gap)
-        total_cost += gen_cost
-        _check_cancel()
-
-        query_id, neurons_activated, exec_cost = await _execute_pipeline(generated_query)
-        total_cost += exec_cost
-        run_fields.update(query_id=query_id, neurons_activated=neurons_activated)
-        _check_cancel()
-
-        eval_overall, eval_text, eval_cost = await _evaluate_response(query_id, config.eval_model)
-        total_cost += eval_cost
-        run_fields.update(eval_overall=eval_overall, eval_text=eval_text)
-        _check_cancel()
-
-        reasoning, updates, new_neurons, refine_cost = await _refine_neurons(
-            query_id, config.max_layer, config.focus_neuron_id, config.eval_model, gap,
-        )
-        total_cost += refine_cost
-        run_fields.update(refine_reasoning=reasoning)
-        _check_cancel()
-
-        # Get assembled prompt for hash
-        assembled_prompt = None
-        async with async_session() as _sp:
-            q = await _sp.get(Query, query_id)
-            if q:
-                assembled_prompt = q.assembled_prompt
-
-        proposal_id = await _create_proposal(
-            query_id=query_id,
-            updates=updates,
-            new_neurons=new_neurons,
-            scored_gap=scored_gap,
-            reasoning=reasoning,
-            eval_overall=eval_overall,
-            eval_text=eval_text,
-            llm_model=config.eval_model,
-            assembled_prompt=assembled_prompt,
-        )
-
-        # Record with 0 applied — changes happen at approval time
-        run_fields.update(updates_applied=0, neurons_created=0)
-        run = await _record_run(
-            "completed", generated_query=generated_query, cost_usd=total_cost,
-            proposal_id=proposal_id, **run_fields,
-        )
-
-        # Link proposal back to run
-        async with async_session() as _link:
-            prop = await _link.get(AutopilotProposal, proposal_id)
-            if prop:
-                prop.autopilot_run_id = run.id
-                await _link.commit()
-
+        await run_pipeline(build_autopilot_pipeline(config), state, ctx)
+        await _persist_tick_telemetry(state.run_id, ctx.telemetry_json())
         _reset_tick_state()
-        return AutopilotTickResponse(status="completed", run_id=run.id)
+        return AutopilotTickResponse(status="completed", run_id=state.run_id)
 
     except _CancelledError:
-        return await _handle_cancelled(generated_query, total_cost, run_fields)
+        return await _handle_cancelled(state, ctx)
 
-    except Exception as e:
-        return await _handle_error(e, generated_query, total_cost, run_fields)
+    except PipelineStageError as pse:
+        return await _handle_error(pse.original, state, ctx)
+
+    except Exception as e:  # noqa: BLE001 — final safety net, recorded to DB
+        return await _handle_error(e, state, ctx)
 
 
 class _CancelledError(Exception):

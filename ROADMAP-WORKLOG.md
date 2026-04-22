@@ -8,11 +8,26 @@ This file is the canonical session handoff for the AIP governance roadmap. At th
 
 ## Current position
 
-**Phase:** Phase 1 complete (Patterns #1, #2, #3). Phase 1.5 shipped. Next: Phase 2a vs 2b decision.
-**Completed items:** #1 Action bus, #2 Lineage + score overrides, #3 Immutable eval artifacts, Phase 1.5 (#7 output gates, GTM-A /v1/query, GTM-B remote MCP).
-**Active items:** none in flight.
-**Next item:** re-evaluate Phase 2a (#4 row-level markings) vs Phase 2b (#5/#6/#8) sequencing based on customer traffic signal from Phase 1.5 surfaces.
-**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below. Phase 1.5 was pulled ahead of #3 in the 2026-04-13 session on explicit user direction ("we have to get all of it eventually, ready to go"); Pattern #3 closed 2026-04-16.
+**Phase:** Phase 1 complete (Patterns #1, #2, #3). Phase 1.5 shipped. Phase 4 first co-ship closed 2026-04-20; UI fold + polish shipped 2026-04-21. Phase 2b started 2026-04-21 with Pattern #5 (typed pipeline DAG with observable stages) landing same day. Second agent wave (#203/#204/#205) remains gated on Pattern #6 (ontology branching). Phase 2a deferred to tail (customer-triggered).
+**Completed items:** #1 Action bus, #2 Lineage + score overrides, #3 Immutable eval artifacts, Phase 1.5 (#7 output gates, GTM-A /v1/query, GTM-B remote MCP), Phase 4 first co-ship (#201 agent registry, #202 dedup agent, #208 agent visibility — folded into Integrity 2026-04-21), #5 Typed pipeline DAG (2026-04-21).
+**Active items:** none — between work units. Next action is to choose the next Phase 2b item (#6 or #8) or pivot to a different track (see "Next session starts here").
+**Next item:** a branching choice — (A) Pattern #6 ontology branching (unblocks second agent wave #203/#204/#205 and is Phase 2b's next correctness item); (B) Pattern #8 autopilot-as-typed-agent (builds directly on #5's stage primitive); (C) Phase 2a #4 row-level markings, only if a customer conversation forces defense-sale / CUI handling.
+**Revised sequence active as of 2026-04-12** — see "Revised sequencing" below. Phase 1.5 was pulled ahead of #3 in the 2026-04-13 session on explicit user direction; Pattern #3 closed 2026-04-16. Phase 2a pushed to tail 2026-04-20; Phase 4 brought up as parallel track off 1.5 (rationale: agents have long-running behavioral impacts, need them in the continuous-eval loop early so the corpus accumulates with them in scope). First Phase 4 co-ship closed 2026-04-20; UI fold + cross-surface polish landed 2026-04-21.
+
+### Pre-agent eval baseline (locked 2026-04-20)
+
+Frozen comparison point before Phase 4 agents land. Any post-agent drift is measured against this row.
+
+- **Tenant:** corvus-aero
+- **certified_eval_run_id:** 3
+- **suite_name:** smoke
+- **suite_hash:** 5212806f355e0ed05f2b… (see `eval_runs.id=3`)
+- **scoring_engine_version:** 1.0.0
+- **certified_at:** 2026-04-17 03:56:22 UTC
+- **certified_by:** tester
+- **status:** completed
+
+How to use: when re-certifying a post-agent run, compare `eval_runs.summary_json` deltas (pass_rate, severity_counts) against run #3. Any regression on pass_rate or increase in high-severity violations is attributable (at least partially) to Phase 4 agent behavior and warrants rollback flag flip or targeted investigation.
 
 ## Revised sequencing (2026-04-12)
 
@@ -25,17 +40,19 @@ The three-leg GTM pivot (tool-call endpoint + remote MCP + admin UI, detailed in
 
 ## Next session starts here
 
-> Phase 1 closed. Patterns #1, #2, #3 shipped. Phase 1.5 (output gates, /v1/query, remote MCP) shipped.
+> Pattern #5 (typed pipeline DAG with observable stages) shipped 2026-04-21. `prepare_context` in `backend/app/services/executor.py` now delegates to a new `app/services/pipeline/` package: 8 named stages (`structural_resolve → classify → prefilter_score → continuity_boost → spread_activation → inhibitory → regulatory_resolve → assemble_prompt`) threaded through a mutable `PipelineState`, wired to a runner that times each stage with `time.perf_counter`, records a `StageTelemetry` row into `PipelineContext`, and hard-fails any stage exception as `PipelineStageError(stage_name, original)`. Telemetry is persisted to a new JSONB column `queries.stage_telemetry_json` (alembic `011_stage_telemetry`) and returned on `QueryResponse.stage_telemetry` + a `failed_stage` field on error. `/query`, `/query/stream` (SSE error event includes `failed_stage`), and `/v1/query` all catch `PipelineStageError` cleanly. Query Lab renders server-authoritative per-stage durations, a `StageTelemetryTable` (score-table styled) under a new "Pipeline Telemetry" step, and a failed-stage banner above the error message. Unit tests for the runner: `tests/test_pipeline_runner.py` (5 tests). Full suite: 153 pre-existing + 5 new, all green. NASA lint strict-clean.
 >
-> Next session picks the Phase 2 sequencing based on customer-traffic signal from Phase 1.5 surfaces. The three candidates:
+> Next session picks one of three tracks:
 >
-> - **#4 Row-level markings / classification** (Phase 2a, defense-sale track) — pull forward if any customer conversation surfaces ATO / classified-data / CUI-handling requirements. Without customer signal, this is speculative hardening.
-> - **#5 Typed pipeline DAG with observable stages** (Phase 2b, correctness) — the "assembly" → "score" → "execute" chain is currently implicit in `executor.py`. Formalizing as named stages unlocks per-stage timing, error isolation, and sets up Pattern #6 (ontology branching).
-> - **#8 Unified autopilot as a typed agent** (Phase 2b) — would fold the existing autopilot loop into the same action/stage system used by query execution.
+> - **Track A — Pattern #6 ontology branching → second agent wave (#203/#204/#205).** The plan explicitly marks #6 as a soft prereq for the second wave so agent mutations can be A/B tested against a no-agent control branch. Highest-leverage path if the goal is to keep the agent initiative moving. Cost: introduces branch-scoped identifiers across neurons/edges/proposals and a merge semantics decision (additive vs. overwrite on merge).
+> - **Track B (continued) — Phase 2b correctness: #8 autopilot-as-typed-agent.** Pattern #5's stage primitive is now the natural building block. Autopilot currently operates as a set of cron-fired procedures; rewriting it as typed stages + a `Pipeline` reuses the same telemetry surface the Query Lab just gained.
+> - **Track C — Phase 2a #4 row-level markings / classification.** Only if a customer conversation surfaces ATO / classified / CUI requirements. Without that signal, speculative hardening.
 >
-> Suggested prep: before the next session, pull logs from `/v1/query` in prod-like traffic (if any) to see whether output-guard violations, latency bursts, or user-reported wrong-answer patterns point toward correctness > classification. Start with `backend/app/routers/v1.py` + the action log for `output.policy.check` actions.
+> Defaults: recommend Track A next — #6 is the last remaining soft prereq for the second agent wave, and #8 can follow it without friction since both benefit from branch-scoped IDs. Avoid Track C absent customer signal.
 >
-> For the historical context of why Pattern #3 chose append-only-at-three-layers and snapshot-in-the-row over the simpler alternatives, read the `2026-04-16 — Pattern #3` session-log entry above. Same for the Phase 1.5 philosophy (`2026-04-13`).
+> Suggested prep: `git log --since='2026-04-17' --oneline` inside ~/Projects/corvus to see the exact Phase 4 co-ship + follow-up commits. Read `~/.claude/plans/staged-booping-globe.md` Pattern #6 section for the ontology-branching design sketch before starting Track A.
+>
+> For the historical context of why Pattern #3 chose append-only-at-three-layers and snapshot-in-the-row over the simpler alternatives, read the `2026-04-16 — Pattern #3` session-log entry above. Same for the Phase 1.5 philosophy (`2026-04-13`) and Phase 4 sequencing (`2026-04-20`, `2026-04-21`).
 
 ## Checklist
 
@@ -43,6 +60,15 @@ The three-leg GTM pivot (tool-call endpoint + remote MCP + admin UI, detailed in
 - [DONE] #1 Actions as the universal write primitive
 - [DONE] #2 Bidirectional lineage / active provenance graph
 - [DONE] #3 Evals as immutable, first-class artifacts
+
+### Phase 4 — Agentic Maintainers (first co-ship closed 2026-04-20; UI fold 2026-04-21)
+- [DONE] #201 A-Base — agent registry + tool allow-list + tool_base
+- [DONE] #202 A-Dedup — dedup / proposal curator agent
+- [DONE] #208 A-UI — agent visibility (folded into IntegrityPage 2026-04-21)
+- [ ] #203 A-Autopilot — gated on Pattern #6
+- [ ] #204 A-Integrity — gated on Pattern #6
+- [ ] #205 A-Ingest — gated on Pattern #6
+- [proposed] #206 A-Screen / #207 A-GapGen / #209 A-Ops — deferred per gates in plan
 
 ### Phase 1.5 — GTM gate (NEW, 2026-04-12; shipped 2026-04-13)
 These unlock shipping tool-call and MCP surfaces externally. Ordered. Closed.
@@ -56,7 +82,7 @@ Pull forward if customer conversation / ATO question / classified-data requireme
 
 ### Phase 2b — Correctness / experimentation track
 Pull forward if pipeline iteration speed is the near-term pain.
-- [ ] #5 Typed pipeline DAG with observable stages
+- [DONE] #5 Typed pipeline DAG with observable stages (shipped 2026-04-21)
 - [ ] #6 Ontology branching for safe experimentation
 - [ ] #8 Unified autopilot as a typed agent
 
@@ -82,6 +108,42 @@ Pull forward if pipeline iteration speed is the near-term pain.
 10. **Snapshot-in-the-row beats FK-to-mutable-source for frozen artifacts.** `NeuronScoreOverride` rows are editable; `tenant.yaml` suites are editable. If `EvalRun` had FK'd those, "what did this run actually test?" would silently decay. Storing denormalized snapshots (model_versions, overrides_snapshot, suite_hash) as JSONB costs a few KB per row and buys permanent answerability.
 
 ## Session log
+
+### 2026-04-21 — Pattern #5: typed pipeline DAG with observable stages
+- User directive: "lets go with just 5; consider all UI components in scope; hard fail for v1."
+- New package `backend/app/services/pipeline/`:
+  - `stage.py` — `Stage(Protocol, Generic[IN, OUT])` with `name: str`, `run()`, `describe()`; `StageTelemetry` dataclass (stage / status / duration_ms / detail / error_message); `PipelineStageError(stage_name, original)` and `ShortCircuit(final_value)` control-flow exceptions.
+  - `context.py` — `PipelineContext` holds `db`, `on_stage` callback (reused by `/query/stream`), `telemetry` list, and `metadata` scratch space.
+  - `runner.py` — `run_pipeline(stages, initial_input, ctx)` iterates stages under `time.perf_counter`, appends a `StageTelemetry` row per stage, emits an `on_stage` event, catches `ShortCircuit` (returns `sc.final_value`), wraps any other exception as `PipelineStageError` with original as `__cause__`. JPL-2 bounded loop, JPL-5 precondition assertions.
+  - `state.py` — single mutable `PipelineState` dataclass threading fields across stages (pragmatic, documented in docstring vs. pure functional dataflow).
+  - `stages/` — 8 concrete stages extracted from the old `prepare_context`: `structural_resolve` (raises `ShortCircuit(PreparedContext)` on a structural hit, zero-cost path), `classify`, `prefilter_score`, `continuity_boost` (1.3× multiplier for `prior_neuron_ids`, re-sort), `spread_activation` (guards `ensure_adjacency_loaded`), `inhibitory`, `regulatory_resolve`, `assemble_prompt`.
+- `services/executor.py` — `prepare_context` now ~40 lines; builds `PipelineState`, calls `run_pipeline(build_default_pipeline(), state, ctx)`, maps back to `PreparedContext`. `stage_telemetry` threaded through `_create_query_record` (persisted) and `_build_response` (returned).
+- Schema: `models.py` gains `Query.stage_telemetry_json: JSONB | None`. Alembic `011_stage_telemetry` (applied to both corvus-aero and corvus-flow DBs). `schemas.QueryResponse` gains `stage_telemetry: list[StageTelemetryOut]` + `failed_stage: str | None`.
+- Hard-fail wiring — all three external surfaces catch `PipelineStageError` and format failures with a `failed_stage` field:
+  - `routers/query.py::post_query` → HTTP 500 body `{message, failed_stage, cause}`.
+  - `routers/query.py::post_query_stream` → SSE `error` event `{message, failed_stage, cause}`.
+  - `routers/v1.py::_run_v1_pipeline` → HTTP 500 identical shape.
+- Frontend:
+  - `types.ts` — new `StageTelemetry` interface; `QueryResponse` gains `stage_telemetry` + `failed_stage`.
+  - `api.ts::submitQueryStream` — SSE error handler now attaches `failed_stage` to the thrown Error.
+  - `components/QueryLab.tsx` — tracks `failedStage` state, merges server-authoritative `stage_telemetry[].duration_ms` into `stageTimes` (replacing SSE-gap estimation), renders a failed-stage banner above the error message, adds a new "Pipeline Telemetry" pipeline step with `StageTelemetryTable` (score-table styled, IntegrityPage design language: stage name / status badge / duration / per-stage detail summary).
+- Verification:
+  - `python3 scripts/nasa_lint.py backend/app/services/pipeline/ backend/app/services/executor.py backend/app/routers/query.py backend/app/routers/v1.py backend/app/models.py backend/app/schemas.py` → strict clean; pre-existing JPL-4 guideline warnings only.
+  - `npx tsc --noEmit -p tsconfig.app.json` → no new errors (two pre-existing unchanged).
+  - `tests/test_pipeline_runner.py` — 5 unit tests (chain + telemetry, ShortCircuit skip, PipelineStageError wrapping, on_stage event emission, JSON serialization). All green.
+  - Full backend suite: 153 pre-existing + 5 new = 158 tests, all green.
+  - Live smoke on `:8002`:
+    - `POST /query` `"How should I organize a production scheduling team?"` → 200; response envelope includes all 8 stages in `stage_telemetry`.
+    - `POST /v1/query` same prompt → 200 with full answer.
+    - DB readback (`queries.stage_telemetry_json`) — 8 rows persisted for query_id 449, timings matching the runner's per-stage `perf_counter` deltas.
+- Decisions worth preserving:
+  - **Mutable `PipelineState` over pure functional dataflow.** Each stage mutates state fields relevant to its step. The alternative — each stage returning a new immutable state — would have required every stage to reconstruct a ~20-field dataclass and produced trivial hot-path copies. Pipeline correctness is asserted by JPL-5 preconditions in the runner + per-stage type hints, not by immutability.
+  - **Hard-fail over graded-degrade for v1 (per user).** `PipelineStageError(stage_name, original)` surfaces the exact failed stage to the caller. Graded-degrade (e.g., skip regulatory_resolve and proceed) was considered and deferred — it's a Pattern #5.5 enhancement that requires per-stage "criticality" annotations and a downstream assembler that tolerates missing inputs.
+  - **JSONB snapshot on `queries` row vs. a new `StageTelemetryRow` table.** ~8 stages × ~100 bytes per row is well within JSONB's ergonomic range, queries are always row-scoped ("show me the telemetry for query X"), and no cross-query analytics justified the extra table + FK. If dashboards later want per-stage aggregates, a materialized view over the JSONB is straightforward.
+- Deferred:
+  - Per-stage "criticality" annotations for graded-degrade behavior.
+  - Pipeline builder DSL / dynamic stage insertion (current `build_default_pipeline()` is hard-coded; fine for v1).
+  - Prometheus histograms for stage durations (the JSONB row + `/admin/query/{id}` readback is enough for now; observability tooling lands with Pattern #6's experimentation harness).
 
 ### 2026-04-09 — Roadmap authored
 - Evaluated AIP migration and deferred it; extracted design principles instead.
@@ -281,3 +343,72 @@ Four design decisions drove the implementation; each has a deliberate rejection 
 **Files added.** `backend/app/services/eval_runs.py`, `backend/app/routers/eval_runs.py`, `backend/app/services/actions/eval_run_lifecycle.py`, `backend/alembic/versions/010_add_eval_runs.py`, `backend/tenants/corvus-aero/eval_suites/smoke.yaml`, `backend/tenants/corvus-flow/eval_suites/smoke.yaml`, `backend/tests/test_eval_runs.py`, `frontend/src/components/EvalRunsPage.tsx`.
 
 **Phase 1 complete.** Patterns #1, #2, #3 shipped. The full governance loop is now: every write is an action → every firing is traceable to a query → every answer carries a certified eval_run_id proving which pipeline produced it. Next: re-evaluate sequencing (Phase 2a vs 2b) once customer traffic through Phase 1.5 surfaces lands real-world signal.
+
+### 2026-04-20 — Phase 4 first co-ship: #201 A-Base + #202 A-Dedup + #208 A-UI
+
+Deliberate co-ship per the plan — the agent registry (#201) is infrastructure that needs at least one agent (#202) and customer-facing visibility (#208) landing alongside it, or the registry sits unused and the feature is invisible.
+
+**What shipped.**
+
+- **#201 A-Base — agent registry + tool allow-list.** New package `backend/app/agents/` with `registry.py` (loads `tenants/{id}/agents/*.yaml` at startup, validates schema, rejects malformed files with a clear error), `runtime.py` (drives a bounded agent-loop via the Claude CLI subprocess, scrubbing `CLAUDECODE*` / `CLAUDE_CODE_*` env per the nested-session gotcha), `tool_base.py` (abstract tool protocol — `name`, `schema`, `invoke`), and `tools/dedup_tools.py` (first concrete tool pair). Tool allow-list is enforced *before* the LLM sees a tool call: an agent with `tools: [mark_duplicate]` attempting `write_neuron` raises `ToolNotAllowedError` from the runtime, never reaching the model. Synthetic actor identity: every action the agent emits carries `actor_id="corvus-agent-{name}"` (e.g. `corvus-agent-dedup`), so the audit trail cleanly separates agent writes from human writes without a schema change.
+- **#202 A-Dedup — dedup / proposal curator agent.** `backend/tenants/corvus-aero/agents/dedup.yaml` defines the first agent: goal (cluster near-duplicate integrity-proposed findings), allow-listed tools (`mark_duplicate`, `mark_reviewed_as_unique`), model (Haiku), turn limit (bounded loop). The two tools record `Action` rows whose `input_json` carries `finding_id` and whose `parent_action_id` points at the agent-run root action — that parent-child relationship is the join key the UI uses to reverse-link from a proposed finding back to the run that auto-proposed it. Closes the open TODO at `proposals.py:152`.
+- **#208 A-UI — agent visibility.** `/v1/agents`, `/v1/agents/{name}/run` (trigger), `/v1/agents/runs/{id}` (detail with tool-call trace) endpoints. Initial shape was a standalone `AgentsPage.tsx` under the Autopilot nav group — worked, but visually inconsistent with the rest of the graph-quality surfaces, and conceptually redundant with IntegrityPage (which already surfaced near-duplicate / contradiction / missing-connection findings). See the 2026-04-21 entry for the fold.
+
+**Design decisions locked in.**
+
+- **Agents are never on the query hot path.** Pattern #201's runtime refuses to wire into `/query` or `/v1/query`. Agents run on explicit trigger (or, later, scheduled) and their writes go through the proposal queue, same as autopilot.
+- **Synthetic actor identity over a new column.** Considered adding `is_agent: bool` to `actions`. Rejected — the `actor_id` string is already denormalized enough. `corvus-agent-*` prefix is the convention; no schema change needed to add agents 3–N.
+- **Tool allow-list enforced outside the LLM loop.** A tempting alternative is to let the model call whatever, then reject at the DB boundary. Rejected — that leaks capability surface into LLM context and spends tokens on forbidden calls. Allow-list is a pre-flight check in `runtime.py` before the tool call reaches the model's view.
+
+**Verification.**
+
+- Registry load: `pytest tests/test_agent_registry.py -v` — 6 tests green (load, missing fields, bad tool name, reload).
+- Allow-list: unit test confirms `ToolNotAllowedError` before any LLM call when agent attempts non-allowed tool.
+- Dedup accuracy: 50-item hand-labeled gold set (stored at `backend/tests/fixtures/dedup_gold.json`) — agreement 94% vs labels.
+- Audit trail: `SELECT user_id, COUNT(*) FROM actions WHERE user_id LIKE 'corvus-agent-%' GROUP BY user_id;` shows agent actions cleanly partitioned.
+- Pre-agent eval baseline locked at `eval_runs.id=3` on corvus-aero (see "Current position" above) so post-agent drift has a comparison point.
+
+**Pattern #201 + #202 + #208 complete.** First agent is live, visible, and auditable.
+
+### 2026-04-21 — Phase 4 follow-up: Agents folded into Integrity + cross-surface polish bundle
+
+The standalone `AgentsPage` shipped the day before worked but sat awkwardly next to Integrity — both surfaces fundamentally do the same thing (detect graph defects → review → propose → approve). The fold collapsed them into one workbench, then a second pass addressed cross-surface navigation friction the unified view exposed.
+
+**Agents → Integrity fold.**
+
+- Deleted `frontend/src/components/AgentsPage.tsx` and removed the Autopilot → Agents nav entry + `'agents'` tab state.
+- IntegrityPage now has three panels (unchanged names) with expanded roles:
+  - **Dashboard** carries the unified "Recent runs" table — rows are a chronological union of `IntegrityScan` and `Action(kind='agent.run')`, sorted by completion time. Click a row → detail modal with scan parameters (for scan rows) or tool-call trace (for agent rows). New `GET /admin/integrity/runs` backend endpoint merges the two sources into a single `RunRowOut` shape.
+  - **Scan** gained an "Available agents" card above the existing scan tiles. "Run now" triggers `/v1/agents/{name}/run`, toasts, auto-switches to Dashboard so the new row is visible.
+  - **Findings Queue** detail pane gained a reverse-link banner: any finding whose proposal was created by an agent shows "Auto-proposed by dedup (run #X)" → click opens the same run-detail modal. Implemented via reverse Action-Bus lookup on `agent.tool.mark_duplicate` / `agent.tool.mark_reviewed_as_unique` rows filtered by `finding_id` — exposed on the finding-detail response as `created_by_agent_run_id` + `created_by_agent_name`.
+
+**Cross-surface polish bundle.** Five producer pages (Autopilot, Emergent, Document Ingest, Integrity, Query Lab) all feed the Proposal Queue. The unified view made the lack of navigation feedback between them obvious. Rather than reorganize the nav hierarchy (which the user explicitly rejected as over-kill), the lighter alternative: teach existing pages + the queue to talk to each other.
+
+- **Per-origin pending count badges on nav items.** `/stats` now returns `proposed_by_origin: {autopilot: N, integrity: M, document_ingest: K, emergent: J, query_lab: L}` computed at request time via a projection over `AutopilotProposal(state='proposed')` rows. App.tsx polls `/stats` every 30s (gated on auth) and renders a chip on each producer nav item — clicking the chip deep-links to a pre-filtered Proposal Queue (forward navigation).
+- **Origin filter in Proposal Queue.** The queue already grouped by origin client-side; upgraded to a server-recognized filter parameter so deep-links land pre-filtered without a second client render.
+- **Reverse deep-links from Proposal Queue back to producer pages.** `ProposalOut` now carries `finding_id` and `scan_id` (extracted from `gap_evidence_json[0]` server-side — not Python post-processing — so the values are queryable). The queue detail pane renders a "from integrity (finding #123) →" chip that routes back to IntegrityPage → Findings Queue with the finding pre-selected.
+- **Shared j/k keyboard navigation hook.** Extracted the j/k handler previously inline in ProposalQueuePage into `frontend/src/hooks/useListKeyboardNav.ts`. Generic over any `Identifiable` list, guards against typing targets (input/textarea/contentEditable), skips when `nextIdx === curIdx` (so pressing j on the last row doesn't accidentally collapse a toggle-style selection handler — bug caught during the AutopilotPage wiring). Now used by ProposalQueuePage, IntegrityPage FindingsPanel, and AutopilotPage, giving all three surfaces parity navigation without duplicating code.
+
+**Backend changes.**
+
+- `routers/integrity.py` — new `GET /admin/integrity/runs` endpoint; `GET /admin/integrity/findings/{id}` enriched with `created_by_agent_run_id` + `created_by_agent_name`.
+- `routers/proposals.py` — `_classify_origin` precedence fix (source-string prefix now beats `autopilot_run_id` when both present, matching the actual origin semantics); new `emergent` origin classifier; `_extract_source_ids()` helper projects `finding_id`/`scan_id` onto `ProposalOut`; `_apply_origin_filter()` used by the list endpoint; `/stats` computes `proposed_by_origin`.
+- `schemas.py` — `ProposalOut` gains `finding_id: int | None`, `scan_id: int | None`; `ProposalStatsOut` gains `proposed_by_origin: dict[str, int]`.
+
+**Frontend changes.**
+
+- New `frontend/src/hooks/useListKeyboardNav.ts` (j/k parity hook).
+- `components/IntegrityPage.tsx` — three-panel fold (Dashboard run-union table + run-detail modal, Scan available-agents card, Findings Queue reverse-link banner) + j/k hook wiring.
+- `components/ProposalQueuePage.tsx` — exported `OriginFilter` type; new `initialOriginFilter` + `onNavigateToProducer` props; producer-chip rendering; j/k hook replaces inline handler; `emergent` added to `OriginFilter` / `ORIGIN_COLORS` / `SOURCE_OPTIONS`.
+- `components/AutopilotPage.tsx` — j/k hook wiring with a non-toggling `navigateToRun` callback (since `handleExpandRun` toggles selection, using it as the hook callback would collapse on j-on-selected).
+- `App.tsx` — deleted AgentsPage import/route; added `ORIGIN_TO_TAB` + `TAB_TO_ORIGIN` maps; new `proposedByOrigin` / `totalProposed` / `queueInitialOrigin` state; 30s `/stats` polling; `navigateToProducer` and `navigateToFilteredQueue` callbacks; extended nav-item render with pending-count badge chip.
+- `api.ts` — `ProposalSummary` gains `finding_id` / `scan_id`; `ProposalStats` gains `proposed_by_origin`.
+
+**Lessons.**
+
+1. **Co-shipped visibility beats sequential shipping.** If #208 (customer-facing agent visibility) had been deferred to a later session, #202's audit trail would have sat behind a SQL prompt for days and no one would have validated the visibility story end-to-end. The 2026-04-21 fold was easier *because* the standalone AgentsPage existed for a day — the fold was an obvious consolidation rather than a blank-page design.
+2. **"Reformat the nav" vs "teach existing pages to talk" is a real choice.** The user rejected the former, got the latter, and the latter turned out to be higher-leverage anyway — every future producer page (screen watcher intake, new agent types) will automatically appear as a chip-bearing nav item with no reorganization needed.
+3. **Origin classifier precedence was wrong in a quiet way.** Proposals could carry both an `autopilot_run_id` *and* a `gap_source` string starting with `integrity_`. The original classifier checked `autopilot_run_id` first, so integrity-backed proposals produced by autopilot-triggered integrity scans were misclassified as `autopilot`. Source-string prefix now wins. Caught because the new `proposed_by_origin` counter disagreed with what the old origin chip showed.
+4. **Same-index skip in a shared j/k hook matters.** The first version of the hook called `onSelect(targetId)` unconditionally. AutopilotPage's `handleExpandRun` is a toggle, so pressing j on the last row (`curIdx === nextIdx`) collapsed the current selection. Added `if (nextIdx === curIdx) return;` to the hook — a one-line fix that prevents a whole class of bugs in toggle-style consumers.
+
+**Phase 4 first co-ship + follow-up closed.** Next: Track A (#6 → second agent wave) vs Track B (#5 → #6 → #8) vs Track C (#4 defense-sale). See "Next session starts here" above.

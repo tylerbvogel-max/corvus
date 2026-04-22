@@ -225,13 +225,20 @@ async def _anthropic_chat(
 
     assert input_tokens >= 0, f"input_tokens must be non-negative, got {input_tokens}"
     assert output_tokens >= 0, f"output_tokens must be non-negative, got {output_tokens}"
+    # Cost is an API-equivalent estimate. The CLI itself runs on a personal
+    # subscription (no per-call charge), but the UI needs the "what would a
+    # customer pay?" figure — so price it against MODEL_REGISTRY rates with
+    # Anthropic's cache multipliers (1.25x create, 0.10x read).
+    cost = _estimate_cost_anthropic(
+        model_info, input_tokens, cache_create, cache_read, output_tokens,
+    )
     return {
         "text": text,
         "input_tokens": input_tokens,
         "cache_creation_tokens": cache_create,
         "cache_read_tokens": cache_read,
         "output_tokens": output_tokens,
-        "cost_usd": 0.0,
+        "cost_usd": cost,
         "model_version": payload.get("model") or model_info.api_id,
     }
 

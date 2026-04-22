@@ -217,6 +217,9 @@ class Query(Base):
     neuron_scores_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     model_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Pattern #5: typed pipeline DAG telemetry — per-stage timing + status snapshot.
+    # Shape: list[{stage, status, duration_ms, detail?, error_message?}]
+    stage_telemetry_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )
@@ -312,6 +315,10 @@ class AutopilotRun(Base):
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     status: Mapped[str] = mapped_column(String(20), default="completed")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Pattern #8: typed pipeline DAG telemetry — per-stage timing + status snapshot
+    # captured by the autopilot tick runner. Shape mirrors Query.stage_telemetry_json:
+    # list[{stage, status, duration_ms, detail?, error_message?}]
+    stage_telemetry_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )

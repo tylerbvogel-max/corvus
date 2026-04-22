@@ -10,3 +10,23 @@ error: failed to push some refs to 'https://github.com/tylerbvogel-max/corvus.gi
 [2026-03-15 03:00:43] Skipping: odd week (11), next run on even week
 [2026-03-29 03:00:34] === Backup triggered ===
 [2026-03-29 03:00:34] Skipping: odd week (13), next run on even week
+[2026-04-05 03:00:10] === Backup triggered ===
+[2026-04-05 03:00:10] Running backup (week 14)
+[2026-04-05 03:00:10] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-04-05 03:00:10] WARNING: Checkpoint endpoint failed or server not running: 
+Everything up-to-date
+[2026-04-05 03:00:11] Git: pushed to origin
+[2026-04-05 03:00:11] === Backup complete ===
+[2026-04-12 13:21:45] === Backup triggered ===
+[2026-04-12 13:21:45] Skipping: odd week (15), next run on even week
+[2026-04-19 03:00:45] === Backup triggered ===
+[2026-04-19 03:00:45] Running backup (week 16)
+[2026-04-19 03:00:45] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-04-19 03:00:47] Checkpoint: {"status":"ok","filename":"neurons_20260419_030046.json","neuron_count":2258,"commit_sha":"ecd3fc20e2ca57b87770f3df25cb5c761e47a151"}
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-04-19 03:00:47] WARNING: git push failed
+[2026-04-19 03:00:47] === Backup complete ===

@@ -21,6 +21,7 @@ from app.schemas import (
 )
 from app.governance.output_guard import GuardResult, run_guards
 from app.services.executor import execute_query, prepare_context
+from app.services.pipeline import PipelineStageError
 from app.services.llm_provider import llm_chat, estimate_cost, MODEL_REGISTRY
 from app.services import action_bus
 from app.middleware.rbac import UserIdentity, resolve_identity
@@ -529,6 +530,16 @@ async def post_query(
         )
     except HTTPException:
         raise
+    except PipelineStageError as pse:
+        # Pattern #5 hard-fail: surface which stage broke so the UI can highlight it.
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": f"Pipeline stage '{pse.stage_name}' failed",
+                "failed_stage": pse.stage_name,
+                "cause": str(pse.original),
+            },
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=504, detail=str(e))
     except Exception as e:
@@ -600,6 +611,12 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
             # Final result
             resp = QueryResponse(**result)
             await queue.put({"event": "result", "data": resp.model_dump()})
+        except PipelineStageError as pse:
+            await queue.put({"event": "error", "data": {
+                "message": f"Pipeline stage '{pse.stage_name}' failed",
+                "failed_stage": pse.stage_name,
+                "cause": str(pse.original),
+            }})
         except Exception as e:
             await queue.put({"event": "error", "data": {"message": str(e)}})
         finally:

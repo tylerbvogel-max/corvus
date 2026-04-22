@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
 import { submitQueryStream, submitRating, fetchQueryHistory, fetchQueryDetail, evaluateQuery, refineQuery, applyRefinements, fetchGraphCapacity } from '../api'
 import type { SlotSpec, GraphCapacity, StageEvent, ModelOption } from '../api'
-import type { QueryResponse, QuerySummary, QueryDetail, SlotResult, EvalScoreOut, RefineResponse } from '../types'
+import type { QueryResponse, QuerySummary, QueryDetail, SlotResult, EvalScoreOut, RefineResponse, StageTelemetry } from '../types'
 import { useModels } from '../hooks/useModels'
 import TokenCharts from './TokenCharts'
 import NeuronTreeViz from './NeuronTreeViz'
@@ -729,6 +729,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
   const [liveRefineRestore, setLiveRefineRestore] = useState<RefineResponse | null>(null);
   const [stageStatuses, setStageStatuses] = useState<Record<string, StageEvent>>({});
   const [stageTimes, setStageTimes] = useState<Record<string, number>>({});
+  const [failedStage, setFailedStage] = useState<string | null>(null);
   const stageTimestamps = useRef<Record<string, number>>({});
   const [configCollapsed, setConfigCollapsed] = useState(false);
   const abortRef = useRef<(() => void) | null>(null);
@@ -776,6 +777,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     setLiveRefineRestore(null);
     setStageStatuses({});
     setStageTimes({});
+    setFailedStage(null);
     stageTimestamps.current = {};
     setConfigCollapsed(true);
     setView('new');
@@ -837,6 +839,12 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
         setStageTimes(prev => ({ ...prev, [lastKey]: finishTime - stageTimestamps.current[lastKey] }));
       }
       setResult(res);
+      // Override client-estimated timings with server-authoritative stage telemetry
+      if (res.stage_telemetry && res.stage_telemetry.length > 0) {
+        const serverTimes: Record<string, number> = {};
+        for (const st of res.stage_telemetry) serverTimes[st.stage] = st.duration_ms;
+        setStageTimes(prev => ({ ...prev, ...serverTimes }));
+      }
       // Map SlotResults to slot IDs
       const slotResultMap: Record<number, SlotResult | null> = {};
       slotConfigs.forEach((sc, idx) => {
@@ -863,6 +871,8 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     } catch (e) {
       if ((e as Error).name !== 'AbortError') {
         setError(e instanceof Error ? e.message : 'Query failed');
+        const fs = (e as Error & { failedStage?: string }).failedStage;
+        if (fs) setFailedStage(fs);
       }
     } finally {
       abortRef.current = null;
@@ -884,6 +894,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     setLiveRefineRestore(null);
     setStageStatuses({});
     setStageTimes({});
+    setFailedStage(null);
     stageTimestamps.current = {};
     setConfigCollapsed(false);
     setError('');
@@ -902,6 +913,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     setLiveRefineRestore(null);
     setStageStatuses({});
     setStageTimes({});
+    setFailedStage(null);
     stageTimestamps.current = {};
     setView('new');
     setSelectedQuery(null);
@@ -1070,7 +1082,16 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
           </div>
         </div>
 
-        {error && <div className="error-msg">{error}</div>}
+        {error && (
+          <div className="error-msg">
+            {failedStage && (
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fca5a5', marginBottom: 4 }}>
+                Pipeline stage failed: <code style={{ fontFamily: 'monospace' }}>{failedStage}</code>
+              </div>
+            )}
+            {error}
+          </div>
+        )}
 
         {(loading || result) && view === 'new' && (
           <LiveResult
@@ -1194,6 +1215,56 @@ function PipelineConnectors({ containerRef }: { containerRef: React.RefObject<HT
       ref={svgRef}
       style={{ position: 'absolute', top: 0, left: 0, width: 40, pointerEvents: 'none', zIndex: 1 }}
     />
+  );
+}
+
+// ────────── Pipeline Telemetry Table (Pattern #5) ──────────
+
+function StageTelemetryTable({ telemetry }: { telemetry: StageTelemetry[] }) {
+  function fmtDuration(ms: number): string {
+    if (ms < 1) return '<1ms';
+    if (ms < 1000) return `${ms.toFixed(1)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  }
+  function statusColor(status: string): string {
+    if (status === 'done') return '#22c55e';
+    if (status === 'error') return '#ef4444';
+    return '#94a3b8';
+  }
+  function fmtDetail(detail: Record<string, unknown>): string {
+    const entries = Object.entries(detail);
+    if (entries.length === 0) return '—';
+    return entries.map(([k, v]) => `${k}=${Array.isArray(v) ? `[${v.length}]` : String(v)}`).join(' · ');
+  }
+  return (
+    <table className="score-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'left' }}>Stage</th>
+          <th style={{ textAlign: 'left' }}>Status</th>
+          <th style={{ textAlign: 'right' }}>Duration</th>
+          <th style={{ textAlign: 'left' }}>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {telemetry.map((st, i) => (
+          <tr key={`${st.stage}-${i}`}>
+            <td style={{ fontFamily: 'monospace' }}>{st.stage}</td>
+            <td>
+              <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 3, background: `${statusColor(st.status)}22`, color: statusColor(st.status), textTransform: 'uppercase', fontWeight: 600 }}>
+                {st.status}
+              </span>
+            </td>
+            <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-dim)' }}>{fmtDuration(st.duration_ms)}</td>
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>
+              {st.error_message ? (
+                <span style={{ color: '#ef4444' }}>{st.error_message}</span>
+              ) : fmtDetail(st.detail)}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -1412,6 +1483,16 @@ function LiveResult({ result, loading, message, stageStatuses, slotLoadingSet, s
       <PStep status={stepStatus('output_checks')}>
         <div className="pipeline-step-label">Output Checks{result && <span className="step-timing">{result.output_checks?.length ?? 0} checked{stageTime('output_checks') && ` · ${stageTime('output_checks')}`}</span>}</div>
       </PStep>
+
+      {/* Pipeline Telemetry (Pattern #5): server-authoritative per-stage timings */}
+      {result?.stage_telemetry && result.stage_telemetry.length > 0 && (
+        <PStep status="done">
+          <div className="pipeline-step-label">Pipeline Telemetry <span className="step-timing">{result.stage_telemetry.length} stages</span></div>
+          <Section title="Per-stage timings" defaultOpen={false}>
+            <StageTelemetryTable telemetry={result.stage_telemetry} />
+          </Section>
+        </PStep>
+      )}
 
       {/* Step 11: COST & TOKEN ANALYSIS */}
       <PStep status={result ? 'done' : 'pending'}>

@@ -13,11 +13,11 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import IntegrityScan, IntegrityFinding, Neuron
+from app.models import Action, IntegrityScan, IntegrityFinding, Neuron
 
 
 router = APIRouter(prefix="/admin/integrity", tags=["integrity"])
@@ -92,6 +92,34 @@ class FindingProposeRequest(BaseModel):
     resolution: str = Field(..., min_length=1, max_length=30)
     reviewer: str = Field(..., min_length=1, max_length=100)
     notes: str = ""
+
+
+class RunRowOut(BaseModel):
+    """Unified row shape for the Dashboard run-history table.
+
+    Merges IntegrityScan rows and Action(kind='agent.run') rows into a
+    single normalized projection so the UI renders one chronological list.
+    """
+    id: int
+    kind: str  # "scan:<scan_type>" | "agent:<agent_name>"
+    started_at: str | None
+    completed_at: str | None
+    initiated_by: str
+    state: str
+    summary: str | None
+    scan_scope: str | None = None
+    findings_count: int | None = None
+    turns: int | None = None
+    tool_calls: int | None = None
+    mutations: int | None = None
+    errors: int | None = None
+
+
+# Kinds of agent tool actions that create IntegrityFinding proposals
+_AGENT_PROPOSAL_TOOL_KINDS = (
+    "agent.tool.mark_duplicate",
+    "agent.tool.mark_reviewed_as_unique",
+)
 
 
 # ── Scan Endpoints ────────────────────────────────────────────────
@@ -392,6 +420,45 @@ async def integrity_dashboard(db: AsyncSession = Depends(get_db)):
     }
 
 
+@router.get("/runs", response_model=list[RunRowOut])
+async def list_integrity_runs(
+    limit: int = 50,
+    kind_filter: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> list[RunRowOut]:
+    """Unified chronological feed of IntegrityScans + agent runs.
+
+    kind_filter: 'scan' keeps only IntegrityScan rows, 'agent' keeps only
+    agent runs, None merges both. Rows sort by completed_at desc (nulls
+    fall back to started_at). Bounded by limit (1..500).
+    """
+    assert 1 <= limit <= 500, "limit must be 1..500"
+    fetch = min(limit * 2, 500)
+    rows: list[RunRowOut] = []
+
+    if kind_filter in (None, "scan"):
+        scan_stmt = (
+            select(IntegrityScan)
+            .order_by(IntegrityScan.id.desc())
+            .limit(fetch)
+        )
+        for scan in (await db.execute(scan_stmt)).scalars().all():
+            rows.append(_scan_to_run_row(scan))
+
+    if kind_filter in (None, "agent"):
+        agent_stmt = (
+            select(Action)
+            .where(Action.kind == "agent.run")
+            .order_by(Action.id.desc())
+            .limit(fetch)
+        )
+        for action in (await db.execute(agent_stmt)).scalars().all():
+            rows.append(_agent_run_to_row(action))
+
+    rows.sort(key=_run_row_sort_key, reverse=True)
+    return rows[:limit]
+
+
 # ── Helpers ───────────────────────────────────────────────────────
 
 
@@ -474,4 +541,76 @@ async def _finding_detail(db: AsyncSession, finding: IntegrityFinding) -> dict:
                 "invocations": neuron.invocations,
             }
     base["neurons"] = neurons
+
+    # Reverse-lookup: was this finding's proposal created by an agent?
+    # Scan the most recent applied agent tool actions and match finding_id
+    # in input_json. Bounded (50 rows) — scales fine for audit-trail use.
+    agent_stmt = (
+        select(Action)
+        .where(
+            Action.kind.in_(_AGENT_PROPOSAL_TOOL_KINDS),
+            Action.state == "applied",
+        )
+        .order_by(Action.id.desc())
+        .limit(50)
+    )
+    agent_run_id: int | None = None
+    agent_name: str | None = None
+    for act in (await db.execute(agent_stmt)).scalars().all():
+        payload = act.input_json or {}
+        if payload.get("finding_id") == finding.id:
+            agent_run_id = act.parent_action_id
+            # actor_id on the child = the agent name (runtime sets it)
+            agent_name = act.actor_id
+            # If parent missing actor_id, fall back to looking up parent
+            if agent_run_id is not None and not agent_name:
+                parent = await db.get(Action, agent_run_id)
+                if parent is not None:
+                    agent_name = parent.actor_id
+            break
+    base["created_by_agent_run_id"] = agent_run_id
+    base["created_by_agent_name"] = agent_name
     return base
+
+
+def _scan_to_run_row(scan: IntegrityScan) -> RunRowOut:
+    """Project an IntegrityScan row onto the unified RunRowOut shape."""
+    return RunRowOut(
+        id=scan.id,
+        kind=f"scan:{scan.scan_type}",
+        started_at=scan.started_at.isoformat() if scan.started_at else None,
+        completed_at=scan.completed_at.isoformat() if scan.completed_at else None,
+        initiated_by=scan.initiated_by or "unknown",
+        state=scan.status,
+        summary=None,
+        scan_scope=scan.scope,
+        findings_count=scan.findings_count,
+    )
+
+
+def _agent_run_to_row(action: Action) -> RunRowOut:
+    """Project an agent.run Action onto the unified RunRowOut shape."""
+    result = action.result_json or {}
+    payload = action.input_json or {}
+    started = action.created_at.isoformat() if action.created_at else None
+    completed = action.applied_at.isoformat() if action.applied_at else None
+    return RunRowOut(
+        id=action.id,
+        kind=f"agent:{action.actor_id or 'unknown'}",
+        started_at=started,
+        completed_at=completed,
+        initiated_by=str(payload.get("triggered_by", "unknown")),
+        state=action.state,
+        summary=result.get("summary"),
+        turns=result.get("turns"),
+        tool_calls=result.get("tool_calls"),
+        mutations=result.get("mutations"),
+        errors=result.get("errors"),
+    )
+
+
+def _run_row_sort_key(row: RunRowOut) -> str:
+    """Sort unified rows newest-first on completed_at, falling back to
+    started_at so in-progress rows still land near the top. Empty string
+    for both sinks to the bottom."""
+    return row.completed_at or row.started_at or ""

@@ -121,6 +121,14 @@ export interface OutputCheckOut {
   grounding: GroundingOut | null;
 }
 
+export interface StageTelemetry {
+  stage: string;
+  status: 'done' | 'error' | 'skipped';
+  duration_ms: number;
+  detail: Record<string, unknown>;
+  error_message: string | null;
+}
+
 export interface QueryResponse {
   query_id: number;
   intent: string | null;
@@ -136,6 +144,8 @@ export interface QueryResponse {
   total_cost: number;
   input_guard?: InputGuardOut | null;
   output_checks?: OutputCheckOut[];
+  stage_telemetry?: StageTelemetry[];
+  failed_stage?: string | null;
 }
 
 export interface QuerySummary {
@@ -348,6 +358,7 @@ export interface AutopilotRun {
   status: string;
   error_message: string | null;
   created_at: string | null;
+  stage_telemetry?: StageTelemetry[] | null;
 }
 
 export interface AutopilotTickResponse {
@@ -563,6 +574,8 @@ export interface IntegrityFindingDetail extends IntegrityFinding {
   detail: Record<string, unknown>;
   edge_ids: number[][];
   neurons: Record<string, IntegrityNeuronSnapshot>;
+  created_by_agent_run_id?: number | null;
+  created_by_agent_name?: string | null;
 }
 
 export interface IntegrityScanDetail extends IntegrityScanSummary {

@@ -22,6 +22,7 @@ export default defineConfig({
       '/chat': apiTarget,
       '/models': apiTarget,
       '/learning-analytics': apiTarget,
+      '/v1': apiTarget,
     },
   },
 })

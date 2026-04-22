@@ -49,6 +49,10 @@ class PreparedContext:
     classify_cost_usd: float = 0.0
     classify_input_tokens: int = 0
     classify_output_tokens: int = 0
+    # Pattern #5: typed pipeline DAG telemetry — per-stage timing + status.
+    # Populated when prepare_context runs through the pipeline runner;
+    # None for structural fast-path results (no pipeline ran).
+    stage_telemetry: list[dict] = field(default_factory=list)
 
 
 async def _embed_query_async(user_message: str):
@@ -229,79 +233,53 @@ async def prepare_context(
     top_k: int | None = None, project_path: str | None = None,
     on_stage: StageCallback = None, prior_neuron_ids: list[int] | None = None,
 ) -> PreparedContext:
-    """Run classify → score → spread → inhibit → resolve → assemble pipeline."""
+    """Run the classify → score → spread → inhibit → resolve → assemble pipeline.
+
+    Pattern #5: stages are composed via the typed pipeline runner; each stage
+    emits timing + telemetry and any stage failure hard-fails with a
+    `PipelineStageError` carrying the stage name.
+    """
     assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
         "user_message must be a non-empty string"
-    async def _emit(stage: str, data: dict | None = None):
-        if on_stage:
-            await on_stage(stage, data or {"status": "done"})
 
-    from app.services.structural_resolver import try_structural_resolve
-    structural = await try_structural_resolve(db, user_message)
-    if structural is not None:
-        await _emit("structural_resolve", {"status": "done", "detail": "fast-path match"})
-        return structural
-    await _emit("structural_resolve", {"status": "skipped"})
+    from app.services.pipeline import PipelineContext, run_pipeline
+    from app.services.pipeline.state import PipelineState
+    from app.services.pipeline.stages import build_default_pipeline
 
-    # Ensure adjacency cache is loaded for spread activation
-    if settings.spread_enabled:
-        from app.services.adjacency_cache import ensure_adjacency_loaded
-        await ensure_adjacency_loaded(db)
-
-    effective_top_k = top_k or settings.top_k_neurons
-    effective_pool = settings.semantic_prefilter_top_n
-    effective_budget = token_budget or settings.token_budget
-    classify_result, query_embedding, intent, departments, role_keys, keywords = \
-        await _embed_and_classify(user_message)
-    await _emit("embed_query")
-    await _emit("classify", {"status": "done", "detail": {"intent": intent, "departments": departments, "role_keys": role_keys, "keywords": keywords}})
-
-    state = await get_system_state(db)
-    scored, scored_engrams = await _select_and_score_candidates(
-        db, query_embedding, effective_pool, keywords, departments, role_keys, state.total_queries,
+    initial_state = PipelineState(
+        user_message=user_message,
+        effective_top_k=top_k or settings.top_k_neurons,
+        effective_pool=settings.semantic_prefilter_top_n,
+        effective_budget=token_budget or settings.token_budget,
+        project_path=project_path,
+        prior_neuron_ids=prior_neuron_ids,
     )
-    await _emit("semantic_prefilter", {"status": "done", "detail": {"candidates": len(scored), "engram_candidates": len(scored_engrams)}})
+    pipeline_ctx = PipelineContext(db=db, on_stage=on_stage)
 
-    # Load neuron map early for score_neurons event
-    neuron_map_early = await _load_neuron_map(db, [s.neuron_id for s in scored[:effective_top_k]])
-    neuron_scores_early = _build_neuron_score_dicts(scored[:effective_top_k], neuron_map_early)
-    await _emit("score_neurons", {"status": "done", "detail": {"scored": len(scored), "neuron_scores": neuron_scores_early}})
+    final = await run_pipeline(build_default_pipeline(), initial_state, pipeline_ctx)
 
-    # Continuity boost: neurons from prior conversation turns get a 1.3x lift.
-    if prior_neuron_ids:
-        prior_set = set(prior_neuron_ids)
-        for s in scored:
-            if s.neuron_id in prior_set:
-                s.combined = round(s.combined * 1.3, 4)
-        scored.sort(key=lambda s: s.combined, reverse=True)
+    # Structural resolve short-circuit returns the already-built PreparedContext.
+    if isinstance(final, PreparedContext):
+        final.stage_telemetry = pipeline_ctx.telemetry_json()
+        return final
 
-    scored = await spread_activation(db, scored, effective_top_k)
-    await _emit("spread_activation", {"status": "done", "detail": {"propagated": len(scored), "neurons_activated": len(scored)}})
-    all_scored, effective_top_k = await _apply_inhibition_and_boost(
-        db, scored, effective_top_k, project_path,
-    )
+    state: PipelineState = final
+    assert isinstance(state, PipelineState), "pipeline must return a PipelineState when not short-circuiting"
 
-    resolved_regulations = await _resolve_fired_engrams(db, scored_engrams, effective_budget, _emit)
-
-    top_slice, neuron_map, system_prompt = await _assemble_top_slice(
-        db, all_scored, effective_top_k, intent, effective_budget,
-        prior_neuron_ids, resolved_regulations,
-    )
-    await _emit("assemble_prompt", {"status": "done", "detail": {"neurons_activated": min(len(all_scored), effective_top_k), "engrams_resolved": len(resolved_regulations), "assembled_prompt": system_prompt}})
-
-    if project_path and getattr(settings, 'project_cache_enabled', False):
+    if state.project_path and getattr(settings, 'project_cache_enabled', False):
         from app.services.project_cache import record_project_firings
-        await record_project_firings(db, project_path, top_slice)
+        await record_project_firings(db, state.project_path, state.top_slice)
 
     result = PreparedContext(
-        system_prompt=system_prompt, intent=intent, departments=departments,
-        role_keys=role_keys, keywords=keywords,
-        neuron_scores=_build_neuron_score_dicts(top_slice, neuron_map),
-        neurons_activated=min(len(all_scored), effective_top_k),
-        neuron_map=neuron_map, all_scored=top_slice,
-        classify_cost_usd=classify_result.get("cost_usd", 0),
-        classify_input_tokens=classify_result["input_tokens"],
-        classify_output_tokens=classify_result["output_tokens"],
+        system_prompt=state.system_prompt, intent=state.intent,
+        departments=state.departments, role_keys=state.role_keys, keywords=state.keywords,
+        neuron_scores=_build_neuron_score_dicts(state.top_slice, state.neuron_map),
+        neurons_activated=min(len(state.all_scored), state.effective_top_k),
+        neuron_map=state.neuron_map, all_scored=state.top_slice,
+        classify_cost_usd=state.classify_result.get("cost_usd", 0),
+        classify_input_tokens=state.classify_result.get("input_tokens", 0),
+        classify_output_tokens=state.classify_result.get("output_tokens", 0),
+        stage_telemetry=pipeline_ctx.telemetry_json(),
     )
     assert isinstance(result.system_prompt, str) and len(result.system_prompt) > 0, \
         "PreparedContext.system_prompt must be a non-empty string"
@@ -507,6 +485,8 @@ def _create_query_record(
     assert isinstance(slot_specs, list) and len(slot_specs) > 0, \
         "slot_specs must be non-empty"
     selected_ids = [s.neuron_id for s in ctx.all_scored] if ctx else []
+    # Pattern #5: snapshot per-stage telemetry onto the Query row as JSONB.
+    stage_telemetry = ctx.stage_telemetry if ctx else []
     return Query(
         user_message=user_message,
         classified_intent=ctx.intent if needs_neurons else None,
@@ -519,6 +499,7 @@ def _create_query_record(
         classify_output_tokens=classify_result["output_tokens"],
         run_neuron=needs_neurons,
         run_opus=any(s["mode"] == "opus_raw" for s in slot_specs),
+        stage_telemetry_json=stage_telemetry if stage_telemetry else None,
     )
 
 
@@ -749,6 +730,8 @@ def _build_response(
         "classify_output_tokens": classify_result["output_tokens"],
         "slots": slot_results,
         "total_cost": total_cost,
+        # Pattern #5: per-stage timing + status for the query-prep DAG.
+        "stage_telemetry": ctx.stage_telemetry if ctx else [],
     }
 
 
