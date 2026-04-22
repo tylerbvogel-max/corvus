@@ -361,6 +361,77 @@ export interface AutopilotRun {
   stage_telemetry?: StageTelemetry[] | null;
 }
 
+// ── AIP Phase 3 — Query Dossier ──────────────────────────────────────────
+
+export interface DossierActionOut {
+  id: number;
+  kind: string;
+  actor_type: string;
+  actor_id: string | null;
+  state: string;
+  requires_approval: boolean;
+  reason: string | null;
+  parent_action_id: number | null;
+  applied_at: string | null;
+  error_message: string | null;
+  created_at: string | null;
+}
+
+export interface DossierOutputViolationOut {
+  id: number;
+  rule_id: string;
+  severity: string;
+  action: string;
+  matched_span: string | null;
+  redaction: string | null;
+  detail: Record<string, unknown> | null;
+  action_id: number | null;
+  created_at: string | null;
+}
+
+export interface DossierEvalRunParticipation {
+  eval_run_id: number;
+  eval_run_case_id: number;
+  case_label: string;
+  suite_name: string;
+  suite_hash: string;
+  certified: boolean;
+  blocked: boolean;
+  scores_json: Record<string, unknown> | null;
+  violations_json: Record<string, unknown> | null;
+  run_status: string;
+  run_started_at: string | null;
+  run_completed_at: string | null;
+}
+
+export interface DossierIntegrityFindingOut {
+  id: number;
+  scan_id: number;
+  finding_type: string;
+  severity: string;
+  priority_score: number;
+  description: string | null;
+  status: string;
+  resolution: string | null;
+  attributed_via: string;
+  overlapping_neuron_ids: number[];
+  created_at: string | null;
+}
+
+export interface QueryDossier {
+  query_id: number;
+  user_message: string;
+  created_at: string | null;
+  pipeline: { stage_telemetry: StageTelemetry[] };
+  eval: {
+    ad_hoc_scores: EvalScoreOut[];
+    eval_run_participations: DossierEvalRunParticipation[];
+  };
+  output_checks: { violations: DossierOutputViolationOut[] };
+  actions: { actions: DossierActionOut[] };
+  integrity: { findings: DossierIntegrityFindingOut[] };
+}
+
 export interface AutopilotTickResponse {
   status: string;
   run_id: number | null;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
-import { submitQueryStream, submitRating, fetchQueryHistory, fetchQueryDetail, evaluateQuery, refineQuery, applyRefinements, fetchGraphCapacity } from '../api'
+import { submitQueryStream, submitRating, fetchQueryHistory, fetchQueryDetail, evaluateQuery, refineQuery, applyRefinements, fetchGraphCapacity, fetchQueryDossier } from '../api'
 import type { SlotSpec, GraphCapacity, StageEvent, ModelOption } from '../api'
-import type { QueryResponse, QuerySummary, QueryDetail, SlotResult, EvalScoreOut, RefineResponse, StageTelemetry } from '../types'
+import type { QueryResponse, QuerySummary, QueryDetail, SlotResult, EvalScoreOut, RefineResponse, StageTelemetry, QueryDossier, DossierActionOut, DossierOutputViolationOut, DossierEvalRunParticipation, DossierIntegrityFindingOut } from '../types'
 import { useModels } from '../hooks/useModels'
 import TokenCharts from './TokenCharts'
 import NeuronTreeViz from './NeuronTreeViz'
@@ -1754,6 +1754,243 @@ function HistoryDetail({ query, baseline, onNavigateToNeuron }: { query: QueryDe
           </div>
         </PStep>
       )}
+
+      <PStep>
+        <div className="pipeline-step-label">Dossier <span className="step-timing">AIP Phase 3 · live projection</span></div>
+        <DossierSection queryId={query.id} />
+      </PStep>
     </div>
+  );
+}
+
+
+// ── AIP Phase 3 — Query Dossier ─────────────────────────────────────────
+
+function severityColor(sev: string): string {
+  if (sev === 'critical' || sev === 'error') return 'var(--impact)';
+  if (sev === 'warn' || sev === 'warning') return '#facc15';
+  return 'var(--text-dim)';
+}
+
+function stateColor(state: string): string {
+  if (state === 'applied') return 'var(--precision)';
+  if (state === 'failed' || state === 'rejected') return 'var(--impact)';
+  return 'var(--text-dim)';
+}
+
+function DossierSection({ queryId }: { queryId: number }) {
+  const [open, setOpen] = useState(false);
+  const [dossier, setDossier] = useState<QueryDossier | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || dossier !== null || loading) return;
+    setLoading(true);
+    setError(null);
+    fetchQueryDossier(queryId)
+      .then(d => setDossier(d))
+      .catch(e => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false));
+  }, [open, queryId, dossier, loading]);
+
+  return (
+    <div className="result-card">
+      <div className="section-header" onClick={() => setOpen(o => !o)}>
+        <h3>
+          <span className={`section-chevron${open ? ' open' : ''}`} />
+          Full Dossier
+        </h3>
+        {dossier && (
+          <div className="section-header-right" onClick={e => e.stopPropagation()}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+              {dossier.pipeline.stage_telemetry.length} stages · {dossier.eval.ad_hoc_scores.length + dossier.eval.eval_run_participations.length} eval · {dossier.output_checks.violations.length} violations · {dossier.actions.actions.length} actions · {dossier.integrity.findings.length} integrity
+            </span>
+          </div>
+        )}
+      </div>
+      {open && (
+        <div style={{ padding: '12px 16px' }}>
+          {loading && <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Loading dossier…</div>}
+          {error && <div style={{ color: 'var(--impact)', fontSize: '0.85rem' }}>Failed: {error}</div>}
+          {dossier && <DossierBody dossier={dossier} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DossierBody({ dossier }: { dossier: QueryDossier }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <DossierCard title="Pipeline" count={dossier.pipeline.stage_telemetry.length}>
+        {dossier.pipeline.stage_telemetry.length === 0 ? (
+          <DossierEmpty />
+        ) : (
+          <StageTelemetryTable telemetry={dossier.pipeline.stage_telemetry} />
+        )}
+      </DossierCard>
+
+      <DossierCard title="Eval" count={dossier.eval.ad_hoc_scores.length + dossier.eval.eval_run_participations.length}>
+        {dossier.eval.ad_hoc_scores.length === 0 && dossier.eval.eval_run_participations.length === 0 ? (
+          <DossierEmpty />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {dossier.eval.ad_hoc_scores.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>Ad-hoc scores</div>
+                <EvalScoreTable scores={dossier.eval.ad_hoc_scores} winner={null} />
+              </div>
+            )}
+            {dossier.eval.eval_run_participations.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: 4 }}>Eval-run participations</div>
+                <DossierEvalRunsTable parts={dossier.eval.eval_run_participations} />
+              </div>
+            )}
+          </div>
+        )}
+      </DossierCard>
+
+      <DossierCard title="Output Checks" count={dossier.output_checks.violations.length}>
+        {dossier.output_checks.violations.length === 0 ? <DossierEmpty /> : <DossierViolationsTable violations={dossier.output_checks.violations} />}
+      </DossierCard>
+
+      <DossierCard title="Actions" count={dossier.actions.actions.length}>
+        {dossier.actions.actions.length === 0 ? <DossierEmpty /> : <DossierActionsTable actions={dossier.actions.actions} />}
+      </DossierCard>
+
+      <DossierCard title="Integrity" count={dossier.integrity.findings.length}>
+        {dossier.integrity.findings.length === 0 ? <DossierEmpty /> : <DossierIntegrityTable findings={dossier.integrity.findings} />}
+      </DossierCard>
+    </div>
+  );
+}
+
+function DossierCard({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span>{title}</span>
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 400 }}>{count} item{count === 1 ? '' : 's'}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DossierEmpty() {
+  return <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>—</div>;
+}
+
+function DossierEvalRunsTable({ parts }: { parts: DossierEvalRunParticipation[] }) {
+  return (
+    <table className="score-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'left' }}>Run</th>
+          <th style={{ textAlign: 'left' }}>Suite</th>
+          <th style={{ textAlign: 'left' }}>Case</th>
+          <th style={{ textAlign: 'left' }}>Status</th>
+          <th style={{ textAlign: 'left' }}>Certified</th>
+          <th style={{ textAlign: 'left' }}>Blocked</th>
+        </tr>
+      </thead>
+      <tbody>
+        {parts.map(p => (
+          <tr key={p.eval_run_case_id}>
+            <td style={{ fontFamily: 'monospace' }}>#{p.eval_run_id}</td>
+            <td>{p.suite_name} <span style={{ color: 'var(--text-dim)', fontFamily: 'monospace', fontSize: '0.7rem' }}>{p.suite_hash.slice(0, 8)}</span></td>
+            <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.case_label}</td>
+            <td style={{ color: 'var(--text-dim)' }}>{p.run_status}</td>
+            <td>{p.certified ? <span style={{ color: 'var(--precision)', fontWeight: 600 }}>✓ certified</span> : <span style={{ color: 'var(--text-dim)' }}>—</span>}</td>
+            <td>{p.blocked ? <span style={{ color: 'var(--impact)', fontWeight: 600 }}>blocked</span> : <span style={{ color: 'var(--text-dim)' }}>—</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function DossierViolationsTable({ violations }: { violations: DossierOutputViolationOut[] }) {
+  return (
+    <table className="score-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'left' }}>Rule</th>
+          <th style={{ textAlign: 'left' }}>Severity</th>
+          <th style={{ textAlign: 'left' }}>Action</th>
+          <th style={{ textAlign: 'left' }}>Matched</th>
+          <th style={{ textAlign: 'left' }}>Action ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        {violations.map(v => (
+          <tr key={v.id}>
+            <td style={{ fontFamily: 'monospace' }}>{v.rule_id}</td>
+            <td><span style={{ color: severityColor(v.severity), fontWeight: 600, textTransform: 'uppercase', fontSize: '0.7rem' }}>{v.severity}</span></td>
+            <td style={{ color: 'var(--text-dim)' }}>{v.action}</td>
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>{v.matched_span ? (v.matched_span.length > 60 ? v.matched_span.slice(0, 60) + '…' : v.matched_span) : '—'}</td>
+            <td style={{ color: 'var(--text-dim)', fontFamily: 'monospace', fontSize: '0.75rem' }}>{v.action_id != null ? `#${v.action_id}` : '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function DossierActionsTable({ actions }: { actions: DossierActionOut[] }) {
+  return (
+    <table className="score-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'left' }}>ID</th>
+          <th style={{ textAlign: 'left' }}>Kind</th>
+          <th style={{ textAlign: 'left' }}>Actor</th>
+          <th style={{ textAlign: 'left' }}>State</th>
+          <th style={{ textAlign: 'left' }}>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {actions.map(a => (
+          <tr key={a.id}>
+            <td style={{ fontFamily: 'monospace' }}>#{a.id}{a.parent_action_id != null && <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }}> ←#{a.parent_action_id}</span>}</td>
+            <td style={{ fontFamily: 'monospace' }}>{a.kind}</td>
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>{a.actor_type}{a.actor_id ? `/${a.actor_id}` : ''}</td>
+            <td><span style={{ color: stateColor(a.state), fontWeight: 600, textTransform: 'uppercase', fontSize: '0.7rem' }}>{a.state}</span></td>
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>{a.error_message ? <span style={{ color: 'var(--impact)' }}>{a.error_message}</span> : (a.reason ?? '—')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function DossierIntegrityTable({ findings }: { findings: DossierIntegrityFindingOut[] }) {
+  return (
+    <table className="score-table" style={{ width: '100%', fontSize: '0.8rem' }}>
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'left' }}>ID</th>
+          <th style={{ textAlign: 'left' }}>Type</th>
+          <th style={{ textAlign: 'left' }}>Severity</th>
+          <th style={{ textAlign: 'left' }}>Status</th>
+          <th style={{ textAlign: 'left' }}>Overlap</th>
+          <th style={{ textAlign: 'left' }}>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {findings.map(f => (
+          <tr key={f.id}>
+            <td style={{ fontFamily: 'monospace' }}>#{f.id}</td>
+            <td style={{ fontFamily: 'monospace' }}>{f.finding_type}</td>
+            <td><span style={{ color: severityColor(f.severity), fontWeight: 600, textTransform: 'uppercase', fontSize: '0.7rem' }}>{f.severity}</span></td>
+            <td style={{ color: 'var(--text-dim)' }}>{f.status}{f.resolution ? ` (${f.resolution})` : ''}</td>
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>{f.overlapping_neuron_ids.map(n => `#${n}`).join(' · ')}</td>
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>{f.description ? (f.description.length > 80 ? f.description.slice(0, 80) + '…' : f.description) : '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

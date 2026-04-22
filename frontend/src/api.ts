@@ -271,6 +271,10 @@ export function fetchQueryDetail(id: number): Promise<QueryDetail> {
   return json<QueryDetail>(`/queries/${id}`);
 }
 
+export function fetchQueryDossier(id: number): Promise<import('./types').QueryDossier> {
+  return json<import('./types').QueryDossier>(`/queries/${id}/dossier`);
+}
+
 export function fetchQueryRunCounts(texts: string[]): Promise<Record<string, number>> {
   return json<Record<string, number>>('/queries/run-counts', {
     method: 'POST',
