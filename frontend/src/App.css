@@ -720,6 +720,45 @@ body {
 
 .meta-chip.layer-chip { font-weight: 600; }
 
+/* Autopilot Pipeline Timing — waterfall layout */
+.pipeline-timeline-track {
+  position: relative;
+  height: 10px;
+  min-width: 140px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.pipeline-timeline-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 5px;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.pipeline-detail-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.pipeline-cost-chip {
+  font-weight: 600;
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.pipeline-id-chip {
+  color: var(--text-dim);
+  opacity: 0.85;
+}
+.pipeline-header-meta {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 0.75rem;
+  margin-left: 6px;
+}
+
 .detail-section {
   margin-bottom: 20px;
 }

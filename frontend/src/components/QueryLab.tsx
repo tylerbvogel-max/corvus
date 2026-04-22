@@ -5,6 +5,7 @@ import type { QueryResponse, QuerySummary, QueryDetail, SlotResult, EvalScoreOut
 import { useModels } from '../hooks/useModels'
 import TokenCharts from './TokenCharts'
 import NeuronTreeViz from './NeuronTreeViz'
+import { DetailChips, StatusPill, categorizeDetail, fmtDuration } from './pipelineDetail'
 import { marked } from 'marked'
 
 
@@ -1221,21 +1222,6 @@ function PipelineConnectors({ containerRef }: { containerRef: React.RefObject<HT
 // ────────── Pipeline Telemetry Table (Pattern #5) ──────────
 
 function StageTelemetryTable({ telemetry }: { telemetry: StageTelemetry[] }) {
-  function fmtDuration(ms: number): string {
-    if (ms < 1) return '<1ms';
-    if (ms < 1000) return `${ms.toFixed(1)}ms`;
-    return `${(ms / 1000).toFixed(2)}s`;
-  }
-  function statusColor(status: string): string {
-    if (status === 'done') return '#22c55e';
-    if (status === 'error') return '#ef4444';
-    return '#94a3b8';
-  }
-  function fmtDetail(detail: Record<string, unknown>): string {
-    const entries = Object.entries(detail);
-    if (entries.length === 0) return '—';
-    return entries.map(([k, v]) => `${k}=${Array.isArray(v) ? `[${v.length}]` : String(v)}`).join(' · ');
-  }
   return (
     <table className="score-table" style={{ width: '100%', fontSize: '0.8rem' }}>
       <thead>
@@ -1243,23 +1229,17 @@ function StageTelemetryTable({ telemetry }: { telemetry: StageTelemetry[] }) {
           <th style={{ textAlign: 'left' }}>Stage</th>
           <th style={{ textAlign: 'left' }}>Status</th>
           <th style={{ textAlign: 'right' }}>Duration</th>
-          <th style={{ textAlign: 'left' }}>Detail</th>
+          <th style={{ textAlign: 'left', paddingLeft: 16 }}>Detail</th>
         </tr>
       </thead>
       <tbody>
         {telemetry.map((st, i) => (
           <tr key={`${st.stage}-${i}`}>
             <td style={{ fontFamily: 'monospace' }}>{st.stage}</td>
-            <td>
-              <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 3, background: `${statusColor(st.status)}22`, color: statusColor(st.status), textTransform: 'uppercase', fontWeight: 600 }}>
-                {st.status}
-              </span>
-            </td>
+            <td><StatusPill status={st.status} /></td>
             <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-dim)' }}>{fmtDuration(st.duration_ms)}</td>
-            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>
-              {st.error_message ? (
-                <span style={{ color: '#ef4444' }}>{st.error_message}</span>
-              ) : fmtDetail(st.detail)}
+            <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem', paddingLeft: 16 }}>
+              <DetailChips groups={categorizeDetail(st.detail)} error={st.error_message} />
             </td>
           </tr>
         ))}

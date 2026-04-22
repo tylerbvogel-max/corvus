@@ -319,15 +319,33 @@ async def _load_refinements(
     return refinements
 
 
-def _parse_pending_refine(refine_json: str | None) -> dict | None:
+def _parse_pending_refine(refine_json: str | None, fallback_query_id: int) -> dict | None:
+    """Parse the stored refine artifact into a RefineResponse-shaped dict.
+
+    Two writers populate `query.refine_json`:
+    - Manual /refine endpoint — writes the full RefineResponse shape.
+    - Autopilot _refine — writes only {reasoning, updates, new_neurons} and
+      omits query_id/model/input_tokens/output_tokens.
+
+    Normalize by backfilling defaults so Pydantic validation succeeds for
+    both shapes. Required — otherwise /queries/{id} 500s on any query that
+    was last refined by the autopilot.
+    """
+    assert isinstance(fallback_query_id, int), "fallback_query_id must be int"
     if not refine_json:
         return None
     try:
         parsed = json.loads(refine_json)
-        assert parsed is None or isinstance(parsed, dict), "pending_refine must be dict or None"
-        return parsed
     except json.JSONDecodeError:
         return None
+    if parsed is None or not isinstance(parsed, dict):
+        return None
+    parsed.setdefault("query_id", fallback_query_id)
+    parsed.setdefault("model", "")
+    parsed.setdefault("input_tokens", 0)
+    parsed.setdefault("output_tokens", 0)
+    parsed.setdefault("reasoning", "")
+    return parsed
 
 
 @router.get("/queries/{query_id}", response_model=QueryDetail)
@@ -344,7 +362,7 @@ async def get_query_detail(query_id: int, db: AsyncSession = Depends(get_db)):
     slots = _parse_slots(query)
     eval_scores, eval_winner = await _load_eval_scores(db, query_id, query.eval_text)
     refinements = await _load_refinements(db, query_id)
-    pending_refine = _parse_pending_refine(query.refine_json)
+    pending_refine = _parse_pending_refine(query.refine_json, query.id)
 
     assert query.id is not None, "query must have a valid ID"
     return QueryDetail(
