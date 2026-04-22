@@ -21,6 +21,9 @@ class GapTargetedGenerationStage:
 
     name = "query_generation_gap_targeted"
 
+    def __init__(self) -> None:
+        self._last_cost: float = 0.0
+
     async def run(self, state: AutopilotState, _ctx: PipelineContext) -> AutopilotState:
         assert state is not None, "state is required"
         assert state.gap is not None, "gap_targeted stage requires state.gap to be set"
@@ -34,6 +37,7 @@ class GapTargetedGenerationStage:
             state.focus_context,
             state.gap,
         )
+        self._last_cost = cost
         state.generated_query = text
         state.total_cost += cost
         return state
@@ -41,7 +45,7 @@ class GapTargetedGenerationStage:
     def describe(self, out: AutopilotState) -> dict[str, Any]:
         return {
             "query_chars": len(out.generated_query or ""),
-            "cost_usd": round(out.total_cost, 6),
+            "cost_usd": round(self._last_cost, 6),
         }
 
 
@@ -53,6 +57,9 @@ class DirectiveGenerationStage:
     """
 
     name = "query_generation_directive"
+
+    def __init__(self) -> None:
+        self._last_cost: float = 0.0
 
     async def run(self, state: AutopilotState, _ctx: PipelineContext) -> AutopilotState:
         assert state is not None, "state is required"
@@ -66,6 +73,7 @@ class DirectiveGenerationStage:
             state.recent_queries,
             state.focus_context,
         )
+        self._last_cost = cost
         state.generated_query = text
         state.total_cost += cost
         return state
@@ -73,7 +81,7 @@ class DirectiveGenerationStage:
     def describe(self, out: AutopilotState) -> dict[str, Any]:
         return {
             "query_chars": len(out.generated_query or ""),
-            "cost_usd": round(out.total_cost, 6),
+            "cost_usd": round(self._last_cost, 6),
         }
 
 

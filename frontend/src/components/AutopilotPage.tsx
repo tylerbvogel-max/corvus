@@ -688,6 +688,7 @@ function StageTimingTable({ telemetry }: { telemetry: StageTelemetry[] }) {
         <tr>
           <th style={{ textAlign: 'left' }}>Stage</th>
           <th style={{ textAlign: 'right' }}>Duration</th>
+          <th style={{ textAlign: 'right', paddingLeft: 16 }}>Cost</th>
           <th style={{ textAlign: 'left', paddingLeft: 16, minWidth: 160 }}>Timeline</th>
           <th style={{ textAlign: 'left', paddingLeft: 24 }}>Detail</th>
         </tr>
@@ -698,6 +699,9 @@ function StageTimingTable({ telemetry }: { telemetry: StageTelemetry[] }) {
           const durPct = totalMs > 0 ? (st.duration_ms / totalMs) * 100 : 0;
           const visibleWidth = Math.max(durPct, 0.75); // sub-1% stages stay visible
           const groups = categorizeDetail(st.detail);
+          const costText = groups.cost != null ? fmtCost(groups.cost) : '$0.000';
+          // Hide the cost chip from DetailChips — it's its own column now.
+          const chipGroups = { ...groups, cost: null };
           return (
             <tr key={`${st.stage}-${i}`}>
               <td style={{ fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
@@ -708,6 +712,9 @@ function StageTimingTable({ telemetry }: { telemetry: StageTelemetry[] }) {
               </td>
               <td style={{ textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
                 {fmtDuration(st.duration_ms)}
+              </td>
+              <td style={{ textAlign: 'right', fontFamily: 'monospace', paddingLeft: 16, whiteSpace: 'nowrap', color: groups.cost != null && groups.cost > 0 ? 'var(--accent)' : 'var(--text-dim)' }}>
+                {costText}
               </td>
               <td style={{ paddingLeft: 16 }}>
                 <div className="pipeline-timeline-track" title={`${durPct.toFixed(1)}% of tick`}>
@@ -722,7 +729,7 @@ function StageTimingTable({ telemetry }: { telemetry: StageTelemetry[] }) {
                 </div>
               </td>
               <td style={{ color: 'var(--text-dim)', fontSize: '0.75rem', paddingLeft: 24 }}>
-                <DetailChips groups={groups} error={st.error_message} />
+                <DetailChips groups={chipGroups} error={st.error_message} />
               </td>
             </tr>
           );

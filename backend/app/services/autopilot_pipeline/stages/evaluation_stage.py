@@ -15,6 +15,9 @@ class EvaluationStage:
 
     name = "evaluation"
 
+    def __init__(self) -> None:
+        self._last_cost: float = 0.0
+
     async def run(self, state: AutopilotState, _ctx: PipelineContext) -> AutopilotState:
         assert state is not None, "state is required"
         assert state.query_id is not None, "query_id must be set before evaluation"
@@ -24,6 +27,7 @@ class EvaluationStage:
         eval_overall, eval_text, eval_cost = await _evaluate_response(
             state.query_id, state.config.eval_model,
         )
+        self._last_cost = eval_cost
         state.eval_overall = eval_overall
         state.eval_text = eval_text
         state.total_cost += eval_cost
@@ -32,5 +36,5 @@ class EvaluationStage:
     def describe(self, out: AutopilotState) -> dict[str, Any]:
         return {
             "eval_overall": out.eval_overall,
-            "cost_usd": round(out.total_cost, 6),
+            "cost_usd": round(self._last_cost, 6),
         }

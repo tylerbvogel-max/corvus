@@ -15,6 +15,9 @@ class PipelineExecutionStage:
 
     name = "pipeline_execution"
 
+    def __init__(self) -> None:
+        self._last_cost: float = 0.0
+
     async def run(self, state: AutopilotState, _ctx: PipelineContext) -> AutopilotState:
         assert state is not None, "state is required"
         assert state.generated_query, "generated_query must be set before execution"
@@ -22,6 +25,7 @@ class PipelineExecutionStage:
         from app.routers.autopilot import _execute_pipeline
 
         query_id, neurons_activated, exec_cost = await _execute_pipeline(state.generated_query)
+        self._last_cost = exec_cost
         state.query_id = query_id
         state.neurons_activated = neurons_activated
         state.total_cost += exec_cost
@@ -31,5 +35,5 @@ class PipelineExecutionStage:
         return {
             "query_id": out.query_id,
             "neurons_activated": out.neurons_activated,
-            "cost_usd": round(out.total_cost, 6),
+            "cost_usd": round(self._last_cost, 6),
         }

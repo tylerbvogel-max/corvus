@@ -17,6 +17,9 @@ class RefinementStage:
 
     name = "refinement"
 
+    def __init__(self) -> None:
+        self._last_cost: float = 0.0
+
     async def run(self, state: AutopilotState, _ctx: PipelineContext) -> AutopilotState:
         assert state is not None, "state is required"
         assert state.query_id is not None, "query_id must be set before refinement"
@@ -30,6 +33,7 @@ class RefinementStage:
             state.config.eval_model,
             state.gap,
         )
+        self._last_cost = refine_cost
         state.refine_reasoning = reasoning
         state.updates = updates or []
         state.new_neurons = new_neurons or []
@@ -40,5 +44,5 @@ class RefinementStage:
         return {
             "updates": len(out.updates),
             "new_neurons": len(out.new_neurons),
-            "cost_usd": round(out.total_cost, 6),
+            "cost_usd": round(self._last_cost, 6),
         }

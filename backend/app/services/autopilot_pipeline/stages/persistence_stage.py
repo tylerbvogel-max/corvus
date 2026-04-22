@@ -44,5 +44,4 @@ class PersistenceStage:
         return {
             "run_id": out.run_id,
             "proposal_id": out.proposal_id,
-            "cost_usd": round(out.total_cost, 6),
         }
