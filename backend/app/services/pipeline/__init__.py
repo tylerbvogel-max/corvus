@@ -12,19 +12,24 @@ Usage:
 """
 
 from app.services.pipeline.stage import (
+    BranchStage,
     Stage,
     StageTelemetry,
     PipelineStageError,
     ShortCircuit,
+    is_branch_stage,
 )
 from app.services.pipeline.context import PipelineContext
-from app.services.pipeline.runner import run_pipeline
+from app.services.pipeline.runner import MAX_BRANCH_DEPTH, run_pipeline
 
 __all__ = [
+    "BranchStage",
     "Stage",
     "StageTelemetry",
     "PipelineStageError",
     "ShortCircuit",
     "PipelineContext",
+    "MAX_BRANCH_DEPTH",
+    "is_branch_stage",
     "run_pipeline",
 ]

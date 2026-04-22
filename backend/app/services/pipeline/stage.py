@@ -1,7 +1,7 @@
 """Stage protocol + telemetry envelope + error type for the typed pipeline DAG."""
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, Protocol, TypeVar, runtime_checkable
+from typing import Any, Generic, Mapping, Protocol, Sequence, TypeVar, runtime_checkable
 
 
 IN = TypeVar("IN")
@@ -30,6 +30,45 @@ class Stage(Protocol, Generic[IN, OUT]):
         ...
 
 
+@runtime_checkable
+class BranchStage(Protocol, Generic[IN, OUT]):
+    """Pattern #6 — conditional fan-out. Routes the input to one of N sub-pipelines.
+
+    The runner detects BranchStage instances by duck-typing (presence of both
+    `branches` and `route`) and invokes `route()` to pick a branch key. The
+    selected sub-pipeline is executed with `inp` threaded as its initial input;
+    its final output becomes the BranchStage's output and is handed to the next
+    parent stage.
+
+    Routing contract:
+    - `route()` returns a string key that is either in `self.branches` or `""`.
+    - `""` means "pass-through" — no sub-pipeline runs and `inp` flows through
+      unchanged. Chosen over `Optional[str]` for homogeneity with the key type.
+    - Any other key not present in `self.branches` is a programmer error; the
+      runner raises `PipelineStageError`.
+
+    See `docs/design/pattern-6-branch-stage.md` for the full design rationale.
+    """
+
+    name: str
+    branches: Mapping[str, Sequence[Any]]  # branch_key → Sequence[Stage | BranchStage]
+
+    async def route(self, inp: IN, ctx: "object") -> str: ...
+
+    def describe(self, out: OUT) -> dict[str, Any]: ...
+
+
+def is_branch_stage(stage: Any) -> bool:
+    """Duck-typed check — runtime_checkable Protocols don't inspect method bodies,
+    so we combine `isinstance(stage, BranchStage)` with a `branches` attr check
+    to ensure we found a real BranchStage and not a plain Stage that happens to
+    implement `name`.
+    """
+    return hasattr(stage, "branches") and hasattr(stage, "route") and callable(
+        getattr(stage, "route", None)
+    )
+
+
 @dataclass
 class StageTelemetry:
     """Per-stage record appended to `PipelineContext.telemetry`."""
@@ -38,6 +77,10 @@ class StageTelemetry:
     duration_ms: float
     detail: dict[str, Any] = field(default_factory=dict)
     error_message: str | None = None
+    # Pattern #6: path of enclosing BranchStage decisions, e.g.
+    # "query_generation_router:gap_targeted/". Empty for stages in the
+    # top-level pipeline. Included in to_json() only when set.
+    branch_context: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -49,6 +92,8 @@ class StageTelemetry:
             out["detail"] = self.detail
         if self.error_message:
             out["error_message"] = self.error_message
+        if self.branch_context:
+            out["branch_context"] = self.branch_context
         return out
 
 
