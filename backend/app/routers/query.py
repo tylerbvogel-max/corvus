@@ -17,6 +17,7 @@ from app.schemas import (
     ApplyRefineRequest, ApplyRefineResponse, RefinementOut,
     LearningEventOut, LearningAnalytics,
     OutputViolationOut,
+    QueryDossier,
     SlotResult,  # For backward-compat: parsing legacy multi-slot query data
 )
 from app.governance.output_guard import GuardResult, run_guards
@@ -390,6 +391,24 @@ async def get_query_detail(query_id: int, db: AsyncSession = Depends(get_db)):
         pending_refine=pending_refine,
         created_at=query.created_at.isoformat() if query.created_at else None,
     )
+
+
+@router.get("/queries/{query_id}/dossier", response_model=QueryDossier)
+async def get_query_dossier(query_id: int, db: AsyncSession = Depends(get_db)):
+    """AIP Phase 3 — return the full Dossier for a single query.
+
+    On-read aggregation of the five per-query governance signals:
+    pipeline telemetry, eval (ad-hoc + eval-run participations), output
+    violations, action audit trail, and integrity findings (attributed
+    by selected-neuron-id overlap). See
+    `docs/design/aip-phase-3-query-dossier.md` for scope + caveats.
+    """
+    assert query_id > 0, "query_id must be positive"
+    from app.services.query_dossier import build_dossier
+    dossier = await build_dossier(db, query_id)
+    if dossier is None:
+        raise HTTPException(status_code=404, detail="Query not found")
+    return dossier
 
 
 async def _load_included_firings(

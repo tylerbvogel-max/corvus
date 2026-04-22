@@ -592,3 +592,108 @@ class V1QueryResponse(BaseModel):
     eval_run_id: int | None = None
     blocked: bool = False
     violations: list[OutputViolationOut] = []
+
+
+# ── AIP Phase 3 — Query Dossier ──────────────────────────────────────────
+#
+# Live-projection aggregate of the five per-query governance/measurement
+# signals: pipeline telemetry, eval (ad-hoc + eval-run participations),
+# output-guard violations, action audit trail, integrity findings.
+# On-read aggregation only; no new table. See
+# `docs/design/aip-phase-3-query-dossier.md` for scope + caveats.
+
+class DossierActionOut(BaseModel):
+    """One Action audit-trail row scoped to a specific query."""
+    id: int
+    kind: str
+    actor_type: str              # user | autopilot | system | external_agent
+    actor_id: str | None = None
+    state: str                   # pending | applied | rejected | failed
+    requires_approval: bool = False
+    reason: str | None = None
+    parent_action_id: int | None = None
+    applied_at: str | None = None
+    error_message: str | None = None
+    created_at: str | None = None
+
+
+class DossierOutputViolationOut(BaseModel):
+    """One OutputViolation row for this query, with linkage to its triggering Action."""
+    id: int
+    rule_id: str
+    severity: str                # info | warn | error | critical
+    action: str                  # flag | redact | block
+    matched_span: str | None = None
+    redaction: str | None = None
+    detail: dict | None = None
+    action_id: int | None = None
+    created_at: str | None = None
+
+
+class DossierEvalRunParticipation(BaseModel):
+    """Indicates an EvalRun included this query as one of its cases."""
+    eval_run_id: int
+    eval_run_case_id: int
+    case_label: str
+    suite_name: str
+    suite_hash: str
+    certified: bool              # == tenant_config.certified_eval_run_id
+    blocked: bool = False
+    scores_json: dict | None = None
+    violations_json: dict | None = None
+    run_status: str
+    run_started_at: str | None = None
+    run_completed_at: str | None = None
+
+
+class DossierIntegrityFindingOut(BaseModel):
+    """An IntegrityFinding attributed to this query via neuron-id overlap."""
+    id: int
+    scan_id: int
+    finding_type: str
+    severity: str
+    priority_score: float
+    description: str | None = None
+    status: str                  # open | resolved | dismissed
+    resolution: str | None = None
+    attributed_via: str          # "selected_neurons"
+    overlapping_neuron_ids: list[int] = []
+    created_at: str | None = None
+
+
+class QueryDossierPipelineSection(BaseModel):
+    """Per-stage pipeline telemetry (from queries.stage_telemetry_json)."""
+    stage_telemetry: list[dict] = []
+
+
+class QueryDossierEvalSection(BaseModel):
+    """Eval-level signals: ad-hoc scores + eval-run participations."""
+    ad_hoc_scores: list[EvalScoreOut] = []
+    eval_run_participations: list[DossierEvalRunParticipation] = []
+
+
+class QueryDossierOutputSection(BaseModel):
+    """Output-guard violations (Pattern #7) fired against this query."""
+    violations: list[DossierOutputViolationOut] = []
+
+
+class QueryDossierActionsSection(BaseModel):
+    """Full Action audit trail with source_query_id == this query."""
+    actions: list[DossierActionOut] = []
+
+
+class QueryDossierIntegritySection(BaseModel):
+    """IntegrityFindings whose neuron_ids overlap with this query's selected neurons."""
+    findings: list[DossierIntegrityFindingOut] = []
+
+
+class QueryDossier(BaseModel):
+    """AIP Phase 3 — unified per-query reviewable artifact."""
+    query_id: int
+    user_message: str
+    created_at: str | None = None
+    pipeline: QueryDossierPipelineSection
+    eval: QueryDossierEvalSection
+    output_checks: QueryDossierOutputSection
+    actions: QueryDossierActionsSection
+    integrity: QueryDossierIntegritySection
