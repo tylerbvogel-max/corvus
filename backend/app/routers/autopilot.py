@@ -534,64 +534,86 @@ class _CancelledError(Exception):
     pass
 
 
-async def _generate_query(
-    directive: str, recent_queries: list[str], focus_context: str,
-    gap: GapTarget | None,
-) -> tuple[str, float]:
-    """Generate a targeted query based on gap analysis, or fall back to directive."""
+def _build_prompt_sections(
+    recent_queries: list[str], focus_context: str,
+) -> tuple[str, str]:
+    """Assemble the shared recent-queries + focus-area suffix blocks."""
     recent_section = ""
     if recent_queries:
         recent_section = (
             "\n\nRecent queries already generated (do NOT repeat or closely paraphrase these):\n"
             + "\n".join(f"- {q}" for q in recent_queries)
         )
-
     focus_section = ""
     if focus_context:
         focus_section = f"\n\nFocus area (generate queries specifically about this domain):\n{focus_context}"
+    return recent_section, focus_section
 
-    if gap and gap.source != "directive":
-        # LLM PROMPT INTENT: Generate a targeted test query that exposes a detected knowledge gap
-        #   in the neuron graph. The gap was identified by the gap detector (thin_neuron, emergent_queue,
-        #   low_coverage, etc.) and the generated query will be executed through the full pipeline to
-        #   trigger neuron creation/refinement in subsequent steps.
-        # INPUT: User message contains the training directive, optional focus area context, gap
-        #   description, and recent queries to avoid repetition. No structured data — all text.
-        # OUTPUT FORMAT: Plain text — a single natural-language question with no quotes, numbering,
-        #   or explanation. The caller strips leading/trailing quotes as a safety measure.
-        # FAILURE MODES: If the LLM ignores the gap description and generates a generic query,
-        #   the subsequent pipeline execution may not activate gap-relevant neurons, reducing training
-        #   effectiveness. If the LLM includes explanation text around the query, the extra text
-        #   becomes part of the query sent to the pipeline (degraded but functional).
-        system_prompt = (
-            "You generate targeted test queries for a knowledge management system. "
-            "A gap has been detected in the knowledge graph. Generate ONE specific, "
-            "detailed query that would expose this gap and require the system to have "
-            "knowledge it currently lacks. "
-            "The query should sound like a natural question from a domain expert. "
-            "Respond with ONLY the query text — no explanation, no quotes, no numbering."
-        )
-        gap_section = f"\n\nDetected gap:\n{gap.description}"
-        user_prompt = f"Training directive: {directive or 'general knowledge improvement'}{focus_section}{gap_section}{recent_section}"
-    else:
-        # LLM PROMPT INTENT: Generate a directive-based exploratory query when no structural gaps
-        #   are detected. Acts as a fallback to keep the autopilot training loop productive even
-        #   when the gap detector finds no specific deficiencies.
-        # INPUT: User message contains the training directive, optional focus area context, and
-        #   recent queries to avoid repetition. No gap description is included.
-        # OUTPUT FORMAT: Plain text — a single natural-language question with no quotes, numbering,
-        #   or explanation. The caller strips leading/trailing quotes as a safety measure.
-        # FAILURE MODES: If the LLM repeats a recent query despite the dedup list, the pipeline
-        #   will still execute but may not produce novel training signal. If the LLM generates
-        #   an off-topic query, the pipeline execution will activate unrelated neurons.
-        system_prompt = (
-            "You generate realistic test queries for a knowledge management system. "
-            "Generate ONE novel, specific query that someone working in this domain would ask. "
-            "The query should test the system's knowledge and require detailed, practical answers. "
-            "Respond with ONLY the query text — no explanation, no quotes, no numbering."
-        )
-        user_prompt = f"Training directive: {directive or 'general knowledge improvement'}{focus_section}{recent_section}"
 
+async def _generate_query_gap_targeted(
+    directive: str, recent_queries: list[str], focus_context: str, gap: GapTarget,
+) -> tuple[str, float]:
+    """Generate a query that probes a detected knowledge gap.
+
+    LLM PROMPT INTENT: Generate a targeted test query that exposes a detected knowledge gap
+      in the neuron graph. The gap was identified by the gap detector (thin_neuron, emergent_queue,
+      low_coverage, etc.) and the generated query will be executed through the full pipeline to
+      trigger neuron creation/refinement in subsequent steps.
+    OUTPUT FORMAT: Plain text — a single natural-language question with no quotes, numbering,
+      or explanation. The caller strips leading/trailing quotes as a safety measure.
+    FAILURE MODES: If the LLM ignores the gap description and generates a generic query,
+      the subsequent pipeline execution may not activate gap-relevant neurons, reducing training
+      effectiveness. If the LLM includes explanation text around the query, the extra text
+      becomes part of the query sent to the pipeline (degraded but functional).
+    """
+    assert gap is not None, "gap_targeted generator requires a non-None gap"
+    assert isinstance(directive, str), "directive must be a string"
+    recent_section, focus_section = _build_prompt_sections(recent_queries, focus_context)
+    system_prompt = (
+        "You generate targeted test queries for a knowledge management system. "
+        "A gap has been detected in the knowledge graph. Generate ONE specific, "
+        "detailed query that would expose this gap and require the system to have "
+        "knowledge it currently lacks. "
+        "The query should sound like a natural question from a domain expert. "
+        "Respond with ONLY the query text — no explanation, no quotes, no numbering."
+    )
+    gap_section = f"\n\nDetected gap:\n{gap.description}"
+    user_prompt = (
+        f"Training directive: {directive or 'general knowledge improvement'}"
+        f"{focus_section}{gap_section}{recent_section}"
+    )
+    result = await llm_chat(system_prompt, user_prompt, max_tokens=256, model="haiku")
+    query_text = result["text"].strip().strip('"').strip("'")
+    return query_text, result["cost_usd"]
+
+
+async def _generate_query_directive(
+    directive: str, recent_queries: list[str], focus_context: str,
+) -> tuple[str, float]:
+    """Directive-based exploratory query when no structural gap is targeted.
+
+    LLM PROMPT INTENT: Generate a directive-based exploratory query when no structural gaps
+      are detected. Acts as a fallback to keep the autopilot training loop productive even
+      when the gap detector finds no specific deficiencies.
+    OUTPUT FORMAT: Plain text — a single natural-language question with no quotes, numbering,
+      or explanation. The caller strips leading/trailing quotes as a safety measure.
+    FAILURE MODES: If the LLM repeats a recent query despite the dedup list, the pipeline
+      will still execute but may not produce novel training signal. If the LLM generates
+      an off-topic query, the pipeline execution will activate unrelated neurons.
+    """
+    assert isinstance(directive, str), "directive must be a string"
+    assert isinstance(recent_queries, list), "recent_queries must be a list"
+    recent_section, focus_section = _build_prompt_sections(recent_queries, focus_context)
+    system_prompt = (
+        "You generate realistic test queries for a knowledge management system. "
+        "Generate ONE novel, specific query that someone working in this domain would ask. "
+        "The query should test the system's knowledge and require detailed, practical answers. "
+        "Respond with ONLY the query text — no explanation, no quotes, no numbering."
+    )
+    user_prompt = (
+        f"Training directive: {directive or 'general knowledge improvement'}"
+        f"{focus_section}{recent_section}"
+    )
     result = await llm_chat(system_prompt, user_prompt, max_tokens=256, model="haiku")
     query_text = result["text"].strip().strip('"').strip("'")
     return query_text, result["cost_usd"]

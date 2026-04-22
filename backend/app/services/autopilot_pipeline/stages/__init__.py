@@ -11,13 +11,19 @@ from app.services.autopilot_pipeline.stages.gap_detection_stage import GapDetect
 from app.services.autopilot_pipeline.stages.persistence_stage import PersistenceStage
 from app.services.autopilot_pipeline.stages.pipeline_execution_stage import PipelineExecutionStage
 from app.services.autopilot_pipeline.stages.proposal_curation_stage import ProposalCurationStage
-from app.services.autopilot_pipeline.stages.query_generation_stage import QueryGenerationStage
+from app.services.autopilot_pipeline.stages.query_generation_stage import (
+    DirectiveGenerationStage,
+    GapTargetedGenerationStage,
+    QueryGenerationRouter,
+)
 from app.services.autopilot_pipeline.stages.refinement_stage import RefinementStage
 
 
 __all__ = [
     "GapDetectionStage",
-    "QueryGenerationStage",
+    "QueryGenerationRouter",
+    "GapTargetedGenerationStage",
+    "DirectiveGenerationStage",
     "PipelineExecutionStage",
     "EvaluationStage",
     "RefinementStage",

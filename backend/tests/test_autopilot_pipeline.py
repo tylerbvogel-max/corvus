@@ -15,7 +15,12 @@ from typing import Any
 import pytest
 
 from app.models import AutopilotConfig
-from app.services.autopilot_pipeline import AutopilotState, build_autopilot_pipeline
+from app.services.autopilot_pipeline import (
+    AutopilotState,
+    QueryGenerationRouter,
+    build_autopilot_pipeline,
+)
+from app.services.gap_detector import GapTarget
 from app.services.pipeline import (
     PipelineContext,
     PipelineStageError,
@@ -157,7 +162,12 @@ async def test_autopilot_runner_telemetry_json_serializable():
 
 @pytest.mark.asyncio
 async def test_build_autopilot_pipeline_returns_ordered_stages():
-    """The canonical pipeline factory wires up the expected stage chain."""
+    """The canonical pipeline factory wires up the expected stage chain.
+
+    Pattern #6: `query_generation` is now a `QueryGenerationRouter` BranchStage
+    that dispatches between gap-targeted and directive sub-pipelines. The
+    router's outward name is `query_generation_router`.
+    """
     cfg = AutopilotConfig(
         id=1, enabled=True, directive="",
         interval_minutes=30, max_layer=5, eval_model="haiku",
@@ -166,10 +176,47 @@ async def test_build_autopilot_pipeline_returns_ordered_stages():
     names = [s.name for s in chain]
     assert names == [
         "gap_detection",
-        "query_generation",
+        "query_generation_router",
         "pipeline_execution",
         "evaluation",
         "refinement",
         "proposal_curation",
         "persistence",
     ]
+    # The router is a BranchStage — it advertises `branches`.
+    router = chain[1]
+    assert set(router.branches.keys()) == {"gap_targeted", "directive"}
+
+
+@pytest.mark.asyncio
+async def test_query_generation_router_picks_gap_targeted_when_gap_present():
+    """gap_source not in ('', 'directive') routes to the gap_targeted branch."""
+    router = QueryGenerationRouter()
+    state = _make_state()
+    state.gap = GapTarget(
+        source="emergent_queue",
+        description="reference to ACME-123 has no neuron",
+        context_neuron_ids=[],
+    )
+    state.gap_source = "emergent_queue"
+    key = await router.route(state, PipelineContext(db=None))  # type: ignore[arg-type]
+    assert key == "gap_targeted"
+
+
+@pytest.mark.asyncio
+async def test_query_generation_router_falls_back_to_directive():
+    """No gap, or gap_source == 'directive', routes to the directive branch."""
+    router = QueryGenerationRouter()
+    state_no_gap = _make_state()
+    state_no_gap.gap = None
+    state_no_gap.gap_source = "directive"
+    key1 = await router.route(state_no_gap, PipelineContext(db=None))  # type: ignore[arg-type]
+    assert key1 == "directive"
+
+    state_directive_source = _make_state()
+    state_directive_source.gap = GapTarget(
+        source="directive", description="no structural gap", context_neuron_ids=[],
+    )
+    state_directive_source.gap_source = "directive"
+    key2 = await router.route(state_directive_source, PipelineContext(db=None))  # type: ignore[arg-type]
+    assert key2 == "directive"
