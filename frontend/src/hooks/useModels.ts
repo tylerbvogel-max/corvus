@@ -18,9 +18,9 @@ export function useModels() {
       .catch(() => {
         // Fallback to Anthropic models if endpoint unavailable
         setModels([
-          { display_name: 'haiku', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 0.8, output_price: 4 },
-          { display_name: 'sonnet', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 3, output_price: 15 },
-          { display_name: 'opus', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 15, output_price: 75 },
+          { display_name: 'haiku', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 0.8, output_price: 4, context_window_tokens: 200_000 },
+          { display_name: 'sonnet', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 3, output_price: 15, context_window_tokens: 200_000 },
+          { display_name: 'opus', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 15, output_price: 75, context_window_tokens: 200_000 },
         ]);
       })
       .finally(() => setLoading(false));

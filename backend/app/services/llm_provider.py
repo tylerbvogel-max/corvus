@@ -38,6 +38,10 @@ class ModelInfo:
     input_price: float      # USD per million input tokens
     output_price: float     # USD per million output tokens
     tier: str               # "frontier" | "free" — for UI grouping
+    # Per-model input context window in tokens. Drives the hero-page
+    # token-vs-context bar denominator. Values are the advertised input
+    # context the API accepts; output limits are separate and not tracked here.
+    context_window_tokens: int = 200_000
 
 
 MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
@@ -49,6 +53,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.80,
         output_price=4.00,
         tier="frontier",
+        context_window_tokens=200_000,
     ),
     "sonnet": ModelInfo(
         display_name="sonnet",
@@ -57,6 +62,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=3.00,
         output_price=15.00,
         tier="frontier",
+        context_window_tokens=200_000,
     ),
     "opus": ModelInfo(
         display_name="opus",
@@ -65,6 +71,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=15.00,
         output_price=75.00,
         tier="frontier",
+        context_window_tokens=200_000,
     ),
     "gemini-pro": ModelInfo(
         display_name="gemini-pro",
@@ -73,6 +80,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=1.25,
         output_price=10.00,
         tier="frontier",
+        context_window_tokens=1_048_576,  # Gemini 2.5 Pro advertised 1M input tokens
     ),
     # ── Free (generous free tiers, suitable for real usage) ──
     "gemini-flash": ModelInfo(
@@ -82,6 +90,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.0,
         output_price=0.0,
         tier="free",
+        context_window_tokens=1_048_576,
     ),
     "gemini-flash-lite": ModelInfo(
         display_name="gemini-flash-lite",
@@ -90,6 +99,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.0,
         output_price=0.0,
         tier="free",
+        context_window_tokens=1_048_576,
     ),
     "groq-llama-70b": ModelInfo(
         display_name="groq-llama-70b",
@@ -98,6 +108,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.0,
         output_price=0.0,
         tier="free",
+        context_window_tokens=131_072,  # Llama 3.3 70B: 128K
     ),
     "groq-llama-8b": ModelInfo(
         display_name="groq-llama-8b",
@@ -106,6 +117,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.0,
         output_price=0.0,
         tier="free",
+        context_window_tokens=131_072,
     ),
     "groq-gemma-9b": ModelInfo(
         display_name="groq-gemma-9b",
@@ -114,6 +126,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.0,
         output_price=0.0,
         tier="free",
+        context_window_tokens=8_192,  # Gemma 2 9B: 8K
     ),
     # ── Azure OpenAI (GovCloud / enterprise deployments) ──
     "azure-gpt4o": ModelInfo(
@@ -123,6 +136,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=2.50,
         output_price=10.00,
         tier="frontier",
+        context_window_tokens=128_000,
     ),
     "azure-gpt4o-mini": ModelInfo(
         display_name="azure-gpt4o-mini",
@@ -131,6 +145,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=0.15,
         output_price=0.60,
         tier="frontier",
+        context_window_tokens=128_000,
     ),
     "azure-o1": ModelInfo(
         display_name="azure-o1",
@@ -139,6 +154,7 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         input_price=15.00,
         output_price=60.00,
         tier="frontier",
+        context_window_tokens=200_000,
     ),
 })
 
@@ -174,6 +190,7 @@ def get_available_models() -> list[dict]:
                 "tier": info.tier,
                 "input_price": info.input_price,
                 "output_price": info.output_price,
+                "context_window_tokens": info.context_window_tokens,
             })
     assert isinstance(result, list), "result must be a list"
     return result

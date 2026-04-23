@@ -99,7 +99,7 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
   const [loading, setLoading] = useState(false);
   const [model, setModel] = useState('haiku');
   const [useNeurons, setUseNeurons] = useState(true);
-  const { grouped: groupedModels } = useModels();
+  const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -326,12 +326,32 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
 
   const stageKeys = Object.keys(PIPELINE_STAGE_LABELS);
 
-  // Context window tracking
-  const MODEL_CONTEXT: Record<string, number> = { haiku: 200000, sonnet: 200000, opus: 200000 };
-  const contextMax = MODEL_CONTEXT[model] ?? 200000;
-  const totalInputTokens = messages.reduce((sum, m) => sum + (m.tokens?.input ?? 0), 0);
-  const contextPct = Math.min(100, (totalInputTokens / contextMax) * 100);
+  // Context window tracking — per-model context size from the /models
+  // response. Denominator updates when the user swaps models.
+  const selectedModelInfo = availableModels.find(m => m.display_name === model);
+  const contextMax = selectedModelInfo?.context_window_tokens ?? 200_000;
+
+  // The "tokens in context" reading is the LATEST assistant turn's
+  // input_tokens — this is what the LLM actually received and accounts for
+  // the assembled prompt + conversation history + neuron context. Summing
+  // across turns would double-count history (each turn's prompt already
+  // re-includes prior exchanges).
+  const lastAssistantTokens = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === 'assistant' && typeof m.tokens?.input === 'number') {
+        return m.tokens.input;
+      }
+    }
+    return 0;
+  })();
+  const contextPct = Math.min(100, (lastAssistantTokens / contextMax) * 100);
   const contextWarning = contextPct >= 80;
+  const fmtTokens = (n: number): string => {
+    if (n < 1000) return String(n);
+    if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}K`;
+    return `${(n / 1_000_000).toFixed(2)}M`;
+  };
 
   // Find latest assistant message with neuron scores for the sidebar
   let latestNeuronScores: NeuronScoreResponse[] | null = null;
@@ -363,15 +383,15 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
           Neurons {useNeurons ? 'ON' : 'OFF'}
         </button>
       </div>
-      {messages.length > 0 && (
-        <div className="chat-context-bar">
+      {messages.length > 0 && lastAssistantTokens > 0 && (
+        <div className="chat-context-bar" title="Tokens the model received on the last turn — the higher this goes, the more the model has to hold in working memory. Near 80% the bar turns amber so you can summarize older exchanges before the session risks collapse.">
           <div className="chat-context-track">
             <div className={`chat-context-fill${contextWarning ? ' warning' : ''}`} style={{ width: `${contextPct}%` }} />
           </div>
-          <span className="chat-context-label">{(totalInputTokens / 1000).toFixed(0)}K / {(contextMax / 1000).toFixed(0)}K</span>
+          <span className="chat-context-label">{fmtTokens(lastAssistantTokens)} / {fmtTokens(contextMax)} ({contextPct.toFixed(0)}%)</span>
           {contextWarning && (
             <button className="chat-context-condense" onClick={condenseContext} disabled={condensing} title="Summarize older messages via Haiku to free context space">
-              {condensing ? 'Summarizing via Haiku...' : 'Condense'}
+              {condensing ? 'Summarizing older messages…' : 'Summarize older messages'}
             </button>
           )}
         </div>
@@ -506,8 +526,17 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
                     const laterHasEvent = stageKeys.slice(idx + 1).some(k => pipelineStages[k]);
                     const isDone = skipped || ev?.status === 'done' || ev?.status === 'skipped' || laterHasEvent;
                     const isActive = !skipped && ev?.status === 'active' && !laterHasEvent;
-                    const detail = ev?.detail as Record<string, unknown> | undefined;
-                    const timing = skipped ? 'skipped' : detail?.duration_ms != null ? `${detail.duration_ms}ms` : isDone ? '0ms' : '';
+                    // duration_ms is emitted at the TOP LEVEL of the SSE stage
+                    // payload (pipeline/runner.py::_payload_for_emit), not inside
+                    // detail. Previously we read detail?.duration_ms which always
+                    // returned undefined → "0ms" fallback on every stage.
+                    const durMs = ev?.duration_ms;
+                    let timing = '';
+                    if (skipped) {
+                      timing = 'skipped';
+                    } else if (typeof durMs === 'number') {
+                      timing = durMs < 1 ? '<1ms' : durMs < 1000 ? `${durMs.toFixed(0)}ms` : `${(durMs / 1000).toFixed(2)}s`;
+                    }
                     return (
                       <div key={key} className={`chat-stage-row${isDone ? ' done' : ''}${isActive ? ' active' : ''}${skipped ? ' skipped' : ''}`}>
                         <span className="chat-stage-dot" />

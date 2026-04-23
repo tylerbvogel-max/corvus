@@ -77,6 +77,7 @@ export interface ModelOption {
   tier: string;
   input_price: number;
   output_price: number;
+  context_window_tokens: number;
 }
 
 export function fetchAvailableModels(): Promise<ModelOption[]> {
@@ -313,6 +314,11 @@ export function submitQuery(message: string, slots: SlotSpec[], chat_style?: str
 export interface StageEvent {
   stage: string;
   status: 'done' | 'skipped' | 'active';
+  // Server-authoritative per-stage timing. Emitted at the top level of the
+  // SSE payload by pipeline/runner.py::_payload_for_emit. Missing on `active`
+  // events (where the stage hasn't finished yet) and on stages emitted by
+  // older clients; consumers must handle the undefined case.
+  duration_ms?: number;
   detail?: Record<string, unknown>;
 }
 
