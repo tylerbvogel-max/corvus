@@ -2724,6 +2724,117 @@ details summary:hover { color: var(--text); }
   color: var(--text-dim);
   font-style: italic;
 }
+/* Source rows are clickable — each opens a popup with the full neuron
+   content so end users can audit what the answer was grounded in. */
+.chat-sources-item-button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.12s;
+}
+.chat-sources-item-button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* Source popup / modal. Fetches full neuron detail on open. */
+.chat-source-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.chat-source-popup {
+  position: relative;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-width: 720px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px 24px 24px 24px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+}
+.chat-source-popup-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.chat-source-popup-close:hover { background: var(--bg-input); color: var(--text); }
+.chat-source-popup-loading, .chat-source-popup-error, .chat-source-popup-empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  padding: 12px 0;
+}
+.chat-source-popup-error { color: var(--impact); }
+.chat-source-popup-title {
+  margin: 0 30px 8px 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.chat-source-popup-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.chat-source-popup-chip {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.chat-source-popup-chip.chat-source-popup-inactive {
+  color: var(--impact);
+  border-color: color-mix(in srgb, var(--impact) 40%, var(--border));
+}
+.chat-source-popup-summary {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.chat-source-popup-content {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
 
 /* Pipeline stages (vertical list while loading) */
 .chat-pipeline-stages {
@@ -2756,8 +2867,33 @@ details summary:hover { color: var(--text); }
 
 .chat-stage-row.done .chat-stage-dot { background: #22c55e; }
 .chat-stage-row.active .chat-stage-dot {
-  background: #fbbf24;
-  animation: pipeline-pulse 1s ease-in-out infinite;
+  background: var(--accent);
+  animation: chat-stage-pulse 1s ease-in-out infinite;
+}
+/* Row-level cue: while running, the stage name becomes the active color
+   (pulses to make "this is happening now" unmistakable against grey). */
+.chat-stage-row.active .chat-stage-name {
+  color: var(--accent);
+  font-weight: 500;
+  animation: chat-stage-name-pulse 1.2s ease-in-out infinite;
+}
+.chat-stage-row.active .chat-stage-time {
+  color: var(--accent);
+  opacity: 0.9;
+}
+@keyframes chat-stage-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 0%, transparent);
+    transform: scale(1.35);
+  }
+}
+@keyframes chat-stage-name-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
 }
 
 .chat-stage-name { flex: 1; }

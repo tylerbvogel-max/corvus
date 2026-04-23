@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getTenantConfig, type SeedPrompt } from '../config';
 import {
   sendChat, submitQueryStream, createSession, listSessions, getSession,
-  appendMessage, generateSessionTitle, deleteSession,
+  appendMessage, generateSessionTitle, deleteSession, fetchNeuron,
   type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec, type SessionSummary,
 } from '../api';
 import type { NeuronScoreResponse } from '../types';
@@ -578,8 +578,14 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     const skipped = !useNeurons && isNeuronOnly;
                     const ev = pipelineStages[key];
                     const laterHasEvent = stageKeys.slice(idx + 1).some(k => pipelineStages[k]);
-                    const isDone = skipped || ev?.status === 'done' || ev?.status === 'skipped' || laterHasEvent;
-                    const isActive = !skipped && ev?.status === 'active' && !laterHasEvent;
+                    // Backend emits only `done` events at stage completion, not
+                    // `active` events. Infer active state from the gap: the
+                    // FIRST stage (in chain order) that has no event yet, while
+                    // we're still loading, is the one currently running.
+                    const explicitActive = ev?.status === 'active';
+                    const inferredActive = !ev && !laterHasEvent && !skipped && loading;
+                    const isActive = explicitActive || inferredActive;
+                    const isDone = !isActive && (skipped || !!ev || laterHasEvent);
                     // duration_ms is emitted at the TOP LEVEL of the SSE stage
                     // payload (pipeline/runner.py::_payload_for_emit), not inside
                     // detail. Previously we read detail?.duration_ms which always
@@ -659,12 +665,11 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
 
 function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
   const [open, setOpen] = React.useState(false);
+  const [popupId, setPopupId] = React.useState<number | null>(null);
   if (!scores.length) return null;
-  // Top-ranked sources first; cap at what fits comfortably in the expanded
-  // list. Users who want the full graph open the neuron sidebar.
+  // Top-ranked first — every source is shown (no cap), each opens a popup
+  // showing its full neuron content when clicked.
   const ranked = [...scores].sort((a, b) => (b.combined ?? 0) - (a.combined ?? 0));
-  const displayable = ranked.slice(0, 8);
-  const remainder = ranked.length - displayable.length;
   return (
     <div className="chat-sources">
       <button
@@ -678,17 +683,74 @@ function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
       </button>
       {open && (
         <ul className="chat-sources-list">
-          {displayable.map(s => (
-            <li key={s.neuron_id} className="chat-sources-item">
-              <span className="chat-sources-label">{s.label || `Source #${s.neuron_id}`}</span>
-              {s.department && <span className="chat-sources-dept">{s.department}</span>}
+          {ranked.map(s => (
+            <li key={s.neuron_id}>
+              <button
+                type="button"
+                className="chat-sources-item chat-sources-item-button"
+                onClick={() => setPopupId(s.neuron_id)}
+                title="Click to view full source content"
+              >
+                <span className="chat-sources-label">{s.label || `Source #${s.neuron_id}`}</span>
+                {s.department && <span className="chat-sources-dept">{s.department}</span>}
+              </button>
             </li>
           ))}
-          {remainder > 0 && (
-            <li className="chat-sources-item chat-sources-more">…and {remainder} more</li>
-          )}
         </ul>
       )}
+      {popupId != null && <SourcePopup neuronId={popupId} onClose={() => setPopupId(null)} />}
+    </div>
+  );
+}
+
+// Modal that fetches + displays full neuron content when a source chip is
+// clicked. Dismissed via the × button, clicking the backdrop, or Esc.
+function SourcePopup({ neuronId, onClose }: { neuronId: number; onClose: () => void }) {
+  const [detail, setDetail] = React.useState<import('../types').NeuronDetail | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchNeuron(neuronId)
+      .then(d => { if (!cancelled) setDetail(d); })
+      .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [neuronId]);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="chat-source-popup-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="chat-source-popup" onClick={e => e.stopPropagation()}>
+        <button className="chat-source-popup-close" onClick={onClose} aria-label="Close">×</button>
+        {loading && <div className="chat-source-popup-loading">Loading…</div>}
+        {error && <div className="chat-source-popup-error">Failed to load: {error}</div>}
+        {detail && (
+          <>
+            <h3 className="chat-source-popup-title">{detail.label || `Source #${detail.id}`}</h3>
+            <div className="chat-source-popup-meta">
+              <span className="chat-source-popup-chip">L{detail.layer} · {detail.node_type}</span>
+              {detail.department && <span className="chat-source-popup-chip">{detail.department}</span>}
+              {detail.role_key && <span className="chat-source-popup-chip">{detail.role_key}</span>}
+              {!detail.is_active && <span className="chat-source-popup-chip chat-source-popup-inactive">inactive</span>}
+            </div>
+            {detail.summary && (
+              <div className="chat-source-popup-summary">{detail.summary}</div>
+            )}
+            {detail.content
+              ? <pre className="chat-source-popup-content">{detail.content}</pre>
+              : <div className="chat-source-popup-empty">(no content)</div>}
+          </>
+        )}
+      </div>
     </div>
   );
 }
