@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getTenantConfig, type SeedPrompt } from '../config';
 import {
   sendChat, submitQueryStream, createSession, listSessions, getSession,
@@ -39,17 +39,63 @@ function relativeTime(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const PIPELINE_STAGE_LABELS: Record<string, string> = {
-  input_guard: 'Guard',
-  structural_resolve: 'Resolve',
-  embed_query: 'Embed',
-  classify: 'Classify',
-  semantic_prefilter: 'Prefilter',
-  score_neurons: 'Score',
-  spread_activation: 'Spread',
-  assemble_prompt: 'Assemble',
-  execute_llm: 'Execute',
-  output_checks: 'Checks',
+// Pipeline stage labels — Option 3 (hybrid). The user sees friendly names
+// that convey each step's purpose in the regulated-answer workflow; a hover
+// tooltip surfaces the internal technical name for power users / debugging.
+// The subtitle lines reinforce "this is a regulated process" without
+// requiring the user to know what a "neuron" or "embedding" is.
+interface StageLabel { label: string; subtitle: string; technical: string; }
+const PIPELINE_STAGE_LABELS: Record<string, StageLabel> = {
+  input_guard: {
+    label: 'Safety check',
+    subtitle: 'Checking your input against company policy',
+    technical: 'input_guard',
+  },
+  structural_resolve: {
+    label: 'Looking up direct match',
+    subtitle: 'Checking for an exact policy or procedure reference',
+    technical: 'structural_resolve',
+  },
+  embed_query: {
+    label: 'Understanding the question',
+    subtitle: 'Encoding your question for semantic search',
+    technical: 'embed_query',
+  },
+  classify: {
+    label: 'Understanding',
+    subtitle: 'Identifying what your question is really asking',
+    technical: 'classify',
+  },
+  semantic_prefilter: {
+    label: 'Finding relevant documentation',
+    subtitle: 'Searching your company’s internal knowledge',
+    technical: 'semantic_prefilter',
+  },
+  score_neurons: {
+    label: 'Ranking sources by relevance',
+    subtitle: 'Weighing authority, recency, and match quality',
+    technical: 'score_neurons',
+  },
+  spread_activation: {
+    label: 'Gathering related policies',
+    subtitle: 'Pulling in nearby context the answer may need',
+    technical: 'spread_activation',
+  },
+  assemble_prompt: {
+    label: 'Building grounded context',
+    subtitle: 'Composing a prompt anchored to internal documentation',
+    technical: 'assemble_prompt',
+  },
+  execute_llm: {
+    label: 'Generating answer',
+    subtitle: 'Producing a response from the grounded context',
+    technical: 'execute_llm',
+  },
+  output_checks: {
+    label: 'Compliance verification',
+    subtitle: 'Screening the answer for policy violations',
+    technical: 'output_checks',
+  },
 };
 
 // Stages that only run when neurons are enabled
@@ -93,7 +139,8 @@ function CondensedMessage({ msg }: { msg: Message }) {
   );
 }
 
-export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => void }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab: string) => void }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -212,11 +259,10 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
 
       setMessages(prev => [...prev, assistantMsg]);
 
-      // Open neuron sidebar on first message of session (only if neurons used)
-      if (isFirstMessage && useNeurons && !neuronSidebarOpenedRef.current && assistantMsg.neuron_scores && assistantMsg.neuron_scores.length > 0) {
-        setNeuronSidebarOpen(true);
-        neuronSidebarOpenedRef.current = true;
-      }
+      // Neuron sidebar stays COLLAPSED by default — it's the technical
+      // graph-explorer surface, not the end-user focus. The toggle button in
+      // the top-right lets curious users open it. Expert/debug flows (query
+      // lab, dossier) are the right home for graph interrogation.
 
       if (sessionId) {
         await appendMessage(sessionId, {
@@ -266,10 +312,8 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
   const [condensing, setCondensing] = useState(false);
 
   async function condenseContext() {
-    console.log('[CONDENSE] called, messages:', messages.length, 'condensing:', condensing);
-    if (messages.length <= 4 || condensing) { console.log('[CONDENSE] skipped — guard'); return; }
+    if (messages.length <= 4 || condensing) return;
     setCondensing(true);
-    console.log('[CONDENSE] starting Haiku call...');
     try {
       const kept = messages.slice(-4);
       const toCondense = messages.slice(0, -4);
@@ -420,7 +464,7 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
         <div className="chat-hero-center">
           <img src="/corvus-logo.png" alt="Corvus" className="chat-hero-logo" />
           <h1 className="chat-hero-title">{getTenantConfig()?.display_name ?? 'Corvus'}</h1>
-          <p className="chat-hero-subtitle">{getTenantConfig()?.description ?? 'Domain-enriched AI assistant'}</p>
+          <p className="chat-hero-subtitle">I know our company's internal documentation — ask me anything.</p>
           {inputBar}
           {(() => {
             const prompts: SeedPrompt[] = getTenantConfig()?.seed_prompts ?? [];
@@ -440,11 +484,12 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
               </div>
             );
           })()}
-          <div className="chat-hero-links">
-            <button onClick={() => onNavigate('query')}>Query Lab</button>
-            <button onClick={() => onNavigate('explorer')}>Explorer</button>
-            <button onClick={() => onNavigate('dashboard')}>Dashboard</button>
-          </div>
+          {/* Admin CTAs (Query Lab / Explorer / Dashboard) hidden on the
+              hero page — the hero is a grounded-answer surface for general
+              employees, not a graph-interrogation dashboard. Power users
+              reach those pages via the side navigation. When role-based
+              access lands (see master-corvus gov-rbac), these can be
+              re-enabled conditionally for admin viewers. */}
           {!sessionsLoading && sessions.length > 0 && (
             <div className="chat-hero-sessions">
               <h3>Recent Conversations</h3>
@@ -503,12 +548,15 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
                   ) : (
                     <div className="chat-text">{msg.text}</div>
                   )}
+                  {msg.role === 'assistant' && msg.neuron_scores && msg.neuron_scores.length > 0 && (
+                    <ChatSourcesChip scores={msg.neuron_scores} />
+                  )}
                   {msg.role === 'assistant' && (msg.model || msg.neurons_activated != null) && (
                     <div className="chat-meta">
                       {msg.model && <span>{msg.model}</span>}
-                      {msg.neurons_activated != null && <span>{msg.neurons_activated} neurons</span>}
                       {msg.tokens && <span>{(msg.tokens.input + msg.tokens.output).toLocaleString()} tokens</span>}
-                      {msg.cost != null && <span>${msg.cost.toFixed(4)}</span>}
+                      {/* Per-message cost hidden on the hero page — aggregated
+                          visibility for admins lives on the Performance page. */}
                     </div>
                   )}
                 </div>
@@ -537,10 +585,15 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
                     } else if (typeof durMs === 'number') {
                       timing = durMs < 1 ? '<1ms' : durMs < 1000 ? `${durMs.toFixed(0)}ms` : `${(durMs / 1000).toFixed(2)}s`;
                     }
+                    const spec = PIPELINE_STAGE_LABELS[key];
+                    // Tooltip surfaces the technical stage name + purpose so
+                    // power users / debuggers can trace what's happening, while
+                    // the visible label stays friendly.
+                    const tooltip = `${spec.subtitle}\n(internal: ${spec.technical})`;
                     return (
-                      <div key={key} className={`chat-stage-row${isDone ? ' done' : ''}${isActive ? ' active' : ''}${skipped ? ' skipped' : ''}`}>
+                      <div key={key} className={`chat-stage-row${isDone ? ' done' : ''}${isActive ? ' active' : ''}${skipped ? ' skipped' : ''}`} title={tooltip}>
                         <span className="chat-stage-dot" />
-                        <span className="chat-stage-name">{PIPELINE_STAGE_LABELS[key]}</span>
+                        <span className="chat-stage-name">{spec.label}</span>
                         {timing && <span className="chat-stage-time">{timing}</span>}
                       </div>
                     );
@@ -580,6 +633,50 @@ export default function HomePage({ onNavigate }: { onNavigate: (tab: string) => 
             <line x1="1" y1="8" x2="4" y2="8" /><line x1="12" y1="8" x2="15" y2="8" />
           </svg>
         </button>
+      )}
+    </div>
+  );
+}
+
+
+// ── Sources chip ────────────────────────────────────────────────────────
+// Surfaces the internal documentation the answer was grounded in. Shown
+// per assistant message as a compact pill that expands to a list. This is
+// the mark of an enterprise-grounded LLM vs. a consumer chat — non-admin
+// users don't need to understand "neurons" but they DO benefit from seeing
+// "Source: HR Policy 4.2 · Travel Procedure 2.1" to trust the answer.
+
+function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
+  const [open, setOpen] = React.useState(false);
+  if (!scores.length) return null;
+  // Top-ranked sources first; cap at what fits comfortably in the expanded
+  // list. Users who want the full graph open the neuron sidebar.
+  const ranked = [...scores].sort((a, b) => (b.combined ?? 0) - (a.combined ?? 0));
+  const displayable = ranked.slice(0, 8);
+  const remainder = ranked.length - displayable.length;
+  return (
+    <div className="chat-sources">
+      <button
+        className={`chat-sources-trigger${open ? ' open' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        title="Internal documentation consulted for this answer"
+      >
+        <span className="chat-sources-icon" aria-hidden="true">◆</span>
+        <span>{scores.length} {scores.length === 1 ? 'source' : 'sources'}</span>
+        <span className="chat-sources-chevron">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <ul className="chat-sources-list">
+          {displayable.map(s => (
+            <li key={s.neuron_id} className="chat-sources-item">
+              <span className="chat-sources-label">{s.label || `Source #${s.neuron_id}`}</span>
+              {s.department && <span className="chat-sources-dept">{s.department}</span>}
+            </li>
+          ))}
+          {remainder > 0 && (
+            <li className="chat-sources-item chat-sources-more">…and {remainder} more</li>
+          )}
+        </ul>
       )}
     </div>
   );
