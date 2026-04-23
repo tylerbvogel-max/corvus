@@ -574,18 +574,30 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
               <div className="chat-bubble">
                 <div className="chat-pipeline-stages">
                   {(() => {
-                    // Compute the single active stage up-front. Backend emits
-                    // only `done` events, so the running stage is inferred as
-                    // the FIRST stage (in chain order) that has no event yet,
-                    // skipping stages that are disabled (neuron-only when
-                    // useNeurons is off). Returns -1 if not loading or all
-                    // stages are already reported.
+                    // Compute the single active stage up-front.
+                    //
+                    // Not every frontend stage has a matching backend SSE
+                    // event — some are narrative sub-steps of a larger
+                    // backend stage. Specifically:
+                    //   - embed_query happens INSIDE the backend `classify` stage
+                    //   - semantic_prefilter + score_neurons are both inside the
+                    //     backend `prefilter_score` stage
+                    //   - execute_llm runs outside the pipeline runner; only
+                    //     `output_checks` (fired after) signals it completed
+                    //
+                    // So "active" is: the first stage that (a) has no event
+                    // of its own yet AND (b) has no LATER stage with an event
+                    // either — i.e. it's genuinely next, not a phantom that
+                    // got implicitly completed when its parent backend stage
+                    // fired.
                     const firstUnreportedIdx = (() => {
                       if (!loading) return -1;
                       for (let i = 0; i < stageKeys.length; i++) {
                         const k = stageKeys[i];
                         if (!useNeurons && NEURON_ONLY_STAGES.has(k)) continue;
                         if (pipelineStages[k]) continue;
+                        const laterReported = stageKeys.slice(i + 1).some(lk => pipelineStages[lk]);
+                        if (laterReported) continue; // phantom — parent stage already moved on
                         return i;
                       }
                       return -1;
@@ -594,12 +606,13 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     const isNeuronOnly = NEURON_ONLY_STAGES.has(key);
                     const skipped = !useNeurons && isNeuronOnly;
                     const ev = pipelineStages[key];
-                    // Only the first unreported stage pulses. Stages before it
-                    // are done (either reported explicitly, skipped, or so fast
-                    // they completed without emitting). Stages after it are
-                    // pending (render as grey).
+                    // A phantom stage (no own event, but a later stage has
+                    // fired) is considered done — its parent backend stage
+                    // has already completed, which implies the phantom's
+                    // work is done too.
+                    const laterReported = stageKeys.slice(idx + 1).some(k => pipelineStages[k]);
                     const isActive = !skipped && idx === firstUnreportedIdx;
-                    const isDone = !isActive && (skipped || !!ev || (firstUnreportedIdx !== -1 && idx < firstUnreportedIdx) || (firstUnreportedIdx === -1 && !!ev));
+                    const isDone = !isActive && (skipped || !!ev || laterReported);
                     // duration_ms is emitted at the TOP LEVEL of the SSE stage
                     // payload (pipeline/runner.py::_payload_for_emit), not inside
                     // detail. Previously we read detail?.duration_ms which always
