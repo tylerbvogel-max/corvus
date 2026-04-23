@@ -2553,7 +2553,7 @@ details summary:hover { color: var(--text); }
 /* Session items (shared between hero and sidebar) */
 .chat-session-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 8px 12px;
   border-radius: 6px;
@@ -2566,10 +2566,15 @@ details summary:hover { color: var(--text); }
 
 .chat-session-title {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.82rem;
+  min-width: 0;
+  /* Wrap instead of truncating so multi-word titles stay readable in the
+     narrow sidebar. Smaller type fits 2-3 lines without the item getting
+     visually heavy. overflow-wrap handles long unbroken tokens. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  font-size: 0.72rem;
+  line-height: 1.35;
   color: var(--text);
 }
 
