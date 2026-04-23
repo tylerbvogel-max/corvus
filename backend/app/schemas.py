@@ -12,7 +12,13 @@ class QuerySlotRequest(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    message: str = Field(..., min_length=1, max_length=5000)
+    # max_length bumped from 5000 → 50000 (2026-04-23) to accommodate the
+    # packed conversation history the hero page includes on follow-ups.
+    # 5000 was a single-turn assumption; real sessions accumulate.
+    # Upstream the LLM's own context window still bounds effective size,
+    # and the hero's "Summarize older messages" button is the escape
+    # valve when that bound is reached.
+    message: str = Field(..., min_length=1, max_length=50000)
     slots: list[QuerySlotRequest] | None = None  # Multi-slot testing; if None, use default single slot
     prior_neuron_ids: list[int] | None = None
 

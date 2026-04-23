@@ -58,6 +58,16 @@ function describeQueryError(e: unknown): string {
     );
   }
   if (status === 400 || status === 422) {
+    // Length-limit 422: the packed conversation history + user message
+    // exceeded the backend's hard cap. Point the user at the condense
+    // escape valve instead of surfacing the raw Pydantic error.
+    if (/string.*most.*character|message.*too long|max_length/i.test(msg)) {
+      return (
+        'This conversation is too long to send in one request. ' +
+        'Use **Summarize older messages** in the token bar below to condense the history, ' +
+        'then ask your question again.'
+      );
+    }
     return `Your question couldn't be processed. ${msg.replace(/^\d{3}:\s*/, '')}`;
   }
   if (status === 401 || status === 403) {
