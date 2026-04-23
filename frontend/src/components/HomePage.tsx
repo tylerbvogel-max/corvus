@@ -203,12 +203,18 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
       let assistantMsg: Message;
 
       if (useNeurons) {
-        // Neuron-enriched path
+        // Neuron-enriched path — include recent conversation in full. Prior
+        // per-message truncation at 500 chars was clipping assistant responses
+        // (which can easily be 2k+ tokens / 8k+ chars) to ~100 tokens, so the
+        // LLM would not see what it had answered moments earlier. The turn
+        // count (slice(-10)) is the intended bound on history size. When the
+        // accumulated tokens approach the model's context window, the
+        // "Summarize older messages" button condenses older turns in place.
         const recentHistory = messages.slice(-10);
         let userMessage = text;
         if (recentHistory.length > 0) {
           const historyLines = recentHistory.map(m =>
-            `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text.slice(0, 500)}`
+            `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`
           ).join('\n');
           userMessage = `[Conversation so far]\n${historyLines}\n\nUser: ${text}`;
         }
