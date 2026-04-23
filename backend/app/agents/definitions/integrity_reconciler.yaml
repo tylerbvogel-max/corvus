@@ -6,6 +6,20 @@ description: >
   credibility context and proposes one of four resolutions — a_correct,
   b_correct, context_added, or dismissed. Never mutates neurons directly
   — proposals flow through the standard human-approval workflow.
+admin_description: >
+  Reviews pairs of knowledge-graph entries that say conflicting things
+  about the same subject — pairs flagged by the contradiction-detection
+  integrity scan. For each contradiction, the agent weighs three signals:
+  regulatory authority (which source has more weight, e.g. a primary
+  policy versus a derived guideline), recency (which entry was verified
+  more recently), and credibility (which is cited more often in actual
+  answers). Based on those signals, the agent proposes one of four
+  resolutions: "entry A is correct," "entry B is correct," "both can be
+  correct in different contexts — add a disambiguator," or "the scan
+  misfired — dismiss the finding." Every resolution routes through the
+  normal proposal-review queue; the agent never overwrites a neuron on
+  its own. Useful after the integrity scan finds content that directly
+  contradicts itself (often from documents authored at different dates).
 model: haiku
 max_tokens: 1024
 max_turns: 12

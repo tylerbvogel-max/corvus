@@ -4,10 +4,25 @@ description: >
   Reviews document-ingest AutopilotProposals (gap_source='document_ingest')
   after extraction. For each proposal, weighs the extracted neuron's
   content against ontology context and either refines the classification
-  (layer / department / role_key) with a confidence score, or flags
+  (layer / document_ingest/uncertain) with a confidence score, or flags
   the proposal as uncertain so a human reviewer handles placement
   explicitly. Never mutates neurons directly — changes flow through the
   standard approve → apply workflow.
+admin_description: >
+  Reviews the department / role / layer classification assigned to each
+  knowledge snippet pulled from an uploaded document. When someone
+  uploads a document (HR policy, procurement procedure, safety manual,
+  etc.), the ingestion pipeline extracts sections into proposed neurons
+  and applies the uploader's form choices (department, role, layer) to
+  every extracted section verbatim. That's often wrong — a "Finance
+  procedures" PDF might contain IT-security sections and travel-expense
+  sections that belong in other buckets. This agent re-reads each
+  section's actual content and either confirms the uploader's
+  classification (with a high-confidence stamp), suggests a better one
+  with a confidence score the human reviewer can see, or flags genuinely
+  ambiguous sections with 2-4 candidate placements for explicit human
+  resolution. The agent never creates neurons on its own — it only
+  sharpens or flags what the human approver sees in the proposal queue.
 model: haiku
 max_tokens: 1024
 max_turns: 16

@@ -2007,6 +2007,7 @@ export interface AgentSummary {
   tool_count: number;
   manual_trigger: boolean;
   schedule_enabled: boolean;
+  admin_description?: string;
 }
 
 export interface AgentDetail extends AgentSummary {

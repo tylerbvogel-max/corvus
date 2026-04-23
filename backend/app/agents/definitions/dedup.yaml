@@ -4,6 +4,17 @@ description: >
   Pre-reviews near_duplicate integrity findings. Classifies each pair as
   duplicate, distinct, or needs-human, and creates AutopilotProposals for
   the standard human-approval workflow. Never mutates neurons directly.
+admin_description: >
+  Reviews pairs of knowledge-graph entries that appear to cover the same
+  subject — pairs flagged by the duplicate-detection integrity scan — and
+  proposes a resolution for each: merge them into one, keep both because
+  they're actually distinct concepts that happen to be similar, or dismiss
+  the detection as a false positive. The agent uses cheap embedding
+  similarity as a first-pass gate, and falls back to semantic comparison
+  (a small LLM call) for borderline pairs. Every resolution routes through
+  the normal proposal-review queue; the agent cannot merge neurons on its
+  own. Useful when the graph has grown from multiple document uploads or
+  ingestion passes and may contain overlapping coverage of the same topic.
 model: haiku
 max_tokens: 1024
 max_turns: 12

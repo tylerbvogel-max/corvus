@@ -41,6 +41,10 @@ class AgentSummaryOut(BaseModel):
     tool_count: int
     manual_trigger: bool
     schedule_enabled: bool
+    # Plain-English explanation for the admin Knowledge → Agents page.
+    # Empty when the YAML doesn't define it; the frontend falls back to
+    # `description` in that case.
+    admin_description: str = ""
 
 
 class AgentDetailOut(AgentSummaryOut):
@@ -99,6 +103,7 @@ async def list_agents(
             tool_count=len(a.tool_allow_list),
             manual_trigger=a.trigger.manual,
             schedule_enabled=a.trigger.schedule_enabled,
+            admin_description=a.admin_description,
         )
         for a in registry.list_agents()
     ]
@@ -180,6 +185,7 @@ async def get_agent(
         tool_count=len(a.tool_allow_list),
         manual_trigger=a.trigger.manual,
         schedule_enabled=a.trigger.schedule_enabled,
+        admin_description=a.admin_description,
         tool_allow_list=list(a.tool_allow_list),
         system_prompt_preview=a.system_prompt[:500],
     )

@@ -40,6 +40,12 @@ _DEFINITIONS_DIR = Path(__file__).parent / "definitions"
 _ALLOWED_KEYS = frozenset({
     "name", "role", "description", "model", "max_tokens", "max_turns",
     "tool_allow_list", "system_prompt", "trigger",
+    # Optional: plain-English explanation of the agent for the admin
+    # Knowledge → Agents page. The `description` field is the short
+    # machine-shape summary; `admin_description` is the human-written
+    # "what does this actually do" paragraph. Falls back to description
+    # when absent so existing YAMLs keep working unchanged.
+    "admin_description",
 })
 
 
@@ -64,6 +70,10 @@ class AgentDefinition:
     system_prompt: str
     trigger: AgentTrigger
     source_path: Path
+    # Plain-English explanation shown on the admin Knowledge → Agents
+    # page. Falls back to `description` when absent so legacy YAMLs
+    # (or any new one that omits it) still render reasonable copy.
+    admin_description: str = ""
 
 
 class AgentRegistry:
@@ -158,6 +168,7 @@ def _parse_yaml(path: Path) -> AgentDefinition:
         system_prompt=str(raw["system_prompt"]).strip(),
         trigger=trigger,
         source_path=path,
+        admin_description=str(raw.get("admin_description", "")).strip(),
     )
 
 

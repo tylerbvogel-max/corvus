@@ -20,6 +20,7 @@ import KnowledgeGovernancePage from './components/KnowledgeGovernancePage'
 import HomePage from './components/HomePage'
 import SystemUseBanner from './components/SystemUseBanner'
 import EngramPage from './components/EngramPage'
+import AgentsPage from './components/AgentsPage'
 import AdvisorPanel from './components/AdvisorPanel'
 import useScreenCapture from './hooks/useScreenCapture'
 import AdvisorToast from './components/AdvisorToast'
@@ -57,7 +58,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -176,6 +177,7 @@ function buildNavGroups(tenantId: string | undefined): NavGroup[] {
         { key: 'graph', label: 'Graph', description: 'Circle-packing visualization of the hierarchy' },
         { key: 'universe', label: '3D Universe', description: 'Three-dimensional neuron network view' },
         { key: 'layer-heatmap', label: 'Layer Heatmap', description: 'Activity heatmap across graph layers' },
+        { key: 'agents', label: 'Agents', description: 'Autonomous maintenance agents that curate the graph' },
       ],
     },
     {
@@ -566,6 +568,7 @@ export default function App() {
         <AdvisorToast panelOpen={advisorOpen} onOpenPanel={() => setAdvisorOpen(true)} onUnreadChange={setAdvisorUnread} />
         {tab === 'explorer' && <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />}
         {tab === 'engrams' && <EngramPage />}
+        {tab === 'agents' && <AgentsPage />}
         {tab === 'graph' && <CirclePacking />}
         {tab === 'universe' && <NeuronUniverse />}
         {tab === 'dashboard' && <Dashboard />}
