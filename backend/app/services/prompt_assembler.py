@@ -176,6 +176,7 @@ def _pack_functional_section(
     functional: list[tuple[NeuronScoreBreakdown, Neuron]],
     used_tokens: int,
     budget: int,
+    citation_index_by_id: dict[int, int] | None = None,
 ) -> int:
     grouped: dict[str, dict[str, list[tuple[NeuronScoreBreakdown, Neuron]]]] = {}
     for score, neuron in functional:
@@ -194,7 +195,7 @@ def _pack_functional_section(
         for role_key, items in roles.items():
             items.sort(key=lambda x: x[0].combined, reverse=True)
             for score, neuron in items:
-                used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget)
+                used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget, citation_index_by_id)
     return used_tokens
 
 
@@ -203,6 +204,7 @@ def _pack_regulatory_section(
     regulatory: list[tuple[NeuronScoreBreakdown, Neuron]],
     used_tokens: int,
     budget: int,
+    citation_index_by_id: dict[int, int] | None = None,
 ) -> int:
     if not regulatory:
         return used_tokens
@@ -222,7 +224,7 @@ def _pack_regulatory_section(
     for role_key, items in reg_grouped.items():
         items.sort(key=lambda x: x[0].combined, reverse=True)
         for score, neuron in items:
-            used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget)
+            used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget, citation_index_by_id)
     return used_tokens
 
 
@@ -250,6 +252,20 @@ def _pack_resolved_regulations(
         parts.append(entry)
         used_tokens += entry_tokens
     return used_tokens
+
+
+def _append_citation_instruction(parts: list[str], citation_index_by_id: dict[int, int] | None) -> None:
+    """Tier C: tell the LLM to cite numbered sources inline. No-op if
+    citations weren't assigned (legacy callers passing no map)."""
+    if not citation_index_by_id:
+        return
+    parts.append(
+        "\n**Citing sources:** When you state a fact from the knowledge above, "
+        "cite the source inline using its bracketed number, e.g. [1] or [2]. "
+        "Only cite numbers that actually appear in the source headers. "
+        "If a claim cannot be traced to a numbered source, say so explicitly "
+        "rather than fabricating a citation."
+    )
 
 
 def _get_closing_instruction(intent: str, max_relevance: float) -> str:
@@ -284,8 +300,21 @@ def assemble_prompt(
 
     Groups by department > role for structural coherence.
     Falls back to summary-only if full content exceeds budget.
+
+    Tier C inline citations (Pattern: hero-UX trust transform, 2026-04-23):
+    Each neuron in ``scored_neurons`` is assigned a 1-based citation index
+    by its position in the list. The index is injected into the prompt
+    headers (`[1] **label**`) and the LLM is instructed to cite sources
+    using those brackets. The frontend reads the same neuron_scores order
+    and turns [N] markers into clickable superscripts pointing at source N.
     """
     budget = budget_tokens or settings.token_budget
+
+    # Citation index: position in scored_neurons order → 1-based index.
+    # Passed into each pack function so neuron blocks carry [N] tags.
+    citation_index_by_id: dict[int, int] = {
+        n.neuron_id: i + 1 for i, n in enumerate(scored_neurons)
+    }
 
     parts, used_tokens = _build_prompt_header(intent, scored_neurons, neuron_map)
 
@@ -301,8 +330,8 @@ def assemble_prompt(
         )
 
     functional, regulatory = _partition_neurons(scored_neurons, neuron_map)
-    used_tokens = _pack_functional_section(parts, functional, used_tokens, budget)
-    used_tokens = _pack_regulatory_section(parts, regulatory, used_tokens, budget)
+    used_tokens = _pack_functional_section(parts, functional, used_tokens, budget, citation_index_by_id)
+    used_tokens = _pack_regulatory_section(parts, regulatory, used_tokens, budget, citation_index_by_id)
 
     # Pack live regulatory text from resolved engrams
     if resolved_regulations:
@@ -314,6 +343,7 @@ def assemble_prompt(
     max_relevance = max((s.combined for s in scored_neurons), default=0.0)
     closing = _get_closing_instruction(intent, max_relevance)
     parts.append(closing)
+    _append_citation_instruction(parts, citation_index_by_id)
 
     return "\n".join(parts)
 
@@ -324,8 +354,18 @@ def _pack_neuron(
     neuron: Neuron,
     used_tokens: int,
     budget: int,
+    citation_index_by_id: dict[int, int] | None = None,
 ) -> int:
     """Try to pack a neuron into parts. Returns updated used_tokens."""
+    # Tier C: prepend the 1-based citation tag so the LLM can reference this
+    # source as [N]. Empty string if the neuron isn't in the citation map
+    # (e.g. legacy callers that pass no map at all).
+    citation_tag = ""
+    if citation_index_by_id is not None:
+        idx = citation_index_by_id.get(neuron.id)
+        if idx is not None:
+            citation_tag = f"[{idx}] "
+
     authority_tag = ""
     if hasattr(neuron, "authority_level") and neuron.authority_level:
         tag = AUTHORITY_TAG_MAP.get(neuron.authority_level)
@@ -350,14 +390,14 @@ def _pack_neuron(
             signal_note = f" ← {signals[0]} driver"
 
     if neuron.content:
-        full_entry = f"**{neuron.label}**{authority_tag} (L{neuron.layer}){signal_note}\n{neuron.content}"
+        full_entry = f"{citation_tag}**{neuron.label}**{authority_tag} (L{neuron.layer}){signal_note}\n{neuron.content}"
         full_tokens = _estimate_tokens(full_entry)
         if used_tokens + full_tokens <= budget:
             parts.append(full_entry)
             return used_tokens + full_tokens
 
     if neuron.summary:
-        summary_entry = f"- {neuron.summary}{authority_tag}{signal_note} (score: {score.combined:.2f})"
+        summary_entry = f"- {citation_tag}{neuron.summary}{authority_tag}{signal_note} (score: {score.combined:.2f})"
         summary_tokens = _estimate_tokens(summary_entry)
         if used_tokens + summary_tokens <= budget:
             parts.append(summary_entry)

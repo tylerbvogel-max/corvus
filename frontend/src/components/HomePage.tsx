@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getTenantConfig, type SeedPrompt } from '../config';
 import {
   sendChat, submitQueryStream, createSession, listSessions, getSession,
   appendMessage, generateSessionTitle, deleteSession, fetchNeuron, updateSessionTitle,
-  submitRating,
+  submitRating, fetchFollowUps,
   type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec, type SessionSummary,
 } from '../api';
 import type { NeuronScoreResponse } from '../types';
@@ -131,6 +131,91 @@ function SessionTitle({
     >
       {title || 'Untitled'}
     </span>
+  );
+}
+
+function AssistantText({ text, scores }: {
+  text: string;
+  scores?: NeuronScoreResponse[];
+}) {
+  // Tier C1 inline citations. Backend prompt tells the LLM to cite sources
+  // as [1], [2], etc. based on the neuron_scores ordering. Here we find
+  // those markers in the rendered HTML and turn them into clickable
+  // superscripts that scroll the sources list to the referenced row.
+  const html = useMemo(() => {
+    const raw = marked.parse(text, { async: false }) as string;
+    if (!scores || scores.length === 0) return raw;
+    // Replace [N] with a clickable sup tag when N is in range.
+    return raw.replace(/\[(\d+)\]/g, (match, n: string) => {
+      const idx = Number(n);
+      if (idx < 1 || idx > scores.length) return match;
+      const neuronId = scores[idx - 1].neuron_id;
+      return `<sup class="chat-citation" data-source="${idx}" data-neuron-id="${neuronId}" tabindex="0" title="Source ${idx}">[${idx}]</sup>`;
+    });
+  }, [text, scores]);
+
+  // Attach a click handler to citation sups. Since we're using
+  // dangerouslySetInnerHTML, event delegation is the cleanest path.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target?.classList?.contains('chat-citation')) {
+        const neuronId = target.getAttribute('data-neuron-id');
+        if (neuronId) {
+          // Broadcast a custom event so the sources chip (if present) can
+          // open itself and highlight the matching row.
+          window.dispatchEvent(new CustomEvent('chat-citation-click', {
+            detail: { neuronId: Number(neuronId) },
+          }));
+        }
+      }
+    };
+    el.addEventListener('click', onClick);
+    return () => el.removeEventListener('click', onClick);
+  }, [html]);
+
+  return (
+    <div
+      ref={ref}
+      className="chat-text markdown-body"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+function FollowUpChips({ queryId, onPick }: {
+  queryId: number;
+  onPick: (text: string) => void;
+}) {
+  const [suggestions, setSuggestions] = useState<string[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchFollowUps(queryId)
+      .then(r => { if (!cancelled) setSuggestions(r.suggestions.map(s => s.text)); })
+      .catch(() => { if (!cancelled) setSuggestions([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [queryId]);
+  if (loading) return null;
+  if (!suggestions || suggestions.length === 0) return null;
+  return (
+    <div className="chat-followups" role="group" aria-label="Suggested follow-up questions">
+      <span className="chat-followups-label">Suggested follow-ups:</span>
+      {suggestions.map((s, i) => (
+        <button
+          key={i}
+          type="button"
+          className="chat-followup-chip"
+          onClick={() => onPick(s)}
+          title={s}
+        >{s}</button>
+      ))}
+    </div>
   );
 }
 
@@ -800,12 +885,21 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
               <div key={i} className={`chat-msg chat-msg--${msg.role}`}>
                 <div className="chat-bubble">
                   {msg.role === 'assistant' ? (
-                    <div className="chat-text markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(msg.text, { async: false }) as string }} />
+                    <AssistantText
+                      text={msg.text}
+                      scores={msg.neuron_scores}
+                    />
                   ) : (
                     <div className="chat-text">{msg.text}</div>
                   )}
                   {msg.role === 'assistant' && msg.neuron_scores && msg.neuron_scores.length > 0 && (
                     <ChatSourcesChip scores={msg.neuron_scores} />
+                  )}
+                  {msg.role === 'assistant' && msg.query_id != null && (
+                    <FollowUpChips
+                      queryId={msg.query_id}
+                      onPick={(text) => { setInput(text); textareaRef.current?.focus(); }}
+                    />
                   )}
                   {msg.role === 'assistant' && (
                     <div className="chat-meta">
@@ -965,6 +1059,26 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
 function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
   const [open, setOpen] = React.useState(false);
   const [popupId, setPopupId] = React.useState<number | null>(null);
+  const [highlightedId, setHighlightedId] = React.useState<number | null>(null);
+
+  // Tier C1: listen for citation clicks in the message text. When the user
+  // clicks `[2]` in the response, this source chip — if it owns that
+  // neuron_id — auto-opens and highlights the row.
+  const neuronIds = React.useMemo(() => new Set(scores.map(s => s.neuron_id)), [scores]);
+  React.useEffect(() => {
+    const onCite = (e: Event) => {
+      const ev = e as CustomEvent<{ neuronId: number }>;
+      const nid = ev.detail?.neuronId;
+      if (nid == null || !neuronIds.has(nid)) return;
+      setOpen(true);
+      setHighlightedId(nid);
+      // Clear the highlight after a couple seconds so it's a pulse, not a lock.
+      setTimeout(() => setHighlightedId(prev => (prev === nid ? null : prev)), 2400);
+    };
+    window.addEventListener('chat-citation-click', onCite);
+    return () => window.removeEventListener('chat-citation-click', onCite);
+  }, [neuronIds]);
+
   if (!scores.length) return null;
   // Top-ranked first — every source is shown (no cap), each opens a popup
   // showing its full neuron content when clicked.
@@ -986,7 +1100,7 @@ function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
             <li key={s.neuron_id}>
               <button
                 type="button"
-                className="chat-sources-item chat-sources-item-button"
+                className={`chat-sources-item chat-sources-item-button${highlightedId === s.neuron_id ? ' highlighted' : ''}`}
                 onClick={() => setPopupId(s.neuron_id)}
                 title="Click to view full source content"
               >

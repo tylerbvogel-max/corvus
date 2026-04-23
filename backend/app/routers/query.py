@@ -18,6 +18,7 @@ from app.schemas import (
     LearningEventOut, LearningAnalytics,
     OutputViolationOut,
     QueryDossier,
+    FollowUpSuggestion, FollowUpSuggestionsResponse,
     SlotResult,  # For backward-compat: parsing legacy multi-slot query data
 )
 from app.governance.output_guard import GuardResult, run_guards
@@ -1010,6 +1011,109 @@ async def rate_query(
     await db.commit()
 
     return RatingResponse(query_id=query_id, utility=req.utility, neurons_updated=updated)
+
+
+_FOLLOWUP_SYSTEM_PROMPT: str = (
+    "You propose 2-3 short follow-up questions the user might logically ask "
+    "NEXT, given the conversation so far. Questions must be concrete, each "
+    "under 14 words, and stay inside the same topic area as the original "
+    "question. Do NOT re-state the prior answer. Do NOT ask the user for "
+    "clarification — these are suggestions for what they could ask next, "
+    "not requests for more context.\n\n"
+    "Respond with ONLY a JSON array of strings. No preamble, no markdown, "
+    "no trailing prose. Example:\n"
+    '  ["How does this apply to subcontractors?", '
+    '"What documentation is typically required?", '
+    '"What are common audit findings here?"]'
+)
+
+
+@router.post("/query/{query_id}/followups", response_model=FollowUpSuggestionsResponse)
+async def get_followups(query_id: int, db: AsyncSession = Depends(get_db)):
+    """Tier C2: suggest 2-3 follow-up questions for a completed query.
+
+    Runs a small Haiku post-call against the user's question + the
+    assistant's neuron-enhanced response. Returns an empty list on any
+    error — follow-ups are nice-to-have, never block the UI.
+    """
+    assert query_id > 0, "query_id must be positive"
+    query = await db.get(Query, query_id)
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+
+    response_text = ""
+    if query.results_json:
+        try:
+            slots = json.loads(query.results_json)
+            if isinstance(slots, list):
+                for s in slots:
+                    if isinstance(s, dict) and s.get("neurons") and s.get("response"):
+                        response_text = str(s["response"])
+                        break
+        except json.JSONDecodeError:
+            pass
+    if not response_text:
+        response_text = query.response_text or ""
+
+    if not response_text.strip():
+        return FollowUpSuggestionsResponse(query_id=query_id, suggestions=[], cost_usd=0.0)
+
+    user_prompt = (
+        f"Original question:\n{query.user_message[:600]}\n\n"
+        f"Assistant's answer:\n{response_text[:1800]}"
+    )
+    try:
+        result = await llm_chat(
+            _FOLLOWUP_SYSTEM_PROMPT, user_prompt, max_tokens=180, model="haiku",
+        )
+    except (RuntimeError, ValueError):
+        return FollowUpSuggestionsResponse(query_id=query_id, suggestions=[], cost_usd=0.0)
+
+    suggestions = _parse_followups(result.get("text", ""))
+    return FollowUpSuggestionsResponse(
+        query_id=query_id,
+        suggestions=[FollowUpSuggestion(text=s) for s in suggestions],
+        cost_usd=float(result.get("cost_usd", 0.0)),
+    )
+
+
+def _parse_followups(raw: str) -> list[str]:
+    """Extract a JSON array of follow-up strings from an LLM response.
+
+    Defensive — Haiku sometimes wraps the array in markdown fences or
+    preambles. Returns [] if unparseable.
+    """
+    assert isinstance(raw, str), "raw must be str"
+    text = raw.strip()
+    # Strip markdown code fence if present.
+    if text.startswith("```"):
+        fence_end = text.find("```", 3)
+        if fence_end > 0:
+            text = text[3:fence_end]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+    # Find the first `[` and last `]` — lets us survive a preamble line.
+    lb = text.find("[")
+    rb = text.rfind("]")
+    if lb < 0 or rb <= lb:
+        return []
+    blob = text[lb:rb + 1]
+    try:
+        parsed = json.loads(blob)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(parsed, list):
+        return []
+    out: list[str] = []
+    for item in parsed:
+        if isinstance(item, str):
+            cleaned = item.strip().strip('"').strip("'")
+            if cleaned:
+                out.append(cleaned[:200])
+        if len(out) >= 3:
+            break
+    return out
 
 
 async def _load_refine_prerequisites(

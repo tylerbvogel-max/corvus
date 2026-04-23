@@ -2664,6 +2664,72 @@ details summary:hover { color: var(--text); }
   opacity: 0.6;
 }
 
+/* C1: Inline citation superscripts — [1], [2] in the answer text. */
+.chat-citation {
+  display: inline-block;
+  margin: 0 1px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 600;
+  cursor: pointer;
+  vertical-align: super;
+  line-height: 1.4;
+  transition: background 0.12s;
+}
+.chat-citation:hover {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.chat-citation:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+/* Highlight pulse for a source row when its citation is clicked. */
+.chat-sources-item-button.highlighted {
+  animation: chat-source-flash 2.2s ease-out;
+}
+@keyframes chat-source-flash {
+  0%   { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+  100% { background: transparent; }
+}
+
+/* C2: Follow-up question chips rendered below an assistant message. */
+.chat-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  align-items: center;
+}
+.chat-followups-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-right: 4px;
+}
+.chat-followup-chip {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+.chat-followup-chip:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
 /* B1: Thumbs-up/down rating on assistant messages. Lives in the chat-meta
    row alongside Copy. Feeds the existing /query/{id}/rating endpoint. */
 .chat-rate-buttons {

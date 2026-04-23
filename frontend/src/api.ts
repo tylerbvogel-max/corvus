@@ -276,6 +276,17 @@ export function fetchQueryDossier(id: number): Promise<import('./types').QueryDo
   return json<import('./types').QueryDossier>(`/queries/${id}/dossier`);
 }
 
+export interface FollowUpSuggestion { text: string; }
+export interface FollowUpSuggestionsResponse {
+  query_id: number;
+  suggestions: FollowUpSuggestion[];
+  cost_usd: number;
+}
+
+export function fetchFollowUps(queryId: number): Promise<FollowUpSuggestionsResponse> {
+  return json<FollowUpSuggestionsResponse>(`/query/${queryId}/followups`, { method: 'POST' });
+}
+
 export function fetchQueryRunCounts(texts: string[]): Promise<Record<string, number>> {
   return json<Record<string, number>>('/queries/run-counts', {
     method: 'POST',

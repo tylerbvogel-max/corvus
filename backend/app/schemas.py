@@ -697,3 +697,21 @@ class QueryDossier(BaseModel):
     output_checks: QueryDossierOutputSection
     actions: QueryDossierActionsSection
     integrity: QueryDossierIntegritySection
+
+
+# ── Tier C: Follow-up question suggestions ──────────────────────────────
+
+class FollowUpSuggestion(BaseModel):
+    """One suggested next question derived from a completed query + answer."""
+    text: str
+
+
+class FollowUpSuggestionsResponse(BaseModel):
+    """2-3 follow-up questions generated from a completed query.
+
+    Produced by a post-hoc Haiku call; cached on the Query row so the
+    same question doesn't re-trigger LLM work on page refresh.
+    """
+    query_id: int
+    suggestions: list[FollowUpSuggestion]
+    cost_usd: float = 0.0
