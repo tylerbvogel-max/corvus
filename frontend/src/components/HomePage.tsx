@@ -17,7 +17,11 @@ interface Message {
   role: 'user' | 'assistant';
   text: string;
   model?: string;
-  tokens?: { input: number; output: number };
+  // `input` is the FRESH (non-cached) input token count from the LLM
+  // provider. `cache_creation` and `cache_read` are the Anthropic prompt-
+  // cache buckets; on cached calls, most of the effective context lives
+  // there. "Effective context size" = input + cache_creation + cache_read.
+  tokens?: { input: number; output: number; cache_creation?: number; cache_read?: number };
   cost?: number;
   neurons_activated?: number;
   neuron_scores?: NeuronScoreResponse[];
@@ -531,6 +535,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           tokens: {
             input: (res.classify_input_tokens || 0) + (slotResult?.input_tokens || 0),
             output: (res.classify_output_tokens || 0) + (slotResult?.output_tokens || 0),
+            cache_creation: slotResult?.cache_creation_tokens || 0,
+            cache_read: slotResult?.cache_read_tokens || 0,
           },
           cost: res.total_cost || 0,
           neurons_activated: res.neurons_activated,
@@ -691,15 +697,18 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const contextMax = selectedModelInfo?.context_window_tokens ?? 200_000;
 
   // The "tokens in context" reading is the LATEST assistant turn's
-  // input_tokens — this is what the LLM actually received and accounts for
-  // the assembled prompt + conversation history + neuron context. Summing
-  // across turns would double-count history (each turn's prompt already
-  // re-includes prior exchanges).
+  // EFFECTIVE context size — input + cache_creation + cache_read. The raw
+  // `input_tokens` count alone excludes content served from Anthropic's
+  // prompt cache, which undercounts by thousands when the system prompt
+  // gets cached (the usual case). Summing across turns would double-count
+  // history (each turn's prompt already re-includes prior exchanges).
   const lastAssistantTokens = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       const m = messages[i];
       if (m.role === 'assistant' && typeof m.tokens?.input === 'number') {
-        return m.tokens.input;
+        return (m.tokens.input || 0)
+          + (m.tokens.cache_creation || 0)
+          + (m.tokens.cache_read || 0);
       }
     }
     return 0;
@@ -743,7 +752,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         </button>
       </div>
       {messages.length > 0 && lastAssistantTokens > 0 && (
-        <div className="chat-context-bar" title="Tokens the model received on the last turn — the higher this goes, the more the model has to hold in working memory. Near 80% the bar turns amber so you can summarize older exchanges before the session risks collapse.">
+        <div className="chat-context-bar" title="Effective context size the model processed on the last turn (fresh input + cached input). The higher this goes, the more the model has to hold in working memory. Near 80% the bar turns amber so you can summarize older exchanges before the session risks collapse.">
           <div className="chat-context-track">
             <div className={`chat-context-fill${contextWarning ? ' warning' : ''}`} style={{ width: `${contextPct}%` }} />
           </div>
@@ -914,7 +923,17 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                   {msg.role === 'assistant' && (
                     <div className="chat-meta">
                       {msg.model && <span>{msg.model}</span>}
-                      {msg.tokens && <span>{(msg.tokens.input + msg.tokens.output).toLocaleString()} tokens</span>}
+                      {msg.tokens && (() => {
+                        const effectiveIn = (msg.tokens.input || 0)
+                          + (msg.tokens.cache_creation || 0)
+                          + (msg.tokens.cache_read || 0);
+                        const total = effectiveIn + (msg.tokens.output || 0);
+                        const cached = (msg.tokens.cache_creation || 0) + (msg.tokens.cache_read || 0);
+                        const title = cached > 0
+                          ? `${msg.tokens.input.toLocaleString()} fresh in + ${cached.toLocaleString()} cached in + ${msg.tokens.output.toLocaleString()} out`
+                          : `${(msg.tokens.input || 0).toLocaleString()} in + ${(msg.tokens.output || 0).toLocaleString()} out`;
+                        return <span title={title}>{total.toLocaleString()} tokens</span>;
+                      })()}
                       {msg.created_at && <span>{formatMessageTime(msg.created_at)}</span>}
                       <CopyButton text={msg.text} />
                       {msg.query_id != null && (
