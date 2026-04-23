@@ -573,19 +573,33 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
             <div className="chat-msg chat-msg--assistant">
               <div className="chat-bubble">
                 <div className="chat-pipeline-stages">
-                  {stageKeys.map((key, idx) => {
+                  {(() => {
+                    // Compute the single active stage up-front. Backend emits
+                    // only `done` events, so the running stage is inferred as
+                    // the FIRST stage (in chain order) that has no event yet,
+                    // skipping stages that are disabled (neuron-only when
+                    // useNeurons is off). Returns -1 if not loading or all
+                    // stages are already reported.
+                    const firstUnreportedIdx = (() => {
+                      if (!loading) return -1;
+                      for (let i = 0; i < stageKeys.length; i++) {
+                        const k = stageKeys[i];
+                        if (!useNeurons && NEURON_ONLY_STAGES.has(k)) continue;
+                        if (pipelineStages[k]) continue;
+                        return i;
+                      }
+                      return -1;
+                    })();
+                    return stageKeys.map((key, idx) => {
                     const isNeuronOnly = NEURON_ONLY_STAGES.has(key);
                     const skipped = !useNeurons && isNeuronOnly;
                     const ev = pipelineStages[key];
-                    const laterHasEvent = stageKeys.slice(idx + 1).some(k => pipelineStages[k]);
-                    // Backend emits only `done` events at stage completion, not
-                    // `active` events. Infer active state from the gap: the
-                    // FIRST stage (in chain order) that has no event yet, while
-                    // we're still loading, is the one currently running.
-                    const explicitActive = ev?.status === 'active';
-                    const inferredActive = !ev && !laterHasEvent && !skipped && loading;
-                    const isActive = explicitActive || inferredActive;
-                    const isDone = !isActive && (skipped || !!ev || laterHasEvent);
+                    // Only the first unreported stage pulses. Stages before it
+                    // are done (either reported explicitly, skipped, or so fast
+                    // they completed without emitting). Stages after it are
+                    // pending (render as grey).
+                    const isActive = !skipped && idx === firstUnreportedIdx;
+                    const isDone = !isActive && (skipped || !!ev || (firstUnreportedIdx !== -1 && idx < firstUnreportedIdx) || (firstUnreportedIdx === -1 && !!ev));
                     // duration_ms is emitted at the TOP LEVEL of the SSE stage
                     // payload (pipeline/runner.py::_payload_for_emit), not inside
                     // detail. Previously we read detail?.duration_ms which always
@@ -614,7 +628,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                         <span className="chat-stage-time">{timing}</span>
                       </div>
                     );
-                  })}
+                    });
+                  })()}
                 </div>
               </div>
             </div>
