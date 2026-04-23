@@ -547,10 +547,11 @@ async def post_query(
     # ── Input Guard: run before classification ──
     guard_result = check_input(req.message)
     if guard_result.verdict == "block":
+        reason = guard_result.flags[0].get("description") if guard_result.flags else "safety filter"
         raise HTTPException(
             status_code=403,
             detail={
-                "message": "Input blocked by safety filter",
+                "message": f"Input blocked: {reason}",
                 "flags": guard_result.flags,
             },
         )
@@ -607,7 +608,13 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
                 "detail": {"verdict": guard_result.verdict, "flag_count": len(guard_result.flags)},
             })
             if guard_result.verdict == "block":
-                await queue.put({"event": "error", "data": {"message": "Input blocked by safety filter"}})
+                # Surface the first specific flag description so the user
+                # can tell WHY the filter fired (length, pattern match, …).
+                reason = guard_result.flags[0].get("description") if guard_result.flags else "safety filter"
+                await queue.put({"event": "error", "data": {
+                    "message": f"Input blocked: {reason}",
+                    "flags": guard_result.flags,
+                }})
                 return
 
             # Execute pipeline with stage callbacks (Session 3+ multi-slot path)

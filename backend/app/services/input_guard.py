@@ -103,36 +103,71 @@ class InputGuardResult:
         }
 
 
+def _extract_current_turn(message: str) -> str:
+    """Return only the user's NEWEST turn if the message is a packed history.
+
+    The hero chat packs prior exchanges into each follow-up as:
+      [Conversation so far]
+      User: q1
+      Assistant: a1
+      ...
+      User: <new question>
+
+    Injection-pattern scans should only see the new question — the prior
+    assistant turns came from our own model and won't contain real
+    exfiltration/hijacking attempts, but they can contain phrases that
+    *match* the detection patterns in neutral context (false positives
+    that would grow with session length). Length / repetition gates
+    still apply to the full message to guard against DoS.
+    """
+    assert isinstance(message, str), "message must be str"
+    if not message.startswith("[Conversation so far]"):
+        return message
+    # Find the LAST "\nUser: " marker — that starts the current turn.
+    last_user_idx = message.rfind("\nUser: ")
+    if last_user_idx < 0:
+        return message
+    return message[last_user_idx + len("\nUser: "):]
+
+
 def check_input(message: str) -> InputGuardResult:
-    """Run all input checks on a user message. Returns InputGuardResult."""
+    """Run all input checks on a user message. Returns InputGuardResult.
+
+    Length + repetition checks run against the full submitted message.
+    Injection / content-policy pattern scans run only against the
+    current-turn portion (see `_extract_current_turn`), so the guard's
+    false-positive rate doesn't grow with conversation length.
+    """
     assert isinstance(message, str), f"message must be a string, got {type(message).__name__}"
     result = InputGuardResult()
 
-    # Length checks
+    # Length checks — apply to the FULL message (DoS guard).
     if len(message.strip()) == 0:
         result.add_flag("Empty input", "block")
         return result
 
-    if len(message) > 10000:
-        result.add_flag(f"Input too long ({len(message)} chars, max 10000)", "block")
+    # Bumped 10000 → 50000 (2026-04-23) to match QueryRequest.message
+    # max_length so packed conversation history doesn't over-block.
+    if len(message) > 50000:
+        result.add_flag(f"Input too long ({len(message)} chars, max 50000)", "block")
         return result
 
-    # Excessive repetition (possible resource exhaustion)
+    # Excessive repetition (possible resource exhaustion) — full-message scan.
     words = message.split()
     if len(words) > 20:
         unique_ratio = len(set(w.lower() for w in words)) / len(words)
         if unique_ratio < 0.15:
             result.add_flag(f"Excessive repetition (unique word ratio: {unique_ratio:.2f})", "warn")
 
-    # Prompt injection patterns
+    # Injection + content scans — run ONLY against the current user turn.
+    current_turn = _extract_current_turn(message)
     for pattern, description, severity in _INJECTION_PATTERNS:
-        match = pattern.search(message)
+        match = pattern.search(current_turn)
         if match:
             result.add_flag(description, severity, match.group(0)[:80])
 
-    # Content policy patterns
     for pattern, description, severity in _CONTENT_PATTERNS:
-        match = pattern.search(message)
+        match = pattern.search(current_turn)
         if match:
             result.add_flag(description, severity, match.group(0)[:80])
 
