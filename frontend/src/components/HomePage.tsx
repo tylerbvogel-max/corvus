@@ -3,6 +3,7 @@ import { getTenantConfig, type SeedPrompt } from '../config';
 import {
   sendChat, submitQueryStream, createSession, listSessions, getSession,
   appendMessage, generateSessionTitle, deleteSession, fetchNeuron, updateSessionTitle,
+  submitRating,
   type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec, type SessionSummary,
 } from '../api';
 import type { NeuronScoreResponse } from '../types';
@@ -25,7 +26,53 @@ interface Message {
   // Per-message timestamp — from backend for loaded history; set locally
   // (new Date().toISOString()) when added in-flight during the current session.
   created_at?: string;
+  // Populated on new current-session assistant messages from QueryResponse
+  // (neuron path only). Loaded-history messages don't carry it because
+  // ChatSessionMessage has no query_id column yet. Rating UI keys off this.
+  query_id?: number;
+  // Persisted rating chosen by the user (1 = thumbs up, 0 = thumbs down).
+  user_rating?: number;
 }
+
+function describeQueryError(e: unknown): string {
+  // B3: translate raw errors into something a non-technical user can
+  // act on. Rendered as the assistant message when a query throws.
+  if (e instanceof DOMException && e.name === 'AbortError') {
+    return '_Query cancelled._';
+  }
+  const msg = e instanceof Error ? e.message : String(e ?? '');
+  // json() helper throws `<status>: <body>` when an HTTP error comes back;
+  // bucket by status code if we can parse it out.
+  const statusMatch = msg.match(/^(\d{3})\b/);
+  const status = statusMatch ? Number(statusMatch[1]) : 0;
+  if (status === 429) {
+    return (
+      'Too many requests right now. Please wait a moment and try again — ' +
+      'the system is rate-limited to keep costs in check.'
+    );
+  }
+  if (status >= 500 && status < 600) {
+    return (
+      'Something went wrong on our end (server error). Please try again in a ' +
+      'moment. If this keeps happening, check with your Corvus administrator.'
+    );
+  }
+  if (status === 400 || status === 422) {
+    return `Your question couldn't be processed. ${msg.replace(/^\d{3}:\s*/, '')}`;
+  }
+  if (status === 401 || status === 403) {
+    return 'You don\'t have permission to run that query. Please sign in again or contact your administrator.';
+  }
+  // Network-layer failures — fetch rejects with TypeError before any HTTP
+  // status lands.
+  if (e instanceof TypeError && /fetch/i.test(msg)) {
+    return 'Can\'t reach the server. Please check your connection and try again.';
+  }
+  // Fallback — raw message but framed so the user knows it's an error, not
+  // the actual answer.
+  return `Something went wrong: ${msg || 'unknown error'}. Please try again.`;
+}
+
 
 function formatMessageTime(iso: string): string {
   // Per-message timestamp shown in the chat-meta row. Same UTC-suffix
@@ -83,6 +130,48 @@ function SessionTitle({
       title="Double-click to rename"
     >
       {title || 'Untitled'}
+    </span>
+  );
+}
+
+function RateButtons({ queryId, initialRating, onRated }: {
+  queryId: number;
+  initialRating?: number;
+  onRated: (rating: number) => void;
+}) {
+  const [rating, setRating] = useState<number | undefined>(initialRating);
+  const [submitting, setSubmitting] = useState(false);
+  const vote = async (value: number) => {
+    if (submitting || rating === value) return;
+    setSubmitting(true);
+    try {
+      await submitRating(queryId, value);
+      setRating(value);
+      onRated(value);
+    } catch {
+      // Silent — user can retry; better than a scary error toast.
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  return (
+    <span className="chat-rate-buttons">
+      <button
+        type="button"
+        className={`chat-rate-btn${rating === 1 ? ' selected' : ''}`}
+        onClick={() => vote(1)}
+        disabled={submitting}
+        title="This answer was helpful"
+        aria-label="Thumbs up"
+      >👍</button>
+      <button
+        type="button"
+        className={`chat-rate-btn${rating === 0 ? ' selected-down' : ''}`}
+        onClick={() => vote(0)}
+        disabled={submitting}
+        title="This answer missed the mark"
+        aria-label="Thumbs down"
+      >👎</button>
     </span>
   );
 }
@@ -253,6 +342,9 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  // B2: client-side substring filter over session titles. Cheap at typical
+  // scale (<500 sessions); no backend change needed.
+  const [sessionQuery, setSessionQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sessionCreatingRef = useRef(false);
 
@@ -349,6 +441,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           neurons_activated: res.neurons_activated,
           neuron_scores: res.neuron_scores,
           created_at: new Date().toISOString(),
+          query_id: res.query_id,
         };
       } else {
         // Raw LLM path (no neurons) — manually set stage indicators
@@ -387,10 +480,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         generateSessionTitle(sessionId).then(() => refreshSessions()).catch(() => {});
       }
     } catch (e) {
-      const isAbort = e instanceof DOMException && e.name === 'AbortError';
-      const errText = isAbort
-        ? '_Query cancelled._'
-        : `Error: ${e instanceof Error ? e.message : 'Failed'}`;
+      // B3: turn raw backend/network errors into actionable copy.
+      const errText = describeQueryError(e);
       setMessages(prev => [...prev, {
         role: 'assistant', text: errText, created_at: new Date().toISOString(),
       }]);
@@ -654,8 +745,25 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           {sidebarOpen && <button className="chat-new-btn" onClick={startNewChat}>+ New Chat</button>}
         </div>
         {sidebarOpen && (
-          <div className="chat-sidebar-list">
-            {sessions.map(s => (
+          <>
+            <div className="chat-sidebar-search">
+              <input
+                type="text"
+                className="chat-sidebar-search-input"
+                placeholder="Search conversations…"
+                value={sessionQuery}
+                onChange={e => setSessionQuery(e.target.value)}
+                aria-label="Search conversations"
+              />
+            </div>
+            <div className="chat-sidebar-list">
+            {sessions
+              .filter(s => {
+                const q = sessionQuery.trim().toLowerCase();
+                if (!q) return true;
+                return (s.title || '').toLowerCase().includes(q);
+              })
+              .map(s => (
               <div
                 key={s.id}
                 className={`chat-session-item${currentSessionId === s.id ? ' active' : ''}`}
@@ -672,7 +780,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                 <button className="chat-session-del" onClick={e => { e.stopPropagation(); archiveSession(s.id); }}>×</button>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -704,6 +813,13 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                       {msg.tokens && <span>{(msg.tokens.input + msg.tokens.output).toLocaleString()} tokens</span>}
                       {msg.created_at && <span>{formatMessageTime(msg.created_at)}</span>}
                       <CopyButton text={msg.text} />
+                      {msg.query_id != null && (
+                        <RateButtons
+                          queryId={msg.query_id}
+                          initialRating={msg.user_rating}
+                          onRated={(r) => setMessages(prev => prev.map((m, mi) => mi === i ? { ...m, user_rating: r } : m))}
+                        />
+                      )}
                       {/* Per-message cost hidden on the hero page — aggregated
                           visibility for admins lives on the Performance page. */}
                     </div>

@@ -2664,6 +2664,64 @@ details summary:hover { color: var(--text); }
   opacity: 0.6;
 }
 
+/* B1: Thumbs-up/down rating on assistant messages. Lives in the chat-meta
+   row alongside Copy. Feeds the existing /query/{id}/rating endpoint. */
+.chat-rate-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
+}
+.chat-rate-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.6;
+  transition: all 0.12s;
+}
+.chat-rate-btn:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--bg-input);
+}
+.chat-rate-btn.selected {
+  opacity: 1;
+  color: var(--precision);
+  border-color: color-mix(in srgb, var(--precision) 40%, var(--border));
+}
+.chat-rate-btn.selected-down {
+  opacity: 1;
+  color: var(--impact);
+  border-color: color-mix(in srgb, var(--impact) 40%, var(--border));
+}
+.chat-rate-btn:disabled { cursor: default; }
+
+/* B2: Session search input in the sidebar, above the list. */
+.chat-sidebar-search {
+  padding: 4px 8px 8px 8px;
+}
+.chat-sidebar-search-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.75rem;
+  padding: 5px 8px;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.chat-sidebar-search-input:focus {
+  border-color: var(--accent);
+}
+.chat-sidebar-search-input::placeholder {
+  color: var(--text-dim);
+}
+
 /* A1: Copy button on assistant messages. Subtle — lives in the chat-meta
    row alongside model and token count. Turns into a checkmark on success. */
 .chat-copy-btn {
