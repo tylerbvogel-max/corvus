@@ -84,7 +84,7 @@ async def upload_document(
     source_url: str = Form(""),
     department: str = Form(""),
     role_key: str = Form(""),
-    model: str = Form("sonnet"),
+    model: str = Form("opus"),
 ):
     """Upload a document and start the two-pass ingestion pipeline.
 

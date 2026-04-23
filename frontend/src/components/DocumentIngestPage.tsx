@@ -255,7 +255,20 @@ function JobList({
           </div>
           {(job.status === 'extracting' || job.status === 'analyzing') && (
             <div style={{ marginTop: 6 }}>
-              <ProgressBar current={job.current_section} total={job.total_sections} />
+              {job.total_sections > 0 ? (
+                <ProgressBar current={job.current_section} total={job.total_sections} />
+              ) : (
+                <div style={{
+                  height: 6, background: 'var(--border)', borderRadius: 3,
+                  overflow: 'hidden', position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(90deg, transparent, #8b5cf6, transparent)',
+                    animation: 'doc-indet 1.5s linear infinite',
+                  }} />
+                </div>
+              )}
               <div style={{ fontSize: '0.8em', color: 'var(--text-dim)', marginTop: 2 }}>
                 {job.step}
               </div>
@@ -359,11 +372,31 @@ function JobDetail({
       {/* Progress */}
       {(job.status === 'extracting' || job.status === 'analyzing') && (
         <div className="doc-detail-progress">
-          <ProgressBar current={job.current_section} total={job.total_sections} />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '0.85em' }}>
-            <span>{job.step}</span>
-            <span>{job.current_section}/{job.total_sections} sections</span>
-          </div>
+          {job.total_sections > 0 ? (
+            <>
+              <ProgressBar current={job.current_section} total={job.total_sections} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '0.85em' }}>
+                <span>{job.step}</span>
+                <span>{job.current_section}/{job.total_sections} sections</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{
+                height: 6, background: 'var(--border)', borderRadius: 3,
+                overflow: 'hidden', position: 'relative',
+              }}>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(90deg, transparent, #8b5cf6, transparent)',
+                  animation: 'doc-indet 1.5s linear infinite',
+                }} />
+              </div>
+              <div style={{ marginTop: 4, fontSize: '0.85em' }}>
+                <span>{job.step}</span>
+              </div>
+            </>
+          )}
           <button className="doc-cancel-btn" onClick={handleCancel} style={{ marginTop: 8 }}>
             Cancel
           </button>

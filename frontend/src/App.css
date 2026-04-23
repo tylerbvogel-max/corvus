@@ -6506,6 +6506,11 @@ details summary:hover { color: var(--text); }
   background: rgba(239, 68, 68, 0.1);
 }
 
+@keyframes doc-indet {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 .doc-stats-row {
   display: flex;
   gap: 16px;
