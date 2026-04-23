@@ -2770,6 +2770,12 @@ details summary:hover { color: var(--text); }
   font-family: var(--font-mono, monospace);
   color: var(--accent);
   opacity: 0.7;
+  /* Fixed-width right-aligned time column — every stage row reserves the
+     same horizontal slot so timings align vertically regardless of value. */
+  min-width: 52px;
+  display: inline-block;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Neuron graph sidebar panel */

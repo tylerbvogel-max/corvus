@@ -57,13 +57,13 @@ const PIPELINE_STAGE_LABELS: Record<string, StageLabel> = {
     technical: 'structural_resolve',
   },
   embed_query: {
-    label: 'Understanding the question',
-    subtitle: 'Encoding your question for semantic search',
+    label: 'Parsing your question',
+    subtitle: 'Encoding your question into a searchable form',
     technical: 'embed_query',
   },
   classify: {
-    label: 'Understanding',
-    subtitle: 'Identifying what your question is really asking',
+    label: 'Understanding your intent',
+    subtitle: 'Identifying the domain, role, and specific ask',
     technical: 'classify',
   },
   semantic_prefilter: {
@@ -584,6 +584,9 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                       timing = 'skipped';
                     } else if (typeof durMs === 'number') {
                       timing = durMs < 1 ? '<1ms' : durMs < 1000 ? `${durMs.toFixed(0)}ms` : `${(durMs / 1000).toFixed(2)}s`;
+                    } else if (isDone) {
+                      // Stage completed but no duration reported — treat as sub-millisecond.
+                      timing = '<1ms';
                     }
                     const spec = PIPELINE_STAGE_LABELS[key];
                     // Tooltip surfaces the technical stage name + purpose so
@@ -594,7 +597,9 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                       <div key={key} className={`chat-stage-row${isDone ? ' done' : ''}${isActive ? ' active' : ''}${skipped ? ' skipped' : ''}`} title={tooltip}>
                         <span className="chat-stage-dot" />
                         <span className="chat-stage-name">{spec.label}</span>
-                        {timing && <span className="chat-stage-time">{timing}</span>}
+                        {/* Time column is ALWAYS rendered — empty placeholder
+                            preserves column alignment for pending/active rows. */}
+                        <span className="chat-stage-time">{timing}</span>
                       </div>
                     );
                   })}
