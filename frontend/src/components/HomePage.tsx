@@ -25,18 +25,27 @@ interface Message {
 }
 
 function relativeTime(iso: string): string {
-  const d = new Date(iso);
+  // Backend returns naive UTC timestamps without a trailing `Z`. JS's
+  // Date parser treats tz-less ISO as LOCAL time, which makes every
+  // session look "just now" on machines not running UTC. Append Z so
+  // the timestamp is unambiguously UTC.
+  const normalized = iso.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return '';
   const now = Date.now();
-  const diffMs = now - d.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay === 1) return 'Yesterday';
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const diffMs = Math.max(0, now - d.getTime());
+  // Within 24 hours → show the time (e.g. "3:42 PM"). Past that → show
+  // the date (e.g. "Apr 21"). Same calendar-year date stays short;
+  // years back get a year appended.
+  if (diffMs < 24 * 60 * 60 * 1000) {
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+  const sameYear = d.getFullYear() === new Date(now).getFullYear();
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
 }
 
 // Pipeline stage labels — Option 3 (hybrid). The user sees friendly names
