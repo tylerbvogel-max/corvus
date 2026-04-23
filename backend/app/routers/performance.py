@@ -101,6 +101,59 @@ async def _cost_summary(db: AsyncSession) -> dict:
     }
 
 
+async def _cost_by_activity(db: AsyncSession) -> dict:
+    """Break the total LLM spend down by activity bucket.
+
+    v1 buckets come from existing tables:
+      - query_pipeline : SUM(queries.cost_usd) — user-facing queries end-to-end
+      - autopilot      : SUM(autopilot_runs.cost_usd) — background tick cost
+      - untracked      : activities whose per-call LLM cost is not aggregated
+                         today: agent runs (actions.kind LIKE 'agent.%'),
+                         document ingestion, eval runs outside queries,
+                         condense-context Haiku calls from the hero page.
+
+    The "untracked" bucket is the gap flagged in the cost-attribution
+    roadmap item (master-corvus gov-cost-attribution). Per-call cost
+    tagging would eliminate it.
+    """
+    query_cost_row = (await db.execute(text(
+        "SELECT COALESCE(SUM(cost_usd), 0) FROM queries"
+    ))).fetchone()
+    autopilot_cost_row = (await db.execute(text(
+        "SELECT COALESCE(SUM(cost_usd), 0) FROM autopilot_runs WHERE status = 'completed'"
+    ))).fetchone()
+
+    query_cost = float(query_cost_row[0] or 0) if query_cost_row else 0.0
+    autopilot_cost = float(autopilot_cost_row[0] or 0) if autopilot_cost_row else 0.0
+    buckets = [
+        {
+            "key": "query_pipeline",
+            "label": "User queries",
+            "total_cost": round(query_cost, 4),
+            "source_table": "queries.cost_usd",
+            "description": "End-to-end cost for user-facing questions (classify + execute + eval + refine).",
+        },
+        {
+            "key": "autopilot",
+            "label": "Autopilot (background maintenance)",
+            "total_cost": round(autopilot_cost, 4),
+            "source_table": "autopilot_runs.cost_usd",
+            "description": "Cost of each autopilot tick (completed runs only).",
+        },
+    ]
+    total_tracked = sum(b["total_cost"] for b in buckets)
+    return {
+        "buckets": buckets,
+        "total_tracked": round(total_tracked, 4),
+        "gap_note": (
+            "Agent runs, document ingestion, condense-context summarization, "
+            "and standalone eval runs are NOT currently aggregated here. "
+            "Per-call activity tagging (tracked on master-corvus as "
+            "gov-cost-attribution) would make these visible."
+        ),
+    }
+
+
 async def _cost_modeling(db: AsyncSession) -> dict:
     row2 = (await db.execute(text("""
         SELECT
@@ -606,6 +659,7 @@ async def performance_report(db: AsyncSession = Depends(get_db)):
 
     cost_summary = await _cost_summary(db)
     cost_modeling = await _cost_modeling(db)
+    cost_by_activity = await _cost_by_activity(db)
     quality_data = await _quality_by_mode(db)
     reliability = await _reliability(db)
     quality_trend = await _quality_trend(db, total_queries)
@@ -622,6 +676,7 @@ async def performance_report(db: AsyncSession = Depends(get_db)):
         "fdr_correction": stats_data["fdr_correction"],
         "cost_summary": cost_summary,
         "cost_modeling": cost_modeling,
+        "cost_by_activity": cost_by_activity,
         "quality_by_mode": quality_data["quality_by_mode"],
         "quality_ratio": quality_data["quality_ratio"],
         "reliability": reliability,

@@ -51,10 +51,21 @@ interface StatTest {
 }
 
 interface FdrCorrection { method: string; total_tests: number; alpha: number; description: string }
+interface CostBucket {
+  key: string; label: string; total_cost: number;
+  source_table: string; description: string;
+}
+interface CostByActivity {
+  buckets: CostBucket[];
+  total_tracked: number;
+  gap_note: string;
+}
+
 interface PerfData {
   stat_tests: StatTest[];
   fdr_correction: FdrCorrection | null;
   cost_summary: CostSummary; cost_modeling: CostModeling; quality_by_mode: QualityMode[];
+  cost_by_activity?: CostByActivity;
   quality_ratio: number | null; reliability: Reliability;
   quality_trend: Record<string, TrendPeriod>; neuron_stats: NeuronStats;
   refinement_impact: RefinementImpact; autopilot: AutopilotRow[]; investment: Investment;
@@ -270,6 +281,33 @@ export default function PerformancePage() {
                 );
               })}
             </div>
+          </section>
+        )}
+
+        {/* Cost by Activity — v1 attribution breakdown */}
+        {data.cost_by_activity && (
+          <section className="perf-section">
+            <h3>Cost by activity</h3>
+            <p className="perf-section-desc">
+              Where Corvus spends LLM budget across tracked activities.
+              Sum of {data.cost_by_activity.buckets.length} buckets: ${fmt(data.cost_by_activity.total_tracked, 2)}.
+            </p>
+            <div className="perf-cost-grid">
+              {data.cost_by_activity.buckets.map(b => {
+                const total = data.cost_by_activity!.total_tracked || 1;
+                const share = (b.total_cost / total) * 100;
+                return (
+                  <div key={b.key} className="perf-cost-card" title={`${b.description}\nSource: ${b.source_table}`}>
+                    <div className="perf-cost-mode">{b.label}</div>
+                    <div className="perf-cost-amount" style={{ color: b.key === 'autopilot' ? '#a78bfa' : '#22c55e' }}>${fmt(b.total_cost, 2)}</div>
+                    <div className="perf-cost-label">{share.toFixed(1)}% of tracked spend</div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="perf-section-desc" style={{ marginTop: 10, fontStyle: 'italic', opacity: 0.8 }}>
+              {data.cost_by_activity.gap_note}
+            </p>
           </section>
         )}
 
