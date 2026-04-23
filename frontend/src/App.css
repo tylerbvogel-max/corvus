@@ -2664,6 +2664,77 @@ details summary:hover { color: var(--text); }
   opacity: 0.6;
 }
 
+/* A1: Copy button on assistant messages. Subtle — lives in the chat-meta
+   row alongside model and token count. Turns into a checkmark on success. */
+.chat-copy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.62rem;
+  padding: 1px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.chat-copy-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+  background: var(--bg-input);
+}
+
+/* A2: Stop button while a query is running. Shown under the pipeline
+   stages panel. Dismisses the in-flight fetch via AbortController. */
+.chat-stop-btn {
+  margin-top: 10px;
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--impact) 50%, var(--border));
+  color: var(--impact);
+  font-size: 0.72rem;
+  padding: 4px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.12s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chat-stop-btn:hover {
+  background: color-mix(in srgb, var(--impact) 12%, transparent);
+}
+
+/* A3: Inline-rename input for session titles. Matches the static title
+   visually so the swap doesn't cause layout shift. */
+.chat-session-title-editing {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 1px 4px;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+/* A5: Grounded banner on the active chat view. Subtle — not a callout,
+   just a line the user's eye catches once but doesn't keep parsing. */
+.chat-grounded-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.chat-grounded-shield {
+  color: var(--accent);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
 /* Sources chip — per-assistant-message affordance listing internal
    documentation consulted. Signals "this answer is grounded." */
 .chat-sources {

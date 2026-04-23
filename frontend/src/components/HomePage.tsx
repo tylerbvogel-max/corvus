@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getTenantConfig, type SeedPrompt } from '../config';
 import {
   sendChat, submitQueryStream, createSession, listSessions, getSession,
-  appendMessage, generateSessionTitle, deleteSession, fetchNeuron,
+  appendMessage, generateSessionTitle, deleteSession, fetchNeuron, updateSessionTitle,
   type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec, type SessionSummary,
 } from '../api';
 import type { NeuronScoreResponse } from '../types';
@@ -22,7 +22,94 @@ interface Message {
   neuron_scores?: NeuronScoreResponse[];
   isCondensed?: boolean;
   condensedOriginals?: { role: string; text: string }[];
+  // Per-message timestamp — from backend for loaded history; set locally
+  // (new Date().toISOString()) when added in-flight during the current session.
+  created_at?: string;
 }
+
+function formatMessageTime(iso: string): string {
+  // Per-message timestamp shown in the chat-meta row. Same UTC-suffix
+  // defensive handling as relativeTime — the backend returns naive UTC.
+  const normalized = iso.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`;
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function SessionTitle({
+  title, onRename,
+}: { title: string; onRename: (newTitle: string) => Promise<void> | void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const cancel = () => { setDraft(title); setEditing(false); };
+  const save = async () => {
+    const next = draft.trim();
+    if (!next || next === title) { cancel(); return; }
+    await onRename(next);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className="chat-session-title chat-session-title-editing"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onClick={e => e.stopPropagation()}
+        onBlur={save}
+        onKeyDown={e => {
+          e.stopPropagation();
+          if (e.key === 'Enter') { e.preventDefault(); save(); }
+          if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+        }}
+      />
+    );
+  }
+
+  return (
+    <span
+      className="chat-session-title"
+      onDoubleClick={e => { e.stopPropagation(); setEditing(true); }}
+      title="Double-click to rename"
+    >
+      {title || 'Untitled'}
+    </span>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="chat-copy-btn"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // Clipboard API unavailable (older browsers / insecure context).
+          // Silent failure is fine — nothing to act on.
+        }
+      }}
+      title={copied ? 'Copied!' : 'Copy answer to clipboard'}
+    >
+      {copied ? '✓ Copied' : 'Copy'}
+    </button>
+  );
+}
+
 
 function relativeTime(iso: string): string {
   // Backend returns naive UTC timestamps without a trailing `Z`. JS's
@@ -154,6 +241,10 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [model, setModel] = useState('haiku');
+  // AbortController handle + boolean paired state for the stop button.
+  // Ref holds the callable (no re-render needed); state drives button visibility.
+  const abortRef = useRef<(() => void) | null>(null);
+  const [canAbort, setCanAbort] = useState(false);
   const [useNeurons, setUseNeurons] = useState(true);
   const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -186,7 +277,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
     if (!text || loading) return;
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
-    const userMsg: Message = { role: 'user', text };
+    const userMsg: Message = { role: 'user', text, created_at: new Date().toISOString() };
     const isFirstMessage = messages.length === 0;
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
@@ -236,12 +327,14 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         }
 
         const slot: SlotSpec = { mode: `${model}_neuron`, token_budget: 8000, top_k: 60 };
-        const { promise } = submitQueryStream(
+        const { promise, abort } = submitQueryStream(
           userMessage,
           (event: StageEvent) => setPipelineStages(prev => ({ ...prev, [event.stage]: event })),
           priorNeuronIds.length > 0 ? priorNeuronIds : undefined,
           [slot],
         );
+        abortRef.current = abort;
+        setCanAbort(true);
         const res = await promise;
         const slotResult = res.slots[0];
         assistantMsg = {
@@ -255,6 +348,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           cost: res.total_cost || 0,
           neurons_activated: res.neurons_activated,
           neuron_scores: res.neuron_scores,
+          created_at: new Date().toISOString(),
         };
       } else {
         // Raw LLM path (no neurons) — manually set stage indicators
@@ -269,6 +363,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           model: res.model,
           tokens: { input: res.input_tokens, output: res.output_tokens },
           cost: res.cost_usd,
+          created_at: new Date().toISOString(),
         };
       }
 
@@ -292,11 +387,29 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         generateSessionTitle(sessionId).then(() => refreshSessions()).catch(() => {});
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${e instanceof Error ? e.message : 'Failed'}` }]);
+      const isAbort = e instanceof DOMException && e.name === 'AbortError';
+      const errText = isAbort
+        ? '_Query cancelled._'
+        : `Error: ${e instanceof Error ? e.message : 'Failed'}`;
+      setMessages(prev => [...prev, {
+        role: 'assistant', text: errText, created_at: new Date().toISOString(),
+      }]);
     } finally {
+      abortRef.current = null;
+      setCanAbort(false);
       setLoading(false);
       setPipelineStages({});
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    }
+  }
+
+  // A2: user-initiated cancel. Aborts the in-flight fetch; the catch
+  // branch above converts the AbortError into a "cancelled" message.
+  function handleStop() {
+    if (abortRef.current) {
+      abortRef.current();
+      abortRef.current = null;
+      setCanAbort(false);
     }
   }
 
@@ -320,6 +433,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         cost: m.cost || undefined,
         neurons_activated: m.neurons_activated || undefined,
         neuron_scores: m.neuron_scores ?? undefined,
+        created_at: m.created_at ?? undefined,
       })));
     } catch { /* session may be deleted */ }
   }
@@ -510,7 +624,13 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
               <h3>Recent Conversations</h3>
               {sessions.slice(0, 8).map(s => (
                 <div key={s.id} className="chat-session-item" onClick={() => loadSession(s.id)}>
-                  <span className="chat-session-title">{s.title || 'Untitled'}</span>
+                  <SessionTitle
+                    title={s.title || 'Untitled'}
+                    onRename={async (newTitle) => {
+                      await updateSessionTitle(s.id, newTitle);
+                      setSessions(prev => prev.map(ss => ss.id === s.id ? { ...ss, title: newTitle } : ss));
+                    }}
+                  />
                   <span className="chat-session-time">{relativeTime(s.updated_at)}</span>
                   <button className="chat-session-del" onClick={e => { e.stopPropagation(); archiveSession(s.id); }}>×</button>
                 </div>
@@ -541,7 +661,13 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                 className={`chat-session-item${currentSessionId === s.id ? ' active' : ''}`}
                 onClick={() => loadSession(s.id)}
               >
-                <span className="chat-session-title">{s.title || 'Untitled'}</span>
+                <SessionTitle
+                  title={s.title || 'Untitled'}
+                  onRename={async (newTitle) => {
+                    await updateSessionTitle(s.id, newTitle);
+                    setSessions(prev => prev.map(ss => ss.id === s.id ? { ...ss, title: newTitle } : ss));
+                  }}
+                />
                 <span className="chat-session-time">{relativeTime(s.updated_at)}</span>
                 <button className="chat-session-del" onClick={e => { e.stopPropagation(); archiveSession(s.id); }}>×</button>
               </div>
@@ -552,6 +678,12 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
 
       {/* Messages */}
       <div className="chat-main">
+        {/* A5: grounded banner — reinforces "this is a regulated, sourced
+            process" signal once the user has moved past the empty state. */}
+        <div className="chat-grounded-banner" title="Every answer is traced back to internal sources you can inspect.">
+          <span className="chat-grounded-shield" aria-hidden="true">◆</span>
+          <span>Grounded in your company's internal documentation. Every answer is traced to source material.</span>
+        </div>
         <div className="chat-messages">
           {messages.map((msg, i) => {
             if (msg.isCondensed) return <CondensedMessage key={i} msg={msg} />;
@@ -566,10 +698,12 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                   {msg.role === 'assistant' && msg.neuron_scores && msg.neuron_scores.length > 0 && (
                     <ChatSourcesChip scores={msg.neuron_scores} />
                   )}
-                  {msg.role === 'assistant' && (msg.model || msg.neurons_activated != null) && (
+                  {msg.role === 'assistant' && (
                     <div className="chat-meta">
                       {msg.model && <span>{msg.model}</span>}
                       {msg.tokens && <span>{(msg.tokens.input + msg.tokens.output).toLocaleString()} tokens</span>}
+                      {msg.created_at && <span>{formatMessageTime(msg.created_at)}</span>}
+                      <CopyButton text={msg.text} />
                       {/* Per-message cost hidden on the hero page — aggregated
                           visibility for admins lives on the Performance page. */}
                     </div>
@@ -653,6 +787,18 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     });
                   })()}
                 </div>
+                {/* A2: user-cancel affordance. Only the neuron path exposes
+                    an abort handle today; raw path finishes too fast to need one. */}
+                {canAbort && (
+                  <button
+                    type="button"
+                    className="chat-stop-btn"
+                    onClick={handleStop}
+                    title="Cancel this query"
+                  >
+                    ■ Stop
+                  </button>
+                )}
               </div>
             </div>
           )}
