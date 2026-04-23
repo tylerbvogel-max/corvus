@@ -6,5 +6,6 @@ Modules must be imported for their @register_tool decorators to run.
 
 from app.agents.tools import dedup_tools  # noqa: F401 — side-effect registration
 from app.agents.tools import integrity_reconciler_tools  # noqa: F401 — side-effect registration
+from app.agents.tools import ingest_reviewer_tools  # noqa: F401 — side-effect registration
 
 __all__: list[str] = []
