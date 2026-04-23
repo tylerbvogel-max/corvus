@@ -11,7 +11,11 @@ import os
 
 os.environ.setdefault("TENANT_ID", "corvus-aero")
 
-from app.routers.chat_sessions import _clean_generated_title
+from app.routers.chat_sessions import (
+    _clean_generated_title,
+    _fallback_title_from_message,
+    _looks_like_preamble,
+)
 
 
 # ── Happy path ──
@@ -99,3 +103,83 @@ def test_clean_handles_full_preamble_then_title():
     assert "Title" not in out
     assert '"' not in out
     assert "Export Controls" in out
+
+
+# ── Rejection guard (_looks_like_preamble) ──────────────────────────────
+
+def test_looks_like_preamble_catches_i_pronoun():
+    assert _looks_like_preamble("I notice the Corvus neuron graph") is True
+
+
+def test_looks_like_preamble_catches_we_pronoun():
+    assert _looks_like_preamble("We don't have access") is True
+
+
+def test_looks_like_preamble_catches_sorry():
+    assert _looks_like_preamble("Sorry, this is beyond my scope") is True
+
+
+def test_looks_like_preamble_catches_as_an_ai():
+    assert _looks_like_preamble("As an AI assistant I cannot") is True
+
+
+def test_looks_like_preamble_catches_let_me():
+    assert _looks_like_preamble("Let me help clarify") is True
+
+
+def test_looks_like_preamble_passes_real_titles():
+    assert _looks_like_preamble("AS9100D Key Requirements") is False
+    assert _looks_like_preamble("Cost Allocation Process") is False
+    assert _looks_like_preamble("Export Controls Overview") is False
+
+
+def test_looks_like_preamble_rejects_bare_article_lead():
+    # "The X Y" at title position is usually a preamble remnant like
+    # "The topic is X" that didn't fully get stripped.
+    assert _looks_like_preamble("The topic you mentioned") is True
+
+
+def test_looks_like_preamble_empty_title_rejected():
+    assert _looks_like_preamble("") is True
+    assert _looks_like_preamble("   ") is True
+
+
+# ── Fallback title extractor ────────────────────────────────────────────
+
+def test_fallback_extracts_content_words_from_question():
+    t = _fallback_title_from_message("What are the key requirements of AS9100D?")
+    # "what, are, the, of" are stopwords; remaining = "key requirements AS9100D?"
+    assert "AS9100D" in t or "key" in t.lower()
+    assert "what" not in t.lower() and "the" not in t.lower()
+
+
+def test_fallback_caps_at_six_words():
+    long_msg = "explain the details of our supplier onboarding compliance verification procedures exhaustively"
+    t = _fallback_title_from_message(long_msg)
+    assert len(t.split()) <= 6
+
+
+def test_fallback_on_greeting_uses_general_inquiry():
+    assert _fallback_title_from_message("hi") == "General Inquiry"
+    # "How are you" — all stopwords, should fall through.
+    assert _fallback_title_from_message("how are you") == "General Inquiry"
+
+
+# ── New preamble patterns (expanded coverage) ───────────────────────────
+
+def test_clean_strips_i_dont_have_preamble():
+    out = _clean_generated_title("I don't have access to that, but the topic is Export Controls")
+    assert "don't" not in out.lower()
+    assert "Export Controls" in out
+
+
+def test_clean_strips_as_an_ai_preamble():
+    out = _clean_generated_title("As an AI, I cannot judge, but the topic is Compliance Review")
+    assert "AI" not in out
+    assert "Compliance Review" in out
+
+
+def test_clean_strips_i_notice_preamble():
+    out = _clean_generated_title("I notice you're asking about Travel Policy")
+    assert "notice" not in out.lower()
+    assert "Travel Policy" in out

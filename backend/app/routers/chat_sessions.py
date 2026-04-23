@@ -196,18 +196,23 @@ async def archive_session(session_id: int, db: AsyncSession = Depends(get_db)):
 # system prompt telling it not to. Order matters: more specific first.
 # JPL-6: tuples of (pattern, replacement) — immutable module data.
 _TITLE_PREAMBLE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    # Apology / refusal preambles that transition via "but/however/so/therefore":
-    # "I appreciate the question but X", "I can't answer this directly, but X".
-    # Non-greedy — eats up to and including the connector word; leaves X behind.
+    # Apology / refusal that transitions via "but/however/so/therefore":
+    # "I appreciate the question but X", "I can't answer this directly, but X",
+    # "I don't have access, but X". Broader verb set to catch Haiku's many
+    # refusal phrasings.
     (re.compile(
-        r"^\s*(?:i\s+appreciate|i\s+can(?:'|no)t|i[\s']m\s+sorry|sorry|unfortunately)\b"
+        r"^\s*(?:i\s+appreciate|i\s+can(?:'|no)t|i\s+don(?:'|no)t|i[\s']m\s+(?:sorry|not|unable)|"
+        r"as\s+an?\s+(?:ai|assistant|llm|language\s+model)|as\s+claude|sorry|unfortunately|"
+        r"let\s+me|this\s+appears|it\s+looks)\b"
         r"[^\n]*?\b(?:but|however|so|therefore)\s+",
         re.IGNORECASE,
     ), ""),
-    # Hedge preambles that transition via "about/regarding/concerning/on":
-    # "I think the user is asking about X", "It seems to be about X".
+    # Hedge / observation that transitions via "about/regarding/concerning/on":
+    # "I think the user is asking about X", "I notice X is about Y",
+    # "It seems to be about X".
     (re.compile(
-        r"^\s*(?:i\s+think|i\s+believe|i\s+would\s+say|i[\s']d\s+say|it\s+seems|it\s+appears)\b"
+        r"^\s*(?:i\s+(?:think|believe|would\s+say|notice|see|observe)|"
+        r"i[\s']d\s+say|it\s+(?:seems|appears|looks)|this\s+(?:seems|appears|is))\b"
         r"[^\n]*?\b(?:about|regarding|concerning|on)\s+",
         re.IGNORECASE,
     ), ""),
@@ -224,6 +229,17 @@ _TITLE_PREAMBLE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
         re.IGNORECASE,
     ), ""),
 )
+
+
+# If after all regex passes the title STILL starts with one of these tokens,
+# the LLM is almost certainly still emitting a preamble/refusal rather than
+# a topic — reject and fall back to message-based extraction. No real title
+# in the 3-6 word range starts with "I", "we", "my", "sorry", etc.
+_TITLE_REJECT_LEADING_TOKENS: frozenset[str] = frozenset({
+    "i", "we", "my", "our", "you", "your", "it", "that",
+    "sorry", "unfortunately", "as", "let", "this", "here",
+    "the", "a", "an",  # real titles rarely start with bare article
+})
 _TITLE_MAX_WORDS = 6
 
 
@@ -264,7 +280,24 @@ _TITLE_FALLBACK_STOPWORDS: frozenset[str] = frozenset({
     "in", "on", "at", "for", "and", "or", "what", "how",
     "why", "when", "where", "who", "which", "can", "do",
     "does", "i", "you", "we", "they", "my", "our",
+    # Conversational greetings — if the message is just these, the title
+    # becomes empty and we fall through to "General Inquiry".
+    "hi", "hello", "hey", "thanks", "thank",
 })
+
+
+def _looks_like_preamble(title: str) -> str | bool:
+    """True if the title's first word suggests the LLM is still preambling.
+
+    After the regex passes, a 3-6-word title starting with "I", "We",
+    "Sorry", "As", "Let", etc. is almost always a refusal or hedge — not
+    a topic. When this hits, callers should use the fallback extractor.
+    """
+    assert isinstance(title, str), "title must be str"
+    first = title.strip().split(None, 1)
+    if not first:
+        return True
+    return first[0].lower().rstrip(",.:!?'\"") in _TITLE_REJECT_LEADING_TOKENS
 
 
 def _fallback_title_from_message(text: str) -> str:
@@ -333,9 +366,11 @@ async def generate_title(session_id: int, db: AsyncSession = Depends(get_db)):
         # actual title — post-processing strips preambles before saving.
         res = await llm_chat(_TITLE_SYSTEM_PROMPT, first_user_msg.text[:300], max_tokens=40, model="haiku")
         title = _clean_generated_title(res["text"])
-        if not title:
-            # Cleaner stripped everything (pure preamble). Fall back to
-            # keyword extraction from the user's own message.
+        if not title or _looks_like_preamble(title):
+            # Either cleaner stripped everything, OR the LLM is still
+            # emitting a preamble after all regex passes (Haiku occasionally
+            # refuses: "I notice X", "I don't have access to Y"). Fall back
+            # to deterministic extraction from the user's own message.
             title = _fallback_title_from_message(first_user_msg.text)
         assert len(title) > 0, "Generated title must not be empty"
     except (AssertionError, ValueError, RuntimeError) as e:
