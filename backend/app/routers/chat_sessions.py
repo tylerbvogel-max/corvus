@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -191,6 +192,124 @@ async def archive_session(session_id: int, db: AsyncSession = Depends(get_db)):
     return {"ok": True}
 
 
+# Patterns that strip common preambles Haiku sometimes emits despite the
+# system prompt telling it not to. Order matters: more specific first.
+# JPL-6: tuples of (pattern, replacement) — immutable module data.
+_TITLE_PREAMBLE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    # Apology / refusal preambles that transition via "but/however/so/therefore":
+    # "I appreciate the question but X", "I can't answer this directly, but X".
+    # Non-greedy — eats up to and including the connector word; leaves X behind.
+    (re.compile(
+        r"^\s*(?:i\s+appreciate|i\s+can(?:'|no)t|i[\s']m\s+sorry|sorry|unfortunately)\b"
+        r"[^\n]*?\b(?:but|however|so|therefore)\s+",
+        re.IGNORECASE,
+    ), ""),
+    # Hedge preambles that transition via "about/regarding/concerning/on":
+    # "I think the user is asking about X", "It seems to be about X".
+    (re.compile(
+        r"^\s*(?:i\s+think|i\s+believe|i\s+would\s+say|i[\s']d\s+say|it\s+seems|it\s+appears)\b"
+        r"[^\n]*?\b(?:about|regarding|concerning|on)\s+",
+        re.IGNORECASE,
+    ), ""),
+    # Label-style prefixes: "Title:", "Topic:", "Subject:"
+    (re.compile(
+        r"^\s*(?:title|topic|subject|the\s+topic|the\s+subject)\s*[:\-—]\s*",
+        re.IGNORECASE,
+    ), ""),
+    # Explicit lead-in phrases: "The topic is X", "This question is about X",
+    # "Here is the title: X"
+    (re.compile(
+        r"^\s*(?:the\s+topic\s+is|the\s+subject\s+is|this\s+(?:question\s+)?is\s+about|"
+        r"here\s+is\s+(?:the\s+)?(?:title|topic)\s*[:\-—]?)\s*",
+        re.IGNORECASE,
+    ), ""),
+)
+_TITLE_MAX_WORDS = 6
+
+
+# System prompt for the title generator. Kept as a module constant (not
+# inline) so `generate_title` stays under the JPL-4 60-line guideline.
+_TITLE_SYSTEM_PROMPT: str = (
+    "You extract the TOPIC of a user's question into a short title. "
+    "Your entire response must be exactly 3-6 words describing the topic. "
+    "START YOUR RESPONSE WITH THE TOPIC WORDS IMMEDIATELY — do NOT write "
+    "\"Title:\", \"The topic is\", \"I think\", \"I appreciate\", \"Here is\", "
+    "\"This question is about\", or any other preamble. No quotes, no "
+    "punctuation at the end, no explanation, no apology. If the message "
+    "is vague or conversational, pick the most concrete noun in it or "
+    "output \"General Inquiry\".\n\n"
+    "Examples of CORRECT responses:\n"
+    "  Input: What are the key requirements of AS9100D?\n"
+    "  Output: AS9100D Key Requirements\n"
+    "  Input: Help me understand our cost allocation process\n"
+    "  Output: Cost Allocation Process Overview\n"
+    "  Input: Compare FAR and DFARS compliance\n"
+    "  Output: FAR vs DFARS Compliance\n"
+    "  Input: what is our travel policy for international trips\n"
+    "  Output: International Travel Policy\n"
+    "  Input: hi\n"
+    "  Output: General Inquiry\n\n"
+    "Examples of INCORRECT responses (do NOT do these):\n"
+    "  \"I appreciate the question but...\"  ← preamble, forbidden\n"
+    "  \"I can't answer this directly...\"   ← apology, forbidden\n"
+    "  \"Title: AS9100D Requirements\"       ← has label prefix, forbidden\n"
+    "  \"The topic is cost allocation\"      ← has lead-in, forbidden"
+)
+
+
+# Common filler words stripped when deriving a title directly from a user
+# message (fallback path). Tuple so JPL-6 mutable-global rule holds.
+_TITLE_FALLBACK_STOPWORDS: frozenset[str] = frozenset({
+    "the", "a", "an", "is", "are", "am", "be", "to", "of",
+    "in", "on", "at", "for", "and", "or", "what", "how",
+    "why", "when", "where", "who", "which", "can", "do",
+    "does", "i", "you", "we", "they", "my", "our",
+})
+
+
+def _fallback_title_from_message(text: str) -> str:
+    """Derive a title from the first content-y words of the user's message.
+
+    Used when the LLM returns pure preamble and `_clean_generated_title`
+    strips everything. Takes up to six non-stopword tokens.
+    """
+    assert isinstance(text, str), "text must be str"
+    words = [
+        w for w in re.split(r"\s+", text.strip())
+        if w and w.lower() not in _TITLE_FALLBACK_STOPWORDS
+    ][:_TITLE_MAX_WORDS]
+    return " ".join(words)[:200] or "General Inquiry"
+
+
+def _clean_generated_title(raw: str) -> str:
+    """Strip preambles, quotes, and trailing punctuation from an LLM-generated title.
+
+    Handles the common failure modes where the model emits "I appreciate the
+    question but...", "Title: X", or an apologetic lead-in despite the prompt.
+    """
+    assert isinstance(raw, str), "raw must be str"
+    text = raw.strip()
+    # Take only the first line — sometimes the model adds a blank line + explanation.
+    text = text.split("\n")[0].strip()
+    # Strip surrounding quotes.
+    text = text.strip('"').strip("'").strip("`").strip()
+    # Strip recognized preambles until none match (max 3 iterations — bounded).
+    for _ in range(3):
+        before = text
+        for pattern, replacement in _TITLE_PREAMBLE_PATTERNS:
+            text = pattern.sub(replacement, text)
+        text = text.strip('"').strip("'").strip()
+        if text == before:
+            break
+    # Trim trailing punctuation (. ! ? : ; , -) that some models append.
+    text = text.rstrip(".!?:;,-—").strip()
+    # Cap at _TITLE_MAX_WORDS words so a rambling output stays a title.
+    words = text.split()
+    if not words:
+        return ""
+    return " ".join(words[:_TITLE_MAX_WORDS])[:200]
+
+
 @router.post("/sessions/{session_id}/generate-title")
 async def generate_title(session_id: int, db: AsyncSession = Depends(get_db)):
     """Use Haiku to generate a 3-6 word title from the first exchange."""
@@ -209,21 +328,20 @@ async def generate_title(session_id: int, db: AsyncSession = Depends(get_db)):
     if not first_user_msg:
         raise HTTPException(status_code=400, detail="No user message to generate title from")
 
-    system = (
-        "You are a title generator. Given a user's message, output a 3-6 word topic title. "
-        "Rules: NO quotes, NO punctuation, NO preamble, NO explanation. "
-        "Output ONLY the title words. Examples:\n"
-        "User: What are the key requirements of AS9100D? → AS9100D Key Requirements\n"
-        "User: Help me understand our cost allocation process → Cost Allocation Process Overview\n"
-        "User: Compare FAR and DFARS compliance → FAR vs DFARS Compliance"
-    )
     try:
-        res = await llm_chat(system, first_user_msg.text[:300], max_tokens=20, model="haiku")
-        title = res["text"].strip().strip('"').strip("'").split("\n")[0].strip()[:200]
+        # max_tokens=40 (not 20) so occasional preamble doesn't truncate the
+        # actual title — post-processing strips preambles before saving.
+        res = await llm_chat(_TITLE_SYSTEM_PROMPT, first_user_msg.text[:300], max_tokens=40, model="haiku")
+        title = _clean_generated_title(res["text"])
+        if not title:
+            # Cleaner stripped everything (pure preamble). Fall back to
+            # keyword extraction from the user's own message.
+            title = _fallback_title_from_message(first_user_msg.text)
         assert len(title) > 0, "Generated title must not be empty"
-    except Exception as e:
+    except (AssertionError, ValueError, RuntimeError) as e:
         logger.warning("Title generation failed: %s", e)
         title = "Untitled conversation"
+        res = {"input_tokens": 0, "output_tokens": 0}
 
     session.title = title
     session.updated_at = datetime.utcnow()
