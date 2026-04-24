@@ -1,4 +1,4 @@
-"""Unit tests for the document_ingest_reviewer agent tools (Phase 4 #205).
+"""Unit tests for the neuron_placer agent tools (renamed from document_ingest_reviewer).
 
 Hermetic — same minimal fake async session shape used by the dedup (#202)
 and integrity reconciler (#204) tool tests. No Postgres, no LLM. The
@@ -22,10 +22,12 @@ import pytest
 from app.agents.tools.ingest_reviewer_tools import (
     flag_ingest_uncertain,
     get_ingest_proposal_detail,
+    get_placement_status,
     list_pending_ingest_proposals,
     refine_ingest_classification,
+    search_graph_parents,
 )
-from app.models import AutopilotProposal, ProposalItem
+from app.models import AutopilotProposal, Neuron, ProposalItem
 
 
 # ── Fake async session (same shape as test_integrity_reconciler_tools.py) ──
@@ -45,6 +47,19 @@ class _FakeExecuteResult:
 
     def scalars(self) -> _FakeScalars:
         return _FakeScalars(self._rows)
+
+    def all(self) -> list:
+        """Real SQLAlchemy Result.all() returns a list of Row tuples — the
+        caller iterates them. We just return the pre-seeded list as-is."""
+        return list(self._rows)
+
+    def scalar(self) -> Any:
+        """Real SQLAlchemy Result.scalar() returns the first column of the
+        first row, or None."""
+        if not self._rows:
+            return None
+        first = self._rows[0]
+        return first[0] if isinstance(first, tuple) else first
 
 
 class _FakeSession:
@@ -114,12 +129,12 @@ def _make_item(
 @pytest.mark.asyncio
 async def test_list_pending_returns_queued_rows():
     rows = [
-        _make_proposal(1),
-        _make_proposal(2),
+        _make_proposal(1, state="artifact"),
+        _make_proposal(2, state="artifact"),
     ]
     sess = _FakeSession(execute_queue=[rows])
     out = await list_pending_ingest_proposals(
-        sess, {"limit": 5, "rationale": "scanning for ingest proposals to review"},
+        sess, {"limit": 5, "rationale": "scanning for artifacts awaiting graph placement"},
     )
     assert out["count"] == 2
     assert [p["id"] for p in out["proposals"]] == [1, 2]
@@ -201,40 +216,63 @@ async def test_get_detail_accepts_uncertain_gap_source():
 # ── refine_ingest_classification ───────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_refine_updates_item_spec_and_marks_reviewed():
+async def test_refine_places_artifact_and_promotes_state():
+    # Artifact-shape spec (Phase 1 output): content fields present, placement fields absent.
     initial_spec = {
-        "parent_id": 42, "layer": 3, "node_type": "knowledge",
+        "node_type": "standard",
         "label": "Travel reimbursement policy",
-        "department": "Engineering", "role_key": "engineer",  # wrong!
+        "content": "Travel is reimbursed per GSA rates.",
+        "summary": "Travel reimbursement standard.",
     }
     item = _make_item(10, initial_spec)
-    proposal = _make_proposal(1, items=[item])
-    sess = _FakeSession(rows_by_id={(AutopilotProposal, 1): proposal})
+    proposal = _make_proposal(1, state="artifact", items=[item])
+
+    # Layer 1 validation queries: (1) parent neurons by id, (2) dept/role pairs.
+    parent_neuron = Neuron(id=42, label="Expenses", layer=2, department="Finance",
+                           role_key="policy_author", node_type="knowledge", is_active=True)
+    sess = _FakeSession(
+        rows_by_id={(AutopilotProposal, 1): proposal},
+        execute_queue=[
+            [parent_neuron],                         # _fetch_valid_parents
+            [("Finance", "policy_author")],          # _fetch_known_dept_roles (rows iter)
+        ],
+    )
 
     out = await refine_ingest_classification(sess, {
         "proposal_id": 1,
         "item_updates": [
-            {"item_id": 10, "layer": 3, "department": "Finance", "role_key": "policy_author"},
+            {"item_id": 10, "parent_id": 42, "layer": 3,
+             "department": "Finance", "role_key": "policy_author",
+             "rationale": "Finance owns travel policy under parent #42 (Expenses)"},
         ],
         "confidence": 0.92,
-        "rationale": "Content clearly describes travel reimbursement — Finance/policy_author fits better than Engineering/engineer",
+        "rationale": "Content describes travel reimbursement — Finance/policy_author fits under Expenses parent",
     })
 
-    # Item spec was rewritten with the correct department + role_key.
+    # Item spec gains the committed placement fields.
     new_spec = json.loads(item.neuron_spec_json)
+    assert new_spec["parent_id"] == 42
     assert new_spec["department"] == "Finance"
     assert new_spec["role_key"] == "policy_author"
-    # Label + parent preserved.
+    assert new_spec["layer"] == 3
+    # Original content fields preserved.
     assert new_spec["label"] == "Travel reimbursement policy"
-    assert new_spec["parent_id"] == 42
+    assert new_spec["node_type"] == "standard"
+    # Item's target_neuron_id mirrors the chosen parent.
+    assert item.target_neuron_id == 42
+    # Placement rationale recorded on the item's reason.
+    assert "neuron_placer" in (item.reason or "")
+    assert "Finance" in (item.reason or "") or "Expenses" in (item.reason or "")
 
-    # Proposal marked reviewed by the agent; state unchanged.
-    assert proposal.reviewed_by == "agent:document_ingest_reviewer"
-    assert proposal.reviewed_at is not None
+    # Proposal promoted artifact → proposed, reviewed by neuron_placer.
     assert proposal.state == "proposed"
-    assert "document_ingest_reviewer" in (proposal.llm_reasoning or "")
+    assert proposal.reviewed_by == "agent:neuron_placer"
+    assert proposal.reviewed_at is not None
+    assert "neuron_placer" in (proposal.llm_reasoning or "")
     assert out["updated_items"] == 1
     assert out["confidence"] == 0.92
+    assert out["promoted"] is True
+    assert out["state"] == "proposed"
     assert sess.flush_calls == 1
 
 
@@ -245,7 +283,9 @@ async def test_refine_rejects_wrong_gap_source():
     with pytest.raises(ValueError, match="not document_ingest"):
         await refine_ingest_classification(sess, {
             "proposal_id": 1,
-            "item_updates": [{"item_id": 1, "layer": 2, "department": "Ops", "role_key": "manager"}],
+            "item_updates": [{"item_id": 1, "parent_id": 5, "layer": 2,
+                              "department": "Ops", "role_key": "manager",
+                              "rationale": "attempting placement on a wrong-source proposal"}],
             "confidence": 0.9,
             "rationale": "attempting to refine a non-ingest proposal must fail",
         })
@@ -257,7 +297,9 @@ async def test_refine_rejects_out_of_range_confidence():
     with pytest.raises(AssertionError, match="confidence must be 0..1"):
         await refine_ingest_classification(sess, {
             "proposal_id": 1,
-            "item_updates": [{"item_id": 1, "layer": 1, "department": "x", "role_key": "y"}],
+            "item_updates": [{"item_id": 1, "parent_id": 1, "layer": 1,
+                              "department": "x", "role_key": "y",
+                              "rationale": "confidence validation test"}],
             "confidence": 1.5,
             "rationale": "out-of-range confidence should be rejected defensively",
         })
@@ -284,7 +326,7 @@ async def test_flag_uncertain_flips_gap_source_and_stores_candidates():
     assert out["gap_source"] == "document_ingest/uncertain"
     assert out["candidate_count"] == 2
     assert proposal.gap_source == "document_ingest/uncertain"
-    assert proposal.reviewed_by == "agent:document_ingest_reviewer"
+    assert proposal.reviewed_by == "agent:neuron_placer"
     assert "FLAGGED UNCERTAIN" in (proposal.llm_reasoning or "")
     # Candidate block stored in gap_evidence_json.
     parsed = json.loads(proposal.gap_evidence_json)
@@ -331,9 +373,175 @@ async def test_flag_uncertain_preserves_prior_evidence():
     assert parsed[1]["signal"] == "agent_flagged_uncertain"
 
 
+# ── Layer 1: refine validates placement fields against reality ─────────
+
+
+@pytest.mark.asyncio
+async def test_refine_rejects_nonexistent_parent_id():
+    item = _make_item(10, {"node_type": "standard", "label": "X"})
+    proposal = _make_proposal(1, state="artifact", items=[item])
+    # _fetch_valid_parents returns nothing → validation raises ValueError.
+    sess = _FakeSession(
+        rows_by_id={(AutopilotProposal, 1): proposal},
+        execute_queue=[
+            [],                               # _fetch_valid_parents → no row for 99999
+            [("Engineering", "materials")],   # _fetch_known_dept_roles
+        ],
+    )
+    with pytest.raises(ValueError, match="Unknown or inactive parent_id"):
+        await refine_ingest_classification(sess, {
+            "proposal_id": 1,
+            "item_updates": [{
+                "item_id": 10, "parent_id": 99999, "layer": 3,
+                "department": "Engineering", "role_key": "materials",
+                "rationale": "attempting placement under a made-up parent id",
+            }],
+            "confidence": 0.8,
+            "rationale": "unknown parent validation — must raise ValueError",
+        })
+
+
+@pytest.mark.asyncio
+async def test_refine_rejects_unknown_department():
+    item = _make_item(10, {"node_type": "standard", "label": "X"})
+    proposal = _make_proposal(1, state="artifact", items=[item])
+    parent = Neuron(id=42, label="P", layer=2, department="Engineering",
+                    role_key="materials", node_type="knowledge", is_active=True)
+    sess = _FakeSession(
+        rows_by_id={(AutopilotProposal, 1): proposal},
+        execute_queue=[
+            [parent],                         # valid parent
+            [("Engineering", "materials")],   # dept_roles — Marketing not here
+        ],
+    )
+    with pytest.raises(ValueError, match="Unknown department"):
+        await refine_ingest_classification(sess, {
+            "proposal_id": 1,
+            "item_updates": [{
+                "item_id": 10, "parent_id": 42, "layer": 3,
+                "department": "Marketing", "role_key": "materials",
+                "rationale": "invented department should be rejected",
+            }],
+            "confidence": 0.8,
+            "rationale": "unknown department validation — must raise ValueError",
+        })
+
+
+@pytest.mark.asyncio
+async def test_refine_rejects_layer_node_type_mismatch():
+    """A 'metric' node_type only fits layers 4-5; layer 1 should raise."""
+    item = _make_item(10, {"node_type": "standard", "label": "X"})
+    proposal = _make_proposal(1, state="artifact", items=[item])
+    # parent.node_type='metric' is what validator checks — test that layer=1
+    # trips the compat check.
+    parent = Neuron(id=42, label="Metric parent", layer=4, department="Engineering",
+                    role_key="materials", node_type="metric", is_active=True)
+    sess = _FakeSession(
+        rows_by_id={(AutopilotProposal, 1): proposal},
+        execute_queue=[
+            [parent],
+            [("Engineering", "materials")],
+        ],
+    )
+    with pytest.raises(ValueError, match="not compatible with node_type"):
+        await refine_ingest_classification(sess, {
+            "proposal_id": 1,
+            "item_updates": [{
+                "item_id": 10, "parent_id": 42, "layer": 1,
+                "department": "Engineering", "role_key": "materials",
+                "rationale": "metric at layer 1 is a compatibility violation",
+            }],
+            "confidence": 0.8,
+            "rationale": "layer-vs-node_type compat check — must raise ValueError",
+        })
+
+
+# ── Layer 2: get_placement_status read-back ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_placement_status_returns_committed_fields():
+    placed_spec = {
+        "parent_id": 42, "layer": 3, "department": "Engineering",
+        "role_key": "materials", "label": "Minimum thickness",
+    }
+    item = _make_item(10, placed_spec)
+    proposal = _make_proposal(1, state="proposed", items=[item])
+    proposal.reviewed_by = "agent:neuron_placer"
+    proposal.reviewed_at = datetime.datetime(2026, 4, 23, 16, 0, 0)
+    parent = Neuron(id=42, label="Materials & Structures", layer=2,
+                    department="Engineering", role_key="materials",
+                    node_type="knowledge", is_active=True)
+    sess = _FakeSession(rows_by_id={
+        (AutopilotProposal, 1): proposal,
+        (Neuron, 42): parent,
+    })
+    out = await get_placement_status(sess, {
+        "proposal_id": 1,
+        "rationale": "read-back after refine to confirm placement stuck",
+    })
+    assert out["proposal_id"] == 1
+    assert out["state"] == "proposed"
+    assert out["placement"]["parent_id"] == 42
+    assert out["placement"]["parent_label"] == "Materials & Structures"
+    assert out["placement"]["layer"] == 3
+    assert out["placement"]["department"] == "Engineering"
+    assert out["reviewed_by"] == "agent:neuron_placer"
+
+
+@pytest.mark.asyncio
+async def test_get_placement_status_returns_null_placement_for_unplaced():
+    """An artifact-state row (no placement fields) reports placement=None."""
+    item = _make_item(10, {"node_type": "standard", "label": "X",
+                           "content": "c", "summary": "s"})
+    proposal = _make_proposal(1, state="artifact", items=[item])
+    sess = _FakeSession(rows_by_id={(AutopilotProposal, 1): proposal})
+    out = await get_placement_status(sess, {
+        "proposal_id": 1,
+        "rationale": "reading back an artifact that hasn't been placed yet",
+    })
+    assert out["state"] == "artifact"
+    assert out["placement"] is None
+
+
+# ── search_graph_parents ───────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_search_graph_parents_empty_returns_zero_candidates():
+    """With no matching rows, the tool returns an empty candidate list
+    without attempting sibling-count sub-queries."""
+    sess = _FakeSession(execute_queue=[[]])
+    out = await search_graph_parents(sess, {
+        "label_pattern": "nonexistent_topic_xyz",
+        "max_results": 5,
+        "rationale": "search returning zero candidates — hermetic test",
+    })
+    assert out["count"] == 0
+    assert out["candidates"] == []
+
+
+@pytest.mark.asyncio
+async def test_search_graph_parents_rejects_missing_rationale():
+    sess = _FakeSession(execute_queue=[[]])
+    with pytest.raises(AssertionError, match="rationale is required"):
+        await search_graph_parents(sess, {"label_pattern": "heat%"})
+
+
+@pytest.mark.asyncio
+async def test_search_graph_parents_caps_max_results():
+    sess = _FakeSession(execute_queue=[[]])
+    with pytest.raises(AssertionError, match="max_results must be 1..20"):
+        await search_graph_parents(sess, {
+            "max_results": 50,
+            "rationale": "out-of-range max_results should be rejected",
+        })
+
+
 # ── Agent allow-list sanity ────────────────────────────────────────────
 
-def test_ingest_reviewer_agent_has_no_neuron_write_tool():
+
+def test_neuron_placer_agent_has_no_neuron_write_tool():
     """Acceptance parallel to #204: no autonomous write. The agent's YAML
     must never expose a neuron/edge mutation tool — the allow-list is the
     structural enforcement of this invariant."""
@@ -341,17 +549,23 @@ def test_ingest_reviewer_agent_has_no_neuron_write_tool():
     from pathlib import Path
     yaml_path = (
         Path(__file__).parent.parent
-        / "app" / "agents" / "definitions" / "document_ingest_reviewer.yaml"
+        / "app" / "agents" / "definitions" / "neuron_placer.yaml"
     )
     with yaml_path.open() as fh:
         spec = yaml.safe_load(fh)
+    assert spec["name"] == "neuron_placer"
     allow = spec["tool_allow_list"]
-    assert allow == [
-        "list_pending_ingest_proposals",
+    # list_pending_ingest_proposals intentionally dropped — neuron_placer
+    # works on one artifact_id per run (passed via input_context) and never
+    # enumerates. get_placement_status added as mandatory post-mutation
+    # verification read-back.
+    assert set(allow) == {
         "get_ingest_proposal_detail",
+        "search_graph_parents",
         "refine_ingest_classification",
         "flag_ingest_uncertain",
-    ]
+        "get_placement_status",
+    }
     forbidden_patterns = ("write_neuron", "update_neuron", "create_neuron", "merge_neuron", "delete_neuron")
     for name in allow:
         for pattern in forbidden_patterns:

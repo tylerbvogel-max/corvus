@@ -168,15 +168,18 @@ def test_build_whole_doc_prompt_includes_required_context():
         doc_title="Test Doc",
         toc_outline="1. Intro\n2. Body",
         paginated_text="[PAGE 1]\nContent here",
-        existing_neurons_summary="- [2] Existing: blah",
-        department="Engineering",
-        role_key="materials_engineer",
     )
-    assert "knowledge extraction specialist" in system.lower()
-    assert "Engineering" in user
-    assert "materials_engineer" in user
+    # Phase 1 prompt is scoped to artifact extraction (not graph placement)
+    assert "phase 1" in system.lower()
+    assert "artifact" in system.lower()
+    assert "verbatim_quote" in system
+    assert "tags" in system
     assert "[PAGE 1]" in user
     assert "1. Intro" in user
+    # Must not ask the LLM for placement fields that Phase 2 owns
+    assert "parent_label" not in system
+    assert '"department"' not in system
+    assert '"role_key"' not in system
 
 
 # ── extract_whole_document ──────────────────────────────────────────────
@@ -188,11 +191,13 @@ async def test_extract_whole_document_calls_llm_and_parses():
     structure = _make_structure([_make_section("s0", "Scope", 0, 1)])
     full_text = "[PAGE 1]\nScope. This standard applies to ..."
 
+    # Phase 1 artifact-shape JSON (no placement fields like layer/parent_label)
     fake_llm_result = {
         "text": json.dumps([
-            {"action": "create", "section": "1.1", "page": 1, "label": "Scope",
-             "content": "...", "summary": "...", "layer": 3,
-             "node_type": "knowledge", "parent_label": "Engineering"},
+            {"action": "create", "section": "1.1", "page": 1,
+             "label": "Scope", "content": "...", "summary": "...",
+             "verbatim_quote": "This standard applies to ...",
+             "node_type": "standard", "tags": ["scope", "applicability"]},
         ]),
         "input_tokens": 12000,
         "output_tokens": 500,
@@ -202,7 +207,7 @@ async def test_extract_whole_document_calls_llm_and_parses():
     with patch("app.services.document_extractor.llm_chat",
                return_value=fake_llm_result) as mock_llm:
         proposals, usage, raw = await extract_whole_document(
-            job, full_text, structure, existing_neurons=[],
+            job, full_text, structure,
         )
 
     mock_llm.assert_called_once()
@@ -211,6 +216,7 @@ async def test_extract_whole_document_calls_llm_and_parses():
     assert "[PAGE 1]" in call_kwargs["user_message"]
     assert len(proposals) == 1
     assert proposals[0]["section"] == "1.1"
+    assert proposals[0]["node_type"] == "standard"
     assert usage["cost_usd"] == 0.18
     assert usage["input_tokens"] == 12000
     assert raw == fake_llm_result["text"]
@@ -226,7 +232,7 @@ async def test_extract_whole_document_handles_empty_response():
     with patch("app.services.document_extractor.llm_chat",
                return_value=fake_llm_result):
         proposals, usage, raw = await extract_whole_document(
-            job, "short doc", structure, existing_neurons=[],
+            job, "short doc", structure,
         )
     assert proposals == []
     assert usage["cost_usd"] == 0.001
@@ -237,15 +243,18 @@ async def test_extract_whole_document_handles_empty_response():
 
 
 @pytest.mark.asyncio
-async def test_create_whole_doc_proposals_groups_by_section():
+async def test_create_whole_doc_proposals_writes_artifact_state():
     job = _make_job()
     proposals = [
         {"action": "create", "section": "5.1", "page": 10, "label": "Metal A",
-         "content": "foo", "summary": "s", "layer": 3},
+         "content": "foo", "summary": "s", "node_type": "standard",
+         "verbatim_quote": "Metal A shall meet...", "tags": ["metal", "aluminum"]},
         {"action": "create", "section": "5.1", "page": 11, "label": "Metal B",
-         "content": "bar", "summary": "s", "layer": 3},
+         "content": "bar", "summary": "s", "node_type": "standard",
+         "verbatim_quote": "Metal B shall...", "tags": ["metal", "steel"]},
         {"action": "create", "section": "5.2", "page": 15, "label": "Ceramic",
-         "content": "baz", "summary": "s", "layer": 3},
+         "content": "baz", "summary": "s", "node_type": "standard",
+         "verbatim_quote": "Ceramic materials...", "tags": ["ceramic"]},
     ]
     sess = _FakeSession()
 
@@ -253,19 +262,34 @@ async def test_create_whole_doc_proposals_groups_by_section():
         job, proposals, existing_neurons=[], db=sess, doc_title="Test Doc",
     )
 
-    # Two groups → two AutopilotProposal rows
+    # Two groups → two AutopilotProposal rows, all in state='artifact'
     proposals_added = [o for o in sess.added if isinstance(o, AutopilotProposal)]
     items_added = [o for o in sess.added if isinstance(o, ProposalItem)]
     assert len(proposals_added) == 2
     assert len(items_added) == 3
     assert len(pids) == 2
 
-    # Provenance includes page field
     for p in proposals_added:
+        assert p.state == "artifact", f"expected state=artifact, got {p.state!r}"
         evidence = json.loads(p.gap_evidence_json)[0]
-        assert "page" in evidence
         assert evidence["source"] == "document_ingest"
         assert evidence["document"] == "TEST-STD-1.pdf"
+        assert "page" in evidence
+        # Phase 1 evidence carries the artifact's verbatim + node_type + tags
+        assert "verbatim_quote" in evidence
+        assert evidence["node_type"] == "standard"
+
+    # ProposalItem specs are artifact-shape: no placement fields
+    for it in items_added:
+        spec = json.loads(it.neuron_spec_json)
+        assert "parent_id" not in spec, "Phase 1 must leave parent unassigned"
+        assert "layer" not in spec, "Phase 1 must leave layer unassigned"
+        assert "department" not in spec, "Phase 1 must leave department unassigned"
+        assert "role_key" not in spec, "Phase 1 must leave role_key unassigned"
+        # Content/source-tracking fields still present
+        assert spec["node_type"] == "standard"
+        assert spec["source_origin"] == "document"
+        assert it.target_neuron_id is None, "artifact rows have no parent target yet"
 
 
 @pytest.mark.asyncio
@@ -274,9 +298,9 @@ async def test_create_whole_doc_proposals_records_page_per_group():
     job = _make_job()
     proposals = [
         {"action": "create", "section": "5.1", "page": 20, "label": "A",
-         "content": "c", "summary": "s", "layer": 3},
+         "content": "c", "summary": "s", "node_type": "knowledge"},
         {"action": "create", "section": "5.1", "page": 18, "label": "B",
-         "content": "c", "summary": "s", "layer": 3},
+         "content": "c", "summary": "s", "node_type": "knowledge"},
     ]
     sess = _FakeSession()
     await create_whole_doc_proposals(

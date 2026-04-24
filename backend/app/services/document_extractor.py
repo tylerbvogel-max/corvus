@@ -209,29 +209,23 @@ def _inject_page_markers(text: str, structure: DocumentStructure) -> str:
     return "".join(parts)
 
 
-_WHOLE_DOC_SYSTEM_PROMPT = """You are a knowledge extraction specialist for Corvus, a hierarchical neuron graph system. You are processing one regulatory / technical document end-to-end to produce a proposal list that will be reviewed by a human approver.
+_WHOLE_DOC_SYSTEM_PROMPT = """You are Phase 1 of Corvus's two-phase document ingest pipeline. Your ONLY job is to read the document end-to-end and emit a list of discrete knowledge artifacts — substantive requirements, definitions, constraints, procedures, or decisions that a downstream graph-placement agent can later organize into the neuron graph.
 
-The graph has 6 layers:
-- Layer 0: Department (top-level organizational unit)
-- Layer 1: Role (functional role within a department)
-- Layer 2: Task (specific task or process)
-- Layer 3: System (system, tool, or standard involved)
-- Layer 4: Decision (decision point, rule, or criterion)
-- Layer 5: Output (deliverable, metric, or communication)
+You do NOT decide where artifacts land in the graph. Fields like parent, layer, department, and role are intentionally out of scope. A second agent (Sonnet-based) owns placement and will consume your output.
 
-Your job: enumerate every substantive requirement, definition, or constraint in this document as a proposed neuron. One subsection typically maps to one proposal. Favor completeness — the human reviewer will dismiss what they don't need. Sparse extraction is worse than noisy extraction.
-
-For each proposal, output a JSON object with:
-- "action": "create" (new neuron) or "update" (modify existing)
+For each artifact you find, output a JSON object with:
+- "action": always "create" (artifacts are always new; updates to existing neurons are out of scope)
 - "section": the section number as it appears in the source doc (e.g. "5.1.3.5") — use "" if not applicable
 - "page": page number the content begins on (integer). Use the [PAGE N] markers in the text to determine this
-- "label": concise title (max 200 chars)
-- "content": full requirement text. Preserve numeric thresholds, UTS values, specification numbers, and approval triggers verbatim. Quote liberally
-- "summary": one-line summary (max 500 chars)
-- "layer": integer 2-5 (departments and roles are pre-existing)
-- "node_type": "knowledge" | "process" | "standard" | "decision" | "metric"
-- "parent_label": label of the parent neuron this should attach to (use an existing neuron label when possible)
-- "reason": why this knowledge is valuable for the graph
+- "label": concise title (max 200 chars) identifying the requirement/definition/constraint
+- "content": full requirement text. Preserve numeric thresholds, UTS values, specification numbers, and approval triggers verbatim. Quote liberally — faithfulness to source outweighs compression
+- "verbatim_quote": the direct-quote span from the source doc that supports this artifact (1-3 sentences max, exact wording so the citation click-through shows what the original says). May equal content if content is already verbatim
+- "summary": one-line summary (max 500 chars) a human could scan
+- "node_type": one of "knowledge" | "process" | "standard" | "decision" | "metric" — what KIND of statement this is (independent of where it will land in the graph)
+- "tags": array of 2-6 short strings describing the subject area (e.g. ["aluminum", "heat treatment", "aerospace"]) — these help the placement agent search the graph for candidate parents
+- "reason": one sentence on why this knowledge is valuable to preserve
+
+Enumerate completeness: one subsection typically maps to one artifact. Favor completeness — the human reviewer and the placement agent will dismiss or merge what's not needed. Sparse extraction is worse than noisy extraction.
 
 Skip: cover page, table of contents, revision history, page footers, the long lists of applicable-document references in section 2 (they're pointers to other specs, not content). Focus on Definitions, General Requirements, Detailed Requirements, Notes, and Tables.
 
@@ -244,44 +238,30 @@ OUTPUT FORMAT — strict requirements:
 
 def _build_whole_doc_user_message(
     doc_title: str, toc_outline: str, paginated_text: str,
-    existing_neurons_summary: str, department: str | None, role_key: str | None,
     request_nonce: str = "",
 ) -> str:
-    dept_context = f"Target department: {department}" if department else "No specific department targeted"
-    role_context = f"Target role: {role_key}" if role_key else ""
     nonce_line = f"Request id: {request_nonce} (fresh extraction — do not treat as a continuation)\n\n" if request_nonce else ""
     return f"""{nonce_line}Document: "{doc_title}"
 
 Detected structure (table of contents):
 {toc_outline}
 
-{dept_context}
-{role_context}
-
-Existing neurons in this area (for deduplication and parent matching):
-{existing_neurons_summary}
-
 --- FULL DOCUMENT TEXT ---
 {paginated_text}
 --- END DOCUMENT TEXT ---
 
-This is a STANDALONE request, not a continuation of any prior conversation. Produce the JSON proposal array now in ONE self-contained response. Aim for thorough coverage of every substantive subsection — if this document has 30 subsections with real requirements, you should emit 30 proposals (not 5 that summarize them)."""
+This is a STANDALONE request, not a continuation of any prior conversation. Emit the JSON artifact array now in ONE self-contained response. Aim for thorough coverage of every substantive subsection — if this document has 30 subsections with real requirements, emit 30 artifacts (not 5 that summarize them)."""
 
 
 def _build_whole_doc_prompt(
     doc_title: str,
     toc_outline: str,
     paginated_text: str,
-    existing_neurons_summary: str,
-    department: str | None,
-    role_key: str | None,
     request_nonce: str = "",
 ) -> tuple[str, str]:
-    """Build system + user prompt for whole-document proposal enumeration."""
+    """Build system + user prompt for whole-document artifact extraction (Phase 1)."""
     user_message = _build_whole_doc_user_message(
-        doc_title, toc_outline, paginated_text,
-        existing_neurons_summary, department, role_key,
-        request_nonce=request_nonce,
+        doc_title, toc_outline, paginated_text, request_nonce=request_nonce,
     )
     return _WHOLE_DOC_SYSTEM_PROMPT, user_message
 
@@ -290,27 +270,23 @@ async def extract_whole_document(
     job: DocumentIngestJob,
     extracted_text: str,
     structure: DocumentStructure,
-    existing_neurons: list[dict],
 ) -> tuple[list[dict], dict, str]:
-    """Whole-doc path: one LLM call, full text, enumerative proposal list.
+    """Phase 1: one LLM call, full text, enumerative knowledge-artifact list.
 
-    Returns (proposals_list, usage_dict, raw_text). The raw text is the
-    unparsed LLM response so the caller can record it for diagnosis when
-    parsing yields 0 proposals. Each proposal carries an optional 'section'
-    string and 'page' integer identifying where in the source it came from;
-    the caller groups by section and persists proposal rows.
+    Returns (artifacts_list, usage_dict, raw_text). Artifacts are content-only:
+    they include section/page/title/content/verbatim_quote/summary/node_type/tags,
+    with NO placement fields. Phase 2 (neuron_placer agent) decides placement.
+
+    raw_text is the unparsed LLM response so the caller can record it for
+    diagnosis when parsing yields 0 artifacts.
     """
     paginated_text = _inject_page_markers(extracted_text, structure)
     toc_outline = _build_toc_outline(structure)
-    neuron_summary = _build_neuron_summary(existing_neurons)
 
     system_prompt, user_message = _build_whole_doc_prompt(
         doc_title=structure.title,
         toc_outline=toc_outline,
         paginated_text=paginated_text,
-        existing_neurons_summary=neuron_summary,
-        department=job.department,
-        role_key=job.role_key,
         request_nonce=job.id,  # cache-bust: each run gets a unique prefix
     )
 
@@ -447,6 +423,22 @@ def _find_all_json_objects(text: str) -> list[dict]:
     return objects
 
 
+def _filter_dict_items(items: list) -> list[dict]:
+    """Drop any non-dict entries from an LLM-emitted list. The LLM
+    occasionally emits a stray comment string between valid objects —
+    silently skip those rather than crashing downstream consumers."""
+    out: list[dict] = []
+    dropped = 0
+    for it in items:
+        if isinstance(it, dict):
+            out.append(it)
+        else:
+            dropped += 1
+    if dropped:
+        logger.info("Parser filtered %d non-dict item(s) from LLM output", dropped)
+    return out
+
+
 def _parse_llm_proposals(text: str) -> list[dict]:
     """Parse the LLM's JSON array response, tolerant of surrounding prose.
 
@@ -457,6 +449,9 @@ def _parse_llm_proposals(text: str) -> list[dict]:
          the LLM emitted individual fenced objects instead of a single array,
          e.g. when it thinks it's continuing a truncated prior response).
 
+    Any non-dict entries (stray strings, nulls, etc.) are dropped so
+    downstream consumers can assume ``list[dict]``.
+
     Returns [] on any failure; the caller logs + records the raw output.
     """
     text = _strip_code_fences(text).strip()
@@ -466,7 +461,7 @@ def _parse_llm_proposals(text: str) -> list[dict]:
     try:
         parsed = json.loads(text)
         if isinstance(parsed, list):
-            return parsed
+            return _filter_dict_items(parsed)
     except json.JSONDecodeError:
         pass
 
@@ -475,7 +470,7 @@ def _parse_llm_proposals(text: str) -> list[dict]:
         try:
             parsed = json.loads(span)
             if isinstance(parsed, list):
-                return parsed
+                return _filter_dict_items(parsed)
         except json.JSONDecodeError as exc:
             logger.warning(
                 "JSON array span failed to parse (err=%s, first 200): %r",
@@ -582,6 +577,30 @@ async def _resolve_parent_id(
     return None
 
 
+def _build_artifact_spec(prop: dict, job: DocumentIngestJob) -> dict:
+    """Artifact-mode neuron_spec for Phase 1 output.
+
+    No placement fields (parent_id, layer, department, role_key are
+    intentionally absent — Phase 2 will fill them). Includes the
+    source-tracking fields that survive through to the applied neuron
+    (citation, authority_level, etc.) since those are doc-level, not
+    graph-placement decisions.
+    """
+    return {
+        "node_type": prop.get("node_type", "knowledge"),
+        "label": prop.get("label", ""),
+        "content": prop.get("content", ""),
+        "summary": prop.get("summary", ""),
+        "verbatim_quote": prop.get("verbatim_quote", ""),
+        "tags": prop.get("tags", []),
+        "source_origin": "document",
+        "source_type": job.source_type,
+        "citation": job.citation,
+        "source_url": job.source_url,
+        "authority_level": job.authority_level,
+    }
+
+
 async def _add_create_item(
     db: AsyncSession,
     proposal_id: int,
@@ -589,26 +608,39 @@ async def _add_create_item(
     job: DocumentIngestJob,
     section_label: str,
     existing_neurons: list[dict],
+    artifact_mode: bool = False,
 ) -> None:
-    """Add a create ProposalItem for a single extracted neuron."""
-    parent_id = await _resolve_parent_id(
-        prop, existing_neurons, job.department, job.role_key,
-    )
-    spec = {
-        "parent_id": parent_id,
-        "layer": prop.get("layer", 3),
-        "node_type": prop.get("node_type", "knowledge"),
-        "label": prop.get("label", ""),
-        "content": prop.get("content", ""),
-        "summary": prop.get("summary", ""),
-        "department": job.department,
-        "role_key": job.role_key,
-        "source_origin": "document",
-        "source_type": job.source_type,
-        "citation": job.citation,
-        "source_url": job.source_url,
-        "authority_level": job.authority_level,
-    }
+    """Add a create ProposalItem for a single extracted neuron.
+
+    When artifact_mode=True (Phase 1 path), the spec omits graph-placement
+    fields; Phase 2's neuron_placer agent fills them later. When False
+    (chunked fallback path), the legacy behavior — full classification at
+    extraction time — applies.
+    """
+    if artifact_mode:
+        spec = _build_artifact_spec(prop, job)
+        target_neuron_id = None
+    else:
+        parent_id = await _resolve_parent_id(
+            prop, existing_neurons, job.department, job.role_key,
+        )
+        spec = {
+            "parent_id": parent_id,
+            "layer": prop.get("layer", 3),
+            "node_type": prop.get("node_type", "knowledge"),
+            "label": prop.get("label", ""),
+            "content": prop.get("content", ""),
+            "summary": prop.get("summary", ""),
+            "department": job.department,
+            "role_key": job.role_key,
+            "source_origin": "document",
+            "source_type": job.source_type,
+            "citation": job.citation,
+            "source_url": job.source_url,
+            "authority_level": job.authority_level,
+        }
+        target_neuron_id = parent_id
+
     reason = prop.get("reason", f"Extracted from {job.filename}, section: {section_label}")
     if prop.get("duplicate_of"):
         dup = prop["duplicate_of"]
@@ -617,7 +649,7 @@ async def _add_create_item(
     db.add(ProposalItem(
         proposal_id=proposal_id,
         action="create",
-        target_neuron_id=parent_id,
+        target_neuron_id=target_neuron_id,
         neuron_spec_json=json.dumps(spec),
         reason=reason,
     ))
@@ -670,6 +702,30 @@ def _build_evidence(
     return evidence
 
 
+def _build_evidence_for_group(
+    job: DocumentIngestJob,
+    section_label: str,
+    section_ref: str | None,
+    page: int | None,
+    proposals: list[dict],
+    is_artifact: bool,
+) -> dict:
+    """Evidence block for an AutopilotProposal. In artifact mode, pull
+    verbatim_quote/tags/node_type from the first artifact so the review UI
+    can show them without digging into the ProposalItem spec."""
+    base = _build_evidence(job, section_label, section_ref, page)
+    if is_artifact and proposals:
+        first = proposals[0]
+        if first.get("verbatim_quote"):
+            base["verbatim_quote"] = str(first["verbatim_quote"])[:2000]
+        if first.get("node_type"):
+            base["node_type"] = str(first["node_type"])
+        tags = first.get("tags")
+        if isinstance(tags, list) and tags:
+            base["tags"] = [str(t)[:60] for t in tags[:10]]
+    return base
+
+
 async def _persist_proposal_group(
     job: DocumentIngestJob,
     *,
@@ -680,11 +736,17 @@ async def _persist_proposal_group(
     proposals: list[dict],
     existing_neurons: list[dict],
     db: AsyncSession,
+    is_artifact: bool = False,
 ) -> int | None:
     """Create one AutopilotProposal row + ProposalItem children from a batch.
 
-    Shared implementation used by both the chunked (per-Section) and the
-    whole-doc (LLM-emitted section-group) extraction paths.
+    When is_artifact=True (Phase 1 / whole-doc path), the row is written in
+    state='artifact' with artifact-shape ProposalItems (no placement fields);
+    Phase 2's neuron_placer agent will commit placement and promote to
+    state='proposed'.
+
+    When is_artifact=False (chunked fallback), the legacy path runs:
+    state='proposed' with full classification at extraction time.
     """
     if not proposals:
         return None
@@ -699,13 +761,22 @@ async def _persist_proposal_group(
     n_updates = sum(1 for p in valid_proposals if p["action"] == "update")
     n_dupes = sum(1 for p in valid_proposals if p.get("duplicate_of"))
 
+    evidence = _build_evidence_for_group(
+        job, section_label, section_ref, page, valid_proposals, is_artifact,
+    )
+    reasoning = (
+        f"Phase 1 extracted {n_creates} artifact(s); awaiting placement by neuron_placer"
+        if is_artifact
+        else f"Extracted {n_creates} new neurons and {n_updates} updates. {n_dupes} potential duplicates."
+    )
+
     proposal = AutopilotProposal(
-        state="proposed",
+        state="artifact" if is_artifact else "proposed",
         gap_source="document_ingest",
         gap_description=f"Section: {section_label} (from {job.filename})",
-        gap_evidence_json=json.dumps([_build_evidence(job, section_label, section_ref, page)]),
+        gap_evidence_json=json.dumps([evidence]),
         priority_score=0.5,
-        llm_reasoning=f"Extracted {n_creates} new neurons and {n_updates} updates. {n_dupes} potential duplicates.",
+        llm_reasoning=reasoning,
         llm_model=job.model,
         prompt_hash=prompt_hash,
         eval_overall=0,
@@ -716,7 +787,10 @@ async def _persist_proposal_group(
 
     for prop in valid_proposals:
         if prop["action"] == "create":
-            await _add_create_item(db, proposal.id, prop, job, section_label, existing_neurons)
+            await _add_create_item(
+                db, proposal.id, prop, job, section_label,
+                existing_neurons, artifact_mode=is_artifact,
+            )
         elif prop["action"] == "update":
             _add_update_item(db, proposal.id, prop, job, section_label, existing_neurons)
 
@@ -731,7 +805,9 @@ async def create_section_proposal(
     existing_neurons: list[dict],
     db: AsyncSession,
 ) -> int | None:
-    """Chunked-path: create an AutopilotProposal from one pre-declared Section."""
+    """Chunked-path (fallback): create an AutopilotProposal from one
+    pre-declared Section with full classification at extraction time.
+    """
     return await _persist_proposal_group(
         job,
         group_key=section.id,
@@ -741,6 +817,7 @@ async def create_section_proposal(
         proposals=proposals,
         existing_neurons=existing_neurons,
         db=db,
+        is_artifact=False,
     )
 
 
@@ -779,11 +856,12 @@ async def create_whole_doc_proposals(
     db: AsyncSession,
     doc_title: str,
 ) -> list[int]:
-    """Whole-doc path: persist a batch of LLM-emitted proposals.
+    """Whole-doc path (Phase 1): persist artifact proposals.
 
     Groups by the LLM's `section` value and creates one AutopilotProposal
-    per group, each with its own ProposalItem children. Returns the list
-    of created AutopilotProposal IDs.
+    per group with state='artifact'. Phase 2 (neuron_placer agent)
+    consumes these and commits placement. Returns the list of created
+    AutopilotProposal IDs.
     """
     groups = _group_whole_doc_proposals(proposals)
     proposal_ids: list[int] = []
@@ -798,6 +876,7 @@ async def create_whole_doc_proposals(
             proposals=group_props,
             existing_neurons=existing_neurons,
             db=db,
+            is_artifact=True,
         )
         if pid is not None:
             proposal_ids.append(pid)
@@ -862,6 +941,175 @@ def _sync_progress(job: DocumentIngestJob, progress: _ExtractionProgress) -> Non
     job.errors_json = json.dumps(progress.errors)
 
 
+async def _run_phase1_extraction(
+    db: AsyncSession,
+    job: DocumentIngestJob,
+    structure: DocumentStructure,
+    full_text: str,
+    existing_neurons: list[dict],
+    progress: _ExtractionProgress,
+) -> list[int]:
+    """Phase 1: Opus extraction of knowledge artifacts. Returns the list
+    of created AutopilotProposal ids (state='artifact')."""
+    job.step = "extracting artifacts (Opus — large call in progress)"
+    job.total_sections = 0
+    job.current_section = 0
+    await db.commit()
+
+    try:
+        proposals, usage, raw_text = await extract_whole_document(
+            job, full_text, structure,
+        )
+    except (AssertionError, RuntimeError, TimeoutError) as exc:
+        error_msg = f"Phase 1 extraction failed: {exc}"
+        logger.error("Job %s: %s", job.id, error_msg)
+        progress.errors.append(error_msg)
+        return []
+
+    progress.total_cost += usage.get("cost_usd", 0.0)
+    progress.total_input += usage.get("input_tokens", 0)
+    progress.total_output += usage.get("output_tokens", 0)
+
+    if not proposals and raw_text:
+        preview = raw_text[:1000] + (" … " + raw_text[-500:] if len(raw_text) > 1500 else "")
+        progress.errors.append(
+            f"Phase 1 LLM produced {len(raw_text)} chars but 0 parseable artifacts. "
+            f"Preview: {preview}"
+        )
+        return []
+
+    if proposals:
+        proposals = await check_semantic_duplicates(proposals, existing_neurons)
+        progress.duplicates_flagged = sum(1 for p in proposals if p.get("duplicate_of"))
+
+    job.step = "persisting artifacts..."
+    await db.commit()
+    return await create_whole_doc_proposals(
+        job, proposals, existing_neurons, db, structure.title,
+    )
+
+
+_PHASE2_MAX_RUNS = 200  # safety cap; each run processes 1 artifact
+# Circuit breaker: if the agent auto-aborts 3 placements back-to-back,
+# stop the orchestrator — further runs will likely just burn model cost
+# without placing anything. A human can re-trigger after investigating.
+_PHASE2_CIRCUIT_BREAKER_THRESHOLD = 3
+
+
+async def _list_remaining_artifact_ids(
+    db: AsyncSession, job_id: str,
+) -> list[int]:
+    """Return AutopilotProposal IDs for this job still awaiting placement."""
+    from sqlalchemy import and_, select  # noqa: PLC0415
+
+    stmt = (
+        select(AutopilotProposal.id)
+        .where(and_(
+            AutopilotProposal.gap_source == "document_ingest",
+            AutopilotProposal.state == "artifact",
+            AutopilotProposal.gap_evidence_json.like(f"%{job_id}%"),
+        ))
+        .order_by(AutopilotProposal.id.asc())
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    return [int(r) for r in rows]
+
+
+@dataclass
+class _Phase2Counters:
+    placed: int = 0
+    aborted: int = 0
+    consecutive_aborts: int = 0
+    circuit_tripped: bool = False
+
+
+async def _place_one_artifact(
+    db: AsyncSession,
+    job: DocumentIngestJob,
+    artifact_id: int,
+    run_idx: int,
+    total: int,
+    counters: _Phase2Counters,
+    progress: _ExtractionProgress,
+) -> None:
+    """Invoke neuron_placer for one artifact + update Phase 2 counters."""
+    from app.agents import execute_agent  # noqa: PLC0415
+
+    job.step = f"placing artifact {run_idx + 1}/{total} (id={artifact_id})"
+    await db.commit()
+
+    try:
+        result = await execute_agent(
+            session=db,
+            agent_name="neuron_placer",
+            input_context={"artifact_id": artifact_id, "job_id": job.id},
+            triggered_by="document_ingest_pipeline",
+            expected_mutations=1,
+            require_verification_for="get_placement_status",
+        )
+    except (AssertionError, RuntimeError, KeyError, ValueError) as exc:
+        error_msg = f"Phase 2 run for artifact {artifact_id} crashed: {exc}"
+        logger.error("Job %s: %s", job.id, error_msg)
+        progress.errors.append(error_msg)
+        counters.aborted += 1
+        counters.consecutive_aborts += 1
+        return
+
+    mutations = getattr(result, "mutations", 0) or 0
+    summary = getattr(result, "summary", "") or ""
+    if mutations > 0:
+        counters.placed += 1
+        counters.consecutive_aborts = 0
+    else:
+        counters.aborted += 1
+        counters.consecutive_aborts += 1
+        progress.errors.append(
+            f"Phase 2 could not place artifact {artifact_id}: {summary[:300]}"
+        )
+    logger.info(
+        "Job %s Phase 2 run %d/%d: artifact=%d action=%s mutations=%d — %s",
+        job.id, run_idx + 1, total, artifact_id,
+        getattr(result, "root_action_id", "?"), mutations, summary[:180],
+    )
+
+
+async def _run_phase2_placement(
+    db: AsyncSession,
+    job: DocumentIngestJob,
+    progress: _ExtractionProgress,
+) -> None:
+    """Phase 2: loop the neuron_placer agent per-artifact. Each invocation
+    gets exactly one artifact_id and is guarded by expected_mutations=1 +
+    require_verification_for='get_placement_status'. Circuit-breaks after
+    3 consecutive auto-aborts to cap failed-run cost."""
+    remaining_ids = await _list_remaining_artifact_ids(db, job.id)
+    total = len(remaining_ids)
+    counters = _Phase2Counters()
+    cap = min(total, _PHASE2_MAX_RUNS)
+
+    for run_idx in range(cap):
+        await _place_one_artifact(
+            db, job, remaining_ids[run_idx], run_idx, total,
+            counters, progress,
+        )
+        if counters.consecutive_aborts >= _PHASE2_CIRCUIT_BREAKER_THRESHOLD:
+            counters.circuit_tripped = True
+            msg = (
+                f"Phase 2 circuit breaker tripped: "
+                f"{counters.consecutive_aborts} consecutive placement "
+                f"failures. Stopped at run {counters.placed + counters.aborted}/{total}. "
+                f"Remaining artifacts stay in state='artifact' for human review."
+            )
+            logger.warning("Job %s %s", job.id, msg)
+            progress.errors.append(msg)
+            break
+
+    logger.info(
+        "Job %s Phase 2 complete: placed=%d aborted=%d of %d (circuit_tripped=%s)",
+        job.id, counters.placed, counters.aborted, total, counters.circuit_tripped,
+    )
+
+
 async def _run_whole_doc_extraction(
     db: AsyncSession,
     job: DocumentIngestJob,
@@ -869,48 +1117,15 @@ async def _run_whole_doc_extraction(
     full_text: str,
     existing_neurons: list[dict],
 ) -> _ExtractionProgress:
-    """Whole-doc path orchestration: one LLM call, persist batched proposals."""
+    """Two-phase orchestration: Phase 1 extracts artifacts, Phase 2 places them."""
     progress = _ExtractionProgress()
-
-    job.step = "Extracting (whole-doc, large call in progress)"
-    job.total_sections = 0
-    job.current_section = 0
-    await db.commit()
-
-    try:
-        proposals, usage, raw_text = await extract_whole_document(
-            job, full_text, structure, existing_neurons,
-        )
-    except (AssertionError, RuntimeError, TimeoutError) as exc:
-        error_msg = f"Whole-doc extraction failed: {exc}"
-        logger.error("Job %s: %s", job.id, error_msg)
-        progress.errors.append(error_msg)
-        return progress
-
-    progress.total_cost += usage.get("cost_usd", 0.0)
-    progress.total_input += usage.get("input_tokens", 0)
-    progress.total_output += usage.get("output_tokens", 0)
-
-    # When the LLM ran but produced no parseable proposals, record the raw
-    # head + tail of its response so a human reviewer can see what it said.
-    if not proposals and raw_text:
-        preview = raw_text[:1000] + (" … " + raw_text[-500:] if len(raw_text) > 1500 else "")
-        progress.errors.append(
-            f"LLM produced {len(raw_text)} chars but 0 parseable proposals. "
-            f"Preview: {preview}"
-        )
-
-    if proposals:
-        proposals = await check_semantic_duplicates(proposals, existing_neurons)
-        progress.duplicates_flagged = sum(1 for p in proposals if p.get("duplicate_of"))
-
-    job.step = "Persisting proposals..."
-    await db.commit()
-
-    pids = await create_whole_doc_proposals(
-        job, proposals, existing_neurons, db, structure.title,
+    pids = await _run_phase1_extraction(
+        db, job, structure, full_text, existing_neurons, progress,
     )
     progress.proposal_ids.extend(pids)
+
+    if pids:
+        await _run_phase2_placement(db, job, progress)
     return progress
 
 
