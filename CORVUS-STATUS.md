@@ -1,6 +1,10 @@
 # Corvus — Project Status & Session Handoff
 
-Last updated: 2026-04-13
+Last updated: 2026-04-24
+
+## Recent milestone: two-phase document-ingest pipeline verified (2026-04-24)
+
+Commits `c49a1c3` + `62d4137` shipped a two-phase PDF-to-neuron ingest pipeline (Phase 1 = whole-doc Opus extraction → artifact-shape `AutopilotProposal` rows; Phase 2 = per-artifact `neuron_placer` agent loop with three guardrail layers). End-to-end verification on MIL-STD-1587E (job `f889c4abc8dc`, 2026-04-24) passed: 19/21 artifacts placed (90.5% flip rate), Layer 3 derived-summary matched persisted state 19/19, Layer 1 caught 14 invented classifications with clean rejections, Layer 2 read-back enforced on 19/19 successful placements, 2 auto-aborts positive-evidence for Guardrail 1. Cost $4.94, wall-time 1h 59m. Report: `docs/design/two-phase-ingest-verification-2026-04-24.md`. Remaining failure mode — wrong-but-valid placements (~20% of quality sample) — tracked in `fwd-hallucination-review`.
 
 ## What Is Corvus
 
