@@ -3,7 +3,7 @@
 Unified, multi-tenant neuron graph for prompt preparation. Two-stage Haiku pipeline: classify intent → score neurons → assemble context → execute with enriched prompt.
 
 ## Active roadmap
-**AIP governance roadmap** — see `ROADMAP-WORKLOG.md` at the repo root for session handoff, current position, and next actions. Full plan at `~/.claude/plans/staged-booping-globe.md`. When the user asks to "work the next AIP roadmap item," start by reading the worklog.
+**AIP governance roadmap** — canonical source is the Master Corvus roadmap. Roadmap state (nodes + statuses + per-node context prompts): `~/Projects/master-corvus/public/roadmap-state.json`. Visual view: Master Corvus → Roadmap Flowchart at http://localhost:5175/. When the user asks to "work the next AIP roadmap item," look at nodes with `status` in `("proposed", "planned")` in the `governance` section (ids prefixed `gov-aip-`) and pick the next one whose dependencies (see `edges` array) are cleared. Each node's `prompt` field carries the kickoff context for that item, including migrated historical rationale from prior session work.
 
 ## Multi-Tenant Architecture
 - **TENANT_ID** env var selects the tenant: `corvus-aero` (aerospace) or `corvus-flow` (plumbing)
@@ -25,6 +25,21 @@ child_env = {k: v for k, v in os.environ.items()
              if not k.startswith("CLAUDECODE") and not k.startswith("CLAUDE_CODE_")}
 ```
 
+### Gotcha 2: the CLI subprocess must be isolated from the repo's agentic context
+A `claude -p` launched with cwd inside this repo loads the project's `.mcp.json`
+and `CLAUDE.md`, decides it is an agent with Corvus MCP tools, and answers
+"I need permission to access the neuron graph" instead of completing the task
+(this silently broke the production classifier for months — every call burned
+tokens and fell back to empty classification). Every CLI call must use:
+`cwd="/tmp"`, `--strict-mcp-config` (with no `--mcp-config` = zero MCP servers),
+`--no-session-persistence`, and `--system-prompt` (full replace, never
+`--append-system-prompt`). `llm_provider._anthropic_chat` does all four.
+
+### Gotcha 3: pass the user prompt via STDIN, never argv
+Prompts that begin with `-` (e.g. `--- Pair 0 ---` in judging formats) are
+parsed as CLI options and crash the parser; argv also has size limits.
+`proc.communicate(input=user_message.encode())` with bare `-p`.
+
 ## Stack
 - Python FastAPI + PostgreSQL (async SQLAlchemy + asyncpg) + Anthropic Python SDK
 - Alembic for schema migrations
@@ -44,11 +59,38 @@ TENANT_ID=corvus-flow PORT=8003 uvicorn app.main:app --port 8003 --reload
 TENANT_ID=corvus-aero docker compose up --build
 ```
 
-## Key Concepts
-- **Neurons**: Nodes in a 6-layer org hierarchy (L0=Department → L5=Output/Comm)
-- **Firing**: When a neuron is selected for a query context
-- **5 Signals**: Burst, Impact, Practice, Novelty, Recency
-- **Propagation**: Child firing propagates up at 0.6× per layer
+## Key Concepts (post generic-org overhaul, 2026-07)
+- **Neurons**: flat substrate nodes. The engine's semantic axis is
+  `abstraction_type` (structural | concept | principle | process | procedure |
+  artifact); numeric `layer` is projection-depth metadata only (navigation/viz).
+- **Region**: the silo tag (physical column is still `department`;
+  `Neuron.region` is a synonym). Silos = labeled regions on ONE shared graph,
+  never separate graphs. Per-region knobs live in `RegionPolicy` (scoring
+  weights, loop config, ACL, write-gate overrides) — see `/admin/regions`.
+- **Firing**: when a neuron is selected for a query context.
+- **Scoring signals**: Burst, Impact, Precision, Novelty, Recency + Relevance
+  (stimulus, gated) + a cold-start prior (authority + freshness + centrality,
+  Bayesian shrinkage on invocations). Weights per-region overridable.
+- **Edges**: stellate = intra-region, pyramidal = cross-region (derived from
+  region membership at write time), instantiates = concept links.
+- **Recall modes**: full (LLM classify) | cheap (embed-only + neighbor vote,
+  ~$0, ~300-600ms) | adaptive (cheap with LLM escalation on low similarity).
+  MCP `query_graph` defaults to adaptive; HTTP defaults to `settings.recall_mode`.
+- **Write gate**: tiered policy (tenant.yaml `write_gate:` + per-region
+  overrides). Observational writes auto-commit through the same Action Bus
+  proposal.apply tree as human approvals; authoritative writes queue.
+  Consolidation decay (rides the autopilot /tick heartbeat) reclaims
+  unreinforced auto-commits.
+- **Reconciler**: the horizontal cross-region loop (integrity framework scans:
+  contradictions, staleness divergence, homonym/synonym, seam gaps), findings
+  routed to owning regions. `/admin/integrity/reconciler/sweep` or
+  `reconciler_interval_hours` > 0.
+- **Seeding a blank org**: ingest corpus → `/admin/seeding/knn-edges` +
+  `cooccurrence-edges` → `discover-regions` (Leiden + LLM labels → human
+  approval) → `retype-edges`. No hand-authored taxonomy required.
+- **Propagation**: child firing propagates up at 0.6× per parent link.
+- **Overhaul log**: OVERHAUL-STATUS.md (design decisions + per-workstream
+  verification evidence).
 
 ## Corvus Integration
 Corvus (screen-watcher) is integrated as a subpackage under `backend/app/corvus/` with endpoints at `/corvus/`. Chrome extension captures → OCR → classify → interpret → queue observations for neuron graph ingestion.
