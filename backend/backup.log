@@ -30,3 +30,104 @@ Please make sure you have the correct access rights
 and the repository exists.
 [2026-04-19 03:00:47] WARNING: git push failed
 [2026-04-19 03:00:47] === Backup complete ===
+[2026-04-27 12:54:29] === Backup triggered ===
+[2026-04-27 12:54:29] Running backup (week 18)
+[2026-04-27 12:54:29] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-04-27 12:54:29] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-04-27 12:54:29] WARNING: git push failed
+[2026-04-27 12:54:29] === Backup complete ===
+[2026-05-03 03:00:33] === Backup triggered ===
+[2026-05-03 03:00:33] Running backup (week 18)
+[2026-05-03 03:00:33] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-05-03 03:00:33] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-05-03 03:00:33] WARNING: git push failed
+[2026-05-03 03:00:33] === Backup complete ===
+[2026-05-10 03:00:33] === Backup triggered ===
+[2026-05-10 03:00:33] Skipping: odd week (19), next run on even week
+[2026-05-17 03:00:15] === Backup triggered ===
+[2026-05-17 03:00:15] Running backup (week 20)
+[2026-05-17 03:00:15] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-05-17 03:00:15] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-05-17 03:00:15] WARNING: git push failed
+[2026-05-17 03:00:15] === Backup complete ===
+[2026-05-30 13:47:50] === Backup triggered ===
+[2026-05-30 13:47:50] Running backup (week 22)
+[2026-05-30 13:47:50] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-05-30 13:47:50] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-05-30 13:47:50] WARNING: git push failed
+[2026-05-30 13:47:50] === Backup complete ===
+[2026-05-31 03:00:36] === Backup triggered ===
+[2026-05-31 03:00:36] Running backup (week 22)
+[2026-05-31 03:00:36] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-05-31 03:00:37] Checkpoint: {"status":"ok","filename":"neurons_20260531_030037.json","neuron_count":2263,"commit_sha":"fc3ff3bca6c30fa1a155fe9d4e91537949098463"}
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-05-31 03:00:37] WARNING: git push failed
+[2026-05-31 03:00:37] === Backup complete ===
+[2026-06-13 13:09:26] === Backup triggered ===
+[2026-06-13 13:09:26] Running backup (week 24)
+[2026-06-13 13:09:26] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-06-13 13:09:26] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-06-13 13:09:26] WARNING: git push failed
+[2026-06-13 13:09:26] === Backup complete ===
+[2026-06-14 03:00:17] === Backup triggered ===
+[2026-06-14 03:00:17] Running backup (week 24)
+[2026-06-14 03:00:17] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-06-14 03:00:17] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-06-14 03:00:17] WARNING: git push failed
+[2026-06-14 03:00:17] === Backup complete ===
+[2026-06-22 08:19:53] === Backup triggered ===
+[2026-06-22 08:19:53] Running backup (week 26)
+[2026-06-22 08:19:53] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-06-22 08:19:53] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-06-22 08:19:54] WARNING: git push failed
+[2026-06-22 08:19:54] === Backup complete ===
+[2026-06-28 03:00:42] === Backup triggered ===
+[2026-06-28 03:00:42] Running backup (week 26)
+[2026-06-28 03:00:42] WARNING: Google Drive not mounted at /mnt/chromeos/GoogleDrive/MyDrive/corvus-backups, skipping Drive backup
+[2026-06-28 03:00:42] WARNING: Checkpoint endpoint failed or server not running: 
+fatal: 'origin' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+[2026-06-28 03:00:42] WARNING: git push failed
+[2026-06-28 03:00:42] === Backup complete ===

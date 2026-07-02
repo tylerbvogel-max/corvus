@@ -27,8 +27,7 @@ Deep docs and forward-plan live in Master Corvus, not here. This file exists onl
 
 - **Unified plan (architecture / governance / measurement / forward)** — `~/Projects/master-corvus/` → sidebar "★ Corvus Plan". Source files under `src/components/plan/sections/`.
 - **Roadmap flowchart (spatial view, per-node Claude kickoff prompts)** — same app → "◇ Roadmap Flowchart". State: `~/Projects/master-corvus/public/roadmap-state.json`.
-- **Active AIP session handoff** — `~/Projects/corvus/ROADMAP-WORKLOG.md` (per `CLAUDE.md`: when asked to "work the next AIP roadmap item," start there).
-- **AIP plan of record** — `~/.claude/plans/staged-booping-globe.md`.
+- **Active AIP session handoff** — canonical source is `~/Projects/master-corvus/public/roadmap-state.json` (node statuses + per-node prompts). The prior `ROADMAP-WORKLOG.md` was retired 2026-04-24 after its unique content was migrated into node prompts on `gov-aip-p3`, `gov-aip-p1_5`, `gov-aip-p4`, and `gov-aip-p4-201`.
 
 ## Current Stats (approximate, 2026-04-13)
 
@@ -92,7 +91,7 @@ Mirrors Master Corvus Plan §1.7 — see that for the canonical list. Highlights
 
 ## Current Focus
 
-- **AIP roadmap execution** — Patterns #1 and #2 landed; next pattern is queued in `ROADMAP-WORKLOG.md`. Start sessions there.
+- **AIP roadmap execution** — Phase 1 (Patterns #1–#3), Phase 1.5 GTM, Phase 2b Patterns #5/#6, and Phase 4 agents #201/#202/#203/#204/#205/#208 all shipped. Next work on the AIP track is Phase 4 continuation (#206 A-Screen, #207 A-GapGen, #209 A-Ops) — status tracked on `gov-aip-p4-*` nodes in `~/Projects/master-corvus/public/roadmap-state.json`.
 - **Role bolstering** — ongoing neuron expansion toward 3,500+.
 - **AS9146 FOD-prevention ingestion test** — validating document ingestion end-to-end through the proposal queue.
 - **Forward Plan backend items** — see Master Corvus Forward Plan §4.1 for the prioritized list (1: done, 2–9 in various states).
