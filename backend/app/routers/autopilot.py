@@ -7,6 +7,7 @@ All proposed changes are staged for human approval — nothing is auto-applied.
 
 import hashlib
 import json
+import logging
 import traceback
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
@@ -33,6 +34,8 @@ from app.services.gap_detector import detect_gap, detect_gaps_scored, GapTarget,
 from app.services.pipeline import PipelineContext, PipelineStageError, run_pipeline
 from app.services import action_bus
 from app.middleware.rbac import UserIdentity
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/autopilot", tags=["autopilot"])
 
@@ -182,11 +185,41 @@ async def cancel():
     return AutopilotTickResponse(status="cancelled", message="Cancel requested — will stop after current step")
 
 
+async def _run_consolidation_if_due(db: AsyncSession) -> None:
+    """Homeostatic maintenance riding the tick heartbeat.
+
+    Consolidation (decay/prune/deactivate/centrality) is the write gate's
+    reclamation backstop — unreinforced auto-committed writes decay away.
+    It runs at most every consolidation_interval_hours, independent of
+    whether autopilot itself is enabled.
+    """
+    from app.config import settings
+    from app.models import SystemState
+    from app.services.consolidation import run_consolidation
+
+    state = (await db.execute(
+        select(SystemState).where(SystemState.id == 1)
+    )).scalar_one_or_none()
+    if state is None:
+        return
+    if state.last_consolidation_at is not None:
+        elapsed = datetime.now(timezone.utc) - state.last_consolidation_at.replace(tzinfo=timezone.utc)
+        if elapsed < timedelta(hours=settings.consolidation_interval_hours):
+            return
+    result = await run_consolidation(db)
+    logger.info("Consolidation (tick heartbeat): %s", result)
+
+
 @router.post("/tick", response_model=AutopilotTickResponse)
 async def tick(db: AsyncSession = Depends(get_db)):
-    """Execute one autopilot tick if enabled and interval has elapsed."""
+    """Execute one autopilot tick if enabled and interval has elapsed.
+
+    Also the tenant heartbeat: consolidation-if-due runs on every tick call,
+    even when autopilot itself is disabled.
+    """
     if _tick_running:
         return AutopilotTickResponse(status="skipped", message="A tick is already running")
+    await _run_consolidation_if_due(db)
     config = await _get_or_create_config(db)
     if not config.enabled:
         return AutopilotTickResponse(status="skipped", message="Autopilot is disabled")

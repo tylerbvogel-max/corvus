@@ -75,6 +75,18 @@ class TenantConfig:
         return self._yaml["regulatory_department_name"]
 
     @property
+    def write_gate_config(self) -> dict:
+        """Tiered write-gate policy (plat-write-gate).
+
+        Keys: mode (manual|tiered), auto_commit_max_authority,
+        require_guardrails_pass, min_confidence. Absent block = manual mode
+        (every write human-gated — the pre-gate behavior).
+        """
+        raw = self._yaml.get("write_gate") or {}
+        assert isinstance(raw, dict), "write_gate must be a mapping"
+        return raw
+
+    @property
     def region_label(self) -> str:
         """Display name for the region dimension (silo label).
 

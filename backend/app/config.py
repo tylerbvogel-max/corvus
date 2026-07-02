@@ -124,6 +124,8 @@ class Settings(BaseSettings):
     consolidation_retention_queries: int = 2000
     consolidation_decay_rate: float = 0.95
     consolidation_deactivation_threshold: float = 0.05
+    # Consolidation rides the autopilot tick heartbeat at most this often
+    consolidation_interval_hours: float = 24.0
     # Hierarchy-aware selection: include ancestor chains so graph shows trees
     hierarchy_selection_enabled: bool = True
     # Per-project neuron subgraph caching

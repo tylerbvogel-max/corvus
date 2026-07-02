@@ -10,7 +10,7 @@
 | Mapping + design decisions | done | — |
 | W1 plat-substrate-ontology | done | (see git log) |
 | W2a plat-cheap-recall | done | (see git log) |
-| W2b plat-write-gate | pending | — |
+| W2b plat-write-gate | done | (see git log) |
 | W3 plat-region-config | pending | — |
 | W4 plat-reconciler | pending | — |
 | Final verification + docs | pending | — |
@@ -154,6 +154,31 @@ owning region; never auto-edits authoritative content (obeys write gate).
 - Answer-quality (LLM-judge) delta remains measurable via the existing
   EvalRun machinery now that recall_mode plumbs through prepare_context;
   not run here (cost/wall-time) — retrieval-level delta documented instead.
+
+## W2b verification evidence (2026-07-01)
+- 345 tests pass (18 new in test_write_gate.py); NASA strict clean.
+- Live smoke (dev DB, transaction rolled back): informational proposal ->
+  auto route -> state=applied, reviewed_by=write_gate:tiered-v1, Action tree
+  [proposal.apply root + neuron.create child, actor_type=system], neuron
+  created with auto-classified abstraction, NeuronRefinement audit row.
+- Consult points: autopilot ProposalCurationStage (confidence =
+  eval_overall/5) and ingest Phase-2 post-placement (guardrails_passed=True
+  by construction of a verified placement). Gate failure never blocks
+  placement — proposal just stays queued.
+- Apply dispatch extracted from routers/proposals.py into
+  proposal_apply_service (shared by human approval + gate auto route;
+  router is now thin).
+- Consolidation (decay = the reclamation backstop) was NEVER WIRED — now
+  rides the autopilot /tick heartbeat at most every
+  consolidation_interval_hours (24h default), independent of autopilot
+  enabled state. The existing corvus-autopilot.timer (5min) drives it.
+- Policy: tenant.yaml `write_gate:` block; aero set to tiered with
+  auto_commit_max_authority=guidance, min_confidence=0.6. Other tenants
+  default to manual (pre-gate behavior).
+- Tier-0 note: usage-mechanics writes (co-fire weights, synaptic learning,
+  decay) intentionally stay off the Action Bus — they are hot-path,
+  event-audited (SynapticLearningEvent, firing rows), and routing them
+  through the bus would put an Action row on every query.
 
 ## Verification protocol (per workstream)
 1. `TENANT_ID=corvus-aero pytest tests/ -v` — full suite green

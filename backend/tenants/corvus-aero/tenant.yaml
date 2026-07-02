@@ -51,3 +51,13 @@ output_policies:
       - "missile"
       - "warhead"
       - "restricted data"
+
+# Tiered write gate (plat-write-gate): observational writes auto-commit with
+# audit + decay reclamation; authoritative writes (organizational and above)
+# stay human-gated. Ingest auto-commit additionally requires all three
+# guardrail layers to hold; autopilot writes need self-eval >= 3/5.
+write_gate:
+  mode: tiered
+  auto_commit_max_authority: guidance
+  require_guardrails_pass: true
+  min_confidence: 0.6
