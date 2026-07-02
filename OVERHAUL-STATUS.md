@@ -11,7 +11,7 @@
 | W1 plat-substrate-ontology | done | (see git log) |
 | W2a plat-cheap-recall | done | (see git log) |
 | W2b plat-write-gate | done | (see git log) |
-| W3 plat-region-config | pending | — |
+| W3 plat-region-config | done | (see git log) |
 | W4 plat-reconciler | pending | — |
 | Final verification + docs | pending | — |
 
@@ -179,6 +179,27 @@ owning region; never auto-edits authoritative content (obeys write gate).
   decay) intentionally stay off the Action Bus — they are hot-path,
   event-audited (SynapticLearningEvent, firing rows), and routing them
   through the bus would put an Action row on every query.
+
+## W3 verification evidence (2026-07-01)
+- 360 tests pass (15 new in test_region_policy.py); NASA strict clean;
+  migration 014 applied to corvus_aero.
+- Live ACL matrix (dev DB, RegionPolicy marking 'Regulatory' restricted,
+  transaction rolled back): unrestricted requester sees it; region member
+  sees it; Manufacturing outsider does NOT (still sees open regions);
+  privileged reconciler sees across. Enforced in SQL at candidate load,
+  spread promotion, and assembly (defense in depth).
+- Per-region weights: vectorized scorer switches to per-candidate weight
+  arrays only when overrides exist (global-scalar fast path otherwise);
+  weight_coldstart_prior participates via rescaling. Unit-tested.
+- Per-region loops: AutopilotConfig.region rows (synced from
+  RegionPolicy.loop_config via /admin/regions PUT); the tick picks the
+  stalest due loop per invocation (round-robin — a fast Manufacturing loop
+  never starves behind slow Legal). Region-scoped gap detection for
+  thin/zero-hit/stale; coverage/quality-trend/eval-dimension stay global.
+- Per-region write-gate overlay: RegionPolicy.write_gate overrides tenant
+  policy (route_proposal takes region; both consult points pass it).
+- MCP query_graph gains requester_regions (region-bounded recall);
+  privileged access is internal-only (never a tool param).
 
 ## Verification protocol (per workstream)
 1. `TENANT_ID=corvus-aero pytest tests/ -v` — full suite green

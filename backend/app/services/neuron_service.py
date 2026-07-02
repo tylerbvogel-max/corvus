@@ -142,20 +142,34 @@ def _rows_to_candidates(rows: list) -> list[NeuronCandidate]:
     ]
 
 
+async def _acl_clause_for(db: AsyncSession, requester, params: dict) -> str:
+    """Resolve the requester's ACL SQL clause against active region policies."""
+    from app.services.region_policy import (
+        acl_sql_clause, get_region_policies, restricted_regions,
+    )
+    if requester is None:
+        return "TRUE"
+    policies = await get_region_policies(db)
+    return acl_sql_clause(requester, restricted_regions(policies), params)
+
+
 async def get_neurons_by_filter(
     db: AsyncSession,
     departments: list[str] | None = None,
     role_keys: list[str] | None = None,
     keywords: list[str] | None = None,
+    requester=None,
 ) -> list[NeuronCandidate]:
     """Pre-filter candidate neurons by classification results.
 
     Returns lightweight NeuronCandidate objects (no content blob) ranked by
     SQL-side keyword hits, limited to candidate_limit. Full content is only
-    loaded later for the final top-K during prompt assembly.
+    loaded later for the final top-K during prompt assembly. The requester's
+    ACL scope (region-restricted recall) is enforced in SQL.
     """
     params: dict = {}
     conditions = _build_filter_conditions(departments, role_keys, params)
+    conditions.append(await _acl_clause_for(db, requester, params))
     kw_expr = _build_keyword_expr(keywords, params)
     params["lim"] = settings.candidate_limit
 
@@ -166,8 +180,10 @@ async def get_neurons_by_filter(
     rows = result.all()
 
     if not rows and (departments or role_keys):
-        fallback_sql = _build_candidate_sql("is_active = true", kw_expr)
-        result = await db.execute(text(fallback_sql), params)
+        acl_params: dict = {k: v for k, v in params.items() if k.startswith("acl_") or k.startswith("kw_") or k == "lim"}
+        acl_fallback = await _acl_clause_for(db, requester, acl_params)
+        fallback_sql = _build_candidate_sql(f"is_active = true AND {acl_fallback}", kw_expr)
+        result = await db.execute(text(fallback_sql), acl_params)
         rows = result.all()
 
     return _rows_to_candidates(rows)
@@ -388,6 +404,17 @@ async def score_candidates(
         db, candidate_ids, query_embedding, precomputed_similarities,
     )
 
+    # Per-region scoring weights (plat-region-config): silos may override
+    # the global signal weights because their epistemics differ.
+    from app.services.region_policy import get_region_policies, resolve_scoring_weights
+    policies = await get_region_policies(db)
+    region_weights: dict[str, dict] | None = None
+    if any((p.get("scoring_weights") or {}) for p in policies.values()):
+        region_weights = {
+            region: resolve_scoring_weights(region, policies)
+            for region in {c.department for c in candidates if c.department}
+        }
+
     # Hybrid RRF: fuse keyword + semantic scores when both are available
     hybrid_map: dict[int, float] | None = None
     if settings.hybrid_relevance_enabled and semantic_map and keywords:
@@ -403,7 +430,7 @@ async def score_candidates(
         burst_map, neuron_fires_map, dept_total_map,
         last_offset_map, semantic_map,
         classified_departments, classified_role_keys,
-        hybrid_map,
+        hybrid_map, region_weights,
     )
 
     # Apply per-neuron score overrides (manual tuning)
@@ -432,6 +459,48 @@ def _batch_coldstart_terms(candidates: list) -> np.ndarray:
     )
 
 
+def _weight_arrays(
+    candidates: list, region_weights: dict[str, dict] | None,
+) -> dict[str, np.ndarray] | None:
+    """Per-candidate signal-weight arrays when any region overrides exist."""
+    if not region_weights:
+        return None
+    from app.services.region_policy import WEIGHT_KEYS, default_weights
+    defaults = default_weights()
+    arrays: dict[str, np.ndarray] = {}
+    for key in WEIGHT_KEYS:
+        arrays[key] = np.array(
+            [
+                (region_weights.get(c.department) or defaults).get(key, defaults[key])
+                for c in candidates
+            ],
+            dtype=np.float64,
+        )
+    return arrays
+
+
+def _effective_weights(
+    candidates: list, region_weights: dict[str, dict] | None,
+) -> dict:
+    """Signal weights for scoring: global scalars, or per-candidate arrays
+    when region policies override them. coldstart_scale rescales the
+    already-computed coldstart terms to each region's weight."""
+    arrays = _weight_arrays(candidates, region_weights)
+    if arrays is None:
+        return {
+            "weight_relevance": settings.weight_relevance,
+            "weight_burst": settings.weight_burst,
+            "weight_impact": settings.weight_impact,
+            "weight_precision": settings.weight_precision,
+            "weight_novelty": settings.weight_novelty,
+            "weight_recency": settings.weight_recency,
+            "coldstart_scale": 1.0,
+        }
+    base_coldstart = max(settings.weight_coldstart_prior, 1e-9)
+    arrays["coldstart_scale"] = arrays.pop("weight_coldstart_prior") / base_coldstart
+    return arrays
+
+
 def _score_candidates_vectorized(
     candidates: list,
     total_queries: int,
@@ -444,8 +513,13 @@ def _score_candidates_vectorized(
     classified_departments: list[str] | None,
     classified_role_keys: list[str] | None,
     hybrid_map: dict[int, float] | None = None,
+    region_weights: dict[str, dict] | None = None,
 ) -> list[NeuronScoreBreakdown]:
-    """Vectorized batch scoring using numpy — 10-50x faster than per-neuron loop."""
+    """Vectorized batch scoring using numpy — 10-50x faster than per-neuron loop.
+
+    region_weights ({region: resolved weight dict}) switches the weight
+    scalars to per-candidate arrays so each silo scores by its own epistemics.
+    """
     n = len(candidates)
     if n == 0:
         return []
@@ -485,15 +559,17 @@ def _score_candidates_vectorized(
     # Cold-start prior term (authority + freshness + centrality, shrinkage-scaled)
     coldstart_terms = _batch_coldstart_terms(candidates)
 
-    # 4. Gated modulatory scoring
-    stimulus = settings.weight_relevance * relevance_arr
+    # 4. Gated modulatory scoring — scalar global weights, or per-candidate
+    # arrays when region policies override them
+    w = _effective_weights(candidates, region_weights)
+    stimulus = w["weight_relevance"] * relevance_arr
     modulatory = (
-        settings.weight_burst * burst
-        + settings.weight_impact * impact
-        + settings.weight_precision * precision
-        + settings.weight_novelty * novelty
-        + settings.weight_recency * recency
-        + coldstart_terms
+        w["weight_burst"] * burst
+        + w["weight_impact"] * impact
+        + w["weight_precision"] * precision
+        + w["weight_novelty"] * novelty
+        + w["weight_recency"] * recency
+        + coldstart_terms * w["coldstart_scale"]
     )
     threshold = settings.relevance_gate_threshold
     floor = settings.relevance_gate_floor
@@ -628,13 +704,23 @@ def _merge_promoted_into_scored(
 async def _select_promotion_targets(
     db: AsyncSession,
     neighbor_activation: dict[int, float],
+    requester=None,
 ) -> list[tuple[int, float]]:
-    """Filter neighbors to active neurons, return top candidates sorted by activation."""
+    """Filter neighbors to active, requester-visible neurons, sorted by activation.
+
+    ACL matters here: spread can traverse pyramidal edges INTO a restricted
+    region — the edge is allowed (coordination), but promoting the restricted
+    neuron into a non-member requester's context is not.
+    """
     neighbor_ids = list(neighbor_activation.keys())
+    params: dict = {"ids": neighbor_ids}
+    acl_clause = await _acl_clause_for(db, requester, params)
     active_result = await db.execute(
-        select(Neuron.id).where(
-            and_(Neuron.id.in_(neighbor_ids), Neuron.is_active == True)
-        )
+        text(
+            "SELECT id FROM neurons "
+            f"WHERE id = ANY(:ids) AND is_active = true AND {acl_clause}"
+        ),
+        params,
     )
     active_ids = {row[0] for row in active_result.all()}
 
@@ -652,6 +738,7 @@ async def spread_activation(
     db: AsyncSession,
     scored: list[NeuronScoreBreakdown],
     top_k_count: int,
+    requester=None,
 ) -> list[NeuronScoreBreakdown]:
     """Multi-hop spread activation through NeuronEdge co-firing graph.
 
@@ -697,7 +784,7 @@ async def spread_activation(
     if not neighbor_activation:
         return scored
 
-    promotions = await _select_promotion_targets(db, neighbor_activation)
+    promotions = await _select_promotion_targets(db, neighbor_activation, requester)
     if not promotions:
         return scored
 

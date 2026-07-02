@@ -64,21 +64,45 @@ class WriteDecision:
     policy_mode: str
 
 
-def load_policy() -> WriteGatePolicy:
-    """Read the tenant's write-gate policy; absent config = manual mode."""
-    from app.tenant import tenant
-    raw = tenant.write_gate_config
+def _policy_from_dict(raw: dict, base: "WriteGatePolicy | None" = None) -> WriteGatePolicy:
+    """Build a policy from a config dict, overlaying an optional base."""
+    defaults = base or WriteGatePolicy()
     policy = WriteGatePolicy(
-        mode=str(raw.get("mode", "manual")),
+        mode=str(raw.get("mode", defaults.mode)),
         auto_commit_max_authority=str(
-            raw.get("auto_commit_max_authority", "informational")
+            raw.get("auto_commit_max_authority", defaults.auto_commit_max_authority)
         ),
-        require_guardrails_pass=bool(raw.get("require_guardrails_pass", True)),
-        min_confidence=float(raw.get("min_confidence", 0.6)),
+        require_guardrails_pass=bool(
+            raw.get("require_guardrails_pass", defaults.require_guardrails_pass)
+        ),
+        min_confidence=float(raw.get("min_confidence", defaults.min_confidence)),
     )
     assert policy.mode in ("manual", "tiered"), \
         f"write_gate.mode must be manual|tiered, got {policy.mode!r}"
     return policy
+
+
+def load_policy() -> WriteGatePolicy:
+    """Read the tenant's write-gate policy; absent config = manual mode."""
+    from app.tenant import tenant
+    return _policy_from_dict(tenant.write_gate_config)
+
+
+async def policy_for_region(db: AsyncSession, region: str | None) -> WriteGatePolicy:
+    """Tenant policy overlaid with the region's write_gate overrides, if any.
+
+    The controller dials the threshold per tenant AND per region — e.g.
+    Manufacturing auto-commits organizational notes while Legal queues
+    everything.
+    """
+    base = load_policy()
+    if not region:
+        return base
+    from app.services.region_policy import get_region_policies
+    overrides = ((await get_region_policies(db)).get(region) or {}).get("write_gate") or {}
+    if not overrides:
+        return base
+    return _policy_from_dict(overrides, base)
 
 
 def authority_rank(authority_level: str | None) -> int:
@@ -172,17 +196,19 @@ async def route_proposal(
     *,
     guardrails_passed: bool | None,
     confidence: float | None,
+    region: str | None = None,
 ) -> WriteDecision:
     """Evaluate a staged proposal and, on auto, approve + apply it in place.
 
     The auto path reuses the identical Action Bus apply tree a human
     approval would produce; the gate's decision is recorded in
     review_notes and the actor is GATE_ACTOR. Caller owns the commit.
+    region selects per-region policy overrides (plat-region-config).
     """
     assert proposal.state == "proposed", \
         f"route_proposal requires state='proposed', got {proposal.state!r}"
 
-    policy = load_policy()
+    policy = await policy_for_region(db, region)
     authority = await proposal_max_authority(db, proposal)
     decision = evaluate_write(policy, authority, guardrails_passed, confidence)
 

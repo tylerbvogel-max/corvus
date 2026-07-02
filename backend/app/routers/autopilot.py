@@ -210,26 +210,48 @@ async def _run_consolidation_if_due(db: AsyncSession) -> None:
     logger.info("Consolidation (tick heartbeat): %s", result)
 
 
+def _config_is_due(config: AutopilotConfig) -> bool:
+    """True when a loop config is enabled and past its interval."""
+    if not config.enabled:
+        return False
+    if config.last_tick_at is None:
+        return True
+    elapsed = datetime.now(timezone.utc) - config.last_tick_at.replace(tzinfo=timezone.utc)
+    return elapsed >= timedelta(minutes=config.interval_minutes)
+
+
+async def _pick_due_config(db: AsyncSession) -> AutopilotConfig | None:
+    """Pick the due loop with the stalest last_tick_at (global + per-region).
+
+    One loop per tick invocation: each silo's vertical loop runs at its own
+    cadence, round-robin across ticks, so a fast Manufacturing loop never
+    starves behind a slow Legal loop in the same request.
+    """
+    rows = (await db.execute(select(AutopilotConfig))).scalars().all()
+    due = [c for c in rows if _config_is_due(c)]
+    if not due:
+        return None
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    due.sort(key=lambda c: (c.last_tick_at.replace(tzinfo=timezone.utc) if c.last_tick_at else epoch))
+    return due[0]
+
+
 @router.post("/tick", response_model=AutopilotTickResponse)
 async def tick(db: AsyncSession = Depends(get_db)):
-    """Execute one autopilot tick if enabled and interval has elapsed.
+    """Execute one due autopilot loop (global or per-region) per invocation.
 
     Also the tenant heartbeat: consolidation-if-due runs on every tick call,
-    even when autopilot itself is disabled.
+    even when every autopilot loop is disabled.
     """
     if _tick_running:
         return AutopilotTickResponse(status="skipped", message="A tick is already running")
     await _run_consolidation_if_due(db)
-    config = await _get_or_create_config(db)
-    if not config.enabled:
-        return AutopilotTickResponse(status="skipped", message="Autopilot is disabled")
-    # Respect interval
-    if config.last_tick_at:
-        elapsed = datetime.now(timezone.utc) - config.last_tick_at.replace(tzinfo=timezone.utc)
-        if elapsed < timedelta(minutes=config.interval_minutes):
-            remaining = timedelta(minutes=config.interval_minutes) - elapsed
-            mins = int(remaining.total_seconds() // 60)
-            return AutopilotTickResponse(status="skipped", message=f"Too soon — {mins}m remaining")
+    global_config = await _get_or_create_config(db)
+    config = await _pick_due_config(db)
+    if config is None:
+        if not global_config.enabled:
+            return AutopilotTickResponse(status="skipped", message="Autopilot is disabled")
+        return AutopilotTickResponse(status="skipped", message="No loop is due")
     return await _run_tick(db, config)
 
 
@@ -327,13 +349,14 @@ def _reset_tick_state():
 
 async def _detect_and_gather_context(
     focus_neuron_id: int | None,
+    region: str | None = None,
 ) -> tuple[GapTarget | None, ScoredGap | None, str | None, str, list[str], str, str]:
     _set_step("detect", "Scanning for knowledge gaps...")
     focus_label = None
     focus_context = ""
 
     async with async_session() as s0:
-        scored_gaps = await detect_gaps_scored(s0, focus_neuron_id, limit=1)
+        scored_gaps = await detect_gaps_scored(s0, focus_neuron_id, limit=1, region=region)
         scored_gap = scored_gaps[0] if scored_gaps else None
         gap = scored_gap.to_gap_target() if scored_gap else None
 

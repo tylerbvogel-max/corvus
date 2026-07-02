@@ -107,6 +107,9 @@ class Neuron(Base):
     # Normalized degree centrality over promoted edges [0, 1].
     # Denormalized for the cold-start prior; refreshed by consolidation.
     centrality: Mapped[float] = mapped_column(Float, default=0.0, server_default="0.0")
+    # Per-neuron ACL override: "open" | "restricted". NULL inherits the
+    # region policy's acl.visibility default (which defaults to open).
+    visibility: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Generic region vocabulary for the engine (silos = labeled regions).
     region = synonym("department")
@@ -339,9 +342,15 @@ class NeuronRefinement(Base):
 
 
 class AutopilotConfig(Base):
+    """Autopilot loop config. Row id=1 is the global (tenant-wide) loop;
+    additional rows keyed by `region` give each silo its own vertical loop
+    with independent cadence/directive/model (plat-region-config)."""
+
     __tablename__ = "autopilot_config"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    # NULL = the global loop; set = this row is one region's vertical loop
+    region: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     directive: Mapped[str] = mapped_column(Text, default="", server_default="")
     interval_minutes: Mapped[int] = mapped_column(Integer, default=30, server_default="30")
@@ -1020,6 +1029,41 @@ class EvalRunCase(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
 
     run: Mapped["EvalRun"] = relationship("EvalRun", back_populates="cases", lazy="select")
+
+
+class RegionPolicy(Base):
+    """Per-region (silo) configuration over the ONE shared substrate.
+
+    A matrix org's silos are labeled regions on the same graph — never
+    separate graphs (separation would kill cross-silo edges at exactly the
+    seams where coordination lives). Each region can carry its own:
+    - scoring_weights: partial overrides of the global signal weights —
+      Manufacturing weights recency high, Legal weights authority/impact
+      high; epistemics differ per silo, so scoring does too.
+    - loop_config: per-region autopilot cadence/directive/model.
+    - acl: visibility default ("open" | "restricted") + allowed principals.
+      Restricted regions are recallable only by requesters scoped to the
+      region (or the privileged reconciler role, detection only).
+    - write_gate: per-region overrides of the tiered write-gate policy.
+    - projection: navigational ontology overlay labels for this region.
+    """
+
+    __tablename__ = "region_policies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    region: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    scoring_weights: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    loop_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    acl: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    write_gate: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    projection: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(),
+    )
 
 
 class TenantConfig(Base):

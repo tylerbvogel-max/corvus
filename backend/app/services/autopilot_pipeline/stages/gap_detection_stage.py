@@ -29,7 +29,10 @@ class GapDetectionStage:
         from app.routers.autopilot import _detect_and_gather_context
 
         gap, scored_gap, focus_label, focus_ctx, recent_qs, gap_src, gap_desc = (
-            await _detect_and_gather_context(state.config.focus_neuron_id)
+            await _detect_and_gather_context(
+                state.config.focus_neuron_id,
+                region=getattr(state.config, "region", None),
+            )
         )
 
         state.gap = gap

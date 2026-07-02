@@ -75,6 +75,7 @@ mcp = FastMCP(
 async def query_graph(
     query: str, top_k: int = 30, token_budget: int = 4000,
     project_path: str | None = None, mode: str = "adaptive",
+    requester_regions: list[str] | None = None,
 ) -> str:
     """Run the neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
 
@@ -89,11 +90,21 @@ async def query_graph(
         mode: Recall mode — "adaptive" (default: embed-only recall, LLM classify
             only when the query is ambiguous), "cheap" (never call an LLM), or
             "full" (LLM classify on every read)
+        requester_regions: Optional region scope for the requester — recall is
+            bounded to knowledge visible to these regions (restricted regions
+            outside this list are excluded). Omit for unrestricted recall.
     """
     from app.services.executor import prepare_context
+    from app.services.region_policy import RequesterContext
 
     if mode not in ("adaptive", "cheap", "full"):
         return json.dumps({"error": f"mode must be adaptive|cheap|full, got {mode!r}"})
+
+    requester = None
+    if requester_regions is not None:
+        requester = RequesterContext(
+            principal="mcp", regions=tuple(requester_regions), privileged=False,
+        )
 
     async with async_session() as db:
         ctx = await prepare_context(
@@ -102,6 +113,7 @@ async def query_graph(
             top_k=top_k,
             project_path=project_path,
             recall_mode=mode,
+            requester=requester,
         )
         await db.commit()
 

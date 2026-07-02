@@ -153,8 +153,13 @@ async def _select_and_score_candidates(
     departments: list[str],
     role_keys: list[str],
     total_queries: int,
+    requester=None,
 ) -> tuple[list[NeuronScoreBreakdown], list[NeuronScoreBreakdown]]:
-    """Score neuron and engram candidates.  Returns (scored_neurons, scored_engrams)."""
+    """Score neuron and engram candidates.  Returns (scored_neurons, scored_engrams).
+
+    The requester's ACL scope filters candidates at load time (the semantic
+    prefilter matrix is region-blind, so enforcement happens in SQL here).
+    """
     assert isinstance(effective_pool, int) and effective_pool > 0, \
         "effective_pool must be a positive integer"
 
@@ -172,7 +177,7 @@ async def _select_and_score_candidates(
 
         # Score neurons
         sem_ids = list(neuron_sims.keys())
-        candidates = await _load_candidates_by_ids(db, sem_ids, keywords) if sem_ids else []
+        candidates = await _load_candidates_by_ids(db, sem_ids, keywords, requester) if sem_ids else []
         scored = await score_candidates(
             db, candidates, total_queries, keywords,
             departments, role_keys,
@@ -192,9 +197,9 @@ async def _select_and_score_candidates(
                     precomputed_similarities=engram_sims,
                 )
     else:
-        candidates = await get_neurons_by_filter(db, departments, role_keys, keywords)
+        candidates = await get_neurons_by_filter(db, departments, role_keys, keywords, requester)
         if not candidates:
-            candidates = await get_neurons_by_filter(db)
+            candidates = await get_neurons_by_filter(db, requester=requester)
         scored = await score_candidates(
             db, candidates, total_queries, keywords, departments, role_keys,
             query_embedding=query_embedding,
@@ -232,11 +237,25 @@ async def _apply_inhibition_and_boost(
     return all_scored, effective_top_k
 
 
-async def _load_neuron_map(db: AsyncSession, neuron_ids: list[int]) -> dict[int, Neuron]:
+async def _load_neuron_map(
+    db: AsyncSession, neuron_ids: list[int], requester=None,
+) -> dict[int, Neuron]:
+    """Hydrate full neurons for assembly, enforcing requester ACL (defense
+    in depth — candidates and promotions were already filtered upstream)."""
     neuron_map: dict[int, Neuron] = {}
     if neuron_ids:
         result = await db.execute(select(Neuron).where(Neuron.id.in_(neuron_ids)))
-        for neuron in result.scalars().all():
+        neurons = list(result.scalars().all())
+        if requester is not None:
+            from app.services.region_policy import (
+                get_region_policies, requester_can_see, restricted_regions,
+            )
+            restricted = set(restricted_regions(await get_region_policies(db)))
+            neurons = [
+                n for n in neurons
+                if requester_can_see(requester, n.department, n.visibility, restricted)
+            ]
+        for neuron in neurons:
             neuron_map[neuron.id] = neuron
     assert isinstance(neuron_map, dict), "neuron_map must be a dict"
     assert len(neuron_map) <= len(neuron_ids), "neuron_map cannot exceed requested IDs"
@@ -292,7 +311,7 @@ async def prepare_context(
     db: AsyncSession, user_message: str, token_budget: int | None = None,
     top_k: int | None = None, project_path: str | None = None,
     on_stage: StageCallback = None, prior_neuron_ids: list[int] | None = None,
-    recall_mode: str | None = None,
+    recall_mode: str | None = None, requester=None,
 ) -> PreparedContext:
     """Run the classify → score → spread → inhibit → resolve → assemble pipeline.
 
@@ -301,7 +320,8 @@ async def prepare_context(
     `PipelineStageError` carrying the stage name.
 
     recall_mode (full | cheap | adaptive) selects the classify stage;
-    None falls back to settings.recall_mode.
+    None falls back to settings.recall_mode. requester (RequesterContext)
+    bounds recall to the requester's regions; None = unrestricted.
     """
     assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
         "user_message must be a non-empty string"
@@ -318,6 +338,7 @@ async def prepare_context(
         effective_budget=token_budget or settings.token_budget,
         project_path=project_path,
         prior_neuron_ids=prior_neuron_ids,
+        requester=requester,
     )
     pipeline_ctx = PipelineContext(db=db, on_stage=on_stage)
 
@@ -368,13 +389,15 @@ async def _assemble_top_slice(
     effective_budget: int,
     prior_neuron_ids: list[int] | None,
     resolved_regulations: list,
+    requester=None,
 ) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str]:
     """Select top-k neurons, load their data, and assemble the system prompt."""
     if settings.hierarchy_selection_enabled:
         top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
     else:
         top_slice = all_scored[:effective_top_k]
-    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice])
+    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice], requester)
+    top_slice = [s for s in top_slice if s.neuron_id in neuron_map]
 
     prior_neuron_map: dict[int, Neuron] | None = None
     if prior_neuron_ids:
@@ -1111,11 +1134,13 @@ async def _load_candidates_by_ids(
     db: AsyncSession,
     neuron_ids: list[int],
     keywords: list[str],
+    requester=None,
 ) -> list[NeuronCandidate]:
     """Load lightweight NeuronCandidate objects for a set of neuron IDs.
 
     Used when the semantic prefilter has already selected the candidate set,
-    so we just need to hydrate the scoring-relevant fields.
+    so we just need to hydrate the scoring-relevant fields. The requester's
+    ACL scope is enforced here (the prefilter matrix is region-blind).
     """
     # Preconditions (JPL Power of Ten Rule 5)
     assert all(isinstance(nid, int) and nid > 0 for nid in neuron_ids), \
@@ -1140,14 +1165,15 @@ async def _load_candidates_by_ids(
     kw_expr = " + ".join(kw_parts) if kw_parts else "0"
 
     # Use ANY(ARRAY[...]) for asyncpg compatibility with large ID lists
-    from app.services.neuron_service import _FRESHNESS_SQL
+    from app.services.neuron_service import _FRESHNESS_SQL, _acl_clause_for
+    acl_clause = await _acl_clause_for(db, requester, params)
     params["id_list"] = list(neuron_ids)
     sql = f"""
         SELECT id, label, summary, department, role_key, avg_utility,
                invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
                authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
-        WHERE id = ANY(:id_list) AND is_active = true
+        WHERE id = ANY(:id_list) AND is_active = true AND {acl_clause}
     """
     result = await db.execute(text(sql), params)
     rows = result.all()

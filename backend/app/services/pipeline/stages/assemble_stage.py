@@ -26,6 +26,7 @@ class AssembleStage:
             state.effective_budget,
             state.prior_neuron_ids,
             state.resolved_regulations,
+            requester=state.requester,
         )
         state.top_slice = top_slice
         state.neuron_map = neuron_map

@@ -141,11 +141,17 @@ async def detect_gaps_scored(
     db: AsyncSession,
     focus_neuron_id: int | None = None,
     limit: int = 10,
+    region: str | None = None,
 ) -> list[ScoredGap]:
     """Run all gap heuristics and return scored gaps sorted by priority.
 
     Unlike detect_gap(), this runs every heuristic and new metric-based
     checks, collecting evidence for each gap found.
+
+    region scopes the neuron-content heuristics (thin/zero-hit/stale) to one
+    silo — used by per-region autopilot loops. Cross-region heuristics
+    (coverage, quality trend, eval dimensions) stay global and are skipped
+    for region-scoped runs; the horizontal reconciler owns the seams.
     """
     gaps: list[ScoredGap] = []
 
@@ -158,7 +164,7 @@ async def detect_gaps_scored(
     if gap:
         gaps.append(gap)
 
-    gap = await _scored_thin_neurons(db, focus_neuron_id)
+    gap = await _scored_thin_neurons(db, focus_neuron_id, region)
     if gap:
         gaps.append(gap)
 
@@ -170,26 +176,27 @@ async def detect_gaps_scored(
     if gap:
         gaps.append(gap)
 
-    # New metric-based checks
-    gap = await _scored_eval_dimensions(db, focus_neuron_id)
+    gap = await _scored_zero_hit_neurons(db, focus_neuron_id, region)
     if gap:
         gaps.append(gap)
 
-    gap = await _scored_zero_hit_neurons(db, focus_neuron_id)
+    gap = await _scored_stale_neurons(db, focus_neuron_id, region)
     if gap:
         gaps.append(gap)
 
-    gap = await _scored_coverage_gap(db)
-    if gap:
-        gaps.append(gap)
+    if region is None:
+        # Cross-region / tenant-wide checks — skipped for silo loops
+        gap = await _scored_eval_dimensions(db, focus_neuron_id)
+        if gap:
+            gaps.append(gap)
 
-    gap = await _scored_quality_trend(db)
-    if gap:
-        gaps.append(gap)
+        gap = await _scored_coverage_gap(db)
+        if gap:
+            gaps.append(gap)
 
-    gap = await _scored_stale_neurons(db, focus_neuron_id)
-    if gap:
-        gaps.append(gap)
+        gap = await _scored_quality_trend(db)
+        if gap:
+            gaps.append(gap)
 
     gaps.sort(key=lambda g: g.priority_score, reverse=True)
     return gaps[:limit]
@@ -304,7 +311,7 @@ async def _check_low_eval_queries(
 
 
 async def _check_thin_neurons(
-    db: AsyncSession, focus_neuron_id: int | None
+    db: AsyncSession, focus_neuron_id: int | None, region: str | None = None,
 ) -> GapTarget | None:
     """Find active neurons with minimal content that need enrichment."""
     stmt = select(Neuron).where(
@@ -312,6 +319,8 @@ async def _check_thin_neurons(
         _knowledge_node_clause(),  # Don't flag structural/concept nodes as thin
     )
 
+    if region:
+        stmt = stmt.where(Neuron.department == region)
     if focus_neuron_id:
         subtree_ids = await _get_subtree_ids(db, focus_neuron_id)
         stmt = stmt.where(Neuron.id.in_(subtree_ids))
@@ -549,10 +558,10 @@ async def _scored_low_eval(
 
 
 async def _scored_thin_neurons(
-    db: AsyncSession, focus_neuron_id: int | None,
+    db: AsyncSession, focus_neuron_id: int | None, region: str | None = None,
 ) -> ScoredGap | None:
     """Scored wrapper for thin neuron check."""
-    target = await _check_thin_neurons(db, focus_neuron_id)
+    target = await _check_thin_neurons(db, focus_neuron_id, region)
     if not target:
         return None
     evidence = [GapEvidence(
@@ -682,7 +691,7 @@ async def _scored_eval_dimensions(
 
 
 async def _scored_zero_hit_neurons(
-    db: AsyncSession, focus_neuron_id: int | None,
+    db: AsyncSession, focus_neuron_id: int | None, region: str | None = None,
 ) -> ScoredGap | None:
     """Find neurons that have never been activated and are > 30 days old."""
     cutoff = datetime.utcnow() - timedelta(days=30)
@@ -692,6 +701,8 @@ async def _scored_zero_hit_neurons(
         Neuron.created_at < cutoff,
         _knowledge_node_clause(),
     )
+    if region:
+        stmt = stmt.where(Neuron.department == region)
     if focus_neuron_id:
         subtree_ids = await _get_subtree_ids(db, focus_neuron_id)
         stmt = stmt.where(Neuron.id.in_(subtree_ids))
@@ -823,7 +834,7 @@ async def _scored_quality_trend(db: AsyncSession) -> ScoredGap | None:
 
 
 async def _scored_stale_neurons(
-    db: AsyncSession, focus_neuron_id: int | None,
+    db: AsyncSession, focus_neuron_id: int | None, region: str | None = None,
 ) -> ScoredGap | None:
     """Find active regulatory neurons with no verification in 90+ days."""
     cutoff = datetime.utcnow() - timedelta(days=90)
@@ -833,6 +844,8 @@ async def _scored_stale_neurons(
         (Neuron.last_verified.is_(None)) | (Neuron.last_verified < cutoff),
         Neuron.source_type == "regulatory",
     )
+    if region:
+        stmt = stmt.where(Neuron.department == region)
     if focus_neuron_id:
         subtree_ids = await _get_subtree_ids(db, focus_neuron_id)
         stmt = stmt.where(Neuron.id.in_(subtree_ids))

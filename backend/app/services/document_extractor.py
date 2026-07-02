@@ -1043,6 +1043,7 @@ async def _route_placement_through_gate(
     try:
         decision = await route_proposal(
             db, proposal, guardrails_passed=True, confidence=None,
+            region=job.department,
         )
         await db.commit()
         logger.info(

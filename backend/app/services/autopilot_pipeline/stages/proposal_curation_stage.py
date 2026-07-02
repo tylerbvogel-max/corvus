@@ -60,6 +60,7 @@ class ProposalCurationStage:
                 sp, proposal,
                 guardrails_passed=None,
                 confidence=(state.eval_overall or 0) / 5.0,
+                region=getattr(state.config, "region", None),
             )
             await sp.commit()
             return decision.route

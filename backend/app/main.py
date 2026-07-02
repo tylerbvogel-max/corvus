@@ -139,8 +139,45 @@ async def _migrate_neuron_and_query_columns(engine):
                     "ALTER TABLE neurons ADD COLUMN centrality FLOAT NOT NULL DEFAULT 0.0"
                 ))
                 print("Migrated: added neurons.centrality")
+            if not await _column_exists(conn, "neurons", "visibility"):
+                await conn.execute(text(
+                    "ALTER TABLE neurons ADD COLUMN visibility VARCHAR(20)"
+                ))
+                print("Migrated: added neurons.visibility")
         except SQLAlchemyError as e:
             logger.warning("Neurons migration skipped: %s", e)
+
+    async with engine.begin() as conn:
+        try:
+            if not await _table_exists(conn, "region_policies"):
+                await conn.execute(text("""
+                    CREATE TABLE region_policies (
+                        id SERIAL PRIMARY KEY,
+                        region VARCHAR(100) NOT NULL UNIQUE,
+                        display_name VARCHAR(200),
+                        description TEXT,
+                        scoring_weights JSONB,
+                        loop_config JSONB,
+                        acl JSONB,
+                        write_gate JSONB,
+                        projection JSONB,
+                        is_active BOOLEAN NOT NULL DEFAULT true,
+                        created_at TIMESTAMP DEFAULT now(),
+                        updated_at TIMESTAMP DEFAULT now()
+                    )
+                """))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_region_policies_region "
+                    "ON region_policies(region)"
+                ))
+                print("Migrated: created region_policies")
+            if not await _column_exists(conn, "autopilot_config", "region"):
+                await conn.execute(text(
+                    "ALTER TABLE autopilot_config ADD COLUMN region VARCHAR(100)"
+                ))
+                print("Migrated: added autopilot_config.region")
+        except SQLAlchemyError as e:
+            logger.warning("Region policy migration skipped: %s", e)
 
     async with engine.begin() as conn:
         try:
@@ -696,6 +733,8 @@ from app.routers import integrity
 app.include_router(integrity.router)
 from app.routers import seeding
 app.include_router(seeding.router)
+from app.routers import regions
+app.include_router(regions.router)
 from app.routers import tool_definitions
 app.include_router(tool_definitions.router)
 from app.routers import fluent

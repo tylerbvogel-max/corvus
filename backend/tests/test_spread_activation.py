@@ -43,9 +43,9 @@ def _mock_db(active_ids: set | None = None):
     """Create a mock AsyncSession for active neuron checks only."""
     db = AsyncMock()
 
-    async def mock_execute(stmt):
+    async def mock_execute(stmt, params=None):
         result = MagicMock()
-        # Active neuron check
+        # Active neuron check (params carries the ACL/id bind values)
         ids = active_ids if active_ids is not None else set()
         result.all.return_value = [(nid,) for nid in ids]
         return result
