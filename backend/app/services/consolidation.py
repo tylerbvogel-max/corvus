@@ -105,8 +105,10 @@ async def run_consolidation(db: AsyncSession) -> dict:
     # 3. Refresh degree centrality (cold-start prior input)
     centrality_updates = await refresh_centrality(db)
 
-    from datetime import datetime, timezone
-    state.last_consolidation_at = datetime.now(timezone.utc)
+    # Naive UTC: the column is TIMESTAMP WITHOUT TIME ZONE (asyncpg rejects
+    # aware datetimes on naive columns).
+    from datetime import datetime
+    state.last_consolidation_at = datetime.utcnow()
     await db.commit()
 
     return {
