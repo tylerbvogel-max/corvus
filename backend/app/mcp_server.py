@@ -72,8 +72,12 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, project_path: str | None = None) -> str:
-    """Run the full neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
+async def query_graph(
+    query: str, top_k: int = 30, token_budget: int = 4000,
+    project_path: str | None = None, mode: str = "adaptive",
+    requester_regions: list[str] | None = None,
+) -> str:
+    """Run the neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
 
     This is the primary tool — returns a system prompt built from the most relevant neurons
     in the graph. Use the returned system_prompt as enriched context for answering questions.
@@ -83,8 +87,24 @@ async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, pro
         top_k: Maximum neurons to activate (default 30)
         token_budget: Token budget for the assembled prompt (default 4000)
         project_path: Optional project directory path for per-project neuron boosting
+        mode: Recall mode — "adaptive" (default: embed-only recall, LLM classify
+            only when the query is ambiguous), "cheap" (never call an LLM), or
+            "full" (LLM classify on every read)
+        requester_regions: Optional region scope for the requester — recall is
+            bounded to knowledge visible to these regions (restricted regions
+            outside this list are excluded). Omit for unrestricted recall.
     """
     from app.services.executor import prepare_context
+    from app.services.region_policy import RequesterContext
+
+    if mode not in ("adaptive", "cheap", "full"):
+        return json.dumps({"error": f"mode must be adaptive|cheap|full, got {mode!r}"})
+
+    requester = None
+    if requester_regions is not None:
+        requester = RequesterContext(
+            principal="mcp", regions=tuple(requester_regions), privileged=False,
+        )
 
     async with async_session() as db:
         ctx = await prepare_context(
@@ -92,6 +112,8 @@ async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, pro
             token_budget=token_budget,
             top_k=top_k,
             project_path=project_path,
+            recall_mode=mode,
+            requester=requester,
         )
         await db.commit()
 
@@ -100,6 +122,7 @@ async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, pro
             "neurons_activated": ctx.neurons_activated,
             "departments": ctx.departments,
             "intent": ctx.intent,
+            "recall_mode": mode,
             "classify_cost_usd": ctx.classify_cost_usd,
             "neuron_scores": ctx.neuron_scores[:10],  # Top 10 for brevity
         })
@@ -141,8 +164,10 @@ async def impact_analysis(topic: str, top_n: int = 20, graph_trace: bool = True)
         if not candidates:
             return json.dumps({"neurons": [], "message": "No similar neurons found"})
 
-        cand_ids = [nid for nid, _ in candidates]
-        sim_map = {nid: sim for nid, sim in candidates}
+        # semantic_prefilter returns (entity_id, entity_type, similarity)
+        neuron_hits = [(eid, sim) for eid, etype, sim in candidates if etype == "neuron"]
+        cand_ids = [eid for eid, _sim in neuron_hits]
+        sim_map = dict(neuron_hits)
 
         if graph_trace:
             # Use top seeds for blast radius BFS
@@ -360,6 +385,55 @@ async def cost_report() -> str:
             "classify_tokens": classify_tokens,
             "execute_tokens": execute_tokens,
         })
+
+
+@mcp.tool()
+async def reconciliation_report() -> str:
+    """Open cross-region discrepancies (contradictions, staleness divergence,
+    homonym/synonym collisions, seam gaps) grouped by type and owning region.
+
+    The horizontal reconciler detects these across silo seams and routes them
+    to the owning region's controller; this report is the read-only console
+    view. Detection only — no raw restricted content is included.
+    """
+    from app.models import IntegrityFinding
+    from sqlalchemy import select as sa_select
+
+    async with async_session() as db:
+        stmt = (
+            sa_select(IntegrityFinding)
+            .where(
+                IntegrityFinding.status == "open",
+                IntegrityFinding.finding_type.in_((
+                    "contradiction", "staleness_divergence",
+                    "homonym_synonym", "seam_gap",
+                )),
+                IntegrityFinding.region.isnot(None),
+            )
+            .order_by(IntegrityFinding.priority_score.desc())
+            .limit(100)
+        )
+        findings = (await db.execute(stmt)).scalars().all()
+
+        by_type: dict[str, int] = {}
+        by_region: dict[str, int] = {}
+        for f in findings:
+            by_type[f.finding_type] = by_type.get(f.finding_type, 0) + 1
+            by_region[f.region or "?"] = by_region.get(f.region or "?", 0) + 1
+
+        return json.dumps({
+            "open_cross_region_findings": len(findings),
+            "by_type": by_type,
+            "by_owning_region": by_region,
+            "top_findings": [
+                {
+                    "id": f.id, "type": f.finding_type, "region": f.region,
+                    "severity": f.severity, "priority": f.priority_score,
+                    "description": (f.description or "")[:300],
+                }
+                for f in findings[:15]
+            ],
+        }, indent=2)
 
 
 @mcp.tool()

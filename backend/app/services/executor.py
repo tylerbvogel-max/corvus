@@ -85,6 +85,66 @@ async def _embed_and_classify(user_message: str) -> tuple[dict, object, str, lis
     return classify_result, query_embedding, intent, departments, role_keys, keywords
 
 
+def _tally_neighbor_votes(
+    neuron_hits: list[tuple[int, float]],
+    tag_rows: list[tuple[int, str | None, str | None]],
+    max_tags: int = 3,
+    min_share: float = 0.2,
+) -> tuple[list[str], list[str]]:
+    """Similarity-weighted vote: neighbors' region/role tags ARE the prediction.
+
+    A tag wins when it carries at least min_share of the total similarity
+    weight; at most max_tags per dimension, strongest first.
+    """
+    sim_by_id = dict(neuron_hits)
+    region_votes: dict[str, float] = {}
+    role_votes: dict[str, float] = {}
+    total_weight = 0.0
+    for nid, region, role_key in tag_rows:
+        weight = sim_by_id.get(nid, 0.0)
+        total_weight += weight
+        if region:
+            region_votes[region] = region_votes.get(region, 0.0) + weight
+        if role_key:
+            role_votes[role_key] = role_votes.get(role_key, 0.0) + weight
+    if total_weight <= 0:
+        return [], []
+
+    def _winners(votes: dict[str, float]) -> list[str]:
+        ranked = sorted(votes.items(), key=lambda kv: kv[1], reverse=True)
+        return [tag for tag, w in ranked[:max_tags] if w / total_weight >= min_share]
+
+    return _winners(region_votes), _winners(role_votes)
+
+
+async def _neighbor_vote_classify(
+    db: AsyncSession, query_embedding, k: int | None = None,
+) -> tuple[list[str], list[str], float]:
+    """Predict region/role tags from top-k semantic neighbors — no LLM.
+
+    The graph classifies itself: the query lands somewhere in embedding
+    space and its nearest neurons' tags are the classification (recognition,
+    not deliberation). Returns (regions, role_keys, top_similarity); the
+    caller uses top_similarity to decide whether recognition was confident
+    enough or the LLM classifier should be consulted (adaptive escalation).
+    """
+    from sqlalchemy import text as sa_text
+    from app.services.semantic_prefilter import semantic_prefilter
+
+    k = k or settings.cheap_recall_neighbor_k
+    results = await semantic_prefilter(db, query_embedding, top_n_override=k * 3)
+    neuron_hits = [(eid, sim) for eid, etype, sim in results if etype == "neuron"][:k]
+    if not neuron_hits:
+        return [], [], 0.0
+
+    rows = await db.execute(
+        sa_text("SELECT id, department, role_key FROM neurons WHERE id = ANY(:ids)"),
+        {"ids": [eid for eid, _sim in neuron_hits]},
+    )
+    regions, role_keys = _tally_neighbor_votes(neuron_hits, list(rows.all()))
+    return regions, role_keys, neuron_hits[0][1]
+
+
 async def _select_and_score_candidates(
     db: AsyncSession,
     query_embedding,
@@ -93,8 +153,13 @@ async def _select_and_score_candidates(
     departments: list[str],
     role_keys: list[str],
     total_queries: int,
+    requester=None,
 ) -> tuple[list[NeuronScoreBreakdown], list[NeuronScoreBreakdown]]:
-    """Score neuron and engram candidates.  Returns (scored_neurons, scored_engrams)."""
+    """Score neuron and engram candidates.  Returns (scored_neurons, scored_engrams).
+
+    The requester's ACL scope filters candidates at load time (the semantic
+    prefilter matrix is region-blind, so enforcement happens in SQL here).
+    """
     assert isinstance(effective_pool, int) and effective_pool > 0, \
         "effective_pool must be a positive integer"
 
@@ -112,7 +177,7 @@ async def _select_and_score_candidates(
 
         # Score neurons
         sem_ids = list(neuron_sims.keys())
-        candidates = await _load_candidates_by_ids(db, sem_ids, keywords) if sem_ids else []
+        candidates = await _load_candidates_by_ids(db, sem_ids, keywords, requester) if sem_ids else []
         scored = await score_candidates(
             db, candidates, total_queries, keywords,
             departments, role_keys,
@@ -132,9 +197,9 @@ async def _select_and_score_candidates(
                     precomputed_similarities=engram_sims,
                 )
     else:
-        candidates = await get_neurons_by_filter(db, departments, role_keys, keywords)
+        candidates = await get_neurons_by_filter(db, departments, role_keys, keywords, requester)
         if not candidates:
-            candidates = await get_neurons_by_filter(db)
+            candidates = await get_neurons_by_filter(db, requester=requester)
         scored = await score_candidates(
             db, candidates, total_queries, keywords, departments, role_keys,
             query_embedding=query_embedding,
@@ -172,11 +237,25 @@ async def _apply_inhibition_and_boost(
     return all_scored, effective_top_k
 
 
-async def _load_neuron_map(db: AsyncSession, neuron_ids: list[int]) -> dict[int, Neuron]:
+async def _load_neuron_map(
+    db: AsyncSession, neuron_ids: list[int], requester=None,
+) -> dict[int, Neuron]:
+    """Hydrate full neurons for assembly, enforcing requester ACL (defense
+    in depth — candidates and promotions were already filtered upstream)."""
     neuron_map: dict[int, Neuron] = {}
     if neuron_ids:
         result = await db.execute(select(Neuron).where(Neuron.id.in_(neuron_ids)))
-        for neuron in result.scalars().all():
+        neurons = list(result.scalars().all())
+        if requester is not None:
+            from app.services.region_policy import (
+                get_region_policies, requester_can_see, restricted_regions,
+            )
+            restricted = set(restricted_regions(await get_region_policies(db)))
+            neurons = [
+                n for n in neurons
+                if requester_can_see(requester, n.department, n.visibility, restricted)
+            ]
+        for neuron in neurons:
             neuron_map[neuron.id] = neuron
     assert isinstance(neuron_map, dict), "neuron_map must be a dict"
     assert len(neuron_map) <= len(neuron_ids), "neuron_map cannot exceed requested IDs"
@@ -232,12 +311,17 @@ async def prepare_context(
     db: AsyncSession, user_message: str, token_budget: int | None = None,
     top_k: int | None = None, project_path: str | None = None,
     on_stage: StageCallback = None, prior_neuron_ids: list[int] | None = None,
+    recall_mode: str | None = None, requester=None,
 ) -> PreparedContext:
     """Run the classify → score → spread → inhibit → resolve → assemble pipeline.
 
     Pattern #5: stages are composed via the typed pipeline runner; each stage
     emits timing + telemetry and any stage failure hard-fails with a
     `PipelineStageError` carrying the stage name.
+
+    recall_mode (full | cheap | adaptive) selects the classify stage;
+    None falls back to settings.recall_mode. requester (RequesterContext)
+    bounds recall to the requester's regions; None = unrestricted.
     """
     assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
         "user_message must be a non-empty string"
@@ -246,6 +330,7 @@ async def prepare_context(
     from app.services.pipeline.state import PipelineState
     from app.services.pipeline.stages import build_default_pipeline
 
+    effective_recall_mode = recall_mode or settings.recall_mode
     initial_state = PipelineState(
         user_message=user_message,
         effective_top_k=top_k or settings.top_k_neurons,
@@ -253,10 +338,13 @@ async def prepare_context(
         effective_budget=token_budget or settings.token_budget,
         project_path=project_path,
         prior_neuron_ids=prior_neuron_ids,
+        requester=requester,
     )
     pipeline_ctx = PipelineContext(db=db, on_stage=on_stage)
 
-    final = await run_pipeline(build_default_pipeline(), initial_state, pipeline_ctx)
+    final = await run_pipeline(
+        build_default_pipeline(effective_recall_mode), initial_state, pipeline_ctx,
+    )
 
     # Structural resolve short-circuit returns the already-built PreparedContext.
     if isinstance(final, PreparedContext):
@@ -270,6 +358,11 @@ async def prepare_context(
         from app.services.project_cache import record_project_firings
         await record_project_firings(db, state.project_path, state.top_slice)
 
+    return _state_to_prepared_context(state, pipeline_ctx)
+
+
+def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
+    """Project the final PipelineState into the public PreparedContext."""
     result = PreparedContext(
         system_prompt=state.system_prompt, intent=state.intent,
         departments=state.departments, role_keys=state.role_keys, keywords=state.keywords,
@@ -296,13 +389,15 @@ async def _assemble_top_slice(
     effective_budget: int,
     prior_neuron_ids: list[int] | None,
     resolved_regulations: list,
+    requester=None,
 ) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str]:
     """Select top-k neurons, load their data, and assemble the system prompt."""
     if settings.hierarchy_selection_enabled:
         top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
     else:
         top_slice = all_scored[:effective_top_k]
-    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice])
+    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice], requester)
+    top_slice = [s for s in top_slice if s.neuron_id in neuron_map]
 
     prior_neuron_map: dict[int, Neuron] | None = None
     if prior_neuron_ids:
@@ -1039,11 +1134,13 @@ async def _load_candidates_by_ids(
     db: AsyncSession,
     neuron_ids: list[int],
     keywords: list[str],
+    requester=None,
 ) -> list[NeuronCandidate]:
     """Load lightweight NeuronCandidate objects for a set of neuron IDs.
 
     Used when the semantic prefilter has already selected the candidate set,
-    so we just need to hydrate the scoring-relevant fields.
+    so we just need to hydrate the scoring-relevant fields. The requester's
+    ACL scope is enforced here (the prefilter matrix is region-blind).
     """
     # Preconditions (JPL Power of Ten Rule 5)
     assert all(isinstance(nid, int) and nid > 0 for nid in neuron_ids), \
@@ -1068,12 +1165,15 @@ async def _load_candidates_by_ids(
     kw_expr = " + ".join(kw_parts) if kw_parts else "0"
 
     # Use ANY(ARRAY[...]) for asyncpg compatibility with large ID lists
+    from app.services.neuron_service import _FRESHNESS_SQL, _acl_clause_for
+    acl_clause = await _acl_clause_for(db, requester, params)
     params["id_list"] = list(neuron_ids)
     sql = f"""
         SELECT id, label, summary, department, role_key, avg_utility,
-               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits
+               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
+               authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
-        WHERE id = ANY(:id_list) AND is_active = true
+        WHERE id = ANY(:id_list) AND is_active = true AND {acl_clause}
     """
     result = await db.execute(text(sql), params)
     rows = result.all()
@@ -1083,6 +1183,9 @@ async def _load_candidates_by_ids(
             id=r[0], label=r[1], summary=r[2], department=r[3], role_key=r[4],
             avg_utility=r[5] or 0.5, invocations=r[6] or 0,
             created_at_query_count=r[7] or 0, keyword_hits=r[8] or 0,
+            authority_level=r[9],
+            freshness_days=float(r[10]) if r[10] is not None else None,
+            centrality=r[11] or 0.0,
         )
         for r in rows
     ]
@@ -1094,21 +1197,49 @@ async def _load_candidates_by_ids(
     return candidates
 
 
+async def _fetch_regions_for(db: AsyncSession, neuron_ids: list[int]) -> dict[int, str | None]:
+    """Load the region tag (department column) for a set of neurons."""
+    from sqlalchemy import text
+    if not neuron_ids:
+        return {}
+    result = await db.execute(
+        text("SELECT id, department FROM neurons WHERE id = ANY(:ids)"),
+        {"ids": list(neuron_ids)},
+    )
+    return {int(r[0]): r[1] for r in result.all()}
+
+
+def _derive_edge_type(region_a: str | None, region_b: str | None) -> str:
+    """Stellate = intra-region (local), pyramidal = cross-region (long-range).
+
+    Unknown regions default to pyramidal (conservative: stronger decay
+    threshold, weaker spread) — matches the pre-region behavior.
+    """
+    if region_a and region_b and region_a == region_b:
+        return "stellate"
+    return "pyramidal"
+
+
 async def _batch_update_edges(db: AsyncSession, neuron_ids: list[int], query_offset: int):
     """Batch update co-firing edges for a set of neurons (tiered storage).
 
     Promoted edges (above threshold) stay in neuron_edges table.
-    Weak edges live in JSONB on the neurons table.
+    Weak edges live in JSONB on the neurons table. New edges are typed
+    stellate/pyramidal from region membership of their endpoints.
     """
     # Precondition (JPL Power of Ten Rule 5)
     assert len(neuron_ids) >= 2, \
         f"_batch_update_edges requires >= 2 neuron_ids, got {len(neuron_ids)}"
 
-    from sqlalchemy import text
-
     pairs = [(min(a, b), max(a, b))
              for i, a in enumerate(neuron_ids)
              for b in neuron_ids[i + 1:]]
+
+    region_by_id = await _fetch_regions_for(db, neuron_ids)
+    edge_type_for = {
+        (s, t): _derive_edge_type(region_by_id.get(s), region_by_id.get(t))
+        for s, t in pairs
+    }
 
     # Check which pairs already exist in the promoted table
     existing = await _find_promoted_pairs(db, pairs)
@@ -1121,7 +1252,7 @@ async def _batch_update_edges(db: AsyncSession, neuron_ids: list[int], query_off
     )
 
     # Update weak edges in JSONB, promoting any that cross threshold
-    newly_promoted = await _cofire_weak(db, weak_pairs, query_offset)
+    newly_promoted = await _cofire_weak(db, weak_pairs, query_offset, edge_type_for)
 
     # Update adjacency cache for table-level changes
     from app.services.adjacency_cache import is_adjacency_loaded, update_adjacency_incremental
@@ -1131,7 +1262,9 @@ async def _batch_update_edges(db: AsyncSession, neuron_ids: list[int], query_off
         update_adjacency_incremental(
             pairs=all_cache_pairs,
             weights=all_cache_weights,
-            edge_types=["pyramidal"] * len(all_cache_pairs),
+            edge_types=[
+                edge_type_for.get((s, t), "pyramidal") for s, t in all_cache_pairs
+            ],
         )
 
 
@@ -1185,9 +1318,12 @@ async def _cofire_weak(
     db: AsyncSession,
     pairs: list[tuple[int, int]],
     qoff: int,
+    edge_type_for: dict[tuple[int, int], str] | None = None,
 ) -> list[tuple[int, int, float]]:
     """Increment co-fire for weak edges in JSONB, creating new ones as needed.
 
+    New edges are typed from region membership (stellate intra-region,
+    pyramidal cross-region); existing edges keep their recorded type.
     Returns list of (src, tgt, weight) for edges that were promoted to table.
     """
     from app.services.edge_tier import (
@@ -1196,14 +1332,17 @@ async def _cofire_weak(
     promoted: list[tuple[int, int, float]] = []
     for src, tgt in pairs:
         entry = await get_weak_edge(db, src, tgt)
+        derived_type = (edge_type_for or {}).get((src, tgt), "pyramidal")
         if entry is not None:
             new_c = entry.get("c", 0) + 1
             new_w = min(1.0, (new_c + 1) / 20.0)
+            edge_type = entry.get("t") or derived_type
         else:
             new_c = 1
             new_w = min(1.0, 2 / 20.0)
+            edge_type = derived_type
         data = {
-            "w": new_w, "t": "pyramidal", "c": new_c,
+            "w": new_w, "t": edge_type, "c": new_c,
             "s": "organic", "q": qoff,
         }
         await upsert_weak_edge(db, src, tgt, data)

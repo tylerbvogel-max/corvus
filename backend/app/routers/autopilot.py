@@ -7,6 +7,7 @@ All proposed changes are staged for human approval — nothing is auto-applied.
 
 import hashlib
 import json
+import logging
 import traceback
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
@@ -33,6 +34,8 @@ from app.services.gap_detector import detect_gap, detect_gaps_scored, GapTarget,
 from app.services.pipeline import PipelineContext, PipelineStageError, run_pipeline
 from app.services import action_bus
 from app.middleware.rbac import UserIdentity
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/autopilot", tags=["autopilot"])
 
@@ -182,21 +185,101 @@ async def cancel():
     return AutopilotTickResponse(status="cancelled", message="Cancel requested — will stop after current step")
 
 
+async def _run_consolidation_if_due(db: AsyncSession) -> None:
+    """Homeostatic maintenance riding the tick heartbeat.
+
+    Consolidation (decay/prune/deactivate/centrality) is the write gate's
+    reclamation backstop — unreinforced auto-committed writes decay away.
+    It runs at most every consolidation_interval_hours, independent of
+    whether autopilot itself is enabled.
+    """
+    from app.config import settings
+    from app.models import SystemState
+    from app.services.consolidation import run_consolidation
+
+    state = (await db.execute(
+        select(SystemState).where(SystemState.id == 1)
+    )).scalar_one_or_none()
+    if state is None:
+        return
+    if state.last_consolidation_at is not None:
+        elapsed = datetime.now(timezone.utc) - state.last_consolidation_at.replace(tzinfo=timezone.utc)
+        if elapsed < timedelta(hours=settings.consolidation_interval_hours):
+            return
+    result = await run_consolidation(db)
+    logger.info("Consolidation (tick heartbeat): %s", result)
+
+
+async def _run_reconciler_if_due(db: AsyncSession) -> None:
+    """The horizontal loop riding the tick heartbeat (plat-reconciler).
+
+    Disabled by default (reconciler_interval_hours=0 — manual sweeps only).
+    When enabled, at most one sweep per interval; cadence is measured off
+    the newest completed reconciler scan.
+    """
+    from app.config import settings
+    from app.models import IntegrityScan
+
+    if settings.reconciler_interval_hours <= 0:
+        return
+    last = (await db.execute(
+        select(func.max(IntegrityScan.completed_at)).where(
+            IntegrityScan.scan_type.like("reconciler_%"),
+            IntegrityScan.status == "completed",
+        )
+    )).scalar()
+    if last is not None:
+        elapsed = datetime.now(timezone.utc) - last.replace(tzinfo=timezone.utc)
+        if elapsed < timedelta(hours=settings.reconciler_interval_hours):
+            return
+    from app.services.integrity.reconciler import run_reconciler_sweep
+    result = await run_reconciler_sweep(db, initiated_by="reconciler_loop")
+    logger.info("Reconciler sweep (tick heartbeat): %s", result)
+
+
+def _config_is_due(config: AutopilotConfig) -> bool:
+    """True when a loop config is enabled and past its interval."""
+    if not config.enabled:
+        return False
+    if config.last_tick_at is None:
+        return True
+    elapsed = datetime.now(timezone.utc) - config.last_tick_at.replace(tzinfo=timezone.utc)
+    return elapsed >= timedelta(minutes=config.interval_minutes)
+
+
+async def _pick_due_config(db: AsyncSession) -> AutopilotConfig | None:
+    """Pick the due loop with the stalest last_tick_at (global + per-region).
+
+    One loop per tick invocation: each silo's vertical loop runs at its own
+    cadence, round-robin across ticks, so a fast Manufacturing loop never
+    starves behind a slow Legal loop in the same request.
+    """
+    rows = (await db.execute(select(AutopilotConfig))).scalars().all()
+    due = [c for c in rows if _config_is_due(c)]
+    if not due:
+        return None
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    due.sort(key=lambda c: (c.last_tick_at.replace(tzinfo=timezone.utc) if c.last_tick_at else epoch))
+    return due[0]
+
+
 @router.post("/tick", response_model=AutopilotTickResponse)
 async def tick(db: AsyncSession = Depends(get_db)):
-    """Execute one autopilot tick if enabled and interval has elapsed."""
+    """Execute one due autopilot loop (global or per-region) per invocation.
+
+    Also the tenant heartbeat: consolidation-if-due runs on every tick call,
+    even when every autopilot loop is disabled.
+    """
     if _tick_running:
         return AutopilotTickResponse(status="skipped", message="A tick is already running")
-    config = await _get_or_create_config(db)
-    if not config.enabled:
-        return AutopilotTickResponse(status="skipped", message="Autopilot is disabled")
-    # Respect interval
-    if config.last_tick_at:
-        elapsed = datetime.now(timezone.utc) - config.last_tick_at.replace(tzinfo=timezone.utc)
-        if elapsed < timedelta(minutes=config.interval_minutes):
-            remaining = timedelta(minutes=config.interval_minutes) - elapsed
-            mins = int(remaining.total_seconds() // 60)
-            return AutopilotTickResponse(status="skipped", message=f"Too soon — {mins}m remaining")
+    await _run_consolidation_if_due(db)
+    await _run_reconciler_if_due(db)
+    global_config = await _get_or_create_config(db)
+    config = await _pick_due_config(db)
+    if config is None:
+        if not global_config.enabled:
+            return AutopilotTickResponse(status="skipped", message="Autopilot is disabled")
+        return AutopilotTickResponse(status="skipped", message="No loop is due")
     return await _run_tick(db, config)
 
 
@@ -294,13 +377,14 @@ def _reset_tick_state():
 
 async def _detect_and_gather_context(
     focus_neuron_id: int | None,
+    region: str | None = None,
 ) -> tuple[GapTarget | None, ScoredGap | None, str | None, str, list[str], str, str]:
     _set_step("detect", "Scanning for knowledge gaps...")
     focus_label = None
     focus_context = ""
 
     async with async_session() as s0:
-        scored_gaps = await detect_gaps_scored(s0, focus_neuron_id, limit=1)
+        scored_gaps = await detect_gaps_scored(s0, focus_neuron_id, limit=1, region=region)
         scored_gap = scored_gaps[0] if scored_gaps else None
         gap = scored_gap.to_gap_target() if scored_gap else None
 

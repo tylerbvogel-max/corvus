@@ -65,6 +65,9 @@ class AutopilotState:
     # --- proposal curation stage ---
     assembled_prompt: str | None = None
     proposal_id: int | None = None
+    # Write-gate routing outcome: "auto" (approved + applied by policy) or
+    # "queue" (awaiting human review)
+    gate_route: str = "queue"
 
     # --- persistence stage ---
     run_id: int | None = None

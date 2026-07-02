@@ -27,6 +27,8 @@ class PipelineState:
     effective_budget: int
     project_path: str | None = None
     prior_neuron_ids: list[int] | None = None
+    # Requester ACL scope (RequesterContext) — None = unrestricted local default
+    requester: Any = None
 
     # --- classify stage ---
     classify_result: dict[str, Any] = field(default_factory=dict)

@@ -213,6 +213,61 @@ async def scan_aging_endpoint(
     return _scan_response(scan, result.extra)
 
 
+# ── Horizontal reconciler (cross-region loop) ─────────────────────
+
+
+class ReconcilerSweepRequest(BaseModel):
+    judge_model: str | None = None
+    initiated_by: str = "admin"
+
+
+@router.post("/reconciler/sweep")
+async def reconciler_sweep_endpoint(
+    req: ReconcilerSweepRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Run one horizontal reconciler pass: cross-region contradictions,
+    staleness divergence, homonym/synonym disambiguation, seam gaps.
+    Findings are routed to owning regions; nothing auto-edits the graph."""
+    from app.services.integrity.reconciler import run_reconciler_sweep
+    return await run_reconciler_sweep(
+        db, initiated_by=req.initiated_by, judge_model=req.judge_model,
+    )
+
+
+@router.get("/reconciler/report")
+async def reconciler_report(db: AsyncSession = Depends(get_db)):
+    """Open cross-region discrepancies grouped by type and owning region —
+    the controller console view of the seams."""
+    stmt = (
+        select(IntegrityFinding)
+        .where(
+            IntegrityFinding.status == "open",
+            IntegrityFinding.finding_type.in_((
+                "contradiction", "staleness_divergence",
+                "homonym_synonym", "seam_gap",
+            )),
+            IntegrityFinding.region.isnot(None),
+        )
+        .order_by(IntegrityFinding.priority_score.desc())
+        .limit(200)
+    )
+    findings = (await db.execute(stmt)).scalars().all()
+
+    by_type: dict[str, int] = {}
+    by_region: dict[str, int] = {}
+    for f in findings:
+        by_type[f.finding_type] = by_type.get(f.finding_type, 0) + 1
+        by_region[f.region or "?"] = by_region.get(f.region or "?", 0) + 1
+
+    return {
+        "open_cross_region_findings": len(findings),
+        "by_type": by_type,
+        "by_owning_region": by_region,
+        "findings": [_finding_out(f) for f in findings[:50]],
+    }
+
+
 # ── Scan & Finding Management ────────────────────────────────────
 
 
@@ -248,10 +303,11 @@ async def list_findings(
     finding_type: str | None = None,
     status: str | None = None,
     severity: str | None = None,
+    region: str | None = None,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
 ):
-    """List findings with optional filters."""
+    """List findings with optional filters (region = owning-silo routing)."""
     stmt = select(IntegrityFinding).order_by(IntegrityFinding.priority_score.desc())
     if finding_type:
         stmt = stmt.where(IntegrityFinding.finding_type == finding_type)
@@ -259,6 +315,8 @@ async def list_findings(
         stmt = stmt.where(IntegrityFinding.status == status)
     if severity:
         stmt = stmt.where(IntegrityFinding.severity == severity)
+    if region:
+        stmt = stmt.where(IntegrityFinding.region == region)
     stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return [_finding_out(f) for f in result.scalars().all()]
@@ -507,6 +565,7 @@ def _finding_out(finding: IntegrityFinding) -> dict:
     return {
         "id": finding.id, "scan_id": finding.scan_id,
         "finding_type": finding.finding_type,
+        "region": finding.region,
         "severity": finding.severity,
         "priority_score": finding.priority_score,
         "description": finding.description,

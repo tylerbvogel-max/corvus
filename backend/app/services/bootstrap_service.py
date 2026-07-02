@@ -259,6 +259,15 @@ async def _pass4_gap_fill(db, neurons, by_dept, edges_to_create, _add_edge) -> i
     return gap_count
 
 
+async def write_planned_edges(db, edges_to_create):
+    """Public entrypoint for planned-edge writes, shared with seeding_service.
+
+    Edge type derives from region (department) equality in SQL; unregioned
+    endpoints resolve to pyramidal until retype_edges_by_region runs.
+    """
+    await _write_edges(db, edges_to_create)
+
+
 async def _write_edges(db, edges_to_create):
     """Write planned edges to database with upsert (always promoted: w >= 0.30)."""
     from app.services.edge_tier import delete_weak_edge

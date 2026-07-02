@@ -77,6 +77,15 @@ class Settings(BaseSettings):
     min_cofire_score: float = 0.3
     edge_prune_min_cofires: int = 2
     edge_prune_stale_queries: int = 100
+    # Recall mode for the query-prep pipeline (plat-cheap-recall):
+    #   full     - LLM classify on every read (legacy default; HTTP/UI path)
+    #   cheap    - embed-only, zero LLM: tokenizer keywords + neighbor-vote regions
+    #   adaptive - cheap first, escalate to LLM classify when the top semantic
+    #              neighbor similarity is below the confidence threshold
+    # The MCP query_graph tool defaults to adaptive (the seamless agent layer).
+    recall_mode: str = "full"
+    cheap_recall_confidence_threshold: float = 0.35
+    cheap_recall_neighbor_k: int = 8
     # Semantic pre-filter (replaces org-chart filtering)
     semantic_prefilter_enabled: bool = True
     semantic_prefilter_top_n: int = 100_000
@@ -101,6 +110,22 @@ class Settings(BaseSettings):
     spread_instantiate_decay: float = 0.6
     spread_instantiate_min_weight: float = 0.10
     concept_activation_boost: float = 1.3
+    # Cold-start prior (substrate/ontology split): authority + freshness +
+    # centrality stand in for usage signals until firing history accrues.
+    # weight_coldstart_prior is the modulatory scale of the (prior - 0.5)
+    # term; component weights below must sum to 1.0.
+    weight_coldstart_prior: float = 0.15
+    coldstart_prior_strength: float = 10.0  # shrinkage: strength/(strength+invocations)
+    coldstart_freshness_halflife_days: float = 365.0
+    coldstart_authority_weight: float = 0.5
+    coldstart_freshness_weight: float = 0.3
+    coldstart_centrality_weight: float = 0.2
+    # Consolidation (decay/prune/deactivate) — formerly module constants
+    consolidation_retention_queries: int = 2000
+    consolidation_decay_rate: float = 0.95
+    consolidation_deactivation_threshold: float = 0.05
+    # Consolidation rides the autopilot tick heartbeat at most this often
+    consolidation_interval_hours: float = 24.0
     # Hierarchy-aware selection: include ancestor chains so graph shows trees
     hierarchy_selection_enabled: bool = True
     # Per-project neuron subgraph caching
@@ -136,6 +161,15 @@ class Settings(BaseSettings):
     integrity_aging_operational_days: int = 548
     integrity_aging_default_days: int = 730
     integrity_max_scan_neurons: int = 10_000
+    # Horizontal reconciler (cross-region loop) — plat-reconciler
+    # Judge model default is opus: sweeps are rare and bounded; judgment
+    # quality on contradictions/homonyms matters more than per-call cost.
+    reconciler_judge_model: str = "opus"
+    reconciler_max_pairs: int = 12
+    reconciler_staleness_divergence_days: int = 180
+    reconciler_homonym_sim_threshold: float = 0.80
+    # 0 = manual only; > 0 = the sweep rides the tick heartbeat at this cadence
+    reconciler_interval_hours: float = 0.0
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -16,7 +16,9 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.rbac import UserIdentity
-from app.models import Action, Neuron, NeuronRefinement, ProposalItem
+from app.models import (
+    ABSTRACTION_BY_NODE_TYPE, Action, Neuron, NeuronRefinement, ProposalItem,
+)
 
 
 class NeuronCreateInput(BaseModel):
@@ -33,10 +35,13 @@ def _build_neuron_from_spec(
     spec: dict[str, Any], item_id: int | None, total_queries: int,
 ) -> Neuron:
     """Materialize a Neuron ORM object from a spec dict."""
+    node_type = spec.get("node_type", "knowledge")
     return Neuron(
         parent_id=spec.get("parent_id"),
         layer=spec.get("layer", 3),
-        node_type=spec.get("node_type", "knowledge"),
+        node_type=node_type,
+        abstraction_type=spec.get("abstraction_type")
+        or ABSTRACTION_BY_NODE_TYPE.get(node_type),
         label=spec.get("label", ""),
         content=spec.get("content", ""),
         summary=spec.get("summary", ""),

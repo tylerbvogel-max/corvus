@@ -23,6 +23,7 @@ class SpreadActivationStage:
             await ensure_adjacency_loaded(ctx.db)
         state.scored = await spread_activation(
             ctx.db, state.scored, state.effective_top_k,
+            requester=state.requester,
         )
         return state
 

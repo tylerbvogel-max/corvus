@@ -86,6 +86,20 @@ async def _migrate_refinements_and_config(engine):
             logger.warning("Autopilot migration skipped: %s", e)
 
 
+def _abstraction_backfill_sql():
+    """Backfill neurons.abstraction_type from node_type (ABSTRACTION_BY_NODE_TYPE)."""
+    from app.models import ABSTRACTION_BY_NODE_TYPE
+    when_clauses = " ".join(
+        f"WHEN '{nt}' THEN '{abstraction}'"
+        for nt, abstraction in ABSTRACTION_BY_NODE_TYPE.items()
+    )
+    return text(
+        "UPDATE neurons SET abstraction_type = "
+        f"CASE node_type {when_clauses} ELSE NULL END "
+        "WHERE abstraction_type IS NULL"
+    )
+
+
 async def _migrate_neuron_and_query_columns(engine):
     """Migrate neuron table columns and queries.model_version."""
     async with engine.begin() as conn:
@@ -110,8 +124,69 @@ async def _migrate_neuron_and_query_columns(engine):
                     "ALTER TABLE neurons ADD COLUMN authority_level VARCHAR(30)"
                 ))
                 print("Migrated: added neurons.authority_level")
+            if not await _column_exists(conn, "neurons", "abstraction_type"):
+                await conn.execute(text(
+                    "ALTER TABLE neurons ADD COLUMN abstraction_type VARCHAR(20)"
+                ))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_neurons_abstraction_type "
+                    "ON neurons(abstraction_type)"
+                ))
+                await conn.execute(_abstraction_backfill_sql())
+                print("Migrated: added neurons.abstraction_type (backfilled from node_type)")
+            if not await _column_exists(conn, "neurons", "centrality"):
+                await conn.execute(text(
+                    "ALTER TABLE neurons ADD COLUMN centrality FLOAT NOT NULL DEFAULT 0.0"
+                ))
+                print("Migrated: added neurons.centrality")
+            if not await _column_exists(conn, "neurons", "visibility"):
+                await conn.execute(text(
+                    "ALTER TABLE neurons ADD COLUMN visibility VARCHAR(20)"
+                ))
+                print("Migrated: added neurons.visibility")
         except SQLAlchemyError as e:
             logger.warning("Neurons migration skipped: %s", e)
+
+    async with engine.begin() as conn:
+        try:
+            if not await _table_exists(conn, "region_policies"):
+                await conn.execute(text("""
+                    CREATE TABLE region_policies (
+                        id SERIAL PRIMARY KEY,
+                        region VARCHAR(100) NOT NULL UNIQUE,
+                        display_name VARCHAR(200),
+                        description TEXT,
+                        scoring_weights JSONB,
+                        loop_config JSONB,
+                        acl JSONB,
+                        write_gate JSONB,
+                        projection JSONB,
+                        is_active BOOLEAN NOT NULL DEFAULT true,
+                        created_at TIMESTAMP DEFAULT now(),
+                        updated_at TIMESTAMP DEFAULT now()
+                    )
+                """))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_region_policies_region "
+                    "ON region_policies(region)"
+                ))
+                print("Migrated: created region_policies")
+            if not await _column_exists(conn, "autopilot_config", "region"):
+                await conn.execute(text(
+                    "ALTER TABLE autopilot_config ADD COLUMN region VARCHAR(100)"
+                ))
+                print("Migrated: added autopilot_config.region")
+            if not await _column_exists(conn, "integrity_findings", "region"):
+                await conn.execute(text(
+                    "ALTER TABLE integrity_findings ADD COLUMN region VARCHAR(100)"
+                ))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_integrity_findings_region "
+                    "ON integrity_findings(region)"
+                ))
+                print("Migrated: added integrity_findings.region")
+        except SQLAlchemyError as e:
+            logger.warning("Region policy migration skipped: %s", e)
 
     async with engine.begin() as conn:
         try:
@@ -665,6 +740,10 @@ from app.routers import document_ingest
 app.include_router(document_ingest.router)
 from app.routers import integrity
 app.include_router(integrity.router)
+from app.routers import seeding
+app.include_router(seeding.router)
+from app.routers import regions
+app.include_router(regions.router)
 from app.routers import tool_definitions
 app.include_router(tool_definitions.router)
 from app.routers import fluent

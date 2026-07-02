@@ -1023,6 +1023,41 @@ class _Phase2Counters:
     circuit_tripped: bool = False
 
 
+async def _route_placement_through_gate(
+    db: AsyncSession, job: DocumentIngestJob, proposal_id: int,
+) -> None:
+    """Consult the tiered write gate after a verified placement.
+
+    A successful placement means all three guardrail layers held (Layer 1
+    validation committed, Layer 2 read-back ran, Layer 3 derived summary
+    counted the mutation) — so guardrails_passed=True. The gate then routes
+    by the DOCUMENT's authority: informational-tier docs auto-commit with
+    audit; authoritative docs stay in the human queue. Gate failures never
+    break placement — the proposal simply stays queued.
+    """
+    from app.services.write_gate import route_proposal  # noqa: PLC0415
+
+    proposal = await db.get(AutopilotProposal, proposal_id)
+    if proposal is None or proposal.state != "proposed":
+        return
+    try:
+        decision = await route_proposal(
+            db, proposal, guardrails_passed=True, confidence=None,
+            region=job.department,
+        )
+        await db.commit()
+        logger.info(
+            "Job %s write gate: proposal %s -> %s (%s)",
+            job.id, proposal_id, decision.route, decision.reason,
+        )
+    except (RuntimeError, ValueError, AssertionError) as exc:
+        await db.rollback()
+        logger.warning(
+            "Job %s write gate failed for proposal %s (stays queued): %s",
+            job.id, proposal_id, exc,
+        )
+
+
 async def _place_one_artifact(
     db: AsyncSession,
     job: DocumentIngestJob,
@@ -1060,6 +1095,7 @@ async def _place_one_artifact(
     if mutations > 0:
         counters.placed += 1
         counters.consecutive_aborts = 0
+        await _route_placement_through_gate(db, job, artifact_id)
     else:
         counters.aborted += 1
         counters.consecutive_aborts += 1

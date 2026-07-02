@@ -1,5 +1,6 @@
 """Neuron CRUD, candidate pre-filtering, and firing record management."""
 
+import datetime
 import json
 from dataclasses import dataclass
 
@@ -11,9 +12,9 @@ from app.config import settings
 from app.models import Neuron, NeuronFiring, NeuronScoreOverride, SystemState
 from app.services.scoring_engine import (
     compute_score, calc_relevance, calc_hybrid_relevance, NeuronScoreBreakdown,
-    apply_score_overrides,
+    ColdstartInputs, apply_score_overrides,
     calc_burst_batch, calc_impact_batch, calc_precision_batch,
-    calc_novelty_batch, calc_recency_batch,
+    calc_novelty_batch, calc_recency_batch, calc_coldstart_term_batch,
 )
 
 
@@ -29,6 +30,42 @@ class NeuronCandidate:
     invocations: int
     created_at_query_count: int
     keyword_hits: int = 0
+    # Cold-start prior inputs (authority + freshness + centrality)
+    authority_level: str | None = None
+    freshness_days: float | None = None
+    centrality: float = 0.0
+
+    @property
+    def region(self) -> str | None:
+        """Generic region vocabulary — silos are labeled regions."""
+        return self.department
+
+
+# SQL expression for days since the most authoritative provenance date.
+_FRESHNESS_SQL = (
+    "EXTRACT(EPOCH FROM (now() - COALESCE(last_verified, "
+    "effective_date::timestamp, created_at))) / 86400.0"
+)
+
+
+def _coldstart_fields(candidate) -> tuple[str | None, float | None, float, int]:
+    """Resolve (authority, freshness_days, centrality, invocations)
+    from either a NeuronCandidate or a full Neuron ORM object."""
+    authority = getattr(candidate, "authority_level", None)
+    freshness = getattr(candidate, "freshness_days", None)
+    if freshness is None:
+        stamp = (
+            getattr(candidate, "last_verified", None)
+            or getattr(candidate, "effective_date", None)
+            or getattr(candidate, "created_at", None)
+        )
+        if isinstance(stamp, datetime.date) and not isinstance(stamp, datetime.datetime):
+            stamp = datetime.datetime.combine(stamp, datetime.time())
+        if isinstance(stamp, datetime.datetime):
+            freshness = max(0.0, (datetime.datetime.utcnow() - stamp).total_seconds() / 86400.0)
+    centrality = getattr(candidate, "centrality", 0.0) or 0.0
+    invocations = getattr(candidate, "invocations", 0) or 0
+    return authority, freshness, centrality, invocations
 
 
 async def get_neuron(db: AsyncSession, neuron_id: int) -> Neuron | None:
@@ -82,7 +119,8 @@ def _build_keyword_expr(keywords: list[str] | None, params: dict) -> str:
 def _build_candidate_sql(where_clause: str, kw_expr: str) -> str:
     return f"""
         SELECT id, label, summary, department, role_key, avg_utility,
-               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits
+               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
+               authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
         WHERE {where_clause}
         ORDER BY keyword_hits DESC, avg_utility DESC
@@ -96,9 +134,23 @@ def _rows_to_candidates(rows: list) -> list[NeuronCandidate]:
             id=r[0], label=r[1], summary=r[2], department=r[3], role_key=r[4],
             avg_utility=r[5] or 0.5, invocations=r[6] or 0,
             created_at_query_count=r[7] or 0, keyword_hits=r[8] or 0,
+            authority_level=r[9],
+            freshness_days=float(r[10]) if r[10] is not None else None,
+            centrality=r[11] or 0.0,
         )
         for r in rows
     ]
+
+
+async def _acl_clause_for(db: AsyncSession, requester, params: dict) -> str:
+    """Resolve the requester's ACL SQL clause against active region policies."""
+    from app.services.region_policy import (
+        acl_sql_clause, get_region_policies, restricted_regions,
+    )
+    if requester is None:
+        return "TRUE"
+    policies = await get_region_policies(db)
+    return acl_sql_clause(requester, restricted_regions(policies), params)
 
 
 async def get_neurons_by_filter(
@@ -106,15 +158,18 @@ async def get_neurons_by_filter(
     departments: list[str] | None = None,
     role_keys: list[str] | None = None,
     keywords: list[str] | None = None,
+    requester=None,
 ) -> list[NeuronCandidate]:
     """Pre-filter candidate neurons by classification results.
 
     Returns lightweight NeuronCandidate objects (no content blob) ranked by
     SQL-side keyword hits, limited to candidate_limit. Full content is only
-    loaded later for the final top-K during prompt assembly.
+    loaded later for the final top-K during prompt assembly. The requester's
+    ACL scope (region-restricted recall) is enforced in SQL.
     """
     params: dict = {}
     conditions = _build_filter_conditions(departments, role_keys, params)
+    conditions.append(await _acl_clause_for(db, requester, params))
     kw_expr = _build_keyword_expr(keywords, params)
     params["lim"] = settings.candidate_limit
 
@@ -125,8 +180,10 @@ async def get_neurons_by_filter(
     rows = result.all()
 
     if not rows and (departments or role_keys):
-        fallback_sql = _build_candidate_sql("is_active = true", kw_expr)
-        result = await db.execute(text(fallback_sql), params)
+        acl_params: dict = {k: v for k, v in params.items() if k.startswith("acl_") or k.startswith("kw_") or k == "lim"}
+        acl_fallback = await _acl_clause_for(db, requester, acl_params)
+        fallback_sql = _build_candidate_sql(f"is_active = true AND {acl_fallback}", kw_expr)
+        result = await db.execute(text(fallback_sql), acl_params)
         rows = result.all()
 
     return _rows_to_candidates(rows)
@@ -288,6 +345,7 @@ def _score_single_candidate(
     role_match = bool(classified_role_keys and neuron.role_key in classified_role_keys)
 
     hybrid_score = hybrid_map.get(neuron.id) if hybrid_map else None
+    authority, freshness, centrality, invocations = _coldstart_fields(neuron)
     score = compute_score(
         fires_in_window=fires_in_window,
         avg_utility=neuron.avg_utility,
@@ -302,6 +360,12 @@ def _score_single_candidate(
         role_match=role_match,
         semantic_similarity=semantic_map.get(neuron.id),
         hybrid_score=hybrid_score,
+        coldstart=ColdstartInputs(
+            authority_level=authority,
+            freshness_days=freshness,
+            centrality=centrality,
+            invocations=invocations,
+        ),
     )
     assert score.combined >= 0, f"Score for neuron {neuron.id} is negative: {score.combined}"
     return score
@@ -340,6 +404,17 @@ async def score_candidates(
         db, candidate_ids, query_embedding, precomputed_similarities,
     )
 
+    # Per-region scoring weights (plat-region-config): silos may override
+    # the global signal weights because their epistemics differ.
+    from app.services.region_policy import get_region_policies, resolve_scoring_weights
+    policies = await get_region_policies(db)
+    region_weights: dict[str, dict] | None = None
+    if any((p.get("scoring_weights") or {}) for p in policies.values()):
+        region_weights = {
+            region: resolve_scoring_weights(region, policies)
+            for region in {c.department for c in candidates if c.department}
+        }
+
     # Hybrid RRF: fuse keyword + semantic scores when both are available
     hybrid_map: dict[int, float] | None = None
     if settings.hybrid_relevance_enabled and semantic_map and keywords:
@@ -355,7 +430,7 @@ async def score_candidates(
         burst_map, neuron_fires_map, dept_total_map,
         last_offset_map, semantic_map,
         classified_departments, classified_role_keys,
-        hybrid_map,
+        hybrid_map, region_weights,
     )
 
     # Apply per-neuron score overrides (manual tuning)
@@ -370,6 +445,62 @@ async def score_candidates(
     return scores
 
 
+def _batch_coldstart_terms(candidates: list) -> np.ndarray:
+    """Vectorized cold-start prior terms for a candidate batch."""
+    rows = [_coldstart_fields(c) for c in candidates]
+    return calc_coldstart_term_batch(
+        authority_levels=[r[0] for r in rows],
+        freshness_days=np.array(
+            [float("nan") if r[1] is None else r[1] for r in rows],
+            dtype=np.float64,
+        ),
+        centrality=np.array([r[2] for r in rows], dtype=np.float64),
+        invocations=np.array([r[3] for r in rows], dtype=np.float64),
+    )
+
+
+def _weight_arrays(
+    candidates: list, region_weights: dict[str, dict] | None,
+) -> dict[str, np.ndarray] | None:
+    """Per-candidate signal-weight arrays when any region overrides exist."""
+    if not region_weights:
+        return None
+    from app.services.region_policy import WEIGHT_KEYS, default_weights
+    defaults = default_weights()
+    arrays: dict[str, np.ndarray] = {}
+    for key in WEIGHT_KEYS:
+        arrays[key] = np.array(
+            [
+                (region_weights.get(c.department) or defaults).get(key, defaults[key])
+                for c in candidates
+            ],
+            dtype=np.float64,
+        )
+    return arrays
+
+
+def _effective_weights(
+    candidates: list, region_weights: dict[str, dict] | None,
+) -> dict:
+    """Signal weights for scoring: global scalars, or per-candidate arrays
+    when region policies override them. coldstart_scale rescales the
+    already-computed coldstart terms to each region's weight."""
+    arrays = _weight_arrays(candidates, region_weights)
+    if arrays is None:
+        return {
+            "weight_relevance": settings.weight_relevance,
+            "weight_burst": settings.weight_burst,
+            "weight_impact": settings.weight_impact,
+            "weight_precision": settings.weight_precision,
+            "weight_novelty": settings.weight_novelty,
+            "weight_recency": settings.weight_recency,
+            "coldstart_scale": 1.0,
+        }
+    base_coldstart = max(settings.weight_coldstart_prior, 1e-9)
+    arrays["coldstart_scale"] = arrays.pop("weight_coldstart_prior") / base_coldstart
+    return arrays
+
+
 def _score_candidates_vectorized(
     candidates: list,
     total_queries: int,
@@ -382,8 +513,13 @@ def _score_candidates_vectorized(
     classified_departments: list[str] | None,
     classified_role_keys: list[str] | None,
     hybrid_map: dict[int, float] | None = None,
+    region_weights: dict[str, dict] | None = None,
 ) -> list[NeuronScoreBreakdown]:
-    """Vectorized batch scoring using numpy — 10-50x faster than per-neuron loop."""
+    """Vectorized batch scoring using numpy — 10-50x faster than per-neuron loop.
+
+    region_weights ({region: resolved weight dict}) switches the weight
+    scalars to per-candidate arrays so each silo scores by its own epistemics.
+    """
     n = len(candidates)
     if n == 0:
         return []
@@ -413,21 +549,27 @@ def _score_candidates_vectorized(
             neuron_text = f"{c.label} {c.summary or ''} {content}"
             relevance_arr[i] = calc_relevance(keywords, neuron_text)
 
-    # 3. Compute all 6 signals in parallel via numpy
+    # 3. Compute all signals in parallel via numpy
     burst = calc_burst_batch(burst_counts)
     impact = calc_impact_batch(avg_utilities)
     precision = calc_precision_batch(dept_fires_arr, dept_totals_arr)
     novelty = calc_novelty_batch(ages)
     recency = calc_recency_batch(queries_since)
 
-    # 4. Gated modulatory scoring
-    stimulus = settings.weight_relevance * relevance_arr
+    # Cold-start prior term (authority + freshness + centrality, shrinkage-scaled)
+    coldstart_terms = _batch_coldstart_terms(candidates)
+
+    # 4. Gated modulatory scoring — scalar global weights, or per-candidate
+    # arrays when region policies override them
+    w = _effective_weights(candidates, region_weights)
+    stimulus = w["weight_relevance"] * relevance_arr
     modulatory = (
-        settings.weight_burst * burst
-        + settings.weight_impact * impact
-        + settings.weight_precision * precision
-        + settings.weight_novelty * novelty
-        + settings.weight_recency * recency
+        w["weight_burst"] * burst
+        + w["weight_impact"] * impact
+        + w["weight_precision"] * precision
+        + w["weight_novelty"] * novelty
+        + w["weight_recency"] * recency
+        + coldstart_terms * w["coldstart_scale"]
     )
     threshold = settings.relevance_gate_threshold
     floor = settings.relevance_gate_floor
@@ -436,12 +578,13 @@ def _score_candidates_vectorized(
         1.0,
         np.where(relevance_arr > 0, floor + (1.0 - floor) * (relevance_arr / threshold), floor),
     )
-    combined = stimulus + modulatory * gate
+    # Clamp at zero: the signed coldstart term may push inactive neurons negative
+    combined = np.maximum(0.0, stimulus + modulatory * gate)
 
-    # 5. Classification boosts (dept_match x 1.25, role_match x 1.5)
-    dept_match = np.array([c.department in dept_set for c in candidates])
+    # 5. Classification boosts (region_match x 1.25, role_match x 1.5)
+    region_match = np.array([c.department in dept_set for c in candidates])
     role_match = np.array([c.role_key in role_set for c in candidates])
-    combined *= np.where(role_match, 1.5, np.where(dept_match, 1.25, 1.0))
+    combined *= np.where(role_match, 1.5, np.where(region_match, 1.25, 1.0))
 
     # 6. Build NeuronScoreBreakdown objects from arrays
     scores = [
@@ -561,13 +704,23 @@ def _merge_promoted_into_scored(
 async def _select_promotion_targets(
     db: AsyncSession,
     neighbor_activation: dict[int, float],
+    requester=None,
 ) -> list[tuple[int, float]]:
-    """Filter neighbors to active neurons, return top candidates sorted by activation."""
+    """Filter neighbors to active, requester-visible neurons, sorted by activation.
+
+    ACL matters here: spread can traverse pyramidal edges INTO a restricted
+    region — the edge is allowed (coordination), but promoting the restricted
+    neuron into a non-member requester's context is not.
+    """
     neighbor_ids = list(neighbor_activation.keys())
+    params: dict = {"ids": neighbor_ids}
+    acl_clause = await _acl_clause_for(db, requester, params)
     active_result = await db.execute(
-        select(Neuron.id).where(
-            and_(Neuron.id.in_(neighbor_ids), Neuron.is_active == True)
-        )
+        text(
+            "SELECT id FROM neurons "
+            f"WHERE id = ANY(:ids) AND is_active = true AND {acl_clause}"
+        ),
+        params,
     )
     active_ids = {row[0] for row in active_result.all()}
 
@@ -585,6 +738,7 @@ async def spread_activation(
     db: AsyncSession,
     scored: list[NeuronScoreBreakdown],
     top_k_count: int,
+    requester=None,
 ) -> list[NeuronScoreBreakdown]:
     """Multi-hop spread activation through NeuronEdge co-firing graph.
 
@@ -630,7 +784,7 @@ async def spread_activation(
     if not neighbor_activation:
         return scored
 
-    promotions = await _select_promotion_targets(db, neighbor_activation)
+    promotions = await _select_promotion_targets(db, neighbor_activation, requester)
     if not promotions:
         return scored
 
