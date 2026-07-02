@@ -141,8 +141,10 @@ async def impact_analysis(topic: str, top_n: int = 20, graph_trace: bool = True)
         if not candidates:
             return json.dumps({"neurons": [], "message": "No similar neurons found"})
 
-        cand_ids = [nid for nid, _ in candidates]
-        sim_map = {nid: sim for nid, sim in candidates}
+        # semantic_prefilter returns (entity_id, entity_type, similarity)
+        neuron_hits = [(eid, sim) for eid, etype, sim in candidates if etype == "neuron"]
+        cand_ids = [eid for eid, _sim in neuron_hits]
+        sim_map = dict(neuron_hits)
 
         if graph_trace:
             # Use top seeds for blast radius BFS

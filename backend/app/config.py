@@ -101,6 +101,20 @@ class Settings(BaseSettings):
     spread_instantiate_decay: float = 0.6
     spread_instantiate_min_weight: float = 0.10
     concept_activation_boost: float = 1.3
+    # Cold-start prior (substrate/ontology split): authority + freshness +
+    # centrality stand in for usage signals until firing history accrues.
+    # weight_coldstart_prior is the modulatory scale of the (prior - 0.5)
+    # term; component weights below must sum to 1.0.
+    weight_coldstart_prior: float = 0.15
+    coldstart_prior_strength: float = 10.0  # shrinkage: strength/(strength+invocations)
+    coldstart_freshness_halflife_days: float = 365.0
+    coldstart_authority_weight: float = 0.5
+    coldstart_freshness_weight: float = 0.3
+    coldstart_centrality_weight: float = 0.2
+    # Consolidation (decay/prune/deactivate) — formerly module constants
+    consolidation_retention_queries: int = 2000
+    consolidation_decay_rate: float = 0.95
+    consolidation_deactivation_threshold: float = 0.05
     # Hierarchy-aware selection: include ancestor chains so graph shows trees
     hierarchy_selection_enabled: bool = True
     # Per-project neuron subgraph caching

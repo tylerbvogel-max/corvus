@@ -19,10 +19,36 @@ from dataclasses import dataclass, field as dc_field
 from datetime import datetime, timedelta
 from types import MappingProxyType
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import EmergentQueue, Neuron, Query, EvalScore, AutopilotRun
+from app.models import (
+    EmergentQueue, Neuron, Query, EvalScore, AutopilotRun,
+    KNOWLEDGE_ABSTRACTIONS,
+)
+
+
+def _knowledge_node_clause():
+    """Filter to knowledge-content nodes (vs structural/concept scaffolding).
+
+    Keyed on the abstraction axis when classified; falls back to the legacy
+    layer>=2 heuristic for unclassified rows.
+    """
+    return or_(
+        Neuron.abstraction_type.in_(KNOWLEDGE_ABSTRACTIONS),
+        and_(Neuron.abstraction_type.is_(None), Neuron.layer >= 2),
+    )
+
+
+def _coordination_node_clause():
+    """Filter to process-abstraction nodes that can anchor a cluster.
+
+    Falls back to the legacy layer==2 (Task) heuristic when unclassified.
+    """
+    return or_(
+        Neuron.abstraction_type == "process",
+        and_(Neuron.abstraction_type.is_(None), Neuron.layer == 2),
+    )
 
 
 # ── Dataclasses ───────────────────────────────────────────────────────
@@ -283,7 +309,7 @@ async def _check_thin_neurons(
     """Find active neurons with minimal content that need enrichment."""
     stmt = select(Neuron).where(
         Neuron.is_active == True,
-        Neuron.layer >= 2,  # Don't flag departments/roles as thin
+        _knowledge_node_clause(),  # Don't flag structural/concept nodes as thin
     )
 
     if focus_neuron_id:
@@ -335,8 +361,9 @@ async def _check_sparse_subtrees(
     if not child_counts:
         return None
 
-    # Group siblings — find parents that have sparse children compared to peers
-    # Look at L1-L2 nodes (roles, tasks) that have few children
+    # Group siblings — find parents that have sparse children compared to peers.
+    # Projection-DEPTH heuristic (grouping nodes at depth 1-2 in any projection),
+    # so it stays keyed on layer by design, not on the abstraction axis.
     stmt = select(Neuron).where(
         Neuron.is_active == True,
         Neuron.layer.in_([1, 2]),
@@ -429,12 +456,12 @@ async def _check_emergent_clusters(
         depts = cluster["departments"]
         suggested = cluster["suggested_label"]
 
-        # Check if there's already a Task-level neuron (L2) that covers this cluster
-        # by looking for neurons whose labels overlap significantly with the cluster keywords
+        # Check if there's already a process-abstraction neuron that can
+        # anchor/coordinate this cluster
         task_result = await db.execute(
             select(Neuron).where(
                 Neuron.is_active == True,
-                Neuron.layer == 2,
+                _coordination_node_clause(),
                 Neuron.id.in_(nids),
             )
         )
@@ -663,7 +690,7 @@ async def _scored_zero_hit_neurons(
         Neuron.is_active.is_(True),
         Neuron.invocations == 0,
         Neuron.created_at < cutoff,
-        Neuron.layer >= 2,
+        _knowledge_node_clause(),
     )
     if focus_neuron_id:
         subtree_ids = await _get_subtree_ids(db, focus_neuron_id)
@@ -802,7 +829,7 @@ async def _scored_stale_neurons(
     cutoff = datetime.utcnow() - timedelta(days=90)
     stmt = select(Neuron).where(
         Neuron.is_active.is_(True),
-        Neuron.layer >= 2,
+        _knowledge_node_clause(),
         (Neuron.last_verified.is_(None)) | (Neuron.last_verified < cutoff),
         Neuron.source_type == "regulatory",
     )

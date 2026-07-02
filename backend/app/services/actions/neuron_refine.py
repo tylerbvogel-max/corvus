@@ -6,8 +6,9 @@ Used by:
   - Autopilot _apply_single_update
   - Corvus observation update/merge paths
 
-Supported fields: content, summary, label, is_active. Anything else is a
-no-op (matches existing behavior).
+Supported fields: content, summary, label, is_active, department (region
+tag assignment for emergent seeding). Anything else is a no-op (matches
+existing behavior).
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ from app.middleware.rbac import UserIdentity
 from app.models import Action, Neuron, NeuronRefinement, ProposalItem
 
 
-_SUPPORTED_FIELDS = frozenset({"content", "summary", "label", "is_active"})
+_SUPPORTED_FIELDS = frozenset({"content", "summary", "label", "is_active", "department"})
 
 
 class NeuronRefineInput(BaseModel):
@@ -46,6 +47,8 @@ def _apply_field_to_neuron(neuron: Neuron, field: str, new_value: str) -> None:
         neuron.label = new_value
     elif field == "is_active":
         neuron.is_active = new_value.lower() in ("true", "1", "yes")
+    elif field == "department":
+        neuron.department = new_value or None
 
 
 def _skipped_audit(payload: NeuronRefineInput, reason: str) -> dict[str, Any]:

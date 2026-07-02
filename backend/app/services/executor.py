@@ -1068,10 +1068,12 @@ async def _load_candidates_by_ids(
     kw_expr = " + ".join(kw_parts) if kw_parts else "0"
 
     # Use ANY(ARRAY[...]) for asyncpg compatibility with large ID lists
+    from app.services.neuron_service import _FRESHNESS_SQL
     params["id_list"] = list(neuron_ids)
     sql = f"""
         SELECT id, label, summary, department, role_key, avg_utility,
-               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits
+               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
+               authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
         WHERE id = ANY(:id_list) AND is_active = true
     """
@@ -1083,6 +1085,9 @@ async def _load_candidates_by_ids(
             id=r[0], label=r[1], summary=r[2], department=r[3], role_key=r[4],
             avg_utility=r[5] or 0.5, invocations=r[6] or 0,
             created_at_query_count=r[7] or 0, keyword_hits=r[8] or 0,
+            authority_level=r[9],
+            freshness_days=float(r[10]) if r[10] is not None else None,
+            centrality=r[11] or 0.0,
         )
         for r in rows
     ]
@@ -1094,21 +1099,49 @@ async def _load_candidates_by_ids(
     return candidates
 
 
+async def _fetch_regions_for(db: AsyncSession, neuron_ids: list[int]) -> dict[int, str | None]:
+    """Load the region tag (department column) for a set of neurons."""
+    from sqlalchemy import text
+    if not neuron_ids:
+        return {}
+    result = await db.execute(
+        text("SELECT id, department FROM neurons WHERE id = ANY(:ids)"),
+        {"ids": list(neuron_ids)},
+    )
+    return {int(r[0]): r[1] for r in result.all()}
+
+
+def _derive_edge_type(region_a: str | None, region_b: str | None) -> str:
+    """Stellate = intra-region (local), pyramidal = cross-region (long-range).
+
+    Unknown regions default to pyramidal (conservative: stronger decay
+    threshold, weaker spread) — matches the pre-region behavior.
+    """
+    if region_a and region_b and region_a == region_b:
+        return "stellate"
+    return "pyramidal"
+
+
 async def _batch_update_edges(db: AsyncSession, neuron_ids: list[int], query_offset: int):
     """Batch update co-firing edges for a set of neurons (tiered storage).
 
     Promoted edges (above threshold) stay in neuron_edges table.
-    Weak edges live in JSONB on the neurons table.
+    Weak edges live in JSONB on the neurons table. New edges are typed
+    stellate/pyramidal from region membership of their endpoints.
     """
     # Precondition (JPL Power of Ten Rule 5)
     assert len(neuron_ids) >= 2, \
         f"_batch_update_edges requires >= 2 neuron_ids, got {len(neuron_ids)}"
 
-    from sqlalchemy import text
-
     pairs = [(min(a, b), max(a, b))
              for i, a in enumerate(neuron_ids)
              for b in neuron_ids[i + 1:]]
+
+    region_by_id = await _fetch_regions_for(db, neuron_ids)
+    edge_type_for = {
+        (s, t): _derive_edge_type(region_by_id.get(s), region_by_id.get(t))
+        for s, t in pairs
+    }
 
     # Check which pairs already exist in the promoted table
     existing = await _find_promoted_pairs(db, pairs)
@@ -1121,7 +1154,7 @@ async def _batch_update_edges(db: AsyncSession, neuron_ids: list[int], query_off
     )
 
     # Update weak edges in JSONB, promoting any that cross threshold
-    newly_promoted = await _cofire_weak(db, weak_pairs, query_offset)
+    newly_promoted = await _cofire_weak(db, weak_pairs, query_offset, edge_type_for)
 
     # Update adjacency cache for table-level changes
     from app.services.adjacency_cache import is_adjacency_loaded, update_adjacency_incremental
@@ -1131,7 +1164,9 @@ async def _batch_update_edges(db: AsyncSession, neuron_ids: list[int], query_off
         update_adjacency_incremental(
             pairs=all_cache_pairs,
             weights=all_cache_weights,
-            edge_types=["pyramidal"] * len(all_cache_pairs),
+            edge_types=[
+                edge_type_for.get((s, t), "pyramidal") for s, t in all_cache_pairs
+            ],
         )
 
 
@@ -1185,9 +1220,12 @@ async def _cofire_weak(
     db: AsyncSession,
     pairs: list[tuple[int, int]],
     qoff: int,
+    edge_type_for: dict[tuple[int, int], str] | None = None,
 ) -> list[tuple[int, int, float]]:
     """Increment co-fire for weak edges in JSONB, creating new ones as needed.
 
+    New edges are typed from region membership (stellate intra-region,
+    pyramidal cross-region); existing edges keep their recorded type.
     Returns list of (src, tgt, weight) for edges that were promoted to table.
     """
     from app.services.edge_tier import (
@@ -1196,14 +1234,17 @@ async def _cofire_weak(
     promoted: list[tuple[int, int, float]] = []
     for src, tgt in pairs:
         entry = await get_weak_edge(db, src, tgt)
+        derived_type = (edge_type_for or {}).get((src, tgt), "pyramidal")
         if entry is not None:
             new_c = entry.get("c", 0) + 1
             new_w = min(1.0, (new_c + 1) / 20.0)
+            edge_type = entry.get("t") or derived_type
         else:
             new_c = 1
             new_w = min(1.0, 2 / 20.0)
+            edge_type = derived_type
         data = {
-            "w": new_w, "t": "pyramidal", "c": new_c,
+            "w": new_w, "t": edge_type, "c": new_c,
             "s": "organic", "q": qoff,
         }
         await upsert_weak_edge(db, src, tgt, data)

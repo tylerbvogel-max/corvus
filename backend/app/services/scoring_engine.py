@@ -2,6 +2,7 @@
 
 import math
 from dataclasses import dataclass
+from types import MappingProxyType
 
 import numpy as np
 
@@ -20,6 +21,83 @@ class NeuronScoreBreakdown:
     combined: float
     spread_boost: float = 0.0
     entity_type: str = "neuron"  # "neuron" or "engram"
+
+
+@dataclass
+class ColdstartInputs:
+    """Inputs for the cold-start prior (authority + freshness + centrality).
+
+    The prior stands in for usage signals while a neuron has little firing
+    history, then hands off to the usage posterior as invocations accrue
+    (Bayesian shrinkage). Callers that cannot supply these fields pass None
+    and the prior term is skipped entirely.
+    """
+    authority_level: str | None
+    freshness_days: float | None
+    centrality: float
+    invocations: int
+
+
+# Authority level -> prior evidence strength. Unknown/missing = mild default.
+AUTHORITY_PRIOR_MAP = MappingProxyType({
+    "binding_standard": 1.0,
+    "regulatory": 0.9,
+    "industry_practice": 0.7,
+    "organizational": 0.5,
+    "guidance": 0.5,
+    "informational": 0.3,
+})
+_AUTHORITY_PRIOR_DEFAULT = 0.4
+
+
+def coldstart_shrinkage(invocations: int | np.ndarray):
+    """Weight of the prior vs the usage posterior: strength / (strength + n)."""
+    strength = settings.coldstart_prior_strength
+    return strength / (strength + np.maximum(invocations, 0))
+
+
+def calc_coldstart_prior(
+    authority_level: str | None,
+    freshness_days: float | None,
+    centrality: float,
+) -> float:
+    """Cold-start prior in [0, 1] from authority + source freshness + centrality.
+
+    Story: an org declares what is authoritative (authority_level), documents
+    edited recently outrank documents from 2019 (freshness), and structurally
+    central nodes outrank periphery (degree centrality) — all before any
+    firing history exists.
+    """
+    authority = AUTHORITY_PRIOR_MAP.get(authority_level or "", _AUTHORITY_PRIOR_DEFAULT)
+    if freshness_days is None:
+        freshness = 0.5  # unknown provenance date: neutral
+    else:
+        freshness = math.exp(-max(freshness_days, 0.0) / settings.coldstart_freshness_halflife_days)
+    central = max(0.0, min(1.0, centrality))
+
+    prior = (
+        settings.coldstart_authority_weight * authority
+        + settings.coldstart_freshness_weight * freshness
+        + settings.coldstart_centrality_weight * central
+    )
+    assert 0.0 <= prior <= 1.0, f"coldstart prior out of range: {prior}"
+    return prior
+
+
+def calc_coldstart_term(coldstart: "ColdstartInputs | None") -> float:
+    """Signed modulatory contribution of the cold-start prior.
+
+    Centered at 0.5 so high-authority fresh central knowledge gets a boost
+    and stale unanchored knowledge a mild penalty; scaled by shrinkage so
+    the term decays out as real firings accrue.
+    """
+    if coldstart is None or settings.weight_coldstart_prior <= 0:
+        return 0.0
+    prior = calc_coldstart_prior(
+        coldstart.authority_level, coldstart.freshness_days, coldstart.centrality,
+    )
+    shrink = float(coldstart_shrinkage(coldstart.invocations))
+    return settings.weight_coldstart_prior * (prior - 0.5) * shrink
 
 
 def calc_burst(fires_in_window: int) -> float:
@@ -99,6 +177,37 @@ def calc_recency_batch(queries_since: np.ndarray) -> np.ndarray:
     """Vectorized recency: e^(-queries_since / decay)."""
     safe_qs = np.maximum(queries_since, 0.0)
     return np.exp(-safe_qs / settings.recency_decay_queries)
+
+
+def calc_coldstart_term_batch(
+    authority_levels: list,
+    freshness_days: np.ndarray,
+    centrality: np.ndarray,
+    invocations: np.ndarray,
+) -> np.ndarray:
+    """Vectorized cold-start prior term (see calc_coldstart_term).
+
+    freshness_days uses NaN for unknown provenance dates (neutral 0.5).
+    """
+    if settings.weight_coldstart_prior <= 0:
+        return np.zeros(len(authority_levels), dtype=np.float64)
+    authority = np.array(
+        [AUTHORITY_PRIOR_MAP.get(a or "", _AUTHORITY_PRIOR_DEFAULT) for a in authority_levels],
+        dtype=np.float64,
+    )
+    freshness = np.where(
+        np.isnan(freshness_days),
+        0.5,
+        np.exp(-np.maximum(freshness_days, 0.0) / settings.coldstart_freshness_halflife_days),
+    )
+    central = np.clip(centrality, 0.0, 1.0)
+    prior = (
+        settings.coldstart_authority_weight * authority
+        + settings.coldstart_freshness_weight * freshness
+        + settings.coldstart_centrality_weight * central
+    )
+    shrink = coldstart_shrinkage(invocations)
+    return settings.weight_coldstart_prior * (prior - 0.5) * shrink
 
 
 _STOP_WORDS = frozenset({
@@ -212,6 +321,7 @@ def _compute_gated_combined(
     novelty: float,
     recency: float,
     relevance: float,
+    coldstart_term: float = 0.0,
 ) -> float:
     stimulus = settings.weight_relevance * relevance
 
@@ -221,6 +331,7 @@ def _compute_gated_combined(
         + settings.weight_precision * precision
         + settings.weight_novelty * novelty
         + settings.weight_recency * recency
+        + coldstart_term
     )
 
     threshold = settings.relevance_gate_threshold
@@ -232,18 +343,21 @@ def _compute_gated_combined(
     else:
         gate = floor
 
-    combined = stimulus + modulatory * gate
+    # Clamp at zero: the coldstart term is signed and may push an otherwise
+    # inactive neuron slightly negative, which just means "no activation".
+    combined = max(0.0, stimulus + modulatory * gate)
     assert combined >= 0, f"combined score must be non-negative, got {combined}"
     assert isinstance(combined, float), f"combined must be float, got {type(combined)}"
     return combined
 
 
 def _apply_classification_boost(
-    combined: float, dept_match: bool, role_match: bool
+    combined: float, region_match: bool, role_match: bool
 ) -> float:
+    """Boost for classifier-predicted region/role membership (role wins)."""
     if role_match:
         combined *= 1.5
-    elif dept_match:
+    elif region_match:
         combined *= 1.25
     assert combined >= 0, f"boosted score must be non-negative, got {combined}"
     return combined
@@ -263,6 +377,7 @@ def compute_score(
     role_match: bool = False,
     semantic_similarity: float | None = None,
     hybrid_score: float | None = None,
+    coldstart: ColdstartInputs | None = None,
 ) -> NeuronScoreBreakdown:
     """Compute combined activation score using gated modulatory scoring.
 
@@ -272,6 +387,8 @@ def compute_score(
     - Burst/Impact/Precision/Novelty/Recency = neuromodulatory signals
       (dopamine, norepinephrine, serotonin). They adjust sensitivity and
       gain but cannot cause firing on their own.
+    - Cold-start prior (optional) = developmental wiring bias: authority +
+      freshness + centrality stand in for usage until firings accrue.
 
     The modulatory component is gated by relevance: full modulation at
     relevance >= threshold (default 0.2), with a small floor for
@@ -290,7 +407,10 @@ def compute_score(
     assert 0.0 <= recency <= 1.0, f"recency out of range: {recency}"
 
     relevance = _resolve_relevance(semantic_similarity, keywords, neuron_text, hybrid_score)
-    combined = _compute_gated_combined(burst, impact, precision, novelty, recency, relevance)
+    combined = _compute_gated_combined(
+        burst, impact, precision, novelty, recency, relevance,
+        coldstart_term=calc_coldstart_term(coldstart),
+    )
     combined = _apply_classification_boost(combined, dept_match, role_match)
 
     return NeuronScoreBreakdown(

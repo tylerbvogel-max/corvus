@@ -1,5 +1,6 @@
 """Neuron CRUD, candidate pre-filtering, and firing record management."""
 
+import datetime
 import json
 from dataclasses import dataclass
 
@@ -11,9 +12,9 @@ from app.config import settings
 from app.models import Neuron, NeuronFiring, NeuronScoreOverride, SystemState
 from app.services.scoring_engine import (
     compute_score, calc_relevance, calc_hybrid_relevance, NeuronScoreBreakdown,
-    apply_score_overrides,
+    ColdstartInputs, apply_score_overrides,
     calc_burst_batch, calc_impact_batch, calc_precision_batch,
-    calc_novelty_batch, calc_recency_batch,
+    calc_novelty_batch, calc_recency_batch, calc_coldstart_term_batch,
 )
 
 
@@ -29,6 +30,42 @@ class NeuronCandidate:
     invocations: int
     created_at_query_count: int
     keyword_hits: int = 0
+    # Cold-start prior inputs (authority + freshness + centrality)
+    authority_level: str | None = None
+    freshness_days: float | None = None
+    centrality: float = 0.0
+
+    @property
+    def region(self) -> str | None:
+        """Generic region vocabulary — silos are labeled regions."""
+        return self.department
+
+
+# SQL expression for days since the most authoritative provenance date.
+_FRESHNESS_SQL = (
+    "EXTRACT(EPOCH FROM (now() - COALESCE(last_verified, "
+    "effective_date::timestamp, created_at))) / 86400.0"
+)
+
+
+def _coldstart_fields(candidate) -> tuple[str | None, float | None, float, int]:
+    """Resolve (authority, freshness_days, centrality, invocations)
+    from either a NeuronCandidate or a full Neuron ORM object."""
+    authority = getattr(candidate, "authority_level", None)
+    freshness = getattr(candidate, "freshness_days", None)
+    if freshness is None:
+        stamp = (
+            getattr(candidate, "last_verified", None)
+            or getattr(candidate, "effective_date", None)
+            or getattr(candidate, "created_at", None)
+        )
+        if isinstance(stamp, datetime.date) and not isinstance(stamp, datetime.datetime):
+            stamp = datetime.datetime.combine(stamp, datetime.time())
+        if isinstance(stamp, datetime.datetime):
+            freshness = max(0.0, (datetime.datetime.utcnow() - stamp).total_seconds() / 86400.0)
+    centrality = getattr(candidate, "centrality", 0.0) or 0.0
+    invocations = getattr(candidate, "invocations", 0) or 0
+    return authority, freshness, centrality, invocations
 
 
 async def get_neuron(db: AsyncSession, neuron_id: int) -> Neuron | None:
@@ -82,7 +119,8 @@ def _build_keyword_expr(keywords: list[str] | None, params: dict) -> str:
 def _build_candidate_sql(where_clause: str, kw_expr: str) -> str:
     return f"""
         SELECT id, label, summary, department, role_key, avg_utility,
-               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits
+               invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
+               authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
         WHERE {where_clause}
         ORDER BY keyword_hits DESC, avg_utility DESC
@@ -96,6 +134,9 @@ def _rows_to_candidates(rows: list) -> list[NeuronCandidate]:
             id=r[0], label=r[1], summary=r[2], department=r[3], role_key=r[4],
             avg_utility=r[5] or 0.5, invocations=r[6] or 0,
             created_at_query_count=r[7] or 0, keyword_hits=r[8] or 0,
+            authority_level=r[9],
+            freshness_days=float(r[10]) if r[10] is not None else None,
+            centrality=r[11] or 0.0,
         )
         for r in rows
     ]
@@ -288,6 +329,7 @@ def _score_single_candidate(
     role_match = bool(classified_role_keys and neuron.role_key in classified_role_keys)
 
     hybrid_score = hybrid_map.get(neuron.id) if hybrid_map else None
+    authority, freshness, centrality, invocations = _coldstart_fields(neuron)
     score = compute_score(
         fires_in_window=fires_in_window,
         avg_utility=neuron.avg_utility,
@@ -302,6 +344,12 @@ def _score_single_candidate(
         role_match=role_match,
         semantic_similarity=semantic_map.get(neuron.id),
         hybrid_score=hybrid_score,
+        coldstart=ColdstartInputs(
+            authority_level=authority,
+            freshness_days=freshness,
+            centrality=centrality,
+            invocations=invocations,
+        ),
     )
     assert score.combined >= 0, f"Score for neuron {neuron.id} is negative: {score.combined}"
     return score
@@ -370,6 +418,20 @@ async def score_candidates(
     return scores
 
 
+def _batch_coldstart_terms(candidates: list) -> np.ndarray:
+    """Vectorized cold-start prior terms for a candidate batch."""
+    rows = [_coldstart_fields(c) for c in candidates]
+    return calc_coldstart_term_batch(
+        authority_levels=[r[0] for r in rows],
+        freshness_days=np.array(
+            [float("nan") if r[1] is None else r[1] for r in rows],
+            dtype=np.float64,
+        ),
+        centrality=np.array([r[2] for r in rows], dtype=np.float64),
+        invocations=np.array([r[3] for r in rows], dtype=np.float64),
+    )
+
+
 def _score_candidates_vectorized(
     candidates: list,
     total_queries: int,
@@ -413,12 +475,15 @@ def _score_candidates_vectorized(
             neuron_text = f"{c.label} {c.summary or ''} {content}"
             relevance_arr[i] = calc_relevance(keywords, neuron_text)
 
-    # 3. Compute all 6 signals in parallel via numpy
+    # 3. Compute all signals in parallel via numpy
     burst = calc_burst_batch(burst_counts)
     impact = calc_impact_batch(avg_utilities)
     precision = calc_precision_batch(dept_fires_arr, dept_totals_arr)
     novelty = calc_novelty_batch(ages)
     recency = calc_recency_batch(queries_since)
+
+    # Cold-start prior term (authority + freshness + centrality, shrinkage-scaled)
+    coldstart_terms = _batch_coldstart_terms(candidates)
 
     # 4. Gated modulatory scoring
     stimulus = settings.weight_relevance * relevance_arr
@@ -428,6 +493,7 @@ def _score_candidates_vectorized(
         + settings.weight_precision * precision
         + settings.weight_novelty * novelty
         + settings.weight_recency * recency
+        + coldstart_terms
     )
     threshold = settings.relevance_gate_threshold
     floor = settings.relevance_gate_floor
@@ -436,12 +502,13 @@ def _score_candidates_vectorized(
         1.0,
         np.where(relevance_arr > 0, floor + (1.0 - floor) * (relevance_arr / threshold), floor),
     )
-    combined = stimulus + modulatory * gate
+    # Clamp at zero: the signed coldstart term may push inactive neurons negative
+    combined = np.maximum(0.0, stimulus + modulatory * gate)
 
-    # 5. Classification boosts (dept_match x 1.25, role_match x 1.5)
-    dept_match = np.array([c.department in dept_set for c in candidates])
+    # 5. Classification boosts (region_match x 1.25, role_match x 1.5)
+    region_match = np.array([c.department in dept_set for c in candidates])
     role_match = np.array([c.role_key in role_set for c in candidates])
-    combined *= np.where(role_match, 1.5, np.where(dept_match, 1.25, 1.0))
+    combined *= np.where(role_match, 1.5, np.where(region_match, 1.25, 1.0))
 
     # 6. Build NeuronScoreBreakdown objects from arrays
     scores = [
