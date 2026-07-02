@@ -9,7 +9,7 @@
 |---|---|---|
 | Mapping + design decisions | done | — |
 | W1 plat-substrate-ontology | done | (see git log) |
-| W2a plat-cheap-recall | pending | — |
+| W2a plat-cheap-recall | done | (see git log) |
 | W2b plat-write-gate | pending | — |
 | W3 plat-region-config | pending | — |
 | W4 plat-reconciler | pending | — |
@@ -127,6 +127,33 @@ owning region; never auto-edits authoritative content (obeys write gate).
   member as coordination (was layer==2 only). Both intended.
 - NOTE: run_consolidation has NO caller anywhere (decay loop never runs
   today) — wired in W2b where decay is the soft write gate.
+
+## W2a verification evidence (2026-07-01)
+- 327 tests pass (13 new in test_cheap_recall.py); NASA strict clean.
+- **CRITICAL FIX FOUND DURING MEASUREMENT:** the production LLM classifier
+  has been silently broken — `llm_provider._anthropic_chat` ran the Claude
+  CLI with the repo as cwd and `--append-system-prompt`, so the CLI loaded
+  the project's .mcp.json/CLAUDE.md and answered "I need permission to
+  access the Corvus neuron graph" instead of classifying. Every classify
+  call burned ~$0.006-0.024 and fell back to empty classification
+  (departments=[], intent=general_query). Fixed: cwd=/tmp,
+  --strict-mcp-config, --no-session-persistence, --system-prompt (full
+  replace). Verified: classifier returns real intents/departments again.
+- Measurement (5 smoke queries, live aero DB, top_k=10, post-fix):
+  | metric | cheap | full |
+  |---|---|---|
+  | warm latency | 284-558 ms | 11.4-17.0 s |
+  | classify cost | $0 | ~$0.024/query |
+  | LLM calls | 0 | 1 (Haiku via CLI) |
+  top-10 Jaccard cheap-vs-full: 0.33/0.50/0.43/0.33/0.00 — the classify
+  boost (×1.25/×1.5) + LLM phrase keywords genuinely reshape ranking.
+  Neighbor-vote regions matched LLM-classified departments on 4/5 queries
+  (DCAA query voted Executive Leadership+Finance vs LLM's Finance-first).
+- Adaptive mode: 0/5 escalations (all top-neighbor sims >= 0.35 threshold);
+  returns cheap results at cheap latency. Escalation verified in unit tests.
+- Answer-quality (LLM-judge) delta remains measurable via the existing
+  EvalRun machinery now that recall_mode plumbs through prepare_context;
+  not run here (cost/wall-time) — retrieval-level delta documented instead.
 
 ## Verification protocol (per workstream)
 1. `TENANT_ID=corvus-aero pytest tests/ -v` — full suite green

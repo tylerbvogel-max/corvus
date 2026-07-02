@@ -85,6 +85,66 @@ async def _embed_and_classify(user_message: str) -> tuple[dict, object, str, lis
     return classify_result, query_embedding, intent, departments, role_keys, keywords
 
 
+def _tally_neighbor_votes(
+    neuron_hits: list[tuple[int, float]],
+    tag_rows: list[tuple[int, str | None, str | None]],
+    max_tags: int = 3,
+    min_share: float = 0.2,
+) -> tuple[list[str], list[str]]:
+    """Similarity-weighted vote: neighbors' region/role tags ARE the prediction.
+
+    A tag wins when it carries at least min_share of the total similarity
+    weight; at most max_tags per dimension, strongest first.
+    """
+    sim_by_id = dict(neuron_hits)
+    region_votes: dict[str, float] = {}
+    role_votes: dict[str, float] = {}
+    total_weight = 0.0
+    for nid, region, role_key in tag_rows:
+        weight = sim_by_id.get(nid, 0.0)
+        total_weight += weight
+        if region:
+            region_votes[region] = region_votes.get(region, 0.0) + weight
+        if role_key:
+            role_votes[role_key] = role_votes.get(role_key, 0.0) + weight
+    if total_weight <= 0:
+        return [], []
+
+    def _winners(votes: dict[str, float]) -> list[str]:
+        ranked = sorted(votes.items(), key=lambda kv: kv[1], reverse=True)
+        return [tag for tag, w in ranked[:max_tags] if w / total_weight >= min_share]
+
+    return _winners(region_votes), _winners(role_votes)
+
+
+async def _neighbor_vote_classify(
+    db: AsyncSession, query_embedding, k: int | None = None,
+) -> tuple[list[str], list[str], float]:
+    """Predict region/role tags from top-k semantic neighbors — no LLM.
+
+    The graph classifies itself: the query lands somewhere in embedding
+    space and its nearest neurons' tags are the classification (recognition,
+    not deliberation). Returns (regions, role_keys, top_similarity); the
+    caller uses top_similarity to decide whether recognition was confident
+    enough or the LLM classifier should be consulted (adaptive escalation).
+    """
+    from sqlalchemy import text as sa_text
+    from app.services.semantic_prefilter import semantic_prefilter
+
+    k = k or settings.cheap_recall_neighbor_k
+    results = await semantic_prefilter(db, query_embedding, top_n_override=k * 3)
+    neuron_hits = [(eid, sim) for eid, etype, sim in results if etype == "neuron"][:k]
+    if not neuron_hits:
+        return [], [], 0.0
+
+    rows = await db.execute(
+        sa_text("SELECT id, department, role_key FROM neurons WHERE id = ANY(:ids)"),
+        {"ids": [eid for eid, _sim in neuron_hits]},
+    )
+    regions, role_keys = _tally_neighbor_votes(neuron_hits, list(rows.all()))
+    return regions, role_keys, neuron_hits[0][1]
+
+
 async def _select_and_score_candidates(
     db: AsyncSession,
     query_embedding,
@@ -232,12 +292,16 @@ async def prepare_context(
     db: AsyncSession, user_message: str, token_budget: int | None = None,
     top_k: int | None = None, project_path: str | None = None,
     on_stage: StageCallback = None, prior_neuron_ids: list[int] | None = None,
+    recall_mode: str | None = None,
 ) -> PreparedContext:
     """Run the classify → score → spread → inhibit → resolve → assemble pipeline.
 
     Pattern #5: stages are composed via the typed pipeline runner; each stage
     emits timing + telemetry and any stage failure hard-fails with a
     `PipelineStageError` carrying the stage name.
+
+    recall_mode (full | cheap | adaptive) selects the classify stage;
+    None falls back to settings.recall_mode.
     """
     assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
         "user_message must be a non-empty string"
@@ -246,6 +310,7 @@ async def prepare_context(
     from app.services.pipeline.state import PipelineState
     from app.services.pipeline.stages import build_default_pipeline
 
+    effective_recall_mode = recall_mode or settings.recall_mode
     initial_state = PipelineState(
         user_message=user_message,
         effective_top_k=top_k or settings.top_k_neurons,
@@ -256,7 +321,9 @@ async def prepare_context(
     )
     pipeline_ctx = PipelineContext(db=db, on_stage=on_stage)
 
-    final = await run_pipeline(build_default_pipeline(), initial_state, pipeline_ctx)
+    final = await run_pipeline(
+        build_default_pipeline(effective_recall_mode), initial_state, pipeline_ctx,
+    )
 
     # Structural resolve short-circuit returns the already-built PreparedContext.
     if isinstance(final, PreparedContext):
@@ -270,6 +337,11 @@ async def prepare_context(
         from app.services.project_cache import record_project_firings
         await record_project_firings(db, state.project_path, state.top_slice)
 
+    return _state_to_prepared_context(state, pipeline_ctx)
+
+
+def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
+    """Project the final PipelineState into the public PreparedContext."""
     result = PreparedContext(
         system_prompt=state.system_prompt, intent=state.intent,
         departments=state.departments, role_keys=state.role_keys, keywords=state.keywords,

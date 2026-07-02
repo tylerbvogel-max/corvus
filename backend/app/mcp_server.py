@@ -72,8 +72,11 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, project_path: str | None = None) -> str:
-    """Run the full neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
+async def query_graph(
+    query: str, top_k: int = 30, token_budget: int = 4000,
+    project_path: str | None = None, mode: str = "adaptive",
+) -> str:
+    """Run the neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
 
     This is the primary tool — returns a system prompt built from the most relevant neurons
     in the graph. Use the returned system_prompt as enriched context for answering questions.
@@ -83,8 +86,14 @@ async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, pro
         top_k: Maximum neurons to activate (default 30)
         token_budget: Token budget for the assembled prompt (default 4000)
         project_path: Optional project directory path for per-project neuron boosting
+        mode: Recall mode — "adaptive" (default: embed-only recall, LLM classify
+            only when the query is ambiguous), "cheap" (never call an LLM), or
+            "full" (LLM classify on every read)
     """
     from app.services.executor import prepare_context
+
+    if mode not in ("adaptive", "cheap", "full"):
+        return json.dumps({"error": f"mode must be adaptive|cheap|full, got {mode!r}"})
 
     async with async_session() as db:
         ctx = await prepare_context(
@@ -92,6 +101,7 @@ async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, pro
             token_budget=token_budget,
             top_k=top_k,
             project_path=project_path,
+            recall_mode=mode,
         )
         await db.commit()
 
@@ -100,6 +110,7 @@ async def query_graph(query: str, top_k: int = 30, token_budget: int = 4000, pro
             "neurons_activated": ctx.neurons_activated,
             "departments": ctx.departments,
             "intent": ctx.intent,
+            "recall_mode": mode,
             "classify_cost_usd": ctx.classify_cost_usd,
             "neuron_scores": ctx.neuron_scores[:10],  # Top 10 for brevity
         })

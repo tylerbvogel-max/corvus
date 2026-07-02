@@ -209,23 +209,35 @@ def get_valid_model_names() -> set[str]:
 async def _anthropic_chat(
     system_prompt: str, user_message: str, max_tokens: int, model_info: ModelInfo,
 ) -> dict:
-    """Call Claude via the local Claude CLI (personal subscription, no API credits)."""
+    """Call Claude via the local Claude CLI (personal subscription, no API credits).
+
+    The subprocess must behave as a PURE completion model, so it is isolated
+    from the agentic CLI environment three ways:
+    - cwd=/tmp: prevents pickup of the repo's CLAUDE.md / .mcp.json (a CLI
+      launched in the repo loads the Corvus MCP config and answers with
+      "I need permission to access the neuron graph" instead of classifying)
+    - --strict-mcp-config with no --mcp-config: zero MCP servers
+    - --system-prompt (not --append-): replaces the CLI's default
+      software-engineering-agent framing entirely
+    """
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
     args = [
         _CLAUDE_CLI_PATH, "-p", user_message,
         "--model", model_info.api_id,
         "--output-format", "json",
+        "--strict-mcp-config",
+        "--no-session-persistence",
     ]
     if system_prompt:
-        args.extend(["--append-system-prompt", system_prompt])
+        args.extend(["--system-prompt", system_prompt])
 
     # Strip CLAUDECODE/CLAUDE_CODE_* from env — the CLI refuses to launch nested
     # inside another Claude Code session. See CLAUDE.md "Claude CLI nested session".
     child_env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDECODE") and not k.startswith("CLAUDE_CODE_")}
     proc = await asyncio.create_subprocess_exec(
         *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-        env=child_env,
+        env=child_env, cwd="/tmp",
     )
     stdout, stderr = await proc.communicate()
     assert proc.returncode == 0, (

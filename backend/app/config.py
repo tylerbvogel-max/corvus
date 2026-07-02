@@ -77,6 +77,15 @@ class Settings(BaseSettings):
     min_cofire_score: float = 0.3
     edge_prune_min_cofires: int = 2
     edge_prune_stale_queries: int = 100
+    # Recall mode for the query-prep pipeline (plat-cheap-recall):
+    #   full     - LLM classify on every read (legacy default; HTTP/UI path)
+    #   cheap    - embed-only, zero LLM: tokenizer keywords + neighbor-vote regions
+    #   adaptive - cheap first, escalate to LLM classify when the top semantic
+    #              neighbor similarity is below the confidence threshold
+    # The MCP query_graph tool defaults to adaptive (the seamless agent layer).
+    recall_mode: str = "full"
+    cheap_recall_confidence_threshold: float = 0.35
+    cheap_recall_neighbor_k: int = 8
     # Semantic pre-filter (replaces org-chart filtering)
     semantic_prefilter_enabled: bool = True
     semantic_prefilter_top_n: int = 100_000

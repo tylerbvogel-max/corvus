@@ -223,6 +223,44 @@ _STOP_WORDS = frozenset({
 })
 
 
+# Question/auxiliary words filtered by the cheap-recall tokenizer (in
+# addition to the domain stop words above). Tokens under 3 chars are
+# dropped before this check, so short function words need no entries.
+_QUERY_STOP_WORDS = frozenset({
+    "what", "when", "where", "which", "whose", "who", "whom", "why",
+    "how", "does", "did", "doing", "done", "should", "would", "could",
+    "must", "might", "shall", "will", "can", "need", "needs", "there",
+    "their", "these", "those", "they", "them", "then", "than", "some",
+    "only", "very", "just", "over", "under", "between", "before",
+    "after", "about", "against", "because", "being", "both", "during",
+    "please", "explain", "describe", "tell", "give", "show", "help",
+})
+
+
+def extract_keywords(text: str, max_keywords: int = 8) -> list[str]:
+    """Deterministic keyword extraction for cheap recall (no LLM).
+
+    Stopword-filtered unigrams in order of first appearance — the same
+    vocabulary discipline calc_relevance applies at match time.
+    """
+    assert max_keywords > 0, f"max_keywords must be positive, got {max_keywords}"
+    seen: set[str] = set()
+    keywords: list[str] = []
+    for raw in text.lower().split():
+        token = raw.strip(".,;:!?()[]{}\"'`“”‘’")
+        if len(token) < 3 or not any(ch.isalnum() for ch in token):
+            continue
+        if token in _STOP_WORDS or token in _QUERY_STOP_WORDS:
+            continue
+        if token in seen:
+            continue
+        seen.add(token)
+        keywords.append(token)
+        if len(keywords) >= max_keywords:
+            break
+    return keywords
+
+
 def calc_relevance(keywords: list[str], neuron_text: str) -> float:
     """Relevance: two-tier keyword matching with stop-word filtering.
 
