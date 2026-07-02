@@ -161,6 +161,15 @@ class Settings(BaseSettings):
     integrity_aging_operational_days: int = 548
     integrity_aging_default_days: int = 730
     integrity_max_scan_neurons: int = 10_000
+    # Horizontal reconciler (cross-region loop) — plat-reconciler
+    # Judge model default is opus: sweeps are rare and bounded; judgment
+    # quality on contradictions/homonyms matters more than per-call cost.
+    reconciler_judge_model: str = "opus"
+    reconciler_max_pairs: int = 12
+    reconciler_staleness_divergence_days: int = 180
+    reconciler_homonym_sim_threshold: float = 0.80
+    # 0 = manual only; > 0 = the sweep rides the tick heartbeat at this cadence
+    reconciler_interval_hours: float = 0.0
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

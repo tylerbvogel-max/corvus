@@ -388,6 +388,55 @@ async def cost_report() -> str:
 
 
 @mcp.tool()
+async def reconciliation_report() -> str:
+    """Open cross-region discrepancies (contradictions, staleness divergence,
+    homonym/synonym collisions, seam gaps) grouped by type and owning region.
+
+    The horizontal reconciler detects these across silo seams and routes them
+    to the owning region's controller; this report is the read-only console
+    view. Detection only — no raw restricted content is included.
+    """
+    from app.models import IntegrityFinding
+    from sqlalchemy import select as sa_select
+
+    async with async_session() as db:
+        stmt = (
+            sa_select(IntegrityFinding)
+            .where(
+                IntegrityFinding.status == "open",
+                IntegrityFinding.finding_type.in_((
+                    "contradiction", "staleness_divergence",
+                    "homonym_synonym", "seam_gap",
+                )),
+                IntegrityFinding.region.isnot(None),
+            )
+            .order_by(IntegrityFinding.priority_score.desc())
+            .limit(100)
+        )
+        findings = (await db.execute(stmt)).scalars().all()
+
+        by_type: dict[str, int] = {}
+        by_region: dict[str, int] = {}
+        for f in findings:
+            by_type[f.finding_type] = by_type.get(f.finding_type, 0) + 1
+            by_region[f.region or "?"] = by_region.get(f.region or "?", 0) + 1
+
+        return json.dumps({
+            "open_cross_region_findings": len(findings),
+            "by_type": by_type,
+            "by_owning_region": by_region,
+            "top_findings": [
+                {
+                    "id": f.id, "type": f.finding_type, "region": f.region,
+                    "severity": f.severity, "priority": f.priority_score,
+                    "description": (f.description or "")[:300],
+                }
+                for f in findings[:15]
+            ],
+        }, indent=2)
+
+
+@mcp.tool()
 async def discover_clusters(min_weight: float = 0.3, min_size: int = 3, resolution: float = 1.0) -> str:
     """Discover emergent cross-department neuron clusters via Leiden community detection on co-firing edges.
 

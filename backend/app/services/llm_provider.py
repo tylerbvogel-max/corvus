@@ -222,8 +222,10 @@ async def _anthropic_chat(
     """
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
+    # The user message goes over STDIN, never argv: prompts that start with
+    # "-" would be parsed as CLI options, and argv has size limits.
     args = [
-        _CLAUDE_CLI_PATH, "-p", user_message,
+        _CLAUDE_CLI_PATH, "-p",
         "--model", model_info.api_id,
         "--output-format", "json",
         "--strict-mcp-config",
@@ -236,10 +238,11 @@ async def _anthropic_chat(
     # inside another Claude Code session. See CLAUDE.md "Claude CLI nested session".
     child_env = {k: v for k, v in os.environ.items() if not k.startswith("CLAUDECODE") and not k.startswith("CLAUDE_CODE_")}
     proc = await asyncio.create_subprocess_exec(
-        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        *args, stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
         env=child_env, cwd="/tmp",
     )
-    stdout, stderr = await proc.communicate()
+    stdout, stderr = await proc.communicate(input=user_message.encode())
     assert proc.returncode == 0, (
         f"claude CLI failed (exit {proc.returncode}): {stderr.decode(errors='replace')[:500]}"
     )

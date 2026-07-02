@@ -830,6 +830,9 @@ class IntegrityFinding(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     scan_id: Mapped[int] = mapped_column(Integer, ForeignKey("integrity_scans.id"), nullable=False, index=True)
     finding_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    # Owning region for routed (reconciler) findings — the silo whose
+    # controller should resolve this. NULL for tenant-global findings.
+    region: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     severity: Mapped[str] = mapped_column(String(20), nullable=False, server_default="warning")
     priority_score: Mapped[float] = mapped_column(Float, default=0.0, server_default="0.0")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -210,6 +210,33 @@ async def _run_consolidation_if_due(db: AsyncSession) -> None:
     logger.info("Consolidation (tick heartbeat): %s", result)
 
 
+async def _run_reconciler_if_due(db: AsyncSession) -> None:
+    """The horizontal loop riding the tick heartbeat (plat-reconciler).
+
+    Disabled by default (reconciler_interval_hours=0 — manual sweeps only).
+    When enabled, at most one sweep per interval; cadence is measured off
+    the newest completed reconciler scan.
+    """
+    from app.config import settings
+    from app.models import IntegrityScan
+
+    if settings.reconciler_interval_hours <= 0:
+        return
+    last = (await db.execute(
+        select(func.max(IntegrityScan.completed_at)).where(
+            IntegrityScan.scan_type.like("reconciler_%"),
+            IntegrityScan.status == "completed",
+        )
+    )).scalar()
+    if last is not None:
+        elapsed = datetime.now(timezone.utc) - last.replace(tzinfo=timezone.utc)
+        if elapsed < timedelta(hours=settings.reconciler_interval_hours):
+            return
+    from app.services.integrity.reconciler import run_reconciler_sweep
+    result = await run_reconciler_sweep(db, initiated_by="reconciler_loop")
+    logger.info("Reconciler sweep (tick heartbeat): %s", result)
+
+
 def _config_is_due(config: AutopilotConfig) -> bool:
     """True when a loop config is enabled and past its interval."""
     if not config.enabled:
@@ -246,6 +273,7 @@ async def tick(db: AsyncSession = Depends(get_db)):
     if _tick_running:
         return AutopilotTickResponse(status="skipped", message="A tick is already running")
     await _run_consolidation_if_due(db)
+    await _run_reconciler_if_due(db)
     global_config = await _get_or_create_config(db)
     config = await _pick_due_config(db)
     if config is None:

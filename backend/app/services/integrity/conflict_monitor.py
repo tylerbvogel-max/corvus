@@ -81,6 +81,7 @@ def _format_pair_prompt(
 async def _classify_batch(
     pairs: list[SimilarPair],
     content_map: dict[int, tuple[str, str]],
+    model: str = "haiku",
 ) -> list[dict]:
     """Call LLM to classify a batch of pairs."""
     from app.services.llm_provider import llm_chat
@@ -89,7 +90,7 @@ async def _classify_batch(
     result = await llm_chat(
         system_prompt=_CLASSIFY_SYSTEM_PROMPT,
         user_message=user_prompt,
-        model="haiku",
+        model=model,
         max_tokens=1024,
     )
 

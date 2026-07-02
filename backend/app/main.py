@@ -176,6 +176,15 @@ async def _migrate_neuron_and_query_columns(engine):
                     "ALTER TABLE autopilot_config ADD COLUMN region VARCHAR(100)"
                 ))
                 print("Migrated: added autopilot_config.region")
+            if not await _column_exists(conn, "integrity_findings", "region"):
+                await conn.execute(text(
+                    "ALTER TABLE integrity_findings ADD COLUMN region VARCHAR(100)"
+                ))
+                await conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_integrity_findings_region "
+                    "ON integrity_findings(region)"
+                ))
+                print("Migrated: added integrity_findings.region")
         except SQLAlchemyError as e:
             logger.warning("Region policy migration skipped: %s", e)
 

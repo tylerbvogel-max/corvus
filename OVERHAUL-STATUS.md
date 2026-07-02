@@ -12,8 +12,8 @@
 | W2a plat-cheap-recall | done | (see git log) |
 | W2b plat-write-gate | done | (see git log) |
 | W3 plat-region-config | done | (see git log) |
-| W4 plat-reconciler | pending | — |
-| Final verification + docs | pending | — |
+| W4 plat-reconciler | done | (see git log) |
+| Final verification + docs | done | (see git log) |
 
 ## Design decisions (resolving the brief's open questions)
 
@@ -200,6 +200,37 @@ owning region; never auto-edits authoritative content (obeys write gate).
   policy (route_proposal takes region; both consult points pass it).
 - MCP query_graph gains requester_regions (region-bounded recall);
   privileged access is internal-only (never a tool param).
+
+## W4 verification evidence (2026-07-01)
+- 373 tests pass (13 new in test_reconciler.py); NASA strict clean;
+  migration 015 applied.
+- Implemented as integrity-framework scans (maximal reuse of IntegrityScan/
+  IntegrityFinding/proposal conversion/audit), NOT a harness:
+  reconciler_contradiction, reconciler_staleness, reconciler_homonym,
+  reconciler_seam_gap + run_reconciler_sweep orchestrator.
+- Live acceptance (seeded rows, cleaned up after):
+  * Seeded cross-region contradiction (Engineering 120C max vs Manufacturing
+    130C continuous): the real sweep surfaced it as a ROUTED finding —
+    region=Engineering, severity=warning, priority=0.8, cross_region=true,
+    owning_regions both. Judge rationale precise.
+  * Seeded 399d staleness divergence on a pyramidal edge: flagged, routed
+    to the STALE side's region (Manufacturing), severity=warning.
+  * Notably: the judge correctly ruled the first seeded pair (operating
+    limit vs cure temperature) CONSISTENT — different aspects, not a
+    contradiction. Judge discrimination works.
+- Incremental sweeps: already-judged pairs are excluded, so successive
+  sweeps cover the similarity zone instead of re-judging the same top-N;
+  LLM judging batched (6 pairs/call), shortlist capped
+  (reconciler_max_pairs=12/sweep).
+- FIX: llm_provider passed the user prompt via argv — prompts starting
+  with "-" (the pair-judging format) crashed the CLI arg parser. Now via
+  stdin (also removes argv size limits).
+- Governance: privileged internal read; output = routed findings only;
+  resolutions convert to proposals via the existing integrity path which
+  obeys the tiered write gate; reconciler_interval_hours=0 default
+  (manual sweeps; set >0 to ride the tick heartbeat).
+- MCP: new reconciliation_report tool (8 tools now); /admin/integrity/
+  reconciler/sweep + /report endpoints; findings filterable by region.
 
 ## Verification protocol (per workstream)
 1. `TENANT_ID=corvus-aero pytest tests/ -v` — full suite green
