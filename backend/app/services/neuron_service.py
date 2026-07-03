@@ -501,6 +501,93 @@ def _effective_weights(
     return arrays
 
 
+def _compute_base_signals(
+    candidates: list, total_queries: int, burst_map: dict[int, int],
+    neuron_fires_map: dict[int, int], dept_total_map: dict[str, int],
+    last_offset_map: dict[int, int],
+) -> tuple:
+    """Compute the 5 usage signals (burst/impact/precision/novelty/recency) as arrays."""
+    burst_counts = np.array([burst_map.get(c.id, 0) for c in candidates], dtype=np.float64)
+    avg_utilities = np.array([c.avg_utility or 0.5 for c in candidates], dtype=np.float64)
+    ages = np.array([total_queries - (c.created_at_query_count or 0) for c in candidates], dtype=np.float64)
+    queries_since = np.array([
+        total_queries - last_offset_map[c.id] if c.id in last_offset_map else total_queries
+        for c in candidates
+    ], dtype=np.float64)
+    dept_fires_arr = np.array([neuron_fires_map.get(c.id, 0) for c in candidates], dtype=np.float64)
+    dept_totals_arr = np.array([dept_total_map.get(c.department, 0) for c in candidates], dtype=np.float64)
+    return (
+        calc_burst_batch(burst_counts),
+        calc_impact_batch(avg_utilities),
+        calc_precision_batch(dept_fires_arr, dept_totals_arr),
+        calc_novelty_batch(ages),
+        calc_recency_batch(queries_since),
+    )
+
+
+def _resolve_relevance_arr(
+    candidates: list, keywords: list[str], semantic_map: dict[int, float],
+    hybrid_map: dict[int, float] | None,
+) -> "np.ndarray":
+    """Per-candidate relevance: hybrid > semantic > keyword fallback."""
+    relevance_arr = np.empty(len(candidates), dtype=np.float64)
+    for i, c in enumerate(candidates):
+        if hybrid_map is not None and c.id in hybrid_map:
+            relevance_arr[i] = max(0.0, min(1.0, hybrid_map[c.id]))
+        elif c.id in semantic_map:
+            relevance_arr[i] = max(0.0, min(1.0, semantic_map[c.id]))
+        else:
+            content = getattr(c, 'content', None) or ''
+            neuron_text = f"{c.label} {c.summary or ''} {content}"
+            relevance_arr[i] = calc_relevance(keywords, neuron_text)
+    return relevance_arr
+
+
+def _gated_combined(
+    relevance_arr, burst, impact, precision, novelty, recency, coldstart_terms, w: dict,
+) -> "np.ndarray":
+    """Gated modulatory combine: stimulus + gate * modulatory, clamped at 0.
+
+    The signed coldstart term may push inactive neurons negative, hence the clamp.
+    """
+    stimulus = w["weight_relevance"] * relevance_arr
+    modulatory = (
+        w["weight_burst"] * burst
+        + w["weight_impact"] * impact
+        + w["weight_precision"] * precision
+        + w["weight_novelty"] * novelty
+        + w["weight_recency"] * recency
+        + coldstart_terms * w["coldstart_scale"]
+    )
+    threshold = settings.relevance_gate_threshold
+    floor = settings.relevance_gate_floor
+    gate = np.where(
+        relevance_arr >= threshold,
+        1.0,
+        np.where(relevance_arr > 0, floor + (1.0 - floor) * (relevance_arr / threshold), floor),
+    )
+    return np.maximum(0.0, stimulus + modulatory * gate)
+
+
+def _build_score_breakdowns(
+    candidates: list, burst, impact, precision, novelty, recency, relevance_arr, combined,
+) -> list[NeuronScoreBreakdown]:
+    """Assemble NeuronScoreBreakdown rows from the computed signal arrays."""
+    return [
+        NeuronScoreBreakdown(
+            neuron_id=candidates[i].id,
+            burst=round(float(burst[i]), 4),
+            impact=round(float(impact[i]), 4),
+            precision=round(float(precision[i]), 4),
+            novelty=round(float(novelty[i]), 4),
+            recency=round(float(recency[i]), 4),
+            relevance=round(float(relevance_arr[i]), 4),
+            combined=round(float(combined[i]), 4),
+        )
+        for i in range(len(candidates))
+    ]
+
+
 def _score_candidates_vectorized(
     candidates: list,
     total_queries: int,
@@ -520,87 +607,29 @@ def _score_candidates_vectorized(
     region_weights ({region: resolved weight dict}) switches the weight
     scalars to per-candidate arrays so each silo scores by its own epistemics.
     """
-    n = len(candidates)
-    if n == 0:
+    if len(candidates) == 0:
         return []
 
-    # 1. Collect inputs into numpy arrays
-    burst_counts = np.array([burst_map.get(c.id, 0) for c in candidates], dtype=np.float64)
-    avg_utilities = np.array([c.avg_utility or 0.5 for c in candidates], dtype=np.float64)
-    ages = np.array([total_queries - (c.created_at_query_count or 0) for c in candidates], dtype=np.float64)
-    queries_since = np.array([
-        total_queries - last_offset_map[c.id] if c.id in last_offset_map else total_queries
-        for c in candidates
-    ], dtype=np.float64)
-    dept_fires_arr = np.array([neuron_fires_map.get(c.id, 0) for c in candidates], dtype=np.float64)
-    dept_totals_arr = np.array([dept_total_map.get(c.department, 0) for c in candidates], dtype=np.float64)
+    burst, impact, precision, novelty, recency = _compute_base_signals(
+        candidates, total_queries, burst_map, neuron_fires_map, dept_total_map, last_offset_map,
+    )
+    relevance_arr = _resolve_relevance_arr(candidates, keywords, semantic_map, hybrid_map)
+    coldstart_terms = _batch_coldstart_terms(candidates)
+    w = _effective_weights(candidates, region_weights)
+    combined = _gated_combined(
+        relevance_arr, burst, impact, precision, novelty, recency, coldstart_terms, w,
+    )
 
-    # 2. Resolve relevance per candidate
+    # Classification boosts (region_match x 1.25, role_match x 1.5)
     dept_set = set(classified_departments) if classified_departments else set()
     role_set = set(classified_role_keys) if classified_role_keys else set()
-    relevance_arr = np.empty(n, dtype=np.float64)
-    for i, c in enumerate(candidates):
-        if hybrid_map is not None and c.id in hybrid_map:
-            relevance_arr[i] = max(0.0, min(1.0, hybrid_map[c.id]))
-        elif c.id in semantic_map:
-            relevance_arr[i] = max(0.0, min(1.0, semantic_map[c.id]))
-        else:
-            content = getattr(c, 'content', None) or ''
-            neuron_text = f"{c.label} {c.summary or ''} {content}"
-            relevance_arr[i] = calc_relevance(keywords, neuron_text)
-
-    # 3. Compute all signals in parallel via numpy
-    burst = calc_burst_batch(burst_counts)
-    impact = calc_impact_batch(avg_utilities)
-    precision = calc_precision_batch(dept_fires_arr, dept_totals_arr)
-    novelty = calc_novelty_batch(ages)
-    recency = calc_recency_batch(queries_since)
-
-    # Cold-start prior term (authority + freshness + centrality, shrinkage-scaled)
-    coldstart_terms = _batch_coldstart_terms(candidates)
-
-    # 4. Gated modulatory scoring — scalar global weights, or per-candidate
-    # arrays when region policies override them
-    w = _effective_weights(candidates, region_weights)
-    stimulus = w["weight_relevance"] * relevance_arr
-    modulatory = (
-        w["weight_burst"] * burst
-        + w["weight_impact"] * impact
-        + w["weight_precision"] * precision
-        + w["weight_novelty"] * novelty
-        + w["weight_recency"] * recency
-        + coldstart_terms * w["coldstart_scale"]
-    )
-    threshold = settings.relevance_gate_threshold
-    floor = settings.relevance_gate_floor
-    gate = np.where(
-        relevance_arr >= threshold,
-        1.0,
-        np.where(relevance_arr > 0, floor + (1.0 - floor) * (relevance_arr / threshold), floor),
-    )
-    # Clamp at zero: the signed coldstart term may push inactive neurons negative
-    combined = np.maximum(0.0, stimulus + modulatory * gate)
-
-    # 5. Classification boosts (region_match x 1.25, role_match x 1.5)
     region_match = np.array([c.department in dept_set for c in candidates])
     role_match = np.array([c.role_key in role_set for c in candidates])
-    combined *= np.where(role_match, 1.5, np.where(region_match, 1.25, 1.0))
+    combined = combined * np.where(role_match, 1.5, np.where(region_match, 1.25, 1.0))
 
-    # 6. Build NeuronScoreBreakdown objects from arrays
-    scores = [
-        NeuronScoreBreakdown(
-            neuron_id=candidates[i].id,
-            burst=round(float(burst[i]), 4),
-            impact=round(float(impact[i]), 4),
-            precision=round(float(precision[i]), 4),
-            novelty=round(float(novelty[i]), 4),
-            recency=round(float(recency[i]), 4),
-            relevance=round(float(relevance_arr[i]), 4),
-            combined=round(float(combined[i]), 4),
-        )
-        for i in range(n)
-    ]
-    return scores
+    return _build_score_breakdowns(
+        candidates, burst, impact, precision, novelty, recency, relevance_arr, combined,
+    )
 
 
 def _compute_edge_activation(

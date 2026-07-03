@@ -940,7 +940,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     <div className="chat-text">{msg.text}</div>
                   )}
                   {msg.role === 'assistant' && msg.neuron_scores && msg.neuron_scores.length > 0 && (
-                    <ChatSourcesChip scores={msg.neuron_scores} />
+                    <ChatSourcesChip scores={msg.neuron_scores} citationMap={msg.citation_map} />
                   )}
                   {msg.role === 'assistant' && msg.query_id != null && (
                     <FollowUpChips
@@ -1113,7 +1113,10 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
 // users don't need to understand "neurons" but they DO benefit from seeing
 // "Source: HR Policy 4.2 · Travel Procedure 2.1" to trust the answer.
 
-function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
+function ChatSourcesChip({ scores, citationMap }: {
+  scores: NeuronScoreResponse[];
+  citationMap?: Record<string, CitationSource>;
+}) {
   const [open, setOpen] = React.useState(false);
   const [popupId, setPopupId] = React.useState<number | null>(null);
   const [highlightedId, setHighlightedId] = React.useState<number | null>(null);
@@ -1136,7 +1139,18 @@ function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
     return () => window.removeEventListener('chat-citation-click', onCite);
   }, [neuronIds]);
 
-  if (!scores.length) return null;
+  // Regulatory (engram) sources come from the citation map, not neuron_scores.
+  const engramSources = React.useMemo(() => {
+    const seen = new Map<number, string>();
+    for (const src of Object.values(citationMap ?? {})) {
+      if (src.kind === 'engram' && !seen.has(src.id)) {
+        seen.set(src.id, src.label ?? `Regulation ${src.id}`);
+      }
+    }
+    return Array.from(seen, ([id, label]) => ({ id, label }));
+  }, [citationMap]);
+  const totalCount = scores.length + engramSources.length;
+  if (totalCount === 0) return null;
   // Top-ranked first — every source is shown (no cap), each opens a popup
   // showing its full neuron content when clicked.
   const ranked = [...scores].sort((a, b) => (b.combined ?? 0) - (a.combined ?? 0));
@@ -1148,7 +1162,7 @@ function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
         title="Internal documentation consulted for this answer"
       >
         <span className="chat-sources-icon" aria-hidden="true">◆</span>
-        <span>{scores.length} {scores.length === 1 ? 'source' : 'sources'}</span>
+        <span>{totalCount} {totalCount === 1 ? 'source' : 'sources'}</span>
         <span className="chat-sources-chevron">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
@@ -1164,6 +1178,14 @@ function ChatSourcesChip({ scores }: { scores: NeuronScoreResponse[] }) {
                 <span className="chat-sources-label">{s.label || `Source #${s.neuron_id}`}</span>
                 {s.department && <span className="chat-sources-dept">{s.department}</span>}
               </button>
+            </li>
+          ))}
+          {engramSources.map(e => (
+            <li key={`engram-${e.id}`}>
+              <div className="chat-sources-item chat-sources-item-regulatory">
+                <span className="chat-sources-label">{e.label}</span>
+                <span className="chat-sources-dept">REGULATORY · eCFR</span>
+              </div>
             </li>
           ))}
         </ul>
