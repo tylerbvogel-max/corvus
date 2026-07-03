@@ -9,8 +9,9 @@ from types import MappingProxyType
 
 from mcp.server.fastmcp import FastMCP
 
+from app.config import settings
 from app.database import async_session
-from app.models import Neuron, NeuronEdge, SystemState, Query
+from app.models import Neuron, NeuronEdge, SystemState, Query, CitationHopSession
 from sqlalchemy import select, func, or_
 
 # Next-step hints for AI agent tool chaining (JPL-6: immutable mapping)
@@ -19,6 +20,7 @@ TOOL_HINTS = MappingProxyType({
         "Use neuron_detail(neuron_id) to inspect a specific neuron's content and edges",
         "Use impact_analysis(topic) for zero-cost semantic search on a related topic",
         "Use discover_clusters() to find cross-department knowledge patterns",
+        "If a hop_session_id is returned, call verify_citations(hop_session_id, your_answer) to confirm your citations are real before you rely on them",
     ),
     "impact_analysis": (
         "Use neuron_detail(neuron_id) to get full content for any neuron in the results",
@@ -49,7 +51,29 @@ TOOL_HINTS = MappingProxyType({
         "Use impact_analysis(topic) to find related neurons outside the cluster",
         "Use browse_departments() to compare cluster membership against org hierarchy",
     ),
+    "verify_citations": (
+        "A non-empty hallucinated[] means you cited neuron keys that do not exist — drop those claims or re-answer using only listed keys",
+        "Use neuron_detail(neuron_id) on cited_neuron_ids to confirm the sources you grounded on",
+    ),
 })
+
+
+async def _persist_hop_session(db, ctx) -> int | None:
+    """Persist the secret per-query hop map so verify_citations can later grade
+    an external agent's answer. Returns the session id, or None when hopping is
+    off. The map is never returned to the agent — only the opaque session id."""
+    if not settings.citation_hopping_enabled or ctx.hop_map is None:
+        return None
+    session = CitationHopSession(
+        token_map_json=dict(ctx.hop_map.neuron_by_token),
+        required_json=(
+            sorted(ctx.hop_map.tokens())
+            if settings.citation_hop_require_all else None
+        ),
+    )
+    db.add(session)
+    await db.flush()
+    return session.id
 
 
 def _with_hints(tool_name: str, result_dict: dict) -> str:
@@ -115,9 +139,10 @@ async def query_graph(
             recall_mode=mode,
             requester=requester,
         )
+        hop_session_id = await _persist_hop_session(db, ctx)
         await db.commit()
 
-        return _with_hints("query_graph", {
+        result = {
             "system_prompt": ctx.system_prompt,
             "neurons_activated": ctx.neurons_activated,
             "departments": ctx.departments,
@@ -125,6 +150,52 @@ async def query_graph(
             "recall_mode": mode,
             "classify_cost_usd": ctx.classify_cost_usd,
             "neuron_scores": ctx.neuron_scores[:10],  # Top 10 for brevity
+        }
+        if hop_session_id is not None:
+            # External agent (analysis layer) verifies via verify_citations.
+            result["hop_session_id"] = hop_session_id
+        return _with_hints("query_graph", result)
+
+
+@mcp.tool()
+async def verify_citations(hop_session_id: int, answer: str) -> str:
+    """Frequency-hop exit layer: verify an answer's citation keys are real.
+
+    After answering a query_graph result that returned a hop_session_id, pass
+    that id and your answer text here. Corvus checks every citation key against
+    the secret per-query map and reports any fabricated (hallucinated) neuron
+    references. Keys are unique per query, so a guessed or reused key fails.
+
+    Args:
+        hop_session_id: the id returned by query_graph for this answer
+        answer: your full answer text (citation keys are extracted from it)
+    """
+    from app.services.citation_hopping import (
+        HopMap, extract_citation_tokens, verify_citations as _verify,
+    )
+
+    async with async_session() as db:
+        session = await db.get(CitationHopSession, hop_session_id)
+        if session is None:
+            return json.dumps({"error": f"unknown hop_session_id {hop_session_id}"})
+        neuron_by_token = dict(session.token_map_json or {})
+        hop_map = HopMap(
+            token_by_neuron={v: k for k, v in neuron_by_token.items()},
+            neuron_by_token=neuron_by_token,
+        )
+        result = _verify(
+            extract_citation_tokens(answer), hop_map,
+            require_all=bool(session.required_json),
+        )
+        session.audit_json = result.to_dict()
+        await db.commit()
+        return _with_hints("verify_citations", {
+            "ok": result.ok,
+            "hallucinated": result.hallucinated,
+            "missing": result.missing,
+            "cited_neuron_ids": result.cited_neuron_ids,
+            "allowed_count": len(result.allowed),
+            "used_count": len(result.used),
         })
 
 

@@ -11,14 +11,14 @@ class AssembleStage:
 
     Reads:  state.all_scored, effective_top_k, intent, effective_budget,
             prior_neuron_ids, resolved_regulations
-    Writes: state.top_slice, neuron_map, system_prompt
+    Writes: state.top_slice, neuron_map, system_prompt, hop_map
     """
 
     name = "assemble_prompt"
 
     async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
         from app.services.executor import _assemble_top_slice
-        top_slice, neuron_map, system_prompt = await _assemble_top_slice(
+        top_slice, neuron_map, system_prompt, hop_map = await _assemble_top_slice(
             ctx.db,
             state.all_scored,
             state.effective_top_k,
@@ -31,6 +31,7 @@ class AssembleStage:
         state.top_slice = top_slice
         state.neuron_map = neuron_map
         state.system_prompt = system_prompt
+        state.hop_map = hop_map
         return state
 
     def describe(self, out: PipelineState) -> dict[str, Any]:

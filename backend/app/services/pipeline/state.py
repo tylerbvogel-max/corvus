@@ -56,3 +56,7 @@ class PipelineState:
     top_slice: list[NeuronScoreBreakdown] = field(default_factory=list)
     neuron_map: dict[int, Neuron] = field(default_factory=dict)
     system_prompt: str = ""
+    # Frequency-hopped citation grounding: secret per-query key<->neuron map
+    # (citation_hopping.HopMap) or None when disabled. Typed Any to keep this
+    # scratch module import-light, mirroring `requester`.
+    hop_map: Any = None

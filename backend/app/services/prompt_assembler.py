@@ -176,7 +176,7 @@ def _pack_functional_section(
     functional: list[tuple[NeuronScoreBreakdown, Neuron]],
     used_tokens: int,
     budget: int,
-    citation_index_by_id: dict[int, int] | None = None,
+    citation_label_by_id: dict[int, str] | None = None,
 ) -> int:
     grouped: dict[str, dict[str, list[tuple[NeuronScoreBreakdown, Neuron]]]] = {}
     for score, neuron in functional:
@@ -195,7 +195,7 @@ def _pack_functional_section(
         for role_key, items in roles.items():
             items.sort(key=lambda x: x[0].combined, reverse=True)
             for score, neuron in items:
-                used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget, citation_index_by_id)
+                used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget, citation_label_by_id)
     return used_tokens
 
 
@@ -204,7 +204,7 @@ def _pack_regulatory_section(
     regulatory: list[tuple[NeuronScoreBreakdown, Neuron]],
     used_tokens: int,
     budget: int,
-    citation_index_by_id: dict[int, int] | None = None,
+    citation_label_by_id: dict[int, str] | None = None,
 ) -> int:
     if not regulatory:
         return used_tokens
@@ -224,7 +224,7 @@ def _pack_regulatory_section(
     for role_key, items in reg_grouped.items():
         items.sort(key=lambda x: x[0].combined, reverse=True)
         for score, neuron in items:
-            used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget, citation_index_by_id)
+            used_tokens = _pack_neuron(parts, score, neuron, used_tokens, budget, citation_label_by_id)
     return used_tokens
 
 
@@ -254,10 +254,25 @@ def _pack_resolved_regulations(
     return used_tokens
 
 
-def _append_citation_instruction(parts: list[str], citation_index_by_id: dict[int, int] | None) -> None:
-    """Tier C: tell the LLM to cite numbered sources inline. No-op if
-    citations weren't assigned (legacy callers passing no map)."""
-    if not citation_index_by_id:
+def _append_citation_instruction(
+    parts: list[str],
+    citation_label_by_id: dict[int, str] | None,
+    is_hopping: bool = False,
+) -> None:
+    """Tell the LLM to cite sources inline. No-op if no citation map was
+    assigned. When ``is_hopping`` the citation keys are per-query ephemeral
+    tokens (frequency hopping) rather than plain numbers."""
+    if not citation_label_by_id:
+        return
+    if is_hopping:
+        parts.append(
+            "\n**Citing sources:** When you state a fact from the knowledge above, "
+            "cite the source inline using its exact bracketed citation key as shown "
+            "in the source header, e.g. [FQ-1A2B3C]. These keys are unique to this "
+            "answer. Only cite keys that actually appear in the source headers above "
+            "— never invent, alter, or reuse a key from elsewhere. If a claim cannot "
+            "be traced to a listed key, say so explicitly rather than fabricating one."
+        )
         return
     parts.append(
         "\n**Citing sources:** When you state a fact from the knowledge above, "
@@ -287,6 +302,18 @@ def _get_closing_instruction(intent: str, max_relevance: float) -> str:
     return instruction
 
 
+def _build_citation_labels(
+    scored_neurons: list[NeuronScoreBreakdown],
+    citation_tokens: dict[int, str] | None,
+) -> tuple[dict[int, str], bool]:
+    """Citation labels: per-query frequency-hop keys when supplied by the caller
+    (anti-hallucination — see citation_hopping.py), otherwise 1-based indices.
+    Returns (label_by_neuron_id, is_hopping)."""
+    if citation_tokens is not None:
+        return dict(citation_tokens), True
+    return {n.neuron_id: str(i + 1) for i, n in enumerate(scored_neurons)}, False
+
+
 def assemble_prompt(
     intent: str,
     scored_neurons: list[NeuronScoreBreakdown],
@@ -295,6 +322,7 @@ def assemble_prompt(
     prior_neuron_ids: list[int] | None = None,
     prior_neuron_map: dict[int, Neuron] | None = None,
     resolved_regulations: list | None = None,
+    citation_tokens: dict[int, str] | None = None,
 ) -> str:
     """Pack top-K neurons + resolved regulatory text into a system prompt within token budget.
 
@@ -310,11 +338,8 @@ def assemble_prompt(
     """
     budget = budget_tokens or settings.token_budget
 
-    # Citation index: position in scored_neurons order → 1-based index.
-    # Passed into each pack function so neuron blocks carry [N] tags.
-    citation_index_by_id: dict[int, int] = {
-        n.neuron_id: i + 1 for i, n in enumerate(scored_neurons)
-    }
+    # Neuron blocks carry [label] tags the LLM must cite by.
+    citation_label_by_id, is_hopping = _build_citation_labels(scored_neurons, citation_tokens)
 
     parts, used_tokens = _build_prompt_header(intent, scored_neurons, neuron_map)
 
@@ -330,8 +355,8 @@ def assemble_prompt(
         )
 
     functional, regulatory = _partition_neurons(scored_neurons, neuron_map)
-    used_tokens = _pack_functional_section(parts, functional, used_tokens, budget, citation_index_by_id)
-    used_tokens = _pack_regulatory_section(parts, regulatory, used_tokens, budget, citation_index_by_id)
+    used_tokens = _pack_functional_section(parts, functional, used_tokens, budget, citation_label_by_id)
+    used_tokens = _pack_regulatory_section(parts, regulatory, used_tokens, budget, citation_label_by_id)
 
     # Pack live regulatory text from resolved engrams
     if resolved_regulations:
@@ -343,7 +368,7 @@ def assemble_prompt(
     max_relevance = max((s.combined for s in scored_neurons), default=0.0)
     closing = _get_closing_instruction(intent, max_relevance)
     parts.append(closing)
-    _append_citation_instruction(parts, citation_index_by_id)
+    _append_citation_instruction(parts, citation_label_by_id, is_hopping)
 
     return "\n".join(parts)
 
@@ -354,17 +379,17 @@ def _pack_neuron(
     neuron: Neuron,
     used_tokens: int,
     budget: int,
-    citation_index_by_id: dict[int, int] | None = None,
+    citation_label_by_id: dict[int, str] | None = None,
 ) -> int:
     """Try to pack a neuron into parts. Returns updated used_tokens."""
-    # Tier C: prepend the 1-based citation tag so the LLM can reference this
-    # source as [N]. Empty string if the neuron isn't in the citation map
-    # (e.g. legacy callers that pass no map at all).
+    # Prepend the citation tag so the LLM can reference this source as [label].
+    # The label is either a 1-based index (numeric mode) or a per-query ephemeral
+    # frequency-hop key (e.g. [FQ-7F3A2C]). Empty if the neuron isn't in the map.
     citation_tag = ""
-    if citation_index_by_id is not None:
-        idx = citation_index_by_id.get(neuron.id)
-        if idx is not None:
-            citation_tag = f"[{idx}] "
+    if citation_label_by_id is not None:
+        label = citation_label_by_id.get(neuron.id)
+        if label is not None:
+            citation_tag = f"[{label}] "
 
     authority_tag = ""
     if hasattr(neuron, "authority_level") and neuron.authority_level:

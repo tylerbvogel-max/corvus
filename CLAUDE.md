@@ -89,6 +89,13 @@ TENANT_ID=corvus-aero docker compose up --build
   `cooccurrence-edges` → `discover-regions` (Leiden + LLM labels → human
   approval) → `retype-edges`. No hand-authored taxonomy required.
 - **Propagation**: child firing propagates up at 0.6× per parent link.
+- **Citation hopping**: anti-hallucination exit layer
+  (`settings.citation_hopping_enabled`, default ON; set False to restore numeric
+  [N] citations for the frontend superscripts). Each neuron in the prompt
+  gets a random per-query key `[FQ-XXXXXX]` (secret to the LLM); the exit layer
+  (`services/citation_hopping.py` + `executor._apply_citation_hop_exit`) catches
+  cited keys absent from the secret map = fabricated neuron references. MCP
+  external agents verify via `verify_citations(hop_session_id, answer)`.
 - **Overhaul log**: OVERHAUL-STATUS.md (design decisions + per-workstream
   verification evidence).
 

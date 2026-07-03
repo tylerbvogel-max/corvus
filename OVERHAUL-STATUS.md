@@ -232,6 +232,56 @@ owning region; never auto-edits authoritative content (obeys write gate).
 - MCP: new reconciliation_report tool (8 tools now); /admin/integrity/
   reconciler/sweep + /report endpoints; findings filterable by region.
 
+## Frequency-hopped citation grounding (anti-hallucination exit layer) — 2026-07-03
+
+Goal (per `frequency-hopping.md`): reduce hallucinated NEURON references by
+wrapping the analysis (execute) layer with an entry + exit pair that share a
+secret per-query key map. Entry already existed (numeric `[N]` citations);
+this adds the exit and swaps the guessable integers for unguessable keys.
+
+- **Mechanism.** At assembly each selected neuron gets a random per-query
+  ephemeral key (`[FQ-XXXXXX]`, `secrets`-minted, uppercase hex). The LLM sees
+  only the keys — never real neuron IDs or the map (secret to the analysis
+  layer). Exit: extract cited keys, check `used ⊆ allowed` (any extra key =
+  fabricated reference, caught deterministically) and optional `allowed ⊆ used`
+  (`require_all`). Keys rotate every query ("frequency hopping"), so a key
+  memorised/guessed from training or another query never validates.
+- **Prefix is `FQ-` not the design note's `F-`** — deliberate, so it never
+  collides with aircraft designations (F-16 / F-35 / F/A-18). Test asserts this.
+- **Scope honesty:** catches fabricated *references*, NOT misinterpretation of a
+  correctly-keyed source (entailment is a separate, future concern).
+- **Files.** New `services/citation_hopping.py` (pure: mint / extract / verify /
+  strip / repair_instruction). Entry: `prompt_assembler.assemble_prompt` gains
+  `citation_tokens` (labels generalised int→str via `_build_citation_labels`);
+  `_assemble_top_slice` mints the map, carried on `PipelineState.hop_map` →
+  `PreparedContext.hop_map`. Exit: `executor._apply_citation_hop_exit` (detect |
+  strip | repair — one bounded LLM retry) runs in `execute_query`. Config: 5
+  flags (`citation_hopping_enabled` default **False**, prefix, hex width,
+  `failure_mode`, `require_all`). Model: `CitationHopSession` table +
+  `queries.citation_hop_session_id` (migration `016_citation_hopping`, idempotent).
+- **MCP (external analysis layer).** `query_graph` persists the secret map and
+  returns an opaque `hop_session_id`; new `verify_citations(hop_session_id,
+  answer)` tool grades the agent's answer server-side (9 tools now). The map
+  never leaves Corvus.
+- **Default OFF** → numeric `[N]` citations and the frontend superscripts are
+  unchanged until enabled. Frontend token→superscript mapping for the hop path
+  is a noted follow-up.
+
+Verification evidence:
+- `tests/test_citation_hopping.py` — 13 hermetic tests (mint uniqueness +
+  per-query rotation + format, extraction incl. F-16 non-collision, verify
+  clean/fabricated/require_all, strip, repair instruction, assembler entry both
+  modes). `pytest test_citation_hopping.py test_prompt_assembler.py` = **17
+  passed** (4 existing assembler tests still green → backward compatible).
+- NASA lint **clean** on all touched files (no strict violations; the two
+  functions I grew past the 60-line guideline were refactored back under).
+- Migration applied to all 5 tenant DBs (aero/flow/roost/hedge/apex); `Query`
+  loads verified (required because the model now SELECTs the new column).
+- End-to-end smoke on **real aero neurons**: entry rendered the three secret
+  tokens into a prompt built from live neuron content; a simulated answer citing
+  2 real keys + fabricated `FQ-FADEDD` was caught (`hallucinated=['FQ-FADEDD']`,
+  grounded neurons 1003 & 2805); `CitationHopSession` persist round-tripped.
+
 ## Verification protocol (per workstream)
 1. `TENANT_ID=corvus-aero pytest tests/ -v` — full suite green
 2. NASA lint clean on touched files (hook enforces on edit)

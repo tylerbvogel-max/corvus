@@ -280,6 +280,33 @@ class Query(Base):
     # Pattern #5: typed pipeline DAG telemetry — per-stage timing + status snapshot.
     # Shape: list[{stage, status, duration_ms, detail?, error_message?}]
     stage_telemetry_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    # Frequency-hopped citation grounding: link to the CitationHopSession whose
+    # secret key<->neuron map graded this answer's citations (NULL when disabled).
+    citation_hop_session_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now()
+    )
+
+
+class CitationHopSession(Base):
+    """Per-query frequency-hop citation session (anti-hallucination exit layer).
+
+    Holds the secret ``{token: neuron_id}`` map minted at prompt assembly plus
+    the verification audit produced when an answer's citations are graded. Used
+    by the MCP ``verify_citations`` handshake (the external analysis layer) and
+    linked from ``Query`` for internally-executed answers. Ephemeral by intent —
+    safe to prune on the consolidation heartbeat.
+    """
+
+    __tablename__ = "citation_hop_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # {token: neuron_id} reverse map. Secret — never returned to the LLM.
+    token_map_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # Tokens that must all appear (require_all mode); NULL = disabled.
+    required_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    # HopVerification.to_dict() once graded; NULL until the handshake runs.
+    audit_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()
     )

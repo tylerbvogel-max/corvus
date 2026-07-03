@@ -170,6 +170,25 @@ class Settings(BaseSettings):
     reconciler_homonym_sim_threshold: float = 0.80
     # 0 = manual only; > 0 = the sweep rides the tick heartbeat at this cadence
     reconciler_interval_hours: float = 0.0
+    # Frequency-hopped citation grounding (anti-hallucination exit layer).
+    # When enabled, each neuron in the assembled prompt gets a random per-query
+    # ephemeral key; the exit layer verifies the answer cited only real keys.
+    # ON by default: citations render as [FQ-XXXXXX] (per-query ephemeral) rather
+    # than numeric [N], so any fabricated neuron reference is caught
+    # deterministically. NOTE: the frontend hero-chat superscript mapping still
+    # parses [N] — update it to the hop tokens (or set this False) to restore
+    # clickable citations in the UI.
+    citation_hopping_enabled: bool = True
+    # Prefix must NOT collide with domain tokens (e.g. aircraft F-16/F-35), so
+    # the default is FQ- (frequency) rather than the F- from the design note.
+    citation_hop_prefix: str = "FQ-"
+    citation_hop_hex_width: int = 6
+    # detect (record only) | strip (remove fabricated keys from the answer) |
+    # repair (one bounded LLM retry with the valid-key list, then strip)
+    citation_hop_failure_mode: str = "detect"
+    # require_all: also fail when an allowed key is never cited (allowed ⊆ used).
+    # Off by default — forcing every source to appear hurts open-ended answers.
+    citation_hop_require_all: bool = False
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
-from app.models import Neuron, Query, NeuronEdge
+from app.models import Neuron, Query, NeuronEdge, CitationHopSession
 from app.services.classifier import classify_query
 from app.services.llm_provider import llm_chat, MODEL_REGISTRY
 from app.services.neuron_service import (
@@ -31,6 +31,7 @@ from app.services.prompt_assembler import assemble_prompt
 from app.services.propagation import propagate_activation
 from app.services.neuron_service import NeuronCandidate
 from app.services.scoring_engine import NeuronScoreBreakdown
+from app.services.citation_hopping import HopMap, mint_hop_map
 from app.tenant import tenant
 
 
@@ -53,6 +54,10 @@ class PreparedContext:
     # Populated when prepare_context runs through the pipeline runner;
     # None for structural fast-path results (no pipeline ran).
     stage_telemetry: list[dict] = field(default_factory=list)
+    # Frequency-hopped citation grounding: the secret per-query key<->neuron
+    # map used to render tokens and verify citations. None when disabled.
+    # Never serialise to the client — it is secret to the analysis layer.
+    hop_map: HopMap | None = None
 
 
 async def _embed_query_async(user_message: str):
@@ -373,6 +378,7 @@ def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
         classify_input_tokens=state.classify_result.get("input_tokens", 0),
         classify_output_tokens=state.classify_result.get("output_tokens", 0),
         stage_telemetry=pipeline_ctx.telemetry_json(),
+        hop_map=state.hop_map,
     )
     assert isinstance(result.system_prompt, str) and len(result.system_prompt) > 0, \
         "PreparedContext.system_prompt must be a non-empty string"
@@ -390,8 +396,12 @@ async def _assemble_top_slice(
     prior_neuron_ids: list[int] | None,
     resolved_regulations: list,
     requester=None,
-) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str]:
-    """Select top-k neurons, load their data, and assemble the system prompt."""
+) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str, HopMap | None]:
+    """Select top-k neurons, load their data, and assemble the system prompt.
+
+    When ``settings.citation_hopping_enabled`` a per-query frequency-hop key is
+    minted for each selected neuron and returned as the 4th tuple element (the
+    secret map the exit layer verifies against); None otherwise."""
     if settings.hierarchy_selection_enabled:
         top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
     else:
@@ -408,12 +418,19 @@ async def _assemble_top_slice(
         else:
             prior_neuron_map = neuron_map
 
+    hop_map: HopMap | None = None
+    citation_tokens: dict[int, str] | None = None
+    if settings.citation_hopping_enabled:
+        hop_map = mint_hop_map([s.neuron_id for s in top_slice])
+        citation_tokens = hop_map.token_by_neuron
+
     system_prompt = assemble_prompt(
         intent, top_slice, neuron_map, budget_tokens=effective_budget,
         prior_neuron_ids=prior_neuron_ids, prior_neuron_map=prior_neuron_map,
         resolved_regulations=resolved_regulations,
+        citation_tokens=citation_tokens,
     )
-    return top_slice, neuron_map, system_prompt
+    return top_slice, neuron_map, system_prompt, hop_map
 
 
 # Each slot is a dict: {mode, model, neurons, response, input_tokens, output_tokens, cost_usd}
@@ -1034,6 +1051,71 @@ def _eval_slot_label(mode: str, uses_neurons: bool, token_budget: int) -> str:
     return f"{model_part} {neuron_part} {budget_part}"
 
 
+async def _repair_citations(ctx, user_message, answer, hop_map, result):
+    """One bounded LLM retry citing only valid keys, then re-verify (JPL-2)."""
+    assert ctx is not None, "ctx must be populated for repair"
+    from app.services.citation_hopping import (
+        repair_instruction, extract_citation_tokens, verify_citations,
+    )
+    instruction = repair_instruction(hop_map, result.hallucinated)
+    retry = await llm_chat(
+        system_prompt=ctx.system_prompt + "\n\n" + instruction,
+        user_message=user_message,
+        max_tokens=4096,
+        model="haiku",
+    )
+    new_answer = retry.get("text", "") or answer
+    new_result = verify_citations(
+        extract_citation_tokens(new_answer), hop_map,
+        require_all=settings.citation_hop_require_all,
+    )
+    return new_answer, new_result
+
+
+async def _apply_citation_hop_exit(
+    db: AsyncSession,
+    query: Query,
+    ctx: PreparedContext | None,
+    user_message: str,
+) -> None:
+    """Exit layer: grade the answer's citation keys against the secret hop map.
+
+    Detects fabricated neuron references (cited keys absent from the per-query
+    map), applies the configured failure mode (detect | strip | repair), and
+    persists a CitationHopSession audit linked to the query. No-op when hopping
+    is disabled, no map was minted, or the answer is empty.
+    """
+    if not settings.citation_hopping_enabled:
+        return
+    hop_map = getattr(ctx, "hop_map", None) if ctx else None
+    if hop_map is None or not query.response_text:
+        return
+
+    from app.services.citation_hopping import (
+        extract_citation_tokens, verify_citations, strip_hallucinated,
+    )
+    require_all = settings.citation_hop_require_all
+    used = extract_citation_tokens(query.response_text)
+    result = verify_citations(used, hop_map, require_all=require_all)
+
+    mode = settings.citation_hop_failure_mode
+    if not result.ok and mode == "repair":
+        query.response_text, result = await _repair_citations(
+            ctx, user_message, query.response_text, hop_map, result,
+        )
+    if not result.ok and mode in ("strip", "repair") and result.hallucinated:
+        query.response_text = strip_hallucinated(query.response_text, result.hallucinated)
+
+    session = CitationHopSession(
+        token_map_json=dict(hop_map.neuron_by_token),
+        required_json=sorted(hop_map.tokens()) if require_all else None,
+        audit_json=result.to_dict(),
+    )
+    db.add(session)
+    await db.flush()
+    query.citation_hop_session_id = session.id
+
+
 async def execute_query(
     db: AsyncSession,
     user_message: str,
@@ -1116,6 +1198,9 @@ async def execute_query(
             query.execute_output_tokens = slot_result.get("output_tokens", 0)
             query.model_version = slot_result.get("model")
             break
+
+    # Exit layer: verify citation keys against the secret per-query hop map.
+    await _apply_citation_hop_exit(db, query, ctx, user_message)
 
     query.cost_usd = total_cost
     query.results_json = json.dumps(slot_results)
