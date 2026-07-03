@@ -159,6 +159,10 @@ class Settings(BaseSettings):
     engram_cofire_max_neurons: int = 15
     engram_edge_boost_enabled: bool = False
     engram_edge_boost_scale: float = 0.3
+    # Regulatory coverage: queue CFR refs cited in an answer but not resolved
+    # from an engram this query (un-grounded authority) into EmergentQueue for
+    # review/engram creation. Observational — nothing auto-applies.
+    regulatory_coverage_detection_enabled: bool = True
     # Graph integrity (neurological self-correcting processes)
     integrity_homeostasis_default_scale: float = 0.8
     integrity_homeostasis_floor_threshold: float = 0.05

@@ -1155,6 +1155,45 @@ async def _apply_citation_hop_exit(
     query.citation_hop_session_id = session.id
 
 
+async def _finalize_query_results(
+    db: AsyncSession,
+    query: Query,
+    ctx: PreparedContext | None,
+    user_message: str,
+    slot_results: list[dict],
+    classify_result: dict,
+    needs_neurons: bool,
+    all_scored: list[NeuronScoreBreakdown],
+    total_cost: float,
+) -> None:
+    """Record the primary response, run the citation-exit + regulatory-coverage
+    layers, persist cost/results, and fire neurons + engrams."""
+    for slot_result in slot_results:
+        if slot_result.get("response") and not query.response_text:
+            query.response_text = slot_result["response"]
+            query.execute_input_tokens = slot_result.get("input_tokens", 0)
+            query.execute_output_tokens = slot_result.get("output_tokens", 0)
+            query.model_version = slot_result.get("model")
+            break
+
+    # Exit layer: verify citation keys against the secret per-query hop map.
+    await _apply_citation_hop_exit(db, query, ctx, user_message)
+
+    # Regulatory coverage: queue CFR refs cited but not resolved this query.
+    if ctx is not None and ctx.resolved_regulations is not None:
+        from app.services.regulatory_coverage import record_regulatory_coverage_gaps
+        resolved_refs = {r.cfr_ref for r in ctx.resolved_regulations}
+        await record_regulatory_coverage_gaps(db, query.response_text or "", resolved_refs, query.id)
+
+    query.cost_usd = total_cost
+    query.results_json = json.dumps(slot_results)
+    fired_engram_ids = [r.engram_id for r in ctx.resolved_regulations] if ctx and ctx.resolved_regulations else []
+    await _update_counters_and_fire(
+        db, query, slot_results, classify_result,
+        needs_neurons=needs_neurons, all_scored=all_scored, fired_engram_ids=fired_engram_ids,
+    )
+
+
 async def execute_query(
     db: AsyncSession,
     user_message: str,
@@ -1229,22 +1268,10 @@ async def execute_query(
     slot_results = await asyncio.gather(*slot_tasks)
     total_cost = classify_result.get("cost_usd", 0) + sum(s.get("cost_usd", 0) for s in slot_results)
 
-    # Set primary response from first successful slot
-    for slot_result in slot_results:
-        if slot_result.get("response") and not query.response_text:
-            query.response_text = slot_result["response"]
-            query.execute_input_tokens = slot_result.get("input_tokens", 0)
-            query.execute_output_tokens = slot_result.get("output_tokens", 0)
-            query.model_version = slot_result.get("model")
-            break
-
-    # Exit layer: verify citation keys against the secret per-query hop map.
-    await _apply_citation_hop_exit(db, query, ctx, user_message)
-
-    query.cost_usd = total_cost
-    query.results_json = json.dumps(slot_results)
-    fired_engram_ids = [r.engram_id for r in ctx.resolved_regulations] if ctx and ctx.resolved_regulations else []
-    await _update_counters_and_fire(db, query, slot_results, classify_result, needs_neurons=needs_neurons, all_scored=all_scored, fired_engram_ids=fired_engram_ids)
+    await _finalize_query_results(
+        db, query, ctx, user_message, slot_results, classify_result,
+        needs_neurons, all_scored, total_cost,
+    )
 
     # Postcondition (JPL Rule 5)
     assert total_cost >= 0, f"total_cost must be non-negative, got {total_cost}"
