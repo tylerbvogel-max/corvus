@@ -174,10 +174,9 @@ class Settings(BaseSettings):
     # When enabled, each neuron in the assembled prompt gets a random per-query
     # ephemeral key; the exit layer verifies the answer cited only real keys.
     # ON by default: citations render as [FQ-XXXXXX] (per-query ephemeral) rather
-    # than numeric [N], so any fabricated neuron reference is caught
-    # deterministically. NOTE: the frontend hero-chat superscript mapping still
-    # parses [N] — update it to the hop tokens (or set this False) to restore
-    # clickable citations in the UI.
+    # than numeric [N], so any fabricated neuron/regulation reference is caught
+    # deterministically. The frontend resolves hop tokens to clean numbered
+    # superscripts via the /query response citation_map.
     citation_hopping_enabled: bool = True
     # Prefix must NOT collide with domain tokens (e.g. aircraft F-16/F-35), so
     # the default is FQ- (frequency) rather than the F- from the design note.

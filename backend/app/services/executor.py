@@ -58,6 +58,9 @@ class PreparedContext:
     # map used to render tokens and verify citations. None when disabled.
     # Never serialise to the client — it is secret to the analysis layer.
     hop_map: HopMap | None = None
+    # Resolved eCFR regulations (ResolvedRegulation) surfaced this query — used
+    # to label engram hop citations for the frontend. Empty when none resolved.
+    resolved_regulations: list = field(default_factory=list)
 
 
 async def _embed_query_async(user_message: str):
@@ -379,6 +382,7 @@ def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
         classify_output_tokens=state.classify_result.get("output_tokens", 0),
         stage_telemetry=pipeline_ctx.telemetry_json(),
         hop_map=state.hop_map,
+        resolved_regulations=state.resolved_regulations,
     )
     assert isinstance(result.system_prompt, str) and len(result.system_prompt) > 0, \
         "PreparedContext.system_prompt must be a non-empty string"
@@ -819,6 +823,24 @@ def _populate_query_from_results(
     return total_cost
 
 
+def _build_citation_map(ctx: PreparedContext | None, neuron_map: dict[int, Neuron]) -> dict:
+    """Token -> source descriptor so the frontend can render frequency-hop
+    citations as clean numbered superscripts (neuron label or CFR ref). Empty
+    when hopping is off — the frontend then falls back to numeric [N] citations.
+    This map is safe to expose: it is secret to the *LLM*, not to the client."""
+    if ctx is None or getattr(ctx, "hop_map", None) is None:
+        return {}
+    hop_map = ctx.hop_map
+    cmap: dict[str, dict] = {}
+    for token, nid in hop_map.neuron_by_token.items():
+        neuron = neuron_map.get(nid)
+        cmap[token] = {"kind": "neuron", "id": nid, "label": neuron.label if neuron else f"Neuron {nid}"}
+    cfr_by_engram = {r.engram_id: r.cfr_ref for r in (ctx.resolved_regulations or [])}
+    for token, eid in hop_map.engram_by_token.items():
+        cmap[token] = {"kind": "engram", "id": eid, "label": cfr_by_engram.get(eid, f"Engram {eid}")}
+    return cmap
+
+
 def _build_response(
     query: Query,
     ctx: PreparedContext | None,
@@ -848,6 +870,8 @@ def _build_response(
         "total_cost": total_cost,
         # Pattern #5: per-stage timing + status for the query-prep DAG.
         "stage_telemetry": ctx.stage_telemetry if ctx else [],
+        # Frequency-hop citations: token -> source, for numbered superscripts.
+        "citation_map": _build_citation_map(ctx, neuron_map),
     }
 
 

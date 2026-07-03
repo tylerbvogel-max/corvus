@@ -6,7 +6,7 @@ import {
   submitRating, fetchFollowUps,
   type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec, type SessionSummary,
 } from '../api';
-import type { NeuronScoreResponse } from '../types';
+import type { NeuronScoreResponse, CitationSource } from '../types';
 import { useModels } from '../hooks/useModels';
 import { marked } from 'marked';
 import NeuronTreeViz from './NeuronTreeViz';
@@ -25,6 +25,8 @@ interface Message {
   cost?: number;
   neurons_activated?: number;
   neuron_scores?: NeuronScoreResponse[];
+  // Frequency-hop citations: token -> source, for numbered superscripts.
+  citation_map?: Record<string, CitationSource>;
   isCondensed?: boolean;
   condensedOriginals?: { role: string; text: string }[];
   // Per-message timestamp — from backend for loaded history; set locally
@@ -148,25 +150,49 @@ function SessionTitle({
   );
 }
 
-function AssistantText({ text, scores }: {
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function AssistantText({ text, scores, citationMap }: {
   text: string;
   scores?: NeuronScoreResponse[];
+  citationMap?: Record<string, CitationSource>;
 }) {
-  // Tier C1 inline citations. Backend prompt tells the LLM to cite sources
-  // as [1], [2], etc. based on the neuron_scores ordering. Here we find
-  // those markers in the rendered HTML and turn them into clickable
-  // superscripts that scroll the sources list to the referenced row.
+  // Inline citations become clickable superscripts. Two schemes:
+  //  - Frequency-hop tokens [FQ-XXXXXX]: the LLM emits per-query unforgeable
+  //    keys; each is resolved via citationMap and RE-NUMBERED 1..k for display
+  //    (humans see [1],[2]). With a map, unknown/fabricated keys are dropped;
+  //    without one (reloaded history) we still re-number so raw keys never show.
+  //  - Legacy numeric [N]: maps to the Nth neuron by score order.
   const html = useMemo(() => {
     const raw = marked.parse(text, { async: false }) as string;
+    if (/\[FQ-[0-9A-Fa-f]{6}\]/i.test(raw)) {
+      const map = citationMap ?? {};
+      const displayNum = new Map<string, number>();
+      return raw.replace(/\[(FQ-[0-9A-Fa-f]{6})\]/gi, (_m, tokRaw: string) => {
+        const token = tokRaw.toUpperCase();
+        const src = map[token];
+        if (citationMap && !src) return '';  // resolvable map, fabricated key → drop
+        let n = displayNum.get(token);
+        if (n === undefined) { n = displayNum.size + 1; displayNum.set(token, n); }
+        const idAttr = src
+          ? (src.kind === 'engram' ? `data-engram-id="${src.id}"` : `data-neuron-id="${src.id}"`)
+          : '';
+        const title = escapeAttr(src?.label ?? `Source ${n}`);
+        return `<sup class="chat-citation" data-source="${n}" ${idAttr} tabindex="0" title="${title}">[${n}]</sup>`;
+      });
+    }
     if (!scores || scores.length === 0) return raw;
-    // Replace [N] with a clickable sup tag when N is in range.
+    // Legacy numeric [N] citations (hopping disabled).
     return raw.replace(/\[(\d+)\]/g, (match, n: string) => {
       const idx = Number(n);
       if (idx < 1 || idx > scores.length) return match;
       const neuronId = scores[idx - 1].neuron_id;
       return `<sup class="chat-citation" data-source="${idx}" data-neuron-id="${neuronId}" tabindex="0" title="Source ${idx}">[${idx}]</sup>`;
     });
-  }, [text, scores]);
+  }, [text, scores, citationMap]);
 
   // Attach a click handler to citation sups. Since we're using
   // dangerouslySetInnerHTML, event delegation is the cleanest path.
@@ -541,6 +567,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           cost: res.total_cost || 0,
           neurons_activated: res.neurons_activated,
           neuron_scores: res.neuron_scores,
+          citation_map: res.citation_map,
           created_at: new Date().toISOString(),
           query_id: res.query_id,
         };
@@ -907,6 +934,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     <AssistantText
                       text={msg.text}
                       scores={msg.neuron_scores}
+                      citationMap={msg.citation_map}
                     />
                   ) : (
                     <div className="chat-text">{msg.text}</div>

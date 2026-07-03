@@ -129,6 +129,12 @@ export interface StageTelemetry {
   error_message: string | null;
 }
 
+export interface CitationSource {
+  kind: 'neuron' | 'engram';
+  id: number;
+  label: string | null;
+}
+
 export interface QueryResponse {
   query_id: number;
   intent: string | null;
@@ -146,6 +152,8 @@ export interface QueryResponse {
   output_checks?: OutputCheckOut[];
   stage_telemetry?: StageTelemetry[];
   failed_stage?: string | null;
+  // Frequency-hop citations: token -> source. Empty/absent when hopping is off.
+  citation_map?: Record<string, CitationSource>;
 }
 
 export interface QuerySummary {
