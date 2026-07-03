@@ -677,59 +677,72 @@ async def neuron_edges(neuron_id: int, limit: int = 15, hops: int = 2, db: Async
     }
 
 
-@router.get("/graph-3d")
-async def graph_3d(
-    min_weight: float = 0.3,
-    max_edges: int = 2000,
-    db: AsyncSession = Depends(get_db),
-):
-    """Return all active neurons and top co-firing edges for 3D visualization."""
-    # All active neurons
+async def _graph3d_nodes(db: AsyncSession) -> list[dict]:
+    """All active neurons with the fields the 3D universe renders/filters on."""
     result = await db.execute(
         select(
             Neuron.id, Neuron.label, Neuron.department, Neuron.layer,
-            Neuron.node_type, Neuron.role_key, Neuron.invocations,
-            Neuron.avg_utility, Neuron.parent_id,
+            Neuron.node_type, Neuron.abstraction_type, Neuron.role_key,
+            Neuron.invocations, Neuron.avg_utility, Neuron.centrality,
+            Neuron.parent_id,
         ).where(Neuron.is_active == True)
     )
-    neurons = [
+    return [
         {
             "id": r.id, "label": r.label, "department": r.department,
-            "layer": r.layer, "node_type": r.node_type, "role_key": r.role_key,
-            "invocations": r.invocations or 0, "avg_utility": float(r.avg_utility or 0),
+            "layer": r.layer, "node_type": r.node_type,
+            "abstraction_type": r.abstraction_type, "role_key": r.role_key,
+            "invocations": r.invocations or 0,
+            "avg_utility": float(r.avg_utility or 0),
+            "centrality": float(r.centrality or 0),
             "parent_id": r.parent_id,
         }
         for r in result.fetchall()
     ]
 
-    # Coverage-first edge selection:
-    # Phase 1: each neuron's single best edge (maximises connectivity)
-    # Phase 2: fill remaining budget with top-weight edges
+
+async def _graph3d_edges(
+    db: AsyncSession, min_weight: float, max_edges: int, per_node: int,
+) -> list[dict]:
+    """Coverage-first edge selection: every neuron's top-K edges by weight
+    (keeps the whole web connected instead of one dense clump), then fill
+    the remaining budget with the globally strongest edges."""
     from sqlalchemy import text as sa_text
 
-    best_result = await db.execute(sa_text("""
-        SELECT DISTINCT ON (nid) nid, source_id, target_id, weight, co_fire_count
-        FROM (
-            SELECT source_id AS nid, source_id, target_id, weight, co_fire_count
-            FROM neuron_edges WHERE weight >= :mw
-            UNION ALL
-            SELECT target_id AS nid, source_id, target_id, weight, co_fire_count
-            FROM neuron_edges WHERE weight >= :mw
-        ) sub
-        ORDER BY nid, weight DESC
-    """), {"mw": min_weight})
+    ranked_result = await db.execute(sa_text("""
+        SELECT source_id, target_id, weight, co_fire_count, edge_type FROM (
+            SELECT sub.*, ROW_NUMBER() OVER (
+                PARTITION BY nid ORDER BY weight DESC
+            ) AS rn
+            FROM (
+                SELECT source_id AS nid, source_id, target_id, weight,
+                       co_fire_count, edge_type
+                FROM neuron_edges WHERE weight >= :mw
+                UNION ALL
+                SELECT target_id AS nid, source_id, target_id, weight,
+                       co_fire_count, edge_type
+                FROM neuron_edges WHERE weight >= :mw
+            ) sub
+        ) ranked WHERE rn <= :k
+        ORDER BY weight DESC
+    """), {"mw": min_weight, "k": per_node})
 
     edge_set: dict[tuple[int, int], dict] = {}
-    for r in best_result.fetchall():
-        key = (r[1], r[2])
-        if key not in edge_set:
-            edge_set[key] = {"source": r[1], "target": r[2], "weight": float(r[3]), "co_fire_count": r[4]}
+    for r in ranked_result.fetchall():
+        key = (r[0], r[1])
+        if key not in edge_set and len(edge_set) < max_edges:
+            edge_set[key] = {
+                "source": r[0], "target": r[1], "weight": float(r[2]),
+                "co_fire_count": r[3], "edge_type": r[4] or "pyramidal",
+            }
 
-    # Phase 2: fill remaining budget with top-weight edges
     remaining = max_edges - len(edge_set)
     if remaining > 0:
         fill_result = await db.execute(
-            select(NeuronEdge.source_id, NeuronEdge.target_id, NeuronEdge.weight, NeuronEdge.co_fire_count)
+            select(
+                NeuronEdge.source_id, NeuronEdge.target_id, NeuronEdge.weight,
+                NeuronEdge.co_fire_count, NeuronEdge.edge_type,
+            )
             .where(NeuronEdge.weight >= min_weight)
             .order_by(NeuronEdge.weight.desc())
             .limit(max_edges)
@@ -739,9 +752,32 @@ async def graph_3d(
                 break
             key = (r.source_id, r.target_id)
             if key not in edge_set:
-                edge_set[key] = {"source": r.source_id, "target": r.target_id, "weight": float(r.weight), "co_fire_count": r.co_fire_count}
+                edge_set[key] = {
+                    "source": r.source_id, "target": r.target_id,
+                    "weight": float(r.weight), "co_fire_count": r.co_fire_count,
+                    "edge_type": r.edge_type or "pyramidal",
+                }
+    return list(edge_set.values())
 
-    edges = list(edge_set.values())
+
+@router.get("/graph-3d")
+async def graph_3d(
+    min_weight: float = 0.25,
+    max_edges: int = 12000,
+    per_node: int = 3,
+    db: AsyncSession = Depends(get_db),
+):
+    """Active neurons + coverage-first co-firing edges for the 3D universe.
+
+    per_node bounds the top-K edges kept per neuron before global fill;
+    payload includes the abstraction axis, region tag, centrality, and
+    edge_type so the client can style stellate/pyramidal/instantiates
+    connections differently.
+    """
+    assert 0.0 <= min_weight <= 1.0, "min_weight must be in [0, 1]"
+    assert 1 <= per_node <= 12, "per_node must be in [1, 12]"
+    neurons = await _graph3d_nodes(db)
+    edges = await _graph3d_edges(db, min_weight, max_edges, per_node)
     return {"neurons": neurons, "edges": edges}
 
 
