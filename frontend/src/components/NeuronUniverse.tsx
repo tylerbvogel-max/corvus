@@ -127,7 +127,12 @@ export default function NeuronUniverse() {
     controls.dampingFactor = 0.08;
     controls.rotateSpeed = 0.6;
 
-    const composer = new EffectComposer(renderer);
+    // HalfFloat target so node colours can exceed 1.0 (HDR) and bloom strongly —
+    // that's what lets the Neuron-light slider actually blaze past the synapses.
+    const composer = new EffectComposer(
+      renderer,
+      new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType }),
+    );
     composer.addPass(new RenderPass(scene, camera));
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.9, 0.6, 0.05);
     composer.addPass(bloomPass);
@@ -214,8 +219,9 @@ export default function NeuronUniverse() {
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
         let r = baseColor[i * 3] * nodeLight, g = baseColor[i * 3 + 1] * nodeLight, b = baseColor[i * 3 + 2] * nodeLight;
-        if (highlightId != null && nodes[i].id === highlightId) { r = r * 0.5 + 0.6; g = g * 0.5 + 0.62; b = b * 0.5 + 0.72; }
-        mesh.setColorAt(i, tmpColor.setRGB(Math.min(1, r), Math.min(1, g), Math.min(1, b)));
+        if (highlightId != null && nodes[i].id === highlightId) { r += 0.8; g += 0.85; b += 1.0; }
+        // No clamp: values > 1 are HDR and bloom hard, so higher Neuron light truly brightens.
+        mesh.setColorAt(i, tmpColor.setRGB(r, g, b));
       }
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
