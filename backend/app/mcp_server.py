@@ -12,6 +12,7 @@ from mcp.server.fastmcp import FastMCP
 from app.config import settings
 from app.database import async_session
 from app.models import Neuron, NeuronEdge, SystemState, Query, CitationHopSession
+from app.services.citation_hopping import serialize_hop_map, deserialize_hop_map
 from sqlalchemy import select, func, or_
 
 # Next-step hints for AI agent tool chaining (JPL-6: immutable mapping)
@@ -65,7 +66,7 @@ async def _persist_hop_session(db, ctx) -> int | None:
     if not settings.citation_hopping_enabled or ctx.hop_map is None:
         return None
     session = CitationHopSession(
-        token_map_json=dict(ctx.hop_map.neuron_by_token),
+        token_map_json=serialize_hop_map(ctx.hop_map),
         required_json=(
             sorted(ctx.hop_map.tokens())
             if settings.citation_hop_require_all else None
@@ -171,18 +172,14 @@ async def verify_citations(hop_session_id: int, answer: str) -> str:
         answer: your full answer text (citation keys are extracted from it)
     """
     from app.services.citation_hopping import (
-        HopMap, extract_citation_tokens, verify_citations as _verify,
+        extract_citation_tokens, verify_citations as _verify,
     )
 
     async with async_session() as db:
         session = await db.get(CitationHopSession, hop_session_id)
         if session is None:
             return json.dumps({"error": f"unknown hop_session_id {hop_session_id}"})
-        neuron_by_token = dict(session.token_map_json or {})
-        hop_map = HopMap(
-            token_by_neuron={v: k for k, v in neuron_by_token.items()},
-            neuron_by_token=neuron_by_token,
-        )
+        hop_map = deserialize_hop_map(session.token_map_json)
         result = _verify(
             extract_citation_tokens(answer), hop_map,
             require_all=bool(session.required_json),
@@ -194,6 +191,7 @@ async def verify_citations(hop_session_id: int, answer: str) -> str:
             "hallucinated": result.hallucinated,
             "missing": result.missing,
             "cited_neuron_ids": result.cited_neuron_ids,
+            "cited_engram_ids": result.cited_engram_ids,
             "allowed_count": len(result.allowed),
             "used_count": len(result.used),
         })

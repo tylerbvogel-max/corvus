@@ -233,8 +233,12 @@ def _pack_resolved_regulations(
     resolved: list,
     used_tokens: int,
     budget: int,
+    engram_citation_tokens: dict[int, str] | None = None,
 ) -> int:
-    """Pack resolved engram regulatory text into the prompt."""
+    """Pack resolved engram regulatory text into the prompt. When hop tokens are
+    supplied, each regulation carries a per-query citation key ALONGSIDE its real
+    CFR ref, so the exit layer can verify the model cited a regulation that was
+    actually resolved (while the human-readable federal ref stays visible)."""
     if not resolved:
         return used_tokens
     header = "\n## Authoritative Regulatory Text (live from eCFR)"
@@ -245,7 +249,12 @@ def _pack_resolved_regulations(
     used_tokens += header_tokens
 
     for reg in sorted(resolved, key=lambda r: r.token_count):
-        entry = f"**{reg.cfr_ref}** [REGULATORY]\n{reg.text}"
+        tag = ""
+        if engram_citation_tokens:
+            tok = engram_citation_tokens.get(reg.engram_id)
+            if tok:
+                tag = f"[{tok}] "
+        entry = f"{tag}**{reg.cfr_ref}** [REGULATORY]\n{reg.text}"
         entry_tokens = _estimate_tokens(entry)
         if used_tokens + entry_tokens > budget:
             break
@@ -266,12 +275,14 @@ def _append_citation_instruction(
         return
     if is_hopping:
         parts.append(
-            "\n**Citing sources:** When you state a fact from the knowledge above, "
-            "cite the source inline using its exact bracketed citation key as shown "
-            "in the source header, e.g. [FQ-1A2B3C]. These keys are unique to this "
-            "answer. Only cite keys that actually appear in the source headers above "
-            "— never invent, alter, or reuse a key from elsewhere. If a claim cannot "
-            "be traced to a listed key, say so explicitly rather than fabricating one."
+            "\n**Citing sources:** When you state a fact from the knowledge above "
+            "(including the regulatory sources), cite it inline using its exact "
+            "bracketed citation key as shown in that source's header, e.g. "
+            "[FQ-1A2B3C]. These keys are unique to this answer. Only cite keys that "
+            "actually appear in the source headers above — never invent, alter, or "
+            "reuse a key from elsewhere, and do not cite a regulation by its CFR "
+            "number unless it carries a citation key here. If a claim cannot be "
+            "traced to a listed key, say so explicitly rather than fabricating one."
         )
         return
     parts.append(
@@ -323,6 +334,7 @@ def assemble_prompt(
     prior_neuron_map: dict[int, Neuron] | None = None,
     resolved_regulations: list | None = None,
     citation_tokens: dict[int, str] | None = None,
+    engram_citation_tokens: dict[int, str] | None = None,
 ) -> str:
     """Pack top-K neurons + resolved regulatory text into a system prompt within token budget.
 
@@ -340,6 +352,7 @@ def assemble_prompt(
 
     # Neuron blocks carry [label] tags the LLM must cite by.
     citation_label_by_id, is_hopping = _build_citation_labels(scored_neurons, citation_tokens)
+    is_hopping = is_hopping or engram_citation_tokens is not None
 
     parts, used_tokens = _build_prompt_header(intent, scored_neurons, neuron_map)
 
@@ -360,7 +373,7 @@ def assemble_prompt(
 
     # Pack live regulatory text from resolved engrams
     if resolved_regulations:
-        used_tokens = _pack_resolved_regulations(parts, resolved_regulations, used_tokens, budget)
+        used_tokens = _pack_resolved_regulations(parts, resolved_regulations, used_tokens, budget, engram_citation_tokens)
 
     parts.append("")
 

@@ -19,7 +19,7 @@ executor / MCP layers that call these functions.
 
 import re
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.config import settings
 
@@ -29,13 +29,17 @@ _MINT_MAX_ATTEMPTS = 8
 
 @dataclass(frozen=True)
 class HopMap:
-    """Secret per-query key<->neuron mapping. Never exposed to the analysis layer."""
+    """Secret per-query key<->entity mapping. Never exposed to the analysis
+    layer. Neurons and (regulatory) engrams live in separate namespaces because
+    their id spaces overlap; tokens are unique across both."""
 
     token_by_neuron: dict[int, str]
     neuron_by_token: dict[str, int]
+    token_by_engram: dict[int, str] = field(default_factory=dict)
+    engram_by_token: dict[str, int] = field(default_factory=dict)
 
     def tokens(self) -> set[str]:
-        return set(self.neuron_by_token.keys())
+        return set(self.neuron_by_token) | set(self.engram_by_token)
 
 
 @dataclass(frozen=True)
@@ -48,6 +52,7 @@ class HopVerification:
     hallucinated: list[str]      # cited but not in the map = fabricated references
     missing: list[str]           # required but not cited (require_all mode only)
     cited_neuron_ids: list[int]  # neurons the answer actually grounded on
+    cited_engram_ids: list[int]  # regulatory engrams the answer grounded on
 
     def to_dict(self) -> dict:
         return {
@@ -57,6 +62,7 @@ class HopVerification:
             "hallucinated": self.hallucinated,
             "missing": self.missing,
             "cited_neuron_ids": self.cited_neuron_ids,
+            "cited_engram_ids": self.cited_engram_ids,
         }
 
 
@@ -83,19 +89,39 @@ def _unique_token(existing: dict[str, int]) -> str:
     return f"{base}{secrets.token_hex(2).upper()}"
 
 
-def mint_hop_map(neuron_ids: list[int]) -> HopMap:
-    """Assign a fresh random ephemeral key to each neuron id (order-independent)."""
+def mint_hop_map(neuron_ids: list[int], engram_ids: list[int] | None = None) -> HopMap:
+    """Assign a fresh random ephemeral key to each neuron and engram id.
+
+    Neuron and engram id spaces overlap, so all keys are minted against one
+    shared used-token set (unique across both) and filed in separate namespaces.
+    """
     assert isinstance(neuron_ids, list), "neuron_ids must be a list"
+    engram_ids = engram_ids or []
     token_by_neuron: dict[int, str] = {}
     neuron_by_token: dict[str, int] = {}
+    token_by_engram: dict[int, str] = {}
+    engram_by_token: dict[str, int] = {}
+    used: dict[str, int] = {}
     for nid in neuron_ids:
         assert isinstance(nid, int), "neuron id must be an int"
         if nid in token_by_neuron:
             continue
-        token = _unique_token(neuron_by_token)
+        token = _unique_token(used)
         token_by_neuron[nid] = token
         neuron_by_token[token] = nid
-    return HopMap(token_by_neuron=token_by_neuron, neuron_by_token=neuron_by_token)
+        used[token] = nid
+    for eid in engram_ids:
+        assert isinstance(eid, int), "engram id must be an int"
+        if eid in token_by_engram:
+            continue
+        token = _unique_token(used)
+        token_by_engram[eid] = token
+        engram_by_token[token] = eid
+        used[token] = eid
+    return HopMap(
+        token_by_neuron=token_by_neuron, neuron_by_token=neuron_by_token,
+        token_by_engram=token_by_engram, engram_by_token=engram_by_token,
+    )
 
 
 def _token_regex() -> re.Pattern:
@@ -129,13 +155,17 @@ def verify_citations(
     used_set = {t.upper() for t in used}
     hallucinated = sorted(used_set - allowed_set)
     missing = sorted(allowed_set - used_set) if require_all else []
-    cited_ids = sorted(
+    cited_neuron_ids = sorted(
         {hop_map.neuron_by_token[t] for t in used_set if t in hop_map.neuron_by_token}
+    )
+    cited_engram_ids = sorted(
+        {hop_map.engram_by_token[t] for t in used_set if t in hop_map.engram_by_token}
     )
     ok = not hallucinated and not missing
     return HopVerification(
         ok=ok, allowed=sorted(allowed_set), used=sorted(used_set),
-        hallucinated=hallucinated, missing=missing, cited_neuron_ids=cited_ids,
+        hallucinated=hallucinated, missing=missing,
+        cited_neuron_ids=cited_neuron_ids, cited_engram_ids=cited_engram_ids,
     )
 
 
@@ -159,4 +189,31 @@ def repair_instruction(hop_map: HopMap, hallucinated: list[str]) -> str:
         f"The ONLY valid citation keys for this answer are: {valid}. "
         "Rewrite the answer citing only valid keys, and drop any claim you "
         "cannot attribute to a valid key."
+    )
+
+
+def serialize_hop_map(hop_map: HopMap) -> dict:
+    """JSON-safe secret map for persistence, namespaced by entity kind."""
+    assert isinstance(hop_map, HopMap), "hop_map must be a HopMap"
+    return {
+        "neuron": dict(hop_map.neuron_by_token),
+        "engram": dict(hop_map.engram_by_token),
+    }
+
+
+def deserialize_hop_map(data: dict | None) -> HopMap:
+    """Rebuild a HopMap from a persisted token map. Tolerates the legacy flat
+    ``{token: neuron_id}`` shape (pre-engram sessions)."""
+    data = data or {}
+    if "neuron" not in data and "engram" not in data:
+        neuron_by_token = {str(k): v for k, v in data.items()}  # legacy flat shape
+        engram_by_token: dict[str, int] = {}
+    else:
+        neuron_by_token = dict(data.get("neuron") or {})
+        engram_by_token = dict(data.get("engram") or {})
+    return HopMap(
+        token_by_neuron={v: k for k, v in neuron_by_token.items()},
+        neuron_by_token=neuron_by_token,
+        token_by_engram={v: k for k, v in engram_by_token.items()},
+        engram_by_token=engram_by_token,
     )

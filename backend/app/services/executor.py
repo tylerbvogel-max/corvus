@@ -31,7 +31,7 @@ from app.services.prompt_assembler import assemble_prompt
 from app.services.propagation import propagate_activation
 from app.services.neuron_service import NeuronCandidate
 from app.services.scoring_engine import NeuronScoreBreakdown
-from app.services.citation_hopping import HopMap, mint_hop_map
+from app.services.citation_hopping import HopMap, mint_hop_map, serialize_hop_map
 from app.tenant import tenant
 
 
@@ -420,15 +420,19 @@ async def _assemble_top_slice(
 
     hop_map: HopMap | None = None
     citation_tokens: dict[int, str] | None = None
+    engram_citation_tokens: dict[int, str] | None = None
     if settings.citation_hopping_enabled:
-        hop_map = mint_hop_map([s.neuron_id for s in top_slice])
+        engram_ids = [r.engram_id for r in resolved_regulations] if resolved_regulations else []
+        hop_map = mint_hop_map([s.neuron_id for s in top_slice], engram_ids)
         citation_tokens = hop_map.token_by_neuron
+        engram_citation_tokens = hop_map.token_by_engram
 
     system_prompt = assemble_prompt(
         intent, top_slice, neuron_map, budget_tokens=effective_budget,
         prior_neuron_ids=prior_neuron_ids, prior_neuron_map=prior_neuron_map,
         resolved_regulations=resolved_regulations,
         citation_tokens=citation_tokens,
+        engram_citation_tokens=engram_citation_tokens,
     )
     return top_slice, neuron_map, system_prompt, hop_map
 
@@ -1107,7 +1111,7 @@ async def _apply_citation_hop_exit(
         query.response_text = strip_hallucinated(query.response_text, result.hallucinated)
 
     session = CitationHopSession(
-        token_map_json=dict(hop_map.neuron_by_token),
+        token_map_json=serialize_hop_map(hop_map),
         required_json=sorted(hop_map.tokens()) if require_all else None,
         audit_json=result.to_dict(),
     )

@@ -13,7 +13,19 @@ from app.services.citation_hopping import (
     verify_citations,
     strip_hallucinated,
     repair_instruction,
+    serialize_hop_map,
+    deserialize_hop_map,
 )
+
+
+class _FakeReg:
+    """Minimal ResolvedRegulation stand-in for assembler tests."""
+
+    def __init__(self, engram_id, cfr_ref, text):
+        self.engram_id = engram_id
+        self.cfr_ref = cfr_ref
+        self.text = text
+        self.token_count = len(text) // 4
 
 
 def _make_neuron(nid, label, content=None, department="Engineering", role_key="mech_eng", layer=5):
@@ -164,3 +176,63 @@ def test_assembler_default_is_numeric_backward_compatible():
     assert "[1] " in prompt
     assert "bracketed number" in prompt  # numeric citation instruction
     assert settings.citation_hop_prefix not in prompt
+
+
+# ---- engram (regulatory) citation hopping ----
+
+def test_mint_neuron_and_engram_tokens_are_unique_across_namespaces():
+    # Overlapping id spaces (neuron 1 and engram 1 both exist) must not collide.
+    hop = mint_hop_map([1, 2], [1, 2])
+    assert set(hop.token_by_engram.keys()) == {1, 2}
+    all_tokens = list(hop.token_by_neuron.values()) + list(hop.token_by_engram.values())
+    assert len(set(all_tokens)) == 4
+    assert hop.tokens() == set(all_tokens)
+    # neuron 1 and engram 1 get DIFFERENT keys
+    assert hop.token_by_neuron[1] != hop.token_by_engram[1]
+
+
+def test_verify_resolves_neuron_and_engram_citations():
+    hop = mint_hop_map([10], [42])
+    ntok, etok = hop.token_by_neuron[10], hop.token_by_engram[42]
+    res = verify_citations([ntok, etok], hop)
+    assert res.ok is True
+    assert res.cited_neuron_ids == [10]
+    assert res.cited_engram_ids == [42]
+
+
+def test_verify_detects_fabricated_regulatory_key():
+    hop = mint_hop_map([10], [42])
+    etok = hop.token_by_engram[42]
+    fake = f"{settings.citation_hop_prefix}BADCFR"
+    res = verify_citations([etok, fake], hop)
+    assert res.ok is False
+    assert res.hallucinated == [fake]
+    assert res.cited_engram_ids == [42]
+
+
+def test_serialize_deserialize_roundtrip_and_legacy():
+    hop = mint_hop_map([10, 11], [42])
+    back = deserialize_hop_map(serialize_hop_map(hop))
+    assert back.neuron_by_token == hop.neuron_by_token
+    assert back.engram_by_token == hop.engram_by_token
+    # legacy flat {token: neuron_id} shape still loads as neurons
+    legacy = deserialize_hop_map({f"{settings.citation_hop_prefix}AAAAAA": 7})
+    assert legacy.neuron_by_token == {f"{settings.citation_hop_prefix}AAAAAA": 7}
+    assert legacy.engram_by_token == {}
+
+
+def test_assembler_renders_engram_hop_token_and_keeps_cfr_ref():
+    neurons = {1: _make_neuron(1, "N", content="content")}
+    scores = [_make_score(1, 0.8)]
+    reg = _FakeReg(engram_id=42, cfr_ref="48 CFR 31.205-6", text="Cost principle text.")
+    ntok = f"{settings.citation_hop_prefix}111111"
+    etok = f"{settings.citation_hop_prefix}222222"
+    prompt = assemble_prompt(
+        "compliance", scores, neurons,
+        resolved_regulations=[reg],
+        citation_tokens={1: ntok},
+        engram_citation_tokens={42: etok},
+    )
+    # hop key rendered AND the real federal ref preserved for auditability
+    assert f"[{etok}] **48 CFR 31.205-6**" in prompt
+    assert "regulatory sources" in prompt  # instruction now covers regulations
