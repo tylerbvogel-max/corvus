@@ -57,6 +57,7 @@ export default function NeuronUniverse() {
   const [synapse, setSynapse] = useState(0.5); // 0..1 synapse visibility (density)
   const [nodeLight, setNodeLight] = useState(1.25); // neuron brightness
   const [synapseLight, setSynapseLight] = useState(0.5); // synapse brightness
+  const [repulsion, setRepulsion] = useState(34); // charge magnitude (layout spread)
 
   // ── Data load (hardened: coerce NaN-prone numeric fields) ──
   useEffect(() => {
@@ -164,6 +165,7 @@ export default function NeuronUniverse() {
     const hidden = new Uint8Array(N);
     const radius = new Float32Array(N);
     let nodeLight = 1.25; // neuron brightness multiplier (slider-controlled)
+    let repulsionVal = 34; // charge magnitude (slider-controlled); higher = more spread
 
     function recomputeRadius() {
       for (let i = 0; i < N; i++) {
@@ -255,7 +257,7 @@ export default function NeuronUniverse() {
       sim = forceSimulation(active, 3)
         .force('link', forceLink(links).id((d: SimNode) => d.id)
           .distance((l: any) => 26 + (1 - l.weight) * 70).strength((l: any) => 0.15 + l.weight * 0.5))
-        .force('charge', forceManyBody().strength(pinnedId != null ? -120 : -34).distanceMax(1400))
+        .force('charge', forceManyBody().strength(pinnedId != null ? -(repulsionVal * 3) : -repulsionVal).distanceMax(1400))
         .force('x', forceX(0).strength(0.015))
         .force('y', forceY(0).strength(0.015))
         .force('z', forceZ(0).strength(0.015))
@@ -324,6 +326,15 @@ export default function NeuronUniverse() {
         setSynapse(v: number) { for (let e = 0; e < M; e++) visibleEdge[e] = E[e].weight >= (1 - v) * 0.6 ? 1 : 0; syncPositions(); },
         setNodeLight(v: number) { nodeLight = v; refreshInstances(); },
         setSynapseLight(v: number) { lineMat.opacity = 0.02 + v * 0.88; },
+        setRepulsion(v: number) {
+          repulsionVal = v;
+          // Re-settle the CURRENT view (full or ego) with the new charge; keep camera.
+          const active = focusId != null ? nodes.filter(n => !hidden[n._i]) : nodes;
+          const activeLinks = focusId != null
+            ? E.filter(e => !hidden[byId.get(e.source)!._i] && !hidden[byId.get(e.target)!._i])
+            : E;
+          buildSim(active, activeLinks, focusId);
+        },
         focus(id: number) {
           focusId = id;
           // 2-hop ego neighbourhood so the "local universe" is rich, not a lone dot.
@@ -379,6 +390,7 @@ export default function NeuronUniverse() {
   useEffect(() => { engineRef.current?.api.setSynapse(synapse); }, [synapse]);
   useEffect(() => { engineRef.current?.api.setNodeLight(nodeLight); }, [nodeLight]);
   useEffect(() => { engineRef.current?.api.setSynapseLight(synapseLight); }, [synapseLight]);
+  useEffect(() => { engineRef.current?.api.setRepulsion(repulsion); }, [repulsion]);
   useEffect(() => {
     if (selected) engineRef.current?.api.focus(selected.id);
     else engineRef.current?.api.reset();
@@ -425,6 +437,10 @@ export default function NeuronUniverse() {
         <Row label={`Synapse light ${(synapseLight * 100) | 0}%`}>
           <input type="range" min={0} max={1} step={0.02} value={synapseLight}
             onChange={e => setSynapseLight(+e.target.value)} style={{ width: 150 }} />
+        </Row>
+        <Row label={`Repulsion ${repulsion | 0}`}>
+          <input type="range" min={8} max={140} step={2} value={repulsion}
+            onChange={e => setRepulsion(+e.target.value)} style={{ width: 150 }} />
         </Row>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#c7d0e0', fontSize: '0.78rem', marginTop: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={bloom} onChange={e => setBloom(e.target.checked)} /> Bloom (glow)
