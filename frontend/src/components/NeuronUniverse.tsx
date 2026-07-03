@@ -160,7 +160,11 @@ export default function NeuronUniverse() {
     }
 
     const sphere = new THREE.SphereGeometry(1, 12, 12);
-    const nodeMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true });
+    // NB: no `vertexColors` — the sphere has no colour attribute, and with it on
+    // a real GPU multiplies instanceColor by (0,0,0) -> black nodes. InstancedMesh
+    // applies instanceColor on its own (USE_INSTANCING_COLOR); vertexColors is only
+    // for geometry vertex colours (which the synapse LineSegments do have).
+    const nodeMat = new THREE.MeshBasicMaterial({ transparent: true });
     const mesh = new THREE.InstancedMesh(sphere, nodeMat, N);
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
     scene.add(mesh);
