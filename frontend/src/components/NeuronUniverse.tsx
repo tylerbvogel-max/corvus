@@ -54,7 +54,9 @@ export default function NeuronUniverse() {
   const [colorBy, setColorBy] = useState<'region' | 'abstraction'>('region');
   const [sizeBy, setSizeBy] = useState<'centrality' | 'invocations'>('centrality');
   const [bloom, setBloom] = useState(true);
-  const [synapse, setSynapse] = useState(0.5); // 0..1 synapse visibility
+  const [synapse, setSynapse] = useState(0.5); // 0..1 synapse visibility (density)
+  const [nodeLight, setNodeLight] = useState(1.25); // neuron brightness
+  const [synapseLight, setSynapseLight] = useState(0.5); // synapse brightness
 
   // ── Data load (hardened: coerce NaN-prone numeric fields) ──
   useEffect(() => {
@@ -161,6 +163,7 @@ export default function NeuronUniverse() {
     const baseColor = new Float32Array(N * 3); // per-node base colour (for dim/highlight)
     const hidden = new Uint8Array(N);
     const radius = new Float32Array(N);
+    let nodeLight = 1.25; // neuron brightness multiplier (slider-controlled)
 
     function recomputeRadius() {
       for (let i = 0; i < N; i++) {
@@ -208,9 +211,9 @@ export default function NeuronUniverse() {
         else { dummy.position.set(nodes[i].x, nodes[i].y, nodes[i].z); dummy.scale.setScalar(scaleFor(i)); }
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
-        let r = baseColor[i * 3], g = baseColor[i * 3 + 1], b = baseColor[i * 3 + 2];
-        if (highlightId != null && nodes[i].id === highlightId) { r = Math.min(1, r * 0.6 + 0.55); g = Math.min(1, g * 0.6 + 0.6); b = Math.min(1, b * 0.6 + 0.7); }
-        mesh.setColorAt(i, tmpColor.setRGB(r, g, b));
+        let r = baseColor[i * 3] * nodeLight, g = baseColor[i * 3 + 1] * nodeLight, b = baseColor[i * 3 + 2] * nodeLight;
+        if (highlightId != null && nodes[i].id === highlightId) { r = r * 0.5 + 0.6; g = g * 0.5 + 0.62; b = b * 0.5 + 0.72; }
+        mesh.setColorAt(i, tmpColor.setRGB(Math.min(1, r), Math.min(1, g), Math.min(1, b)));
       }
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
@@ -318,7 +321,9 @@ export default function NeuronUniverse() {
         setColorMode() { recomputeColors(); refreshInstances(); },
         setSizeMode() { recomputeRadius(); refreshInstances(); },
         setBloom(on: boolean) { bloomPass.enabled = on; bloomPass.strength = on ? 0.9 : 0; },
-        setSynapse(v: number) { lineMat.opacity = 0.02 + v * 0.5; for (let e = 0; e < M; e++) visibleEdge[e] = E[e].weight >= (1 - v) * 0.6 ? 1 : 0; syncPositions(); },
+        setSynapse(v: number) { for (let e = 0; e < M; e++) visibleEdge[e] = E[e].weight >= (1 - v) * 0.6 ? 1 : 0; syncPositions(); },
+        setNodeLight(v: number) { nodeLight = v; refreshInstances(); },
+        setSynapseLight(v: number) { lineMat.opacity = 0.02 + v * 0.88; },
         focus(id: number) {
           focusId = id;
           // 2-hop ego neighbourhood so the "local universe" is rich, not a lone dot.
@@ -372,6 +377,8 @@ export default function NeuronUniverse() {
   useEffect(() => { engineRef.current?.api.setSizeMode(); }, [sizeBy]);
   useEffect(() => { engineRef.current?.api.setBloom(bloom); }, [bloom]);
   useEffect(() => { engineRef.current?.api.setSynapse(synapse); }, [synapse]);
+  useEffect(() => { engineRef.current?.api.setNodeLight(nodeLight); }, [nodeLight]);
+  useEffect(() => { engineRef.current?.api.setSynapseLight(synapseLight); }, [synapseLight]);
   useEffect(() => {
     if (selected) engineRef.current?.api.focus(selected.id);
     else engineRef.current?.api.reset();
@@ -410,6 +417,14 @@ export default function NeuronUniverse() {
         <Row label={`Synapses ${(synapse * 100) | 0}%`}>
           <input type="range" min={0} max={1} step={0.02} value={synapse}
             onChange={e => setSynapse(+e.target.value)} style={{ width: 150 }} />
+        </Row>
+        <Row label={`Neuron light ${(nodeLight * 100) | 0}%`}>
+          <input type="range" min={0.2} max={2.5} step={0.05} value={nodeLight}
+            onChange={e => setNodeLight(+e.target.value)} style={{ width: 150 }} />
+        </Row>
+        <Row label={`Synapse light ${(synapseLight * 100) | 0}%`}>
+          <input type="range" min={0} max={1} step={0.02} value={synapseLight}
+            onChange={e => setSynapseLight(+e.target.value)} style={{ width: 150 }} />
         </Row>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#c7d0e0', fontSize: '0.78rem', marginTop: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={bloom} onChange={e => setBloom(e.target.checked)} /> Bloom (glow)
