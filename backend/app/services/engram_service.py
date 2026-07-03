@@ -224,29 +224,22 @@ async def record_engram_cofiring(
     fired_neuron_ids: list[int],
     query_offset: int,
 ) -> None:
-    """Record co-firing between engrams and neurons."""
+    """Record engram<->neuron co-firing as a single batched upsert.
+
+    New pair: weight 0.1, count 1. Repeat: count +1, weight +0.05 (cap 1.0).
+    One round-trip regardless of pair count (was a per-pair SELECT+upsert loop)."""
     if not fired_engram_ids or not fired_neuron_ids:
         return
-
-    for eid in fired_engram_ids:
-        for nid in fired_neuron_ids:
-            existing = await db.execute(
-                select(EngramEdge).where(
-                    EngramEdge.engram_id == eid,
-                    EngramEdge.neuron_id == nid,
-                )
-            )
-            edge = existing.scalar_one_or_none()
-            if edge is None:
-                db.add(EngramEdge(
-                    engram_id=eid,
-                    neuron_id=nid,
-                    co_fire_count=1,
-                    weight=0.1,
-                    source="organic",
-                    last_updated_query=query_offset,
-                ))
-            else:
-                edge.co_fire_count += 1
-                edge.weight = min(1.0, edge.weight + 0.05)
-                edge.last_updated_query = query_offset
+    pairs = [
+        {"eid": int(e), "nid": int(n), "q": int(query_offset)}
+        for e in fired_engram_ids for n in fired_neuron_ids
+    ]
+    await db.execute(text(
+        "INSERT INTO engram_edges "
+        "(engram_id, neuron_id, co_fire_count, weight, edge_type, source, last_updated_query) "
+        "VALUES (:eid, :nid, 1, 0.1, 'regulatory', 'organic', :q) "
+        "ON CONFLICT (engram_id, neuron_id) DO UPDATE SET "
+        "co_fire_count = engram_edges.co_fire_count + 1, "
+        "weight = LEAST(1.0, engram_edges.weight + 0.05), "
+        "last_updated_query = EXCLUDED.last_updated_query"
+    ), pairs)

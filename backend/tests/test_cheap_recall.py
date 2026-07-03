@@ -92,7 +92,7 @@ def test_pipeline_mode_selects_classify_stage():
     assert isinstance(full[1], ClassifyStage)
     assert isinstance(cheap[1], CheapClassifyStage)
     assert isinstance(adaptive[1], AdaptiveClassifyStage)
-    assert len(full) == len(cheap) == len(adaptive) == 8
+    assert len(full) == len(cheap) == len(adaptive) == 9
 
 
 def test_pipeline_rejects_unknown_mode():

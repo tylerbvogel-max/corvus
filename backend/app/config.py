@@ -150,6 +150,15 @@ class Settings(BaseSettings):
     engram_token_budget_fraction: float = 0.25
     engram_fallback_on_api_failure: bool = True
     engram_haiku_extract_threshold: int = 2000
+    # Engram<->neuron association (EngramEdge). Recording grows the edges when
+    # regulations fire alongside neurons (fixes a gap — cofiring was never
+    # recorded); the boost lets a neuron pull in the regulations it co-fires
+    # with. Recording is cheap (one batched upsert); the boost is a scoring
+    # change, so it is opt-in (default off) pending eval.
+    engram_cofire_recording_enabled: bool = True
+    engram_cofire_max_neurons: int = 15
+    engram_edge_boost_enabled: bool = False
+    engram_edge_boost_scale: float = 0.3
     # Graph integrity (neurological self-correcting processes)
     integrity_homeostasis_default_scale: float = 0.8
     integrity_homeostasis_floor_threshold: float = 0.05

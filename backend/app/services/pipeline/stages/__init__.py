@@ -17,6 +17,7 @@ from app.services.pipeline.stages.prefilter_score_stage import PrefilterScoreSta
 from app.services.pipeline.stages.continuity_boost_stage import ContinuityBoostStage
 from app.services.pipeline.stages.spread_stage import SpreadActivationStage
 from app.services.pipeline.stages.inhibitory_stage import InhibitoryStage
+from app.services.pipeline.stages.engram_edge_boost_stage import EngramEdgeBoostStage
 from app.services.pipeline.stages.regulatory_resolve_stage import RegulatoryResolveStage
 from app.services.pipeline.stages.assemble_stage import AssembleStage
 
@@ -44,6 +45,7 @@ def build_default_pipeline(recall_mode: str = "full") -> list:
         ContinuityBoostStage(),
         SpreadActivationStage(),
         InhibitoryStage(),
+        EngramEdgeBoostStage(),
         RegulatoryResolveStage(),
         AssembleStage(),
     ]
@@ -58,6 +60,7 @@ __all__ = [
     "ContinuityBoostStage",
     "SpreadActivationStage",
     "InhibitoryStage",
+    "EngramEdgeBoostStage",
     "RegulatoryResolveStage",
     "AssembleStage",
     "build_default_pipeline",

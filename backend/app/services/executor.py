@@ -882,6 +882,7 @@ async def _update_counters_and_fire(
     classify_result: dict,
     needs_neurons: bool,
     all_scored: list[NeuronScoreBreakdown],
+    fired_engram_ids: list[int] | None = None,
 ):
     assert isinstance(slot_results, list), "slot_results must be a list"
     assert isinstance(classify_result, dict), "classify_result must be a dict"
@@ -911,6 +912,16 @@ async def _update_counters_and_fire(
             await _batch_update_edges(db, cofire_ids, state.total_queries)
         from app.services.concept_service import cofire_concept_neurons
         await cofire_concept_neurons(db, cofire_ids, state.total_queries)
+
+        # Grow the engram<->neuron association: regulations that fired this
+        # query co-fire with the top neurons (fixes a gap — never recorded).
+        if settings.engram_cofire_recording_enabled and fired_engram_ids:
+            from app.services.engram_service import (
+                record_engram_firings, record_engram_cofiring,
+            )
+            await record_engram_firings(db, fired_engram_ids, query.id, state.total_queries)
+            top_neuron_ids = [s.neuron_id for s in all_scored[:settings.engram_cofire_max_neurons]]
+            await record_engram_cofiring(db, fired_engram_ids, top_neuron_ids, state.total_queries)
 
     await db.commit()
 
@@ -1232,7 +1243,8 @@ async def execute_query(
 
     query.cost_usd = total_cost
     query.results_json = json.dumps(slot_results)
-    await _update_counters_and_fire(db, query, slot_results, classify_result, needs_neurons=needs_neurons, all_scored=all_scored)
+    fired_engram_ids = [r.engram_id for r in ctx.resolved_regulations] if ctx and ctx.resolved_regulations else []
+    await _update_counters_and_fire(db, query, slot_results, classify_result, needs_neurons=needs_neurons, all_scored=all_scored, fired_engram_ids=fired_engram_ids)
 
     # Postcondition (JPL Rule 5)
     assert total_cost >= 0, f"total_cost must be non-negative, got {total_cost}"
