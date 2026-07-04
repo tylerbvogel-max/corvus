@@ -357,7 +357,7 @@ export default function NeuronTreeViz({ neuronScores, queryId, onNavigateToNeuro
       for (let depth = 0; depth < 6 && toFetch.length > 0; depth++) {
         const batch = toFetch.splice(0, toFetch.length);
         const results = await Promise.all(
-          batch.map(id => fetch(`/api/neurons/${id}`).then(r => r.ok ? r.json() : null).catch(() => null))
+          batch.map(id => fetch(`/neurons/${id}`).then(r => r.ok ? r.json() : null).catch(() => null))
         );
         for (const r of results) {
           if (!r) continue;

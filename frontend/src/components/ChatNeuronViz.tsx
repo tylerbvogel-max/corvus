@@ -67,7 +67,7 @@ export default function ChatNeuronViz({ neuronScores, neuronsActivated, queryId,
         const batch = toFetch.splice(0, toFetch.length);
         const results = await Promise.all(
           batch.map(id =>
-            fetch(`/api/neurons/${id}`).then(r => r.ok ? r.json() : null).catch(() => null)
+            fetch(`/neurons/${id}`).then(r => r.ok ? r.json() : null).catch(() => null)
           )
         );
         for (const r of results) {

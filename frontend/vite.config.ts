@@ -10,6 +10,7 @@ export default defineConfig({
     port: 8004,
     proxy: {
       '/neurons': apiTarget,
+      '/engrams': apiTarget,
       '/queries': apiTarget,
       '/query': apiTarget,
       '/context': apiTarget,
