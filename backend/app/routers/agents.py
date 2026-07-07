@@ -13,6 +13,7 @@ Endpoints:
 """
 from __future__ import annotations
 
+from types import MappingProxyType
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -191,6 +192,18 @@ async def get_agent(
     )
 
 
+# Guardrail profiles for manual triggers — mirror the pipeline call sites so a
+# manual/UI run gets the SAME runtime enforcement the agent's prompt advertises
+# as "runtime-enforced" (previously only the document-ingest path armed these).
+_RUN_PROFILES = MappingProxyType({
+    "neuron_placer": {
+        "required_context": ("artifact_id",),
+        "expected_mutations": 1,
+        "require_verification_for": "get_placement_status",
+    },
+})
+
+
 @router.post("/{name}/run", response_model=AgentRunTriggerOut)
 async def trigger_agent_run(
     name: str,
@@ -206,11 +219,23 @@ async def trigger_agent_run(
     if not agent.trigger.manual:
         raise HTTPException(400, f"Agent {name!r} does not allow manual triggering")
 
+    input_context = body.input_context or {}
+    profile = _RUN_PROFILES.get(name, {})
+    missing = [k for k in profile.get("required_context", ()) if k not in input_context]
+    if missing:
+        raise HTTPException(
+            400,
+            f"Agent {name!r} requires input_context key(s) {missing} for a manual run "
+            f"(e.g. {{\"input_context\": {{\"artifact_id\": 123}}}}).",
+        )
+
     result = await execute_agent(
         session=db,
         agent_name=name,
-        input_context=body.input_context or {},
+        input_context=input_context,
         triggered_by=f"user:{user.user_id}",
+        expected_mutations=profile.get("expected_mutations"),
+        require_verification_for=profile.get("require_verification_for"),
     )
     return AgentRunTriggerOut(
         action_id=result.root_action_id,

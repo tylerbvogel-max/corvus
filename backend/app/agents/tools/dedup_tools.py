@@ -87,7 +87,9 @@ async def list_pending_duplicates(session: AsyncSession, inp: dict[str, Any]) ->
         "Get the full detail of one near_duplicate finding — both neurons' "
         "label, content, summary, department, role_key, source_origin. "
         "Input: {\"finding_id\": int}. "
-        "Returns: {\"finding_id\": int, \"neurons\": [<neuron_dict>, <neuron_dict>], \"notes\": str}"
+        "Returns: {\"finding_id\": int, \"neurons\": [<neuron_dict>, ...], "
+        "\"severity\": str, \"description\": str} — neurons may contain "
+        "fewer than 2 entries if a referenced neuron was deleted."
     ),
     input_schema={
         "type": "object",
@@ -221,11 +223,13 @@ async def compare_neurons_semantic(session: AsyncSession, inp: dict[str, Any]) -
         f"  label: {n_b.label}\n  department: {n_b.department}\n"
         f"  summary: {n_b.summary or ''}\n  content: {(n_b.content or '')[:1500]}\n"
     )
+    # Opus for graph-mutation-adjacent judgment (quality-first policy for
+    # backend maintenance — cheap models are for end-user query paths).
     result = await llm_chat(
         system_prompt="You classify knowledge-graph duplicates. Reply only with JSON.",
         user_message=prompt,
         max_tokens=400,
-        model="haiku",
+        model="opus",
     )
     text = str(result.get("text", "")).strip()
     try:
@@ -290,10 +294,13 @@ async def mark_duplicate(session: AsyncSession, inp: dict[str, Any]) -> dict[str
 @register_tool(
     "mark_reviewed_as_unique",
     description=(
-        "Record the agent's verdict that two neurons are distinct. Closes the "
-        "finding without creating a merge proposal. "
+        "Record the agent's verdict that two neurons are distinct. "
+        "resolution='dismissed' closes the finding directly (scan misfire) "
+        "and returns status='resolved'. resolution='differentiated' creates "
+        "a differentiate proposal for human review and returns "
+        "status='proposed' — the finding closes when the proposal is decided. "
         "Input: {\"finding_id\": int, \"resolution\": \"differentiated\"|\"dismissed\", \"notes\": str}. "
-        "Returns: {\"finding_id\": int, \"status\": \"resolved\", \"resolution\": str}"
+        "Returns: {\"finding_id\": int, \"status\": \"resolved\"|\"proposed\", \"resolution\": str}"
     ),
     input_schema={
         "type": "object",

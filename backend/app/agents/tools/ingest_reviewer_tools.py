@@ -53,6 +53,17 @@ def _iso_or_none(dt: Any) -> str | None:
     return dt.isoformat() if dt is not None else None
 
 
+def _placer_model() -> str:
+    """The neuron_placer agent's ACTUAL model, for audit evidence. Looked up
+    from the definition (source of truth) — hardcoding here previously
+    recorded 'sonnet'/'haiku' while the agent ran on opus."""
+    from app.agents.registry import get_agent_registry
+    try:
+        return get_agent_registry().get("neuron_placer").model
+    except KeyError:
+        return "unknown"
+
+
 # ── Read tools ──────────────────────────────────────────────────────────
 
 
@@ -180,6 +191,12 @@ async def get_ingest_proposal_detail(
                 "summary": (n.summary or "")[:200],
             })
 
+    # The legal placement vocabulary, up front. Historically the #1 error
+    # class was the agent GUESSING department/role_key names that don't
+    # exist ("Materials & Processes", "metallurgy", ...) and burning turns
+    # on validation rejections — so hand it the valid values on first read.
+    depts, roles_by_dept = await _fetch_known_dept_roles(session)
+
     return {
         "proposal_id": proposal.id,
         "gap_source": proposal.gap_source,
@@ -187,6 +204,10 @@ async def get_ingest_proposal_detail(
         "llm_reasoning": proposal.llm_reasoning,
         "items": items_out,
         "ontology_sample": ontology_sample,
+        "valid_placement_vocabulary": {
+            "departments": sorted(depts),
+            "role_keys_by_department": {d: sorted(r) for d, r in sorted(roles_by_dept.items())},
+        },
     }
 
 
@@ -317,7 +338,9 @@ async def refine_ingest_classification(
     proposal = await session.get(AutopilotProposal, proposal_id)
     if proposal is None:
         raise KeyError(f"AutopilotProposal {proposal_id} not found")
-    if proposal.gap_source != _INGEST_SOURCE:
+    # Accept /uncertain too: a stuck-uncertain artifact must be re-placeable
+    # (re-triage), otherwise flag_ingest_uncertain is a one-way dead end.
+    if proposal.gap_source not in (_INGEST_SOURCE, _UNCERTAIN_SOURCE):
         raise ValueError(
             f"Proposal {proposal_id} has gap_source {proposal.gap_source!r}, "
             f"not document_ingest — refine refuses to touch non-ingest proposals"
@@ -342,12 +365,15 @@ async def refine_ingest_classification(
     if proposal.state == "artifact":
         proposal.state = "proposed"
         promoted = True
+    # A re-placed uncertain artifact returns to the normal ingest source.
+    if proposal.gap_source == _UNCERTAIN_SOURCE:
+        proposal.gap_source = _INGEST_SOURCE
 
     proposal.gap_evidence_json = _append_evidence(
         proposal.gap_evidence_json,
         {
             "signal": "agent_placement_committed",
-            "agent_model": "sonnet",
+            "agent_model": _placer_model(),
             "agent_confidence": round(confidence, 4),
             "reviewed_at": datetime.utcnow().isoformat(),
             "updated_item_count": updated,
@@ -371,7 +397,8 @@ async def refine_ingest_classification(
         "could not pick a single classification. Sets gap_source to "
         "'document_ingest/uncertain' so the review UI shows it as a "
         "distinct bucket. Stores candidate placements + the agent's "
-        "rationale for each. Proposal state STAYS 'proposed'. "
+        "rationale for each. Proposal state stays 'artifact' (it is NOT "
+        "promoted; a human or a later re-triage run picks a placement). "
         "Input: {\"proposal_id\": int, \"candidates\": "
         "[{\"layer\": int, \"department\": str, \"role_key\": str, "
         "\"confidence\": number, \"rationale\": str}], "
@@ -420,7 +447,9 @@ async def flag_ingest_uncertain(
     proposal = await session.get(AutopilotProposal, proposal_id)
     if proposal is None:
         raise KeyError(f"AutopilotProposal {proposal_id} not found")
-    if proposal.gap_source != _INGEST_SOURCE:
+    # Re-flagging an already-uncertain proposal is allowed (idempotent
+    # re-triage with fresh candidates); anything else is off-limits.
+    if proposal.gap_source not in (_INGEST_SOURCE, _UNCERTAIN_SOURCE):
         raise ValueError(
             f"Proposal {proposal_id} has gap_source {proposal.gap_source!r}, "
             f"not document_ingest — flag refuses to touch non-ingest proposals"
@@ -438,7 +467,7 @@ async def flag_ingest_uncertain(
         proposal.gap_evidence_json,
         {
             "signal": "agent_flagged_uncertain",
-            "agent_model": "haiku",
+            "agent_model": _placer_model(),
             "uncertain": True,
             "candidates": [
                 {

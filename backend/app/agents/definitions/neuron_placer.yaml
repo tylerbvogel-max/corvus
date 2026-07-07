@@ -28,6 +28,7 @@ admin_description: >
   manually re-triggered if a batch of artifacts is stuck in the
   uncertain state.
 model: opus
+effort: medium
 max_tokens: 4096
 max_turns: 15
 tool_allow_list:
@@ -76,7 +77,12 @@ system_prompt: |
   Turn 1 — Read the artifact.
     Call get_ingest_proposal_detail(proposal_id=N, rationale=...).
     The response gives you the artifact's label, content, summary,
-    node_type, tags, and gap_evidence (section + page from source doc).
+    node_type, tags, gap_evidence (section + page from source doc), and
+    valid_placement_vocabulary — the COMPLETE list of legal departments
+    and role_keys. Placement fields are validated against this exact
+    vocabulary: never invent a department or role_key that is not in it,
+    and copy values verbatim (no paraphrasing "Engineering" into
+    "Manufacturing Engineering").
 
   Turn 2 — Find candidate parents.
     Call search_graph_parents with a label_pattern derived from the
@@ -94,8 +100,8 @@ system_prompt: |
                   item_id: <from Turn 1 response>,
                   parent_id: <chosen candidate id>,
                   layer: <layer appropriate for node_type, see below>,
-                  department: <match chosen parent's department>,
-                  role_key: <match chosen parent's role_key>,
+                  department: <chosen parent's department — must be in valid_placement_vocabulary>,
+                  role_key: <chosen parent's role_key — must be in valid_placement_vocabulary>,
                   rationale: "<why this parent>"
               }],
               confidence=<0.7-1.0>,

@@ -31,12 +31,13 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.registry import AgentDefinition, get_agent_registry
 from app.agents.tool_base import Tool, get_tool_registry
 from app.models import Action
-from app.services.llm_provider import llm_chat
+from app.services.llm_provider import llm_chat, effort_var
 
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class _LoopState:
     done_rejections: int = 0
     called_verification_tool: bool = False
     auto_aborted: bool = False
+    abort_reason: str = ""
     turn_idx: int = 0
     done: bool = False
 
@@ -175,7 +177,17 @@ async def _run_turn_loop(
     allow_list = set(agent.tool_allow_list)
     for turn_idx in range(max_turns):
         state.turn_idx = turn_idx
-        llm_text = await _llm_turn(agent, state.conversation)
+        try:
+            llm_text = await _llm_turn(agent, state.conversation)
+        except (AssertionError, ValueError, RuntimeError, OSError, json.JSONDecodeError) as exc:
+            # LLM call itself failed (CLI crash, unparseable CLI output, ...).
+            # Abort cleanly so the root action is finalized with the failure
+            # on record instead of being left stuck in 'pending'.
+            state.errors += 1
+            state.auto_aborted = True
+            state.abort_reason = f"LLM call failed on turn {turn_idx}: {type(exc).__name__}: {str(exc)[:300]}"
+            logger.warning("agent %s %s", agent.name, state.abort_reason)
+            return
         state.run_log.append({"turn": turn_idx, "llm_text_preview": llm_text[:500]})
 
         if not await _handle_one_turn(
@@ -326,6 +338,13 @@ async def _invoke_tool(
 ) -> None:
     """Call the tool with timeout + error recovery. Mutates `state`."""
     tool = get_tool_registry().get(tool_name)
+
+    if await _reject_on_schema_violation(
+        session=session, agent=agent, root_action=root_action, state=state,
+        llm_text=llm_text, tool=tool, tool_input=tool_input, tool_reason=tool_reason,
+    ):
+        return
+
     state.tool_calls += 1
     try:
         result = await asyncio.wait_for(
@@ -340,6 +359,11 @@ async def _invoke_tool(
             session, agent, root_action, tool_name, tool_input, tool_reason,
             result=result,
         )
+        if tool.is_mutating:
+            # Durability policy: every applied mutation (and its action row)
+            # is committed immediately, so a later crash can't silently roll
+            # back some mutations while shared helpers committed others.
+            await session.commit()
         state.run_log.append({
             "turn": state.turn_idx, "tool": tool_name,
             "mutating": tool.is_mutating, "result_keys": sorted(result.keys()),
@@ -355,9 +379,28 @@ async def _invoke_tool(
             session, agent, root_action, tool_name, tool_input, tool_reason,
             error=f"tool timeout after {_TOOL_TIMEOUT_SECONDS}s",
         )
+        state.conversation.append({"role": "assistant", "content": llm_text})
         state.conversation.append({
             "role": "user",
             "content": f"Tool {tool_name!r} timed out. Try again, try a different tool, or emit done.",
+        })
+    except HTTPException as exc:
+        # Shared proposal helpers raise HTTPException (404 stale finding, 400
+        # bad status). That's a recoverable tool error for an agent, never a
+        # reason to crash the whole run.
+        state.errors += 1
+        detail = str(exc.detail)[:300]
+        await _record_tool_action(
+            session, agent, root_action, tool_name, tool_input, tool_reason,
+            error=f"HTTP {exc.status_code}: {detail}",
+        )
+        state.conversation.append({"role": "assistant", "content": llm_text})
+        state.conversation.append({
+            "role": "user",
+            "content": (
+                f"Tool {tool_name!r} rejected the request ({detail}). The finding may be "
+                f"stale or already resolved — skip it and move on, or emit done."
+            ),
         })
     except (ValueError, KeyError, AssertionError) as exc:
         state.errors += 1
@@ -365,10 +408,42 @@ async def _invoke_tool(
             session, agent, root_action, tool_name, tool_input, tool_reason,
             error=f"{type(exc).__name__}: {exc}",
         )
+        state.conversation.append({"role": "assistant", "content": llm_text})
         state.conversation.append({
             "role": "user",
             "content": f"Tool {tool_name!r} failed: {type(exc).__name__}: {exc}. Try again or emit done.",
         })
+
+
+async def _reject_on_schema_violation(
+    *,
+    session: AsyncSession,
+    agent: AgentDefinition,
+    root_action: Action,
+    state: _LoopState,
+    llm_text: str,
+    tool: Tool,
+    tool_input: dict,
+    tool_reason: str,
+) -> bool:
+    """Enforce the tool's declared input schema BEFORE dispatch (required
+    keys, types, string length bounds, enums) — this is what makes contract
+    rules like "rationale must be 20-500 chars" real instead of decorative.
+    Returns True (and records + feeds back the error) on violation."""
+    schema_issue = _validate_input_schema(tool.input_schema, tool_input)
+    if schema_issue is None:
+        return False
+    state.errors += 1
+    await _record_tool_action(
+        session, agent, root_action, tool.name, tool_input, tool_reason,
+        error=f"input schema violation: {schema_issue}",
+    )
+    state.conversation.append({"role": "assistant", "content": llm_text})
+    state.conversation.append({
+        "role": "user",
+        "content": f"Tool {tool.name!r} input invalid: {schema_issue}. Fix the input and retry.",
+    })
+    return True
 
 
 def _feedback_parse_error(
@@ -404,6 +479,7 @@ async def _finalize_run(
         tool_calls=state.tool_calls,
         errors=state.errors,
         auto_aborted=state.auto_aborted,
+        abort_reason=state.abort_reason,
         model_self_report=state.model_self_report,
         input_context=input_context,
     )
@@ -418,6 +494,7 @@ async def _finalize_run(
         "summary": derived_summary,
         "model_self_report": state.model_self_report,
         "auto_aborted": state.auto_aborted,
+        "abort_reason": state.abort_reason,
         "done_rejections": state.done_rejections,
     }
     await session.commit()
@@ -465,18 +542,28 @@ def _build_initial_message(agent: AgentDefinition, context: dict) -> str:
 
 
 async def _llm_turn(agent: AgentDefinition, conversation: list[dict]) -> str:
-    """One LLM call. Folds conversation history into a single user message."""
+    """One LLM call. Folds conversation history into a single user message.
+
+    Per-agent reasoning effort (agent YAML `effort:`) is applied via the
+    effort ContextVar for exactly this call, then restored — agent runs must
+    not inherit or leak a request-level effort.
+    """
     transcript_parts = []
     for msg in conversation:
         role_tag = "USER" if msg["role"] == "user" else "ASSISTANT"
         transcript_parts.append(f"[{role_tag}]\n{msg['content']}")
     user_message = "\n\n".join(transcript_parts)
-    result = await llm_chat(
-        system_prompt=agent.system_prompt,
-        user_message=user_message,
-        max_tokens=agent.max_tokens,
-        model=agent.model,
-    )
+    token = effort_var.set(agent.effort) if agent.effort else None
+    try:
+        result = await llm_chat(
+            system_prompt=agent.system_prompt,
+            user_message=user_message,
+            max_tokens=agent.max_tokens,
+            model=agent.model,
+        )
+    finally:
+        if token is not None:
+            effort_var.reset(token)
     return str(result.get("text", "")).strip()
 
 
@@ -484,7 +571,14 @@ _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _parse_envelope(text: str) -> dict:
-    """Extract a single JSON object from the LLM response text."""
+    """Extract a single JSON object from the LLM response text.
+
+    Models sometimes emit SEVERAL envelopes in one turn (batching tool calls
+    despite the one-per-turn protocol — observed live with opus). Rather than
+    failing the whole turn, take the FIRST complete object and execute it;
+    the conversation feedback shows the model its result, so it naturally
+    re-issues the rest one at a time.
+    """
     text = text.strip()
     if not text:
         raise AgentProtocolError("empty LLM response")
@@ -495,10 +589,60 @@ def _parse_envelope(text: str) -> dict:
     match = _JSON_OBJECT_RE.search(text)
     if not match:
         raise AgentProtocolError(f"no JSON object found in response: {text[:200]!r}")
+    candidate = match.group(0)
     try:
-        return json.loads(match.group(0))
-    except json.JSONDecodeError as exc:
-        raise AgentProtocolError(f"JSON parse failed: {exc}") from exc
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        # Greedy span failed — likely multiple objects. Balanced-decode the
+        # first one starting at the span's opening brace (JPL-2: bounded by
+        # raw_decode's single pass).
+        try:
+            first, _end = json.JSONDecoder().raw_decode(candidate)
+        except json.JSONDecodeError as exc:
+            raise AgentProtocolError(f"JSON parse failed: {exc}") from exc
+        if not isinstance(first, dict):
+            raise AgentProtocolError(f"first JSON value is not an object: {type(first).__name__}")
+        return first
+
+
+def _validate_input_schema(schema: dict, tool_input: dict) -> str | None:
+    """Minimal JSON-Schema enforcement: required keys, primitive types, string
+    length bounds, enums. Returns an issue string or None if valid.
+
+    Deliberately not a full validator — it enforces exactly the constraint
+    kinds our tool schemas declare, so rules like "rationale must be 20-500
+    chars" are enforced at dispatch instead of being decorative.
+    """
+    assert isinstance(tool_input, dict), "tool_input must be a dict"
+    if not isinstance(schema, dict):
+        return None
+    for key in schema.get("required") or []:
+        if key not in tool_input:
+            return f"missing required field {key!r}"
+    for key, spec in (schema.get("properties") or {}).items():
+        if key not in tool_input or not isinstance(spec, dict):
+            continue
+        val = tool_input[key]
+        expected = spec.get("type")
+        if expected == "string":
+            if not isinstance(val, str):
+                return f"{key!r} must be a string"
+            if "minLength" in spec and len(val) < spec["minLength"]:
+                return f"{key!r} must be at least {spec['minLength']} chars (got {len(val)})"
+            if "maxLength" in spec and len(val) > spec["maxLength"]:
+                return f"{key!r} must be at most {spec['maxLength']} chars (got {len(val)})"
+        elif expected == "integer":
+            if isinstance(val, bool) or not isinstance(val, int):
+                return f"{key!r} must be an integer"
+        elif expected == "number":
+            if isinstance(val, bool) or not isinstance(val, (int, float)):
+                return f"{key!r} must be a number"
+        elif expected == "boolean":
+            if not isinstance(val, bool):
+                return f"{key!r} must be a boolean"
+        if "enum" in spec and val not in spec["enum"]:
+            return f"{key!r} must be one of {spec['enum']}"
+    return None
 
 
 def _validate_envelope_fields(tool_name: object, tool_input: object) -> str | None:
@@ -602,6 +746,7 @@ def _derive_summary(
     tool_calls: int,
     errors: int,
     auto_aborted: bool,
+    abort_reason: str = "",
     model_self_report: str,
     input_context: dict,
 ) -> str:
@@ -611,6 +756,11 @@ def _derive_summary(
     truth; this function walks the observed mutations and composes a
     summary that matches what was actually committed."""
     if auto_aborted:
+        if abort_reason:
+            return (
+                f"Run aborted: {abort_reason}. mutations={mutations}, "
+                f"tool_calls={tool_calls}, errors={errors}."
+            )
         artifact_id = input_context.get("artifact_id", "?")
         return (
             f"Run auto-aborted: agent emitted 'done' without committing the "

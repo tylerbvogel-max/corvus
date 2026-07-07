@@ -168,7 +168,10 @@ async def test_get_detail_returns_items_and_empty_ontology_sample():
     proposal = _make_proposal(1, items=[_make_item(10, spec)])
     sess = _FakeSession(
         rows_by_id={(AutopilotProposal, 1): proposal},
-        execute_queue=[[]],  # ontology sibling query returns empty
+        execute_queue=[
+            [],  # ontology sibling query returns empty
+            [("Engineering", "materials_engineer"), ("Engineering", "stress_analyst"), ("Quality", None)],  # dept/role vocabulary
+        ],
     )
     out = await get_ingest_proposal_detail(
         sess, {"proposal_id": 1, "rationale": "inspecting the proposal's specs and ontology"},
@@ -177,6 +180,9 @@ async def test_get_detail_returns_items_and_empty_ontology_sample():
     assert len(out["items"]) == 1
     assert out["items"][0]["spec"]["layer"] == 3
     assert out["ontology_sample"] == []
+    vocab = out["valid_placement_vocabulary"]
+    assert vocab["departments"] == ["Engineering", "Quality"]
+    assert vocab["role_keys_by_department"]["Engineering"] == ["materials_engineer", "stress_analyst"]
 
 
 @pytest.mark.asyncio
@@ -570,3 +576,54 @@ def test_neuron_placer_agent_has_no_neuron_write_tool():
     for name in allow:
         for pattern in forbidden_patterns:
             assert pattern not in name, f"{name!r} matches forbidden pattern {pattern!r}"
+
+
+# ── Re-triage of stuck-uncertain artifacts (previously a one-way dead end) ──
+
+@pytest.mark.asyncio
+async def test_refine_accepts_uncertain_source_and_restores_ingest_source():
+    """A stuck-uncertain artifact must be re-placeable: refine accepts
+    gap_source='document_ingest/uncertain' and returns it to the normal
+    ingest source on successful placement."""
+    initial_spec = {"node_type": "standard", "label": "Shot peening spec",
+                    "content": "Peening per AMS 2430.", "summary": "Peening standard."}
+    item = _make_item(10, initial_spec)
+    proposal = _make_proposal(1, state="artifact", gap_source="document_ingest/uncertain", items=[item])
+    parent_neuron = Neuron(id=42, label="Surface treatments", layer=2, department="Engineering",
+                           role_key="materials_engineer", node_type="knowledge", is_active=True)
+    sess = _FakeSession(
+        rows_by_id={(AutopilotProposal, 1): proposal},
+        execute_queue=[
+            [parent_neuron],
+            [("Engineering", "materials_engineer")],
+        ],
+    )
+    out = await refine_ingest_classification(sess, {
+        "proposal_id": 1,
+        "item_updates": [{"item_id": 10, "parent_id": 42, "layer": 3,
+                          "department": "Engineering", "role_key": "materials_engineer",
+                          "rationale": "re-triage: surface treatment spec fits under #42"}],
+        "confidence": 0.85,
+        "rationale": "human asked for re-triage of a stuck-uncertain artifact",
+    })
+    assert out["state"] == "proposed"
+    assert proposal.gap_source == "document_ingest", "re-placed artifact returns to the normal source"
+
+
+@pytest.mark.asyncio
+async def test_flag_uncertain_is_idempotent_for_already_uncertain():
+    """Re-flagging an already-uncertain proposal is allowed (fresh candidates)."""
+    proposal = _make_proposal(1, state="artifact", gap_source="document_ingest/uncertain")
+    sess = _FakeSession(rows_by_id={(AutopilotProposal, 1): proposal})
+    out = await flag_ingest_uncertain(sess, {
+        "proposal_id": 1,
+        "candidates": [
+            {"layer": 3, "department": "Engineering", "role_key": "materials_engineer",
+             "confidence": 0.5, "rationale": "could live under surface treatments"},
+            {"layer": 2, "department": "Quality", "role_key": "qa_engineer",
+             "confidence": 0.4, "rationale": "could be a quality process control"},
+        ],
+        "rationale": "re-triage still cannot pick a single placement confidently",
+    })
+    assert out["gap_source"] == "document_ingest/uncertain"
+    assert out["candidate_count"] == 2

@@ -15,9 +15,13 @@ admin_description: >
   the normal proposal-review queue; the agent cannot merge neurons on its
   own. Useful when the graph has grown from multiple document uploads or
   ingestion passes and may contain overlapping coverage of the same topic.
-model: haiku
+model: opus
+effort: medium
 max_tokens: 1024
-max_turns: 12
+# Turn budget must cover the prompt's workload: 1 list + 5 findings x
+# (detail + embedding + resolve) + done ≈ 17 turns. At 12 the agent ran out
+# of budget and fabricated the remainder in its done summary (observed live).
+max_turns: 20
 tool_allow_list:
   - list_pending_duplicates
   - get_finding_detail
@@ -42,6 +46,9 @@ system_prompt: |
           - If decision_zone == "high_confidence_duplicate" (>=0.95), skip to step d.
           - If decision_zone == "high_confidence_distinct" (<=0.75), skip to step e.
           - If decision_zone == "borderline" (0.75..0.95), proceed to step c.
+          - If decision_zone == "unavailable" (an embedding is missing), treat
+            it exactly like borderline: proceed to step c and rely on the
+            semantic comparison.
        c. Call compare_neurons_semantic for the borderline case. Treat its
           classification output as authoritative.
        d. Call mark_duplicate with a concise note (≤200 chars) explaining WHY
@@ -58,4 +65,10 @@ system_prompt: |
     - If you are uncertain, mark_reviewed_as_unique with "differentiated" is
       safer than mark_duplicate — humans can still merge manually.
     - Never call a tool not in your allow-list.
+    - ONE tool call per turn. Never emit multiple JSON objects in one turn.
+    - Your done summary must describe ONLY tool calls you actually made this
+      run. The runtime derives the authoritative summary from the recorded
+      action trail — claiming work you did not do is flagged as fabrication.
+      If you run low on turns, emit done describing what you DID finish;
+      unprocessed findings simply remain for the next run.
     - Always emit exactly one JSON envelope per turn, no prose outside it.

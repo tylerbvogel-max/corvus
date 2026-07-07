@@ -245,3 +245,23 @@ def test_derive_summary_no_mutations_names_it():
         input_context={},
     )
     assert "No mutations committed" in derived
+
+
+def test_parse_envelope_takes_first_of_multiple_objects():
+    """Observed live (opus): the model batches several tool-call envelopes in
+    one turn. The parser must execute the FIRST instead of failing the turn."""
+    from app.agents.runtime import _parse_envelope
+    text = (
+        '{"tool": "mark_duplicate", "input": {"finding_id": 7, "notes": "n"}, "reason": "r"}\n'
+        '{"tool": "mark_duplicate", "input": {"finding_id": 8, "notes": "n"}, "reason": "r"}'
+    )
+    env = _parse_envelope(text)
+    assert env["tool"] == "mark_duplicate"
+    assert env["input"]["finding_id"] == 7
+
+
+def test_parse_envelope_multiple_objects_with_prose_prefix():
+    from app.agents.runtime import _parse_envelope
+    text = 'Processing findings now:\n{"tool": "x", "input": {}, "reason": "r"}\n{"done": true}'
+    env = _parse_envelope(text)
+    assert env["tool"] == "x"

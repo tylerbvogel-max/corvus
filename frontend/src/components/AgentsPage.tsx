@@ -52,7 +52,25 @@ export default function AgentsPage() {
     refresh();
   }, [refresh]);
 
+  // Agents whose manual run needs a target id (mirrors the backend's
+  // _RUN_PROFILES — the API 400s without it).
+  const REQUIRED_CONTEXT: Record<string, { key: string; hint: string }> = {
+    neuron_placer: { key: 'artifact_id', hint: 'ID of the artifact proposal to place' },
+  };
+
   const onRun = async (name: string) => {
+    const needed = REQUIRED_CONTEXT[name];
+    let context: Record<string, unknown> = {};
+    if (needed) {
+      const raw = window.prompt(`Agent "${name}" needs ${needed.key} (${needed.hint}):`);
+      if (!raw || !raw.trim()) return;
+      const parsed = Number(raw.trim());
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        setRunErrors(prev => ({ ...prev, [name]: `${needed.key} must be a positive integer` }));
+        return;
+      }
+      context = { [needed.key]: parsed };
+    }
     setTriggering(name);
     setRunErrors(prev => {
       const next = { ...prev };
@@ -60,7 +78,7 @@ export default function AgentsPage() {
       return next;
     });
     try {
-      const r = await triggerAgentRun(name, {});
+      const r = await triggerAgentRun(name, context);
       setRunResults(prev => ({
         ...prev,
         [name]: { action_id: r.action_id, summary: r.summary || '(no summary)' },

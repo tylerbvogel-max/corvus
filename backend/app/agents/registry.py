@@ -40,6 +40,9 @@ _DEFINITIONS_DIR = Path(__file__).parent / "definitions"
 _ALLOWED_KEYS = frozenset({
     "name", "role", "description", "model", "max_tokens", "max_turns",
     "tool_allow_list", "system_prompt", "trigger",
+    # Optional reasoning effort for the agent's LLM turns (low|medium|high).
+    # Empty/absent = the provider default. Applied per-call in the runtime.
+    "effort",
     # Optional: plain-English explanation of the agent for the admin
     # Knowledge → Agents page. The `description` field is the short
     # machine-shape summary; `admin_description` is the human-written
@@ -70,6 +73,8 @@ class AgentDefinition:
     system_prompt: str
     trigger: AgentTrigger
     source_path: Path
+    # Reasoning effort for the agent's LLM turns ("" = provider default).
+    effort: str = ""
     # Plain-English explanation shown on the admin Knowledge → Agents
     # page. Falls back to `description` when absent so legacy YAMLs
     # (or any new one that omits it) still render reasonable copy.
@@ -149,6 +154,11 @@ def _parse_yaml(path: Path) -> AgentDefinition:
         f"{path}: tool_allow_list has duplicates"
     )
 
+    effort = str(raw.get("effort", "") or "").strip()
+    assert effort in ("", "low", "medium", "high"), (
+        f"{path}: effort must be low|medium|high (or absent), got {effort!r}"
+    )
+
     trigger_raw = raw.get("trigger", {}) or {}
     schedule = trigger_raw.get("schedule", {}) or {}
     trigger = AgentTrigger(
@@ -168,6 +178,7 @@ def _parse_yaml(path: Path) -> AgentDefinition:
         system_prompt=str(raw["system_prompt"]).strip(),
         trigger=trigger,
         source_path=path,
+        effort=effort,
         admin_description=str(raw.get("admin_description", "")).strip(),
     )
 
