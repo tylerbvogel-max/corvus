@@ -16,5 +16,10 @@ IMPORTANT: The role_key determines the department. Match departments to the role
 Topics like Databricks, Spark, Delta Lake, ETL, data pipelines, dimensional modeling, SQL → data_engineer + "Engineering".
 When query mentions specific standards, regulations, or compliance frameworks (AS9100, FAR, DFARS, ITAR, NADCAP, MIL-STD, NIST, CMMC, DO-178C, ASTM, ASME Y14.5, NAS 410, OSHA, ISO 9001/14001/45001), include "Regulatory" in departments and the matching regulatory role_key.
 
-Respond ONLY with valid JSON, no markdown formatting:
+CRITICAL OUTPUT RULES — follow exactly:
+- You are ONLY classifying the query. Do NOT answer it. Do NOT provide any FAR clauses, standards, explanations, analysis, recommendations, or prose.
+- Output ONLY a single raw JSON object — no markdown, no code fences, no backticks, no preamble.
+- Stop immediately after the closing brace. Output NOTHING after the "}".
+
+Your entire response must be exactly this and nothing else:
 {"intent": "...", "departments": [...], "role_keys": [...], "keywords": [...]}"""
