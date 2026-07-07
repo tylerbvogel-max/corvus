@@ -12,6 +12,7 @@ import SampleQueries from './components/SampleQueries'
 import QualityPage from './components/QualityPage'
 import FairnessPage from './components/FairnessPage'
 import PerformancePage from './components/PerformancePage'
+import PipelineTimingPage from './components/PipelineTimingPage'
 import EmergentQueuePage from './components/EmergentQueuePage'
 import SynapticLearningPage from './components/SynapticLearningPage'
 import LayerHeatmap from './components/LayerHeatmap'
@@ -58,7 +59,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -190,6 +191,7 @@ function buildNavGroups(tenantId: string | undefined): NavGroup[] {
         { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics' },
         { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
         { key: 'performance', label: 'Performance', description: 'Pipeline latency and throughput metrics' },
+        { key: 'pipeline-timing', label: 'Pipeline Timing', description: 'Per-stage latency stats, estimate-vs-actual, and drift over time' },
         { key: 'fairness', label: 'Fairness', description: 'Bias detection across departments and roles' },
         { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history' },
         { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query' },
@@ -592,6 +594,7 @@ export default function App() {
         {tab === 'quality' && <QualityPage />}
         {tab === 'fairness' && <FairnessPage />}
         {tab === 'performance' && <PerformancePage />}
+        {tab === 'pipeline-timing' && <PipelineTimingPage />}
         {tab === 'knowledge-governance' && <KnowledgeGovernancePage />}
         {navGroups.map(group => (
           tab === group.landingKey && (

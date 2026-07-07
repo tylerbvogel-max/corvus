@@ -688,3 +688,101 @@ async def performance_report(db: AsyncSession = Depends(get_db)):
         "neuron_quality_correlation": neuron_quality_corr,
         "query_timeline": query_timeline,
     }
+
+
+# Documented per-stage latency estimates (the "~200ms" figures in the docs) plus
+# pipeline order + display label. The stage-telemetry report surfaces measured
+# p50 against these so drift between the design's assumptions and reality is visible.
+STAGE_META = MappingProxyType({
+    "structural_resolve": {"label": "Structural resolve", "order": 0, "estimate_ms": 0.1},
+    "classify":           {"label": "Classify (LLM)",     "order": 1, "estimate_ms": 200.0},
+    "prefilter_score":    {"label": "Prefilter + score",  "order": 2, "estimate_ms": 3.0},
+    "continuity_boost":   {"label": "Continuity boost",   "order": 3, "estimate_ms": 1.0},
+    "spread_activation":  {"label": "Spread activation",  "order": 4, "estimate_ms": 1.0},
+    "inhibitory":         {"label": "Inhibitory",         "order": 5, "estimate_ms": 5.0},
+    "regulatory_resolve": {"label": "Regulatory resolve", "order": 6, "estimate_ms": 50.0},
+    "assemble_prompt":    {"label": "Assemble prompt",    "order": 7, "estimate_ms": 10.0},
+})
+
+
+async def _stage_stats(db: AsyncSession) -> list[dict]:
+    """Per-stage latency distribution across all recorded telemetry samples."""
+    rows = (await db.execute(text(
+        "SELECT stage, COUNT(*) n, AVG(d) mean, COALESCE(STDDEV_SAMP(d),0) sd, "
+        "percentile_cont(0.5)  WITHIN GROUP (ORDER BY d) p50, "
+        "percentile_cont(0.9)  WITHIN GROUP (ORDER BY d) p90, "
+        "percentile_cont(0.95) WITHIN GROUP (ORDER BY d) p95, "
+        "percentile_cont(0.99) WITHIN GROUP (ORDER BY d) p99, "
+        "MIN(d) mn, MAX(d) mx FROM ("
+        "  SELECT t->>'stage' AS stage, (t->>'duration_ms')::float AS d "
+        "  FROM queries q, jsonb_array_elements(q.stage_telemetry_json) t "
+        "  WHERE q.stage_telemetry_json IS NOT NULL AND (t->>'duration_ms') IS NOT NULL"
+        ") s GROUP BY stage"
+    ))).all()
+    out = []
+    for r in rows:
+        m = STAGE_META.get(r.stage, {"label": r.stage, "order": 99, "estimate_ms": None})
+        mean = _num(r.mean); sd = _num(r.sd); p50 = _num(r.p50); est = m["estimate_ms"]
+        out.append({
+            "stage": r.stage, "label": m["label"], "order": m["order"], "n": int(r.n),
+            "mean": round(mean, 2), "stddev": round(sd, 2),
+            "cov": round(sd / mean, 3) if mean else 0.0,
+            "p50": round(p50, 2), "p90": round(_num(r.p90), 2),
+            "p95": round(_num(r.p95), 2), "p99": round(_num(r.p99), 2),
+            "min": round(_num(r.mn), 2), "max": round(_num(r.mx), 2),
+            "estimate_ms": est,
+            "ratio_p50_vs_estimate": round(p50 / est, 1) if est else None,
+        })
+    out.sort(key=lambda s: s["order"])
+    return out
+
+
+async def _stage_trend(db: AsyncSession) -> list[dict]:
+    """Per-day p50/p95 per stage — the drift series for tuning over time."""
+    rows = (await db.execute(text(
+        "SELECT to_char(date_trunc('day', q.created_at), 'YYYY-MM-DD') bucket, "
+        "t->>'stage' stage, COUNT(*) n, "
+        "percentile_cont(0.5)  WITHIN GROUP (ORDER BY (t->>'duration_ms')::float) p50, "
+        "percentile_cont(0.95) WITHIN GROUP (ORDER BY (t->>'duration_ms')::float) p95 "
+        "FROM queries q, jsonb_array_elements(q.stage_telemetry_json) t "
+        "WHERE q.stage_telemetry_json IS NOT NULL AND (t->>'duration_ms') IS NOT NULL "
+        "AND q.created_at IS NOT NULL GROUP BY bucket, stage ORDER BY bucket"
+    ))).all()
+    return [{"bucket": r.bucket, "stage": r.stage, "n": int(r.n),
+             "p50": round(_num(r.p50), 2), "p95": round(_num(r.p95), 2)} for r in rows]
+
+
+@router.get("/performance/stage-telemetry")
+async def stage_telemetry_report(db: AsyncSession = Depends(get_db)):
+    """Per-stage pipeline-latency statistics from Query.stage_telemetry_json.
+
+    Aggregates every recorded stage duration: distribution (mean/stddev/CoV,
+    p50/p90/p95/p99, min/max), the share of total pipeline latency, documented
+    estimate vs. measured p50, and a per-day drift series. Pure SQL, no LLM calls.
+    """
+    n_q = (await db.execute(text(
+        "SELECT COUNT(*) FROM queries WHERE stage_telemetry_json IS NOT NULL"
+    ))).scalar() or 0
+    if n_q == 0:
+        return {"error": "No stage telemetry recorded yet"}
+
+    stats = await _stage_stats(db)
+    trend = await _stage_trend(db)
+    total_p50 = sum(s["p50"] for s in stats) or 1.0
+    for s in stats:
+        s["share_pct"] = round(100.0 * s["p50"] / total_p50, 1)
+    rng = (await db.execute(text(
+        "SELECT MIN(created_at), MAX(created_at) FROM queries "
+        "WHERE stage_telemetry_json IS NOT NULL"
+    ))).first()
+    return {
+        "meta": {
+            "queries_with_telemetry": int(n_q),
+            "total_samples": sum(s["n"] for s in stats),
+            "pipeline_total_p50_ms": round(total_p50, 2),
+            "date_range": [rng[0].isoformat() if rng and rng[0] else None,
+                           rng[1].isoformat() if rng and rng[1] else None],
+        },
+        "stages": stats,
+        "trend": trend,
+    }

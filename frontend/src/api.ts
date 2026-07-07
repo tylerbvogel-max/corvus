@@ -576,6 +576,26 @@ export function fetchPerformance(): Promise<any> {
   return json<unknown>('/admin/performance');
 }
 
+export interface StageStat {
+  stage: string; label: string; order: number; n: number;
+  mean: number; stddev: number; cov: number;
+  p50: number; p90: number; p95: number; p99: number; min: number; max: number;
+  estimate_ms: number | null; ratio_p50_vs_estimate: number | null; share_pct: number;
+}
+export interface StageTrendPoint { bucket: string; stage: string; n: number; p50: number; p95: number }
+export interface StageTelemetryReport {
+  error?: string;
+  meta: {
+    queries_with_telemetry: number; total_samples: number;
+    pipeline_total_p50_ms: number; date_range: [string | null, string | null];
+  };
+  stages: StageStat[];
+  trend: StageTrendPoint[];
+}
+export function fetchStageTelemetry(): Promise<StageTelemetryReport> {
+  return json<StageTelemetryReport>('/admin/performance/stage-telemetry');
+}
+
 export interface SignalStats {
   mean: number;
   stddev: number;
