@@ -1301,6 +1301,13 @@ async def _load_candidates_by_ids(
     if not neuron_ids:
         return []
 
+    # Fast path: serve from the materialized NeuronIndex (unrestricted requesters
+    # only — ACL filtering stays on the DB path).
+    if settings.neuron_index_enabled and requester is None:
+        from app.services.neuron_index import ensure_index_loaded, get_index
+        await ensure_index_loaded(db)
+        return get_index().candidates(neuron_ids, keywords)
+
     from sqlalchemy import text
 
     # Build keyword hit expression
@@ -1326,6 +1333,7 @@ async def _load_candidates_by_ids(
                authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
         WHERE id = ANY(:id_list) AND is_active = true AND {acl_clause}
+        ORDER BY id
     """
     result = await db.execute(text(sql), params)
     rows = result.all()

@@ -397,9 +397,17 @@ async def score_candidates(
     candidate_ids = [n.id for n in candidates]
     query_window = max(0, total_queries - settings.burst_window_queries)
 
-    burst_map = await _fetch_burst_counts(db, candidate_ids, query_window)
-    neuron_fires_map, last_offset_map = await _fetch_neuron_fire_stats(db, candidate_ids)
-    dept_total_map = await _fetch_dept_fire_totals(db, candidates)
+    if settings.neuron_index_enabled:
+        from app.services.neuron_index import ensure_index_loaded, get_index
+        await ensure_index_loaded(db)
+        idx = get_index()
+        burst_map = idx.burst_counts(candidate_ids, query_window)
+        neuron_fires_map, last_offset_map = idx.fire_stats(candidate_ids)
+        dept_total_map = idx.dept_totals(list({n.department for n in candidates if n.department}))
+    else:
+        burst_map = await _fetch_burst_counts(db, candidate_ids, query_window)
+        neuron_fires_map, last_offset_map = await _fetch_neuron_fire_stats(db, candidate_ids)
+        dept_total_map = await _fetch_dept_fire_totals(db, candidates)
     semantic_map = await _resolve_semantic_map(
         db, candidate_ids, query_embedding, precomputed_similarities,
     )
@@ -1242,6 +1250,10 @@ async def record_firing(
     if neuron:
         neuron.invocations = (neuron.invocations or 0) + 1
         neuron.last_accessed_at = firing.created_at
+
+    if settings.neuron_index_enabled:
+        from app.services.neuron_index import index_on_firing
+        index_on_firing(neuron_id, query_id, global_query_offset)
 
     return firing
 

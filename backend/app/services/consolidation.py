@@ -111,6 +111,11 @@ async def run_consolidation(db: AsyncSession) -> dict:
     state.last_consolidation_at = datetime.utcnow()
     await db.commit()
 
+    # Consolidation pruned firings + changed utility/centrality/activation — the
+    # incremental firing hook only appends, so force a fresh index rebuild.
+    from app.services.neuron_index import invalidate_index
+    invalidate_index()
+
     return {
         "status": "consolidated",
         "firings_pruned": pruned,
