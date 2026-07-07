@@ -935,12 +935,20 @@ async def _execute_slot(
             db, user_message, ctx, model_name, uses_neurons, on_stage,
         )
 
+        # Per-slot citation exit: strip fabricated citations from THIS slot's answer
+        # (before it streams) and count them, so every compare slot is guarded — not
+        # just the primary — and the UI can show which models fabricate.
+        result_data["response_text"], citations_fabricated = await _clean_answer_citations(
+            ctx, user_message, result_data["response_text"],
+        )
+
         duration_ms = round((time.monotonic() - start_time) * 1000)
 
         result = {
             "mode": mode,
             "model": model_name,
             "neurons": uses_neurons,
+            "citations_fabricated": citations_fabricated,
             "response": result_data["response_text"],
             "input_tokens": result_data["input_tokens"],
             "output_tokens": result_data["output_tokens"],
@@ -1091,6 +1099,34 @@ async def _repair_citations(ctx, user_message, answer, hop_map, result):
         require_all=settings.citation_hop_require_all,
     )
     return new_answer, new_result
+
+
+async def _clean_answer_citations(ctx, user_message: str, answer: str) -> tuple[str, int]:
+    """Verify an answer's citation tokens against the per-query hop map and remove
+    fabricated ones per settings.citation_hop_failure_mode.
+
+    Applied to EVERY slot's answer (not just the primary) so a weaker model can't
+    slip fabricated citations through the Query Lab compare grid. Returns
+    (cleaned_answer, num_fabricated) — the count is the model's original fabrication
+    count, reported even in 'detect' mode so the UI can surface it.
+    """
+    hop_map = getattr(ctx, "hop_map", None) if ctx else None
+    if not settings.citation_hopping_enabled or hop_map is None or not answer:
+        return answer, 0
+    from app.services.citation_hopping import (
+        extract_citation_tokens, verify_citations, strip_hallucinated,
+    )
+    require_all = settings.citation_hop_require_all
+    result = verify_citations(extract_citation_tokens(answer), hop_map, require_all=require_all)
+    num_fabricated = len(result.hallucinated)
+    if result.ok:
+        return answer, 0
+    mode = settings.citation_hop_failure_mode
+    if mode == "repair":
+        answer, result = await _repair_citations(ctx, user_message, answer, hop_map, result)
+    if not result.ok and mode in ("strip", "repair") and result.hallucinated:
+        answer = strip_hallucinated(answer, result.hallucinated)
+    return answer, num_fabricated
 
 
 async def _apply_citation_hop_exit(

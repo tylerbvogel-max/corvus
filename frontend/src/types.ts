@@ -80,6 +80,7 @@ export interface SlotResult {
   top_k: number | null;
   label: string | null;
   error?: boolean;
+  citations_fabricated?: number;  // fake citations this slot produced (stripped by the exit layer)
 }
 
 export interface NeuronScoreResponse {

@@ -364,6 +364,11 @@ function ModelCard({
               <div className="response-meta">
                 <span className="cost-badge">${slotResult.cost_usd.toFixed(4)}</span>
                 <span className="tokens-badge">{slotResult.input_tokens + (slotResult.cache_creation_tokens ?? 0) + (slotResult.cache_read_tokens ?? 0) + slotResult.output_tokens} tokens</span>
+                {(slotResult.citations_fabricated ?? 0) > 0 && (
+                  <span className="fabrication-badge" title="Fabricated citations this model produced — invalid per the per-query frequency-hopping map, and stripped from the answer">
+                    ⚠ {slotResult.citations_fabricated} fabricated
+                  </span>
+                )}
               </div>
             </>
           )}

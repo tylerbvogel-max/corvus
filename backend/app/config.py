@@ -198,8 +198,10 @@ class Settings(BaseSettings):
     citation_hop_prefix: str = "FQ-"
     citation_hop_hex_width: int = 6
     # detect (record only) | strip (remove fabricated keys from the answer) |
-    # repair (one bounded LLM retry with the valid-key list, then strip)
-    citation_hop_failure_mode: str = "detect"
+    # repair (one bounded LLM retry with the valid-key list, then strip).
+    # Applied PER-SLOT (every compare slot, not just the primary answer), so a
+    # weaker model can't slip fabricated citations through the Query Lab grid.
+    citation_hop_failure_mode: str = "strip"
     # require_all: also fail when an allowed key is never cited (allowed ⊆ used).
     # Off by default — forcing every source to appear hurts open-ended answers.
     citation_hop_require_all: bool = False
