@@ -1,10 +1,15 @@
-"""Regulatory resolve pipeline stage: fetch live text from eCFR API for fired engrams.
+"""Regulatory resolve: serve fired engrams' regulatory text from the LOCAL cache.
 
-Runs after scoring, before prompt assembly.  Converts engram retrieval cues
-into full regulatory text by querying the eCFR API.  Results are cached on
-the engram record with a configurable TTL (default 24 hours).
+The query hot path (resolve_engrams) is cache-only — it never touches the eCFR
+API. The live API is confined to a scheduled job (warm_engram_cache) that rides
+the consolidation heartbeat and materializes every engram's text into the
+engram.cached_text column, exactly like the neuron index materializes scoring
+inputs. This keeps a 30s-timeout network call (x N engrams, formerly sequential)
+off every query. CFR text is stable, so serving cache regardless of TTL on the
+hot path is safe; freshness is the warm job's responsibility.
 """
 
+import asyncio
 import datetime
 from dataclasses import dataclass
 
@@ -46,95 +51,91 @@ async def resolve_engrams(
     fired_engrams: list[tuple[Engram, float]],
     token_budget: int,
 ) -> list[ResolvedRegulation]:
-    """Fetch live regulatory text for fired engrams within token budget.
+    """Assemble fired engrams' regulatory text from the LOCAL cache only.
 
-    Priority order: highest-scored engrams first.  Stops when token budget
-    is exhausted.  Falls back to engram summary if API fails.
+    Cache-only hot path: no eCFR API call, no writes — pure DB reads. Serves
+    engram.cached_text (populated by warm_engram_cache) regardless of TTL, with
+    the engram summary as fallback when the section is too large for the budget
+    or not yet warmed. Highest-scored engrams first; stops at the token budget.
     """
     if not fired_engrams:
         return []
 
-    # Sort by score descending
     fired_engrams.sort(key=lambda pair: pair[1], reverse=True)
-
     results: list[ResolvedRegulation] = []
     tokens_used = 0
-    client = get_ecfr_client()
 
     for engram, _score in fired_engrams:
         ref = _cfr_ref(engram)
-        now = datetime.datetime.utcnow()
+        stamp = engram.cached_at or datetime.datetime.utcnow()
 
-        # Check cache first
-        if _cache_is_valid(engram):
+        # Prefer full cached text.
+        if engram.cached_text:
             tc = engram.cached_token_count or estimate_tokens(engram.cached_text)
             if tokens_used + tc <= token_budget:
                 results.append(ResolvedRegulation(
-                    engram_id=engram.id,
-                    cfr_ref=ref,
-                    text=engram.cached_text,
-                    token_count=tc,
-                    source="cache",
-                    fetched_at=engram.cached_at,
+                    engram_id=engram.id, cfr_ref=ref, text=engram.cached_text,
+                    token_count=tc, source="cache", fetched_at=stamp,
                 ))
                 tokens_used += tc
-            continue
+                continue
 
-        # Fetch live from eCFR
-        text_content = await client.fetch_section(
-            title=engram.cfr_title,
-            part=engram.cfr_part,
-            section=engram.cfr_section,
-        )
-
-        if text_content:
-            tc = estimate_tokens(text_content)
-
-            # Update cache on the engram record
-            engram.cached_text = text_content
-            engram.cached_at = now
-            engram.cached_token_count = tc
-            engram.last_verified = now
-
-            if tokens_used + tc <= token_budget:
-                results.append(ResolvedRegulation(
-                    engram_id=engram.id,
-                    cfr_ref=ref,
-                    text=text_content,
-                    token_count=tc,
-                    source="live_api",
-                    fetched_at=now,
-                ))
-                tokens_used += tc
-            elif tc > token_budget and engram.summary:
-                # Section too large even alone — use summary as fallback
-                summary_tc = estimate_tokens(engram.summary)
-                if tokens_used + summary_tc <= token_budget:
-                    results.append(ResolvedRegulation(
-                        engram_id=engram.id,
-                        cfr_ref=ref,
-                        text=f"[Summary — full text cached] {engram.summary}",
-                        token_count=summary_tc,
-                        source="fallback_summary",
-                        fetched_at=now,
-                    ))
-                    tokens_used += summary_tc
-
-        elif settings.engram_fallback_on_api_failure and engram.summary:
-            # API failed — use summary
+        # Fallback: summary (section too large for remaining budget, or not yet
+        # warmed into the cache — the next warm job will populate it).
+        if engram.summary:
+            note = "full text cached" if engram.cached_text else "pending cache"
             summary_tc = estimate_tokens(engram.summary)
             if tokens_used + summary_tc <= token_budget:
                 results.append(ResolvedRegulation(
-                    engram_id=engram.id,
-                    cfr_ref=ref,
-                    text=f"[API unavailable — summary only] {engram.summary}",
-                    token_count=summary_tc,
-                    source="fallback_summary",
-                    fetched_at=now,
+                    engram_id=engram.id, cfr_ref=ref,
+                    text=f"[Summary — {note}] {engram.summary}",
+                    token_count=summary_tc, source="fallback_summary", fetched_at=stamp,
                 ))
                 tokens_used += summary_tc
 
-    # Commit cache updates
-    await db.flush()
-
     return results
+
+
+async def warm_engram_cache(db: AsyncSession, force: bool = False) -> dict:
+    """Materialize eCFR text for all active engrams into the local cache.
+
+    The daily/heartbeat job that keeps the live API off the query hot path.
+    Concurrency-bounded by settings.engram_max_concurrent_fetches; refreshes only
+    stale entries (cache older than TTL) unless force=True. Best-effort: a failed
+    fetch leaves the prior cache intact so resolve_engrams keeps serving it.
+    """
+    from sqlalchemy import select
+    from app.models import Engram
+
+    engrams = list((await db.execute(
+        select(Engram).where(Engram.is_active == True)  # noqa: E712
+    )).scalars().all())
+    client = get_ecfr_client()
+    sem = asyncio.Semaphore(max(1, settings.engram_max_concurrent_fetches))
+    stats = {"total": len(engrams), "fetched": 0, "failed": 0, "fresh": 0}
+    now = datetime.datetime.utcnow()
+
+    async def _warm(engram: Engram) -> None:
+        if not force and _cache_is_valid(engram):
+            stats["fresh"] += 1
+            return
+        async with sem:
+            try:
+                text_content = await client.fetch_section(
+                    title=engram.cfr_title, part=engram.cfr_part,
+                    section=engram.cfr_section,
+                )
+            except Exception:  # network/parse failure -> keep prior cache
+                text_content = None
+        if text_content:
+            engram.cached_text = text_content
+            engram.cached_at = now
+            engram.cached_token_count = estimate_tokens(text_content)
+            engram.last_verified = now
+            stats["fetched"] += 1
+        else:
+            stats["failed"] += 1
+
+    await asyncio.gather(*[_warm(e) for e in engrams])
+    await db.flush()
+    return stats

@@ -108,6 +108,12 @@ async def run_consolidation(db: AsyncSession) -> dict:
     # Naive UTC: the column is TIMESTAMP WITHOUT TIME ZONE (asyncpg rejects
     # aware datetimes on naive columns).
     from datetime import datetime
+    # Warm the regulatory (engram) cache from eCFR so the live API stays off the
+    # query hot path — resolve_engrams reads cache only. Rides this ~daily
+    # heartbeat (and the manual "Run Heartbeat" button).
+    from app.services.regulatory_resolve import warm_engram_cache
+    engram_cache = await warm_engram_cache(db)
+
     state.last_consolidation_at = datetime.utcnow()
     await db.commit()
 
@@ -122,5 +128,6 @@ async def run_consolidation(db: AsyncSession) -> dict:
         "neurons_decayed": decayed,
         "neurons_deactivated": deactivated,
         "centrality_updates": centrality_updates,
+        "engram_cache": engram_cache,
         "total_queries": total_queries,
     }

@@ -34,7 +34,7 @@ class ECFRClient:
     async def _get_client(self) -> httpx.AsyncClient:
         """Lazy-init a shared async HTTP client."""
         if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(timeout=30.0)
+            self._client = httpx.AsyncClient(timeout=15.0)
         return self._client
 
     async def close(self) -> None:
@@ -67,16 +67,25 @@ class ECFRClient:
                 section = f"{part}.{section}"
             params["section"] = section
 
-        url = f"{ECFR_BASE}/{date}/title-{title}.xml"
+        # eCFR only has snapshots up to its latest real publication date. A skewed
+        # (or simply too-recent) `date` 404s, so fall back to progressively older
+        # snapshots. Bounded, first 200 wins. Prevents silent summary-only degrade.
+        candidates = [date]
+        today = datetime.date.today()
+        for years_back in (1, 2, 3):
+            candidates.append(datetime.date(today.year - years_back, 1, 1).isoformat())
+
         async with self._semaphore:
             client = await self._get_client()
-            try:
-                resp = await client.get(url, params=params)
-                if resp.status_code != 200:
-                    return None
-                return parse_xml_to_text(resp.text)
-            except (httpx.HTTPError, Exception):
-                return None
+            for snapshot in candidates:
+                url = f"{ECFR_BASE}/{snapshot}/title-{title}.xml"
+                try:
+                    resp = await client.get(url, params=params)
+                except (httpx.HTTPError, Exception):
+                    continue
+                if resp.status_code == 200:
+                    return parse_xml_to_text(resp.text)
+            return None
 
     async def fetch_structure(self, title: int) -> dict | None:
         """Fetch the structural hierarchy of a CFR title (JSON)."""

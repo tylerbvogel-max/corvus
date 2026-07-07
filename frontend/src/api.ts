@@ -558,6 +558,7 @@ export function triggerAutopilotRunNow(): Promise<AutopilotTickResponse> {
 export interface ConsolidationResult {
   status: string; firings_pruned?: number; neurons_decayed?: number;
   neurons_deactivated?: number; centrality_updates?: number; total_queries?: number;
+  engram_cache?: { total: number; fetched: number; failed: number; fresh: number };
 }
 export function triggerConsolidation(): Promise<ConsolidationResult> {
   return json<ConsolidationResult>('/admin/autopilot/consolidate', { method: 'POST' });
