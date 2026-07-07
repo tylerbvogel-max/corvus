@@ -139,3 +139,37 @@ async def warm_engram_cache(db: AsyncSession, force: bool = False) -> dict:
     await asyncio.gather(*[_warm(e) for e in engrams])
     await db.flush()
     return stats
+
+
+# Fire-and-forget warm scheduling. Module ref prevents mid-flight GC of the task.
+_warm_task = None
+
+
+def schedule_engram_cache_warm(force: bool = False) -> bool:
+    """Schedule warm_engram_cache as a background task on its OWN db session.
+
+    Fire-and-forget: returns immediately so a slow/large eCFR fetch never blocks
+    the caller (e.g. the consolidation heartbeat). No-op (returns False) if a warm
+    is already in flight or no event loop is running (sync/test context).
+    """
+    global _warm_task
+    if _warm_task is not None and not _warm_task.done():
+        return False
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    _warm_task = loop.create_task(_warm_in_background(force))
+    return True
+
+
+async def _warm_in_background(force: bool) -> None:
+    """Run the warm job on a fresh session (the caller's is already committed/closed)."""
+    import logging
+    from app.database import async_session
+    try:
+        async with async_session() as db:
+            await warm_engram_cache(db, force=force)
+            await db.commit()
+    except Exception as exc:  # background job: log, never propagate into the loop
+        logging.getLogger(__name__).warning("engram cache warm failed: %s", exc)

@@ -158,7 +158,7 @@ export default function AutopilotPage() {
       setRunResult(
         r.status === 'consolidated'
           ? `Heartbeat: pruned ${r.firings_pruned ?? 0} firings, decayed ${r.neurons_decayed ?? 0}, deactivated ${r.neurons_deactivated ?? 0}, centrality ${r.centrality_updates ?? 0}` +
-            (r.engram_cache ? `, regs ${r.engram_cache.fetched} fetched/${r.engram_cache.fresh} fresh/${r.engram_cache.failed} failed` : '') +
+            (r.engram_cache?.scheduled ? ', regs warming (background)' : '') +
             ' — neuron index rebuilt'
           : `Heartbeat: ${r.status}`,
       );
