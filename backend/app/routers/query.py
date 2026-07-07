@@ -824,6 +824,107 @@ def _parse_eval_response(raw_text: str) -> tuple[list[dict], str, str | None]:
     return parsed_scores, verdict_text, winner
 
 
+_EVAL_DIMS = ("accuracy", "completeness", "clarity", "faithfulness", "overall")
+
+
+async def _judge_pass(
+    user_message: str, ordered: list[SlotResult], domain_knowledge: str, model: str,
+) -> dict:
+    """One judging pass over the answers in the given presentation order."""
+    assert len(ordered) >= 2, "judge pass needs at least 2 answers"
+    eval_system, eval_prompt, _ = _build_eval_prompts(user_message, ordered, domain_knowledge)
+    result = await llm_chat(eval_system, eval_prompt, max_tokens=2048, model=model)
+    parsed_scores, verdict_text, winner = _parse_eval_response(result["text"].strip())
+    return {
+        "scores": parsed_scores, "verdict": verdict_text, "winner": winner,
+        "input_tokens": result["input_tokens"], "output_tokens": result["output_tokens"],
+    }
+
+
+def _scores_by_index(parsed_scores: list[dict], n: int, reversed_order: bool) -> dict[int, dict]:
+    """Map a pass's letter-keyed score rows back to ORIGINAL slot indices."""
+    assert n >= 2, "n must be >= 2"
+    out: dict[int, dict] = {}
+    for ps in parsed_scores:
+        letter = str(ps.get("answer", "")).upper()
+        if len(letter) == 1 and "A" <= letter <= chr(64 + n):
+            pos = ord(letter) - 65
+            out[(n - 1 - pos) if reversed_order else pos] = ps
+    return out
+
+
+def _winner_index(winner, n: int, reversed_order: bool) -> int | None:
+    """Original slot index of a pass's winner letter; None for tie/absent/garbage."""
+    letter = str(winner or "").strip().upper()
+    if len(letter) != 1 or not ("A" <= letter <= chr(64 + n)):
+        return None
+    pos = ord(letter) - 65
+    return (n - 1 - pos) if reversed_order else pos
+
+
+def _reconcile_eval_passes(n: int, fwd: dict, rev: dict) -> tuple[list[dict], str | None, bool]:
+    """Counterbalance judge position bias (empirically the judge favors the
+    last-presented answer): average each answer's dimension scores across the
+    forward and reversed presentation orders, and declare a winner ONLY when
+    both orderings pick the same underlying answer — otherwise tie.
+
+    Returns (score rows in original-order letters, winner, downgraded) where
+    downgraded=True means the two orderings disagreed on a winner.
+    """
+    if not fwd["scores"] and not rev["scores"]:
+        return [], None, False  # both passes unparseable — degrade like the old single pass
+
+    fwd_by_idx = _scores_by_index(fwd["scores"], n, reversed_order=False)
+    rev_by_idx = _scores_by_index(rev["scores"], n, reversed_order=True)
+    merged: list[dict] = []
+    for idx in range(n):
+        row: dict = {"answer": chr(65 + idx)}
+        passes = [s for s in (fwd_by_idx.get(idx), rev_by_idx.get(idx)) if s is not None]
+        for dim in _EVAL_DIMS:
+            vals = [_clamp(s.get(dim, 3)) for s in passes]
+            # Half-up rounding of the two-pass mean, back onto the 1-5 scale
+            row[dim] = _clamp(int(sum(vals) / len(vals) + 0.5)) if vals else 3
+        merged.append(row)
+
+    w_fwd = _winner_index(fwd["winner"], n, reversed_order=False)
+    w_rev = _winner_index(rev["winner"], n, reversed_order=True)
+    if w_fwd is not None and w_fwd == w_rev:
+        return merged, chr(65 + w_fwd), False
+    if fwd["winner"] is None and rev["winner"] is None:
+        return merged, None, False
+    disagreed = w_fwd is not None or w_rev is not None
+    return merged, "tie", disagreed
+
+
+async def _run_counterbalanced_eval(
+    user_message: str, slots: list[SlotResult], domain_knowledge: str, model: str,
+) -> tuple[list[dict], str | None, str, int, int]:
+    """Judge in both presentation orders concurrently and reconcile.
+
+    De-biases the judge's position preference: scores are per-answer averages
+    across orderings; the winner must survive both. Returns
+    (scores, winner, verdict_text, input_tokens, output_tokens).
+    """
+    assert len(slots) >= 2, "counterbalanced eval needs at least 2 slots"
+    fwd, rev = await asyncio.gather(
+        _judge_pass(user_message, slots, domain_knowledge, model),
+        _judge_pass(user_message, list(reversed(slots)), domain_knowledge, model),
+    )
+    merged_scores, winner, downgraded = _reconcile_eval_passes(len(slots), fwd, rev)
+    verdict_text = fwd["verdict"]
+    if downgraded:
+        verdict_text += (
+            "\n\n[Counterbalance check: the order-reversed re-judge picked a different "
+            "winner, so the verdict is recorded as a tie. Dimension scores are the "
+            "average of both orderings.]"
+        )
+    return (
+        merged_scores, winner, verdict_text,
+        fwd["input_tokens"] + rev["input_tokens"],
+        fwd["output_tokens"] + rev["output_tokens"],
+    )
+
+
 async def _save_eval_scores(
     db: AsyncSession, query_id: int, model: str,
     parsed_scores: list[dict], verdict_text: str,
@@ -904,21 +1005,19 @@ async def evaluate_query(
         # If prepare_context fails, fall back to blind evaluation
         domain_knowledge = ""
 
-    eval_system, eval_prompt, answer_map = _build_eval_prompts(query.user_message, slots, domain_knowledge)
-    assert len(answer_map) >= 2, "answer_map must have at least 2 entries"
+    merged_scores, winner, verdict_text, eval_in, eval_out = await _run_counterbalanced_eval(
+        query.user_message, slots, domain_knowledge, req.model,
+    )
 
-    result = await llm_chat(eval_system, eval_prompt, max_tokens=2048, model=req.model)
-    raw_text = result["text"].strip()
-
-    parsed_scores, verdict_text, winner = _parse_eval_response(raw_text)
+    answer_map = [(chr(65 + i), s) for i, s in enumerate(slots)]
     score_rows = await _save_eval_scores(
-        db, query_id, req.model, parsed_scores, verdict_text, answer_map, identity,
+        db, query_id, req.model, merged_scores, verdict_text, answer_map, identity,
     )
 
     query.eval_text = verdict_text
     query.eval_model = req.model
-    query.eval_input_tokens = result["input_tokens"]
-    query.eval_output_tokens = result["output_tokens"]
+    query.eval_input_tokens = eval_in
+    query.eval_output_tokens = eval_out
 
     # Synaptic learning: adjust neuron weights based on eval outcome
     learning_out = None
@@ -941,8 +1040,8 @@ async def evaluate_query(
         query_id=query_id,
         eval_text=verdict_text,
         eval_model=req.model,
-        eval_input_tokens=result["input_tokens"],
-        eval_output_tokens=result["output_tokens"],
+        eval_input_tokens=eval_in,
+        eval_output_tokens=eval_out,
         scores=score_rows,
         winner=winner,
         learning=learning_out,
