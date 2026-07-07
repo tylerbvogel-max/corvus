@@ -1321,6 +1321,13 @@ body {
   gap: 12px;
 }
 
+/* Effort dropdown shares .control-select styling but must not stretch the
+   flex row it shares with the Submit button. */
+.query-controls-bottom .effort-select {
+  width: auto;
+  cursor: pointer;
+}
+
 /* Slot Builder — Grid + XY Plot */
 .slot-builder {
   display: flex;

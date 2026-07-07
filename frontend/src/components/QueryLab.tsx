@@ -1095,7 +1095,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
                 </div>
               )}
               <div className="query-controls-bottom">
-                <select value={effort} onChange={e => setEffort(e.target.value)} title="Reasoning effort — applies to all slots">
+                <select className="control-select effort-select" value={effort} onChange={e => setEffort(e.target.value)} title="Reasoning effort — applies to all slots">
                   <option value="low">Effort: Low</option>
                   <option value="medium">Effort: Medium</option>
                   <option value="high">Effort: High</option>
