@@ -15,6 +15,7 @@ import {
   fetchAutopilotConfig,
   updateAutopilotConfig,
   triggerAutopilotRunNow,
+  triggerConsolidation,
   fetchAutopilotRuns,
   fetchAutopilotRunChanges,
   cancelAutopilotTick,
@@ -36,6 +37,7 @@ export default function AutopilotPage() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [heartbeating, setHeartbeating] = useState(false);
   const [expandedRun, setExpandedRun] = useState<number | null>(null);
   const [runChanges, setRunChanges] = useState<Record<number, AutopilotChange[]>>({});
   const [runResult, setRunResult] = useState<string | null>(null);
@@ -145,6 +147,23 @@ export default function AutopilotPage() {
       setConfig(updated);
     } catch (e) {
       console.error('Failed to toggle:', e);
+    }
+  };
+
+  const handleHeartbeat = async () => {
+    setHeartbeating(true);
+    setRunResult(null);
+    try {
+      const r = await triggerConsolidation();
+      setRunResult(
+        r.status === 'consolidated'
+          ? `Heartbeat: pruned ${r.firings_pruned ?? 0} firings, decayed ${r.neurons_decayed ?? 0}, deactivated ${r.neurons_deactivated ?? 0}, centrality ${r.centrality_updates ?? 0} — neuron index rebuilt`
+          : `Heartbeat: ${r.status}`,
+      );
+    } catch (e) {
+      setRunResult('Heartbeat failed: ' + (e instanceof Error ? e.message : 'error'));
+    } finally {
+      setHeartbeating(false);
     }
   };
 
@@ -359,6 +378,14 @@ export default function AutopilotPage() {
                 Run Now
               </button>
             )}
+            <button
+              className="btn"
+              onClick={handleHeartbeat}
+              disabled={heartbeating}
+              title="Run the maintenance heartbeat now: prune firings, decay utility, refresh centrality, and rebuild the neuron index"
+            >
+              {heartbeating ? 'Running heartbeat…' : '♥ Run Heartbeat'}
+            </button>
             <div className="autopilot-timer-info">
               {config?.last_tick_at && (
                 <span className="autopilot-last-tick">

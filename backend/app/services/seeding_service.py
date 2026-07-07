@@ -104,7 +104,9 @@ async def bootstrap_knn_edges(
         from app.services.bootstrap_service import write_planned_edges
         await write_planned_edges(db, edges_to_create)
         from app.services.adjacency_cache import invalidate_adjacency_cache
+        from app.services.neuron_index import invalidate_index
         invalidate_adjacency_cache()
+        invalidate_index()
 
     return {
         "neurons_embedded": len(ids),
@@ -156,7 +158,9 @@ async def bootstrap_cooccurrence_edges(
         from app.services.bootstrap_service import write_planned_edges
         await write_planned_edges(db, edges_to_create)
         from app.services.adjacency_cache import invalidate_adjacency_cache
+        from app.services.neuron_index import invalidate_index
         invalidate_adjacency_cache()
+        invalidate_index()
 
     return {
         "source_documents": len(by_doc),
@@ -358,5 +362,7 @@ async def retype_edges_by_region(db: AsyncSession) -> int:
     retyped = result.rowcount or 0
     if retyped:
         from app.services.adjacency_cache import invalidate_adjacency_cache
+        from app.services.neuron_index import invalidate_index
         invalidate_adjacency_cache()
+        invalidate_index()
     return retyped

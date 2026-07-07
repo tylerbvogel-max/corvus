@@ -81,6 +81,10 @@ async def handle_neuron_refine(
     if payload.field in ("content", "summary"):
         populate_external_references(neuron)
 
+    # label/summary/department/is_active all feed the materialized index -> rebuild.
+    from app.services.neuron_index import invalidate_index
+    invalidate_index()
+
     ref_reason = _build_reason(payload)
     ref = NeuronRefinement(
         query_id=payload.query_id, neuron_id=payload.target_neuron_id,

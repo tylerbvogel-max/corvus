@@ -92,6 +92,10 @@ async def handle_neuron_create(
         item.refinement_id = ref.id
         await db.flush()
 
+    # New neuron -> the materialized NeuronIndex is stale; force a rebuild.
+    from app.services.neuron_index import invalidate_index
+    invalidate_index()
+
     return {
         "audit": {
             "created_neuron_id": neuron.id, "refinement_id": ref.id,

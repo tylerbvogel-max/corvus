@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     relevance_gate_floor: float = 0.05
     # Scoring parameters (query-count based)
     burst_window_queries: int = 50
-    neuron_index_enabled: bool = False  # serve scoring inputs from the in-memory NeuronIndex
+    neuron_index_enabled: bool = True  # serve scoring inputs from the in-memory NeuronIndex
     burst_threshold: int = 15
     novelty_halflife_queries: int = 200
     recency_decay_queries: int = 500

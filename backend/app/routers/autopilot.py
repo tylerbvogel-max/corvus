@@ -292,6 +292,15 @@ async def run_now(db: AsyncSession = Depends(get_db)):
     return await _run_tick(db, config)
 
 
+@router.post("/consolidate")
+async def consolidate_now(db: AsyncSession = Depends(get_db)):
+    """Manually run the maintenance heartbeat now — prune firings, decay utility,
+    refresh centrality, deactivate stale neurons, and rebuild the NeuronIndex.
+    Bypasses the consolidation_interval_hours gate (this is the manual button)."""
+    from app.services.consolidation import run_consolidation
+    return await run_consolidation(db)
+
+
 @router.get("/runs", response_model=list[AutopilotRunOut])
 async def list_runs(db: AsyncSession = Depends(get_db)):
     """List the 50 most recent autopilot runs with their outcomes."""

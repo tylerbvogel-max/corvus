@@ -555,6 +555,14 @@ export function triggerAutopilotRunNow(): Promise<AutopilotTickResponse> {
   return json<AutopilotTickResponse>('/admin/autopilot/run-now', { method: 'POST' });
 }
 
+export interface ConsolidationResult {
+  status: string; firings_pruned?: number; neurons_decayed?: number;
+  neurons_deactivated?: number; centrality_updates?: number; total_queries?: number;
+}
+export function triggerConsolidation(): Promise<ConsolidationResult> {
+  return json<ConsolidationResult>('/admin/autopilot/consolidate', { method: 'POST' });
+}
+
 export function fetchAutopilotRuns(): Promise<AutopilotRun[]> {
   return json<AutopilotRun[]>('/admin/autopilot/runs');
 }
