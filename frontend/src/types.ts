@@ -83,6 +83,7 @@ export interface SlotResult {
   citations_fabricated?: number;  // fake citations this slot produced (stripped by the exit layer)
   ungrounded_refs?: number;       // standards/regs named as authority but absent from the retrieved context
   ungrounded_ref_list?: string[]; // the normalised refs behind that count — drives inline answer marks
+  effort?: string;                // effective reasoning effort this slot ran at
 }
 
 export interface NeuronScoreResponse {

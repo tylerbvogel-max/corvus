@@ -113,6 +113,9 @@ interface EnhancedSlotConfig {
   maxOutputTokens: number;
   color: string;
   isBaseline: boolean;
+  // Per-slot reasoning effort: 'inherit' = use the global default dropdown.
+  // Enables same-model effort comparisons (opus low vs opus high).
+  effort: string;
 }
 
 /** Model tier for baseline fallback: highest tier wins. */
@@ -234,6 +237,11 @@ function ModelCard({
 }: ModelCardProps) {
   const isRaw = slot.mode.endsWith('_raw');
   const hasKG = !isRaw;
+  // The mode key stays "{model}_{neuron|raw}" everywhere (backend, history,
+  // colors); the card just splits it across two controls — a model dropdown
+  // and the Knowledge Graph checkbox.
+  const modelName = slot.mode.replace(/_(neuron|raw)$/, '');
+  const modelOptions = Array.from(new Set(allModes.map(m => m.key.replace(/_(neuron|raw)$/, ''))));
 
   const mapBudgetToLabel = (budget: number): string => {
     if (budget < 4000) return 'Focused';
@@ -279,14 +287,14 @@ function ModelCard({
       <div className="card-header">
         <div className="card-model">
           <select
-            value={slot.mode}
-            onChange={e => onUpdate({ mode: e.target.value })}
+            value={modelName}
+            onChange={e => onUpdate({ mode: `${e.target.value}_${hasKG ? 'neuron' : 'raw'}` })}
             disabled={isLoading}
             className="model-select"
           >
-            {allModes.map(m => (
-              <option key={m.key} value={m.key}>
-                {m.label}
+            {modelOptions.map(m => (
+              <option key={m} value={m}>
+                {m}
               </option>
             ))}
           </select>
@@ -306,14 +314,15 @@ function ModelCard({
       </div>
 
       <div className="card-controls">
-        {/* Knowledge Graph toggle */}
+        {/* Knowledge Graph toggle — the functional neuron/raw control */}
         <div className="control-group">
-          <label className="control-label">
+          <label className="control-label" title="On: neuron-enriched context from the knowledge graph. Off: raw baseline (vanilla model, no enrichment).">
             <input
               type="checkbox"
               checked={hasKG}
-              disabled={true}
-              style={{ cursor: 'default' }}
+              disabled={isLoading}
+              onChange={e => onUpdate({ mode: `${modelName}_${e.target.checked ? 'neuron' : 'raw'}` })}
+              style={{ cursor: isLoading ? 'default' : 'pointer' }}
             />
             <span>Knowledge Graph: {hasKG ? 'On' : 'Off'}</span>
           </label>
@@ -352,6 +361,23 @@ function ModelCard({
             <option value="Long">Long (8K)</option>
           </select>
         </div>
+
+        {/* Per-slot reasoning effort — lets the same model be compared at low vs high */}
+        <div className="control-group">
+          <label className="control-label">Effort</label>
+          <select
+            value={slot.effort}
+            onChange={e => onUpdate({ effort: e.target.value })}
+            disabled={isLoading}
+            className="control-select"
+            title="Reasoning effort for this slot. Claude: CLI --effort; Azure o1: reasoning_effort; Gemini 2.5: thinking budget. Non-reasoning models ignore it."
+          >
+            <option value="inherit">Inherit (global)</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
       </div>
 
       {/* Response display after execution */}
@@ -365,6 +391,9 @@ function ModelCard({
               <div className="response-meta">
                 <span className="cost-badge">${slotResult.cost_usd.toFixed(4)}</span>
                 <span className="tokens-badge">{slotResult.input_tokens + (slotResult.cache_creation_tokens ?? 0) + (slotResult.cache_read_tokens ?? 0) + slotResult.output_tokens} tokens</span>
+                {slotResult.effort && (
+                  <span className="tokens-badge" title="Reasoning effort this slot ran at">⚙ {slotResult.effort}</span>
+                )}
                 {(slotResult.citations_fabricated ?? 0) > 0 && (
                   <span className="fabrication-badge" title="Fabricated citations this model produced — invalid per the per-query frequency-hopping map, and stripped from the answer">
                     ⚠ {slotResult.citations_fabricated} fabricated
@@ -709,7 +738,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false },
+    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'inherit' },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
@@ -772,6 +801,8 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       token_budget: sc.tokenBudget,
       top_k: 60, // Keep as internal default; hidden from users per plan
       max_output_tokens: sc.maxOutputTokens,
+      // Only send an explicit override; 'inherit' falls back to the global effort
+      ...(sc.effort !== 'inherit' ? { effort: sc.effort } : {}),
     }));
   }
 
@@ -983,6 +1014,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       maxOutputTokens: 4096,
       color: nextSlotColor(),
       isBaseline: false,
+      effort: 'inherit',
     }]);
   }
 
@@ -1095,7 +1127,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
                 </div>
               )}
               <div className="query-controls-bottom">
-                <select className="control-select effort-select" value={effort} onChange={e => setEffort(e.target.value)} title="Reasoning effort — applies to all slots">
+                <select className="control-select effort-select" value={effort} onChange={e => setEffort(e.target.value)} title="Default reasoning effort — slots set to 'Inherit' use this; per-card Effort overrides it">
                   <option value="low">Effort: Low</option>
                   <option value="medium">Effort: Medium</option>
                   <option value="high">Effort: High</option>

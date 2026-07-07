@@ -905,10 +905,10 @@ async def _update_counters_and_fire(
 _EFFORT_RANK = MappingProxyType({"low": 0, "medium": 1, "high": 2})
 
 
-def _apply_primary_overrides(model_name: str) -> str:
+def _apply_primary_overrides(model_name: str, skip_effort: bool = False) -> str:
     """Primary-slot quality floor: raise reasoning effort (never lower it) and
     optionally swap to a stronger model, per settings. Returns the effective
-    model name.
+    model name. skip_effort=True leaves effort alone (the slot set its own).
 
     Must run INSIDE the slot's asyncio task: each task gets its own copy of the
     execution context, so the effort_var set here is visible only to this
@@ -917,7 +917,7 @@ def _apply_primary_overrides(model_name: str) -> str:
     assert isinstance(model_name, str) and model_name, "model_name must be non-empty"
 
     floor = settings.primary_answer_effort
-    if floor in _EFFORT_RANK:
+    if not skip_effort and floor in _EFFORT_RANK:
         current = effort_var.get() or settings.default_effort
         if _EFFORT_RANK.get(current, 0) < _EFFORT_RANK[floor]:
             effort_var.set(floor)
@@ -925,6 +925,24 @@ def _apply_primary_overrides(model_name: str) -> str:
     override = settings.primary_answer_model
     if override and override in MODEL_REGISTRY:
         return override
+    return model_name
+
+
+def _apply_slot_overrides(slot: dict, model_name: str, is_primary: bool) -> str:
+    """Per-slot effort override + primary quality floor. Returns the effective
+    model name. Must run INSIDE the slot's asyncio task (own context copy) so
+    the effort_var set here stays slot-local.
+
+    An EXPLICIT slot effort always wins — including over the primary floor: a
+    user comparing the same model at low vs high effort must not have slot 0
+    silently bumped to the floor.
+    """
+    assert isinstance(slot, dict), "slot must be a dict"
+    explicit = slot.get("effort") in _EFFORT_RANK
+    if explicit:
+        effort_var.set(slot["effort"])
+    if is_primary:
+        return _apply_primary_overrides(model_name, skip_effort=explicit)
     return model_name
 
 
@@ -981,8 +999,8 @@ async def _execute_slot(
     slot_type = parts[1] if len(parts) > 1 else "neuron"
     uses_neurons = slot_type == "neuron"
 
-    if is_primary:
-        model_name = _apply_primary_overrides(model_name)
+    model_name = _apply_slot_overrides(slot, model_name, is_primary)
+    effective_effort = effort_var.get() or settings.default_effort
 
     start_time = time.monotonic()
 
@@ -1001,6 +1019,7 @@ async def _execute_slot(
             "mode": mode,
             "model": model_name,
             "neurons": uses_neurons,
+            "effort": effective_effort,
             "citations_fabricated": citations_fabricated,
             "ungrounded_refs": len(ungrounded_list),
             "ungrounded_ref_list": ungrounded_list,

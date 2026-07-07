@@ -96,6 +96,64 @@ def test_model_override_ignores_unknown_key(monkeypatch):
     assert _run_isolated(lambda: _apply_primary_overrides("haiku")) == "haiku"
 
 
+# ---- per-slot effort override (_apply_slot_overrides) ----
+
+def test_slot_effort_explicit_wins_over_primary_floor(monkeypatch):
+    """Comparing the same model at low vs high effort must work even on slot 0:
+    an explicit slot effort beats the primary_answer_effort floor."""
+    monkeypatch.setattr(settings, "primary_answer_effort", "high")
+    monkeypatch.setattr(settings, "primary_answer_model", "")
+    from app.services.executor import _apply_slot_overrides
+
+    def check():
+        effort_var.set("medium")
+        model = _apply_slot_overrides({"effort": "low"}, "opus", is_primary=True)
+        assert model == "opus"
+        assert effort_var.get() == "low", "explicit slot effort must beat the floor"
+
+    _run_isolated(check)
+
+
+def test_slot_effort_inherit_keeps_primary_floor(monkeypatch):
+    monkeypatch.setattr(settings, "primary_answer_effort", "medium")
+    monkeypatch.setattr(settings, "primary_answer_model", "")
+    from app.services.executor import _apply_slot_overrides
+
+    def check():
+        effort_var.set("low")
+        _apply_slot_overrides({}, "haiku", is_primary=True)
+        assert effort_var.get() == "medium", "no slot effort → floor still applies"
+
+    _run_isolated(check)
+
+
+def test_slot_effort_sets_compare_slot(monkeypatch):
+    monkeypatch.setattr(settings, "primary_answer_effort", "")
+    monkeypatch.setattr(settings, "primary_answer_model", "")
+    from app.services.executor import _apply_slot_overrides
+
+    def check():
+        effort_var.set("low")
+        model = _apply_slot_overrides({"effort": "high"}, "opus", is_primary=False)
+        assert model == "opus"
+        assert effort_var.get() == "high"
+
+    _run_isolated(check)
+
+
+def test_slot_effort_invalid_value_ignored(monkeypatch):
+    monkeypatch.setattr(settings, "primary_answer_effort", "")
+    monkeypatch.setattr(settings, "primary_answer_model", "")
+    from app.services.executor import _apply_slot_overrides
+
+    def check():
+        effort_var.set("low")
+        _apply_slot_overrides({"effort": "ultra"}, "haiku", is_primary=False)
+        assert effort_var.get() == "low"
+
+    _run_isolated(check)
+
+
 def test_effort_isolated_between_slot_tasks(monkeypatch):
     """The primary slot's effort bump must not leak to sibling compare slots.
 

@@ -9,6 +9,9 @@ class QuerySlotRequest(BaseModel):
     top_k: int = Field(60, ge=1, le=500)
     max_output_tokens: int | None = Field(None, ge=256, le=8192)
     label: str | None = None
+    # Per-slot reasoning effort override (None = inherit the request-level
+    # effort). Enables side-by-side effort comparisons: same model, low vs high.
+    effort: str | None = Field(None, pattern="^(low|medium|high)$")
 
 
 class QueryRequest(BaseModel):

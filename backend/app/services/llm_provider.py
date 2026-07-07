@@ -286,6 +286,12 @@ async def _anthropic_chat(
     }
 
 
+# Effort → Gemini 2.5 thinking-budget tokens (monotone; 128 is the 2.5 Pro
+# minimum, effectively "think as little as allowed"). Applied only to models
+# that support thinking — gemini-2.0 rejects thinking_config.
+_GEMINI_THINKING_BUDGET = MappingProxyType({"low": 128, "medium": 8192, "high": 24576})
+
+
 async def _google_chat(
     system_prompt: str, user_message: str, max_tokens: int, model_info: ModelInfo,
 ) -> dict:
@@ -295,10 +301,18 @@ async def _google_chat(
     assert settings.google_api_key, "GOOGLE_API_KEY not configured"
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
+    thinking_config = None
+    if model_info.api_id.startswith("gemini-2.5"):
+        effort = effort_var.get() or settings.default_effort
+        budget = _GEMINI_THINKING_BUDGET.get(effort)
+        if budget is not None:
+            thinking_config = genai.types.ThinkingConfig(thinking_budget=budget)
+
     client = genai.Client(api_key=settings.google_api_key)
     config = genai.types.GenerateContentConfig(
         system_instruction=system_prompt if system_prompt else None,
         max_output_tokens=max_tokens,
+        thinking_config=thinking_config,
     )
     response = await client.aio.models.generate_content(
         model=model_info.api_id,
@@ -412,9 +426,14 @@ async def _azure_openai_chat(
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
     deployment = _azure_deployment_name(model_info.api_id)
-    messages, token_key = _build_azure_messages(
-        system_prompt, user_message, model_info.api_id.startswith("o1"),
-    )
+    is_o1 = model_info.api_id.startswith("o1")
+    messages, token_key = _build_azure_messages(system_prompt, user_message, is_o1)
+
+    # o1 is a reasoning model: map the slot/request effort straight through.
+    extra_kwargs: dict = {}
+    effort = effort_var.get() or settings.default_effort
+    if is_o1 and effort in _VALID_EFFORT:
+        extra_kwargs["reasoning_effort"] = effort
 
     client = AsyncAzureOpenAI(
         api_key=settings.azure_openai_api_key,
@@ -424,7 +443,7 @@ async def _azure_openai_chat(
     )
     try:
         response = await client.chat.completions.create(
-            model=deployment, messages=messages, **{token_key: max_tokens},
+            model=deployment, messages=messages, **{token_key: max_tokens}, **extra_kwargs,
         )
     finally:
         await client.close()

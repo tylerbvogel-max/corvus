@@ -305,6 +305,7 @@ export interface SlotSpec {
   top_k: number;
   max_output_tokens?: number;
   label?: string;
+  effort?: string;  // per-slot reasoning effort override (low|medium|high)
 }
 
 export interface GraphCapacity {
