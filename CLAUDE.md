@@ -104,9 +104,6 @@ TENANT_ID=corvus-aero docker compose up --build
 - **Overhaul log**: OVERHAUL-STATUS.md (design decisions + per-workstream
   verification evidence).
 
-## Corvus Integration
-Corvus (screen-watcher) is integrated as a subpackage under `backend/app/corvus/` with endpoints at `/corvus/`. Chrome extension captures → OCR → classify → interpret → queue observations for neuron graph ingestion.
-
 ## NASA Software Engineering Compliance Policy
 
 All code contributions to this project MUST adhere to the following NASA software engineering standards. These requirements apply to code reviews, development practices, and Corvus-driven development suggestions.
@@ -149,8 +146,11 @@ The NASA linter (`scripts/nasa_lint.py`) runs automatically via two mechanisms:
 When the hook reports a strict violation after an edit, fix it immediately before continuing.
 When the hook reports a guideline warning, fix it if the function was just created or substantially modified. Leave existing violations for dedicated cleanup passes.
 
-### Corvus Development-Specific Rules
-- Screen capture data is ephemeral — never persist raw screenshots beyond the processing pipeline
-- Observation-to-neuron flow must maintain provenance (source_origin="corvus", refinement records)
+### Observation-Pipeline Rules
+- Observation-to-neuron flow must maintain provenance (source origin + refinement records)
 - LLM evaluation proposals are advisory only — human approval required before graph modifications
-- Interpretation cadence and alert thresholds must be configurable, not hardcoded
+
+> The screen-capture/watcher subsystem (`backend/app/corvus/`, `/corvus/*`
+> endpoints, Advisor UI) was REMOVED 2026-07-07. Its DB tables (`corvus_*`)
+> were left in place (no destructive migration); the shared
+> `observation_queue` intake and `/ingest/observation` remain.

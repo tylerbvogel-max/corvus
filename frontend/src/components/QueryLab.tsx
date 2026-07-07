@@ -113,8 +113,8 @@ interface EnhancedSlotConfig {
   maxOutputTokens: number;
   color: string;
   isBaseline: boolean;
-  // Per-slot reasoning effort: 'inherit' = use the global default dropdown.
-  // Enables same-model effort comparisons (opus low vs opus high).
+  // Per-slot reasoning effort (low|medium|high). Enables same-model effort
+  // comparisons (opus low vs opus high).
   effort: string;
 }
 
@@ -372,7 +372,6 @@ function ModelCard({
             className="control-select"
             title="Reasoning effort for this slot. Claude: CLI --effort; Azure o1: reasoning_effort; Gemini 2.5: thinking budget. Non-reasoning models ignore it."
           >
-            <option value="inherit">Inherit (global)</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
@@ -720,7 +719,6 @@ function nextSlotColor(): string {
 
 export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: (id: number) => void } = {}) {
   const [message, setMessage] = useState('');
-  const [effort, setEffort] = useState('low');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QueryResponse | null>(null);
   const [error, setError] = useState('');
@@ -738,7 +736,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'inherit' },
+    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low' },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
@@ -801,8 +799,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       token_budget: sc.tokenBudget,
       top_k: 60, // Keep as internal default; hidden from users per plan
       max_output_tokens: sc.maxOutputTokens,
-      // Only send an explicit override; 'inherit' falls back to the global effort
-      ...(sc.effort !== 'inherit' ? { effort: sc.effort } : {}),
+      effort: sc.effort,
     }));
   }
 
@@ -880,7 +877,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
           setStageTimes(prev => ({ ...prev, [lastKey]: now - lastTime }));
         }
         stageTimestamps.current[event.stage] = now;
-      }, undefined, buildSlotSpecs(), effort);
+      }, undefined, buildSlotSpecs());
       abortRef.current = abort;
       const res = await promise;
       // Capture final stage duration
@@ -1014,7 +1011,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       maxOutputTokens: 4096,
       color: nextSlotColor(),
       isBaseline: false,
-      effort: 'inherit',
+      effort: 'low',
     }]);
   }
 
@@ -1044,9 +1041,11 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
   return (
     <div className="query-lab-layout">
       <div className={`query-history${historyCollapsed ? ' collapsed' : ''}`}>
-        <h3 style={{ display: 'flex', alignItems: 'flex-end', gap: 6, paddingBottom: 6 }}>
+        {/* No inline alignment overrides: .query-history h3 is a centered 48px
+            box matching .sidebar-header, so the collapse arrows line up. */}
+        <h3>
           <span onClick={() => setHistoryCollapsed(c => !c)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-            <span className="sidebar-toggle" style={{ padding: 2 }}>{historyCollapsed ? '\u25B6' : '\u25C0'}</span>
+            <span className="sidebar-toggle" style={{ padding: 4 }}>{historyCollapsed ? '\u25B6' : '\u25C0'}</span>
             {!historyCollapsed && <span>History</span>}
           </span>
           {!historyCollapsed && (
@@ -1127,11 +1126,6 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
                 </div>
               )}
               <div className="query-controls-bottom">
-                <select className="control-select effort-select" value={effort} onChange={e => setEffort(e.target.value)} title="Default reasoning effort — slots set to 'Inherit' use this; per-card Effort overrides it">
-                  <option value="low">Effort: Low</option>
-                  <option value="medium">Effort: Medium</option>
-                  <option value="high">Effort: High</option>
-                </select>
                 <button className="btn" onClick={handleSubmit} disabled={loading || !message.trim()}>
                   {loading ? 'Processing...' : 'Submit'}
                 </button>

@@ -155,10 +155,6 @@ class TenantConfig:
         return self._modules["risk_categories"].GROUNDING_REF_PATTERN
 
     @property
-    def known_apps(self) -> list:
-        return self._modules["known_apps"].KNOWN_APPS
-
-    @property
     def baseline_prompt(self) -> str:
         return self._yaml.get("baseline_prompt", "")
 

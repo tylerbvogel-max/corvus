@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 from app.config import settings
 from app.database import engine, async_session
 from app.models import Base, Neuron, Engram, SystemState, BatchJob, SourceDocument, NeuronSourceLink, ManagementReview, ComplianceSnapshot, EvidenceMapping, ObservationQueue
-from app.models_corvus import CorvusKnownApp, CorvusSession, CorvusAdvisory  # noqa: F401 — for create_all
-from app.routers import query, neurons, admin, autopilot, performance, provenance, compliance, ingest, corvus, chat_sessions, engrams
+from app.routers import query, neurons, admin, autopilot, performance, provenance, compliance, ingest, chat_sessions, engrams
 from app.compliance.router import router as compliance_suite_router
 from app.compliance.models import ComplianceSuiteRun, ComplianceProviderResult, ComplianceAttestation  # noqa: F401 — for create_all
 from app.seed.loader import load_seed
@@ -607,32 +606,8 @@ async def _seed_engrams():
             print(f"Auto-embedded {embedded} engrams")
 
 
-async def _seed_corvus_and_compliance():
-    """Seed Corvus apps, initialize Corvus subsystem, seed evidence and compliance."""
-    import asyncio
-
-    # Seed Corvus known apps if table is empty
-    async with async_session() as db:
-        try:
-            ka_count = (await db.execute(select(func.count(CorvusKnownApp.id)))).scalar() or 0
-            if ka_count == 0:
-                for app_id, name, desc in tenant.known_apps:
-                    db.add(CorvusKnownApp(id=app_id, name=name, description=desc))
-                await db.commit()
-                print("Seeded Corvus known apps")
-        except (SQLAlchemyError, Exception) as e:
-            logger.warning("Corvus known apps seed skipped: %s", e)
-
-    # Initialize Corvus subsystem (session, custom apps, interpretation loop)
-    try:
-        from app.corvus.interpreter import init_session, interpretation_loop
-        from app.corvus.capture import load_custom_apps
-        await init_session()
-        await load_custom_apps()
-        _corvus_task = asyncio.create_task(interpretation_loop())
-    except (ImportError, SQLAlchemyError, Exception) as e:
-        logger.warning("Corvus init skipped: %s", e)
-
+async def _seed_compliance():
+    """Seed evidence mappings and take a compliance snapshot if due."""
     # Auto-seed evidence mappings if table is empty
     async with async_session() as db:
         try:
@@ -664,7 +639,7 @@ async def lifespan(app: FastAPI):
     await _seed_core_data()
     await _auto_embed_neurons()
     await _seed_engrams()
-    await _seed_corvus_and_compliance()
+    await _seed_compliance()
     # AIP Phase 1.5 GTM-B: start remote MCP session manager
     from app.mcp_http import mcp_lifespan
     async with mcp_lifespan():
@@ -732,7 +707,6 @@ app.include_router(performance.router)
 app.include_router(provenance.router)
 app.include_router(compliance.router)
 app.include_router(ingest.router)
-app.include_router(corvus.router)
 app.include_router(chat_sessions.router)
 app.include_router(engrams.router)
 app.include_router(compliance_suite_router)
@@ -831,7 +805,7 @@ if frontend_dist.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
     # SPA catch-all — must NOT match API prefixes
-    _api_prefixes = ("/neurons", "/queries", "/query", "/context", "/eval-scores", "/admin", "/health", "/tenant", "/tenants", "/docs", "/openapi", "/ingest", "/corvus", "/models", "/chat", "/learning-analytics", "/v1", "/mcp")
+    _api_prefixes = ("/neurons", "/queries", "/query", "/context", "/eval-scores", "/admin", "/health", "/tenant", "/tenants", "/docs", "/openapi", "/ingest", "/models", "/chat", "/learning-analytics", "/v1", "/mcp")
 
     def _is_api_path(path: str) -> bool:
         return bool(path) and any(path.startswith(p.lstrip("/")) for p in _api_prefixes)

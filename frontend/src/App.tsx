@@ -22,16 +22,13 @@ import HomePage from './components/HomePage'
 import SystemUseBanner from './components/SystemUseBanner'
 import EngramPage from './components/EngramPage'
 import AgentsPage from './components/AgentsPage'
-import AdvisorPanel from './components/AdvisorPanel'
-import useScreenCapture from './hooks/useScreenCapture'
-import AdvisorToast from './components/AdvisorToast'
 import ProposalQueuePage, { type ProposalProducerTarget, type OriginFilter } from './components/ProposalQueuePage'
 import DocumentIngestPage from './components/DocumentIngestPage'
 import IntegrityPage from './components/IntegrityPage'
 import GroupLandingPage from './components/GroupLandingPage'
 
-import { fetchTenantConfig, fetchAllTenants } from './config'
-import type { TenantConfig, TenantSummary } from './config'
+import { fetchTenantConfig } from './config'
+import type { TenantConfig } from './config'
 import { checkAccess, setAccessKey, getAccessKey } from './auth'
 import { fetchProposalStats } from './api'
 
@@ -59,7 +56,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'corvus-feed' | 'corvus-observations' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -121,27 +118,8 @@ const IconClock = (
   </svg>
 );
 
-const IconMonitor = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
-  </svg>
-);
-
-function buildNavGroups(tenantId: string | undefined): NavGroup[] {
+function buildNavGroups(_tenantId: string | undefined): NavGroup[] {
   const groups: NavGroup[] = [];
-
-  if (tenantId === 'corvus-apex') {
-    groups.push({
-      label: 'Corvus',
-      landingKey: 'corvus-feed',
-      description: 'Screen capture and observation pipeline',
-      icon: IconMonitor,
-      items: [
-        { key: 'corvus-feed', label: 'Screen Watcher', description: 'Live screen capture feed and OCR pipeline' },
-        { key: 'corvus-observations', label: 'Observations', description: 'Review and approve captured observations' },
-      ],
-    });
-  }
 
   groups.push(
     {
@@ -232,11 +210,7 @@ export default function App() {
   );
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
-  const [advisorOpen, setAdvisorOpen] = useState(false);
-  const [advisorUnread, setAdvisorUnread] = useState(0);
-  const screenCapture = useScreenCapture();
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
-  const [allTenants, setAllTenants] = useState<TenantSummary[]>([]);
   const [authStatus, setAuthStatus] = useState<'checking' | 'open' | 'valid' | 'needs_key'>('checking');
   const [keyInput, setKeyInput] = useState('');
   const [keyError, setKeyError] = useState(false);
@@ -254,12 +228,10 @@ export default function App() {
   useEffect(() => {
     if (authStatus === 'open' || authStatus === 'valid') {
       fetchTenantConfig().then(setTenantConfig);
-      fetchAllTenants().then(setAllTenants);
     }
   }, [authStatus]);
 
   const displayName = tenantConfig?.display_name ?? 'Corvus';
-  const otherTenants = allTenants.filter(t => t.tenant_id !== tenantConfig?.tenant_id);
 
   // Apply theme to document
   useEffect(() => {
@@ -390,20 +362,6 @@ export default function App() {
             {collapsed ? '\u25B6' : '\u25C0'}
           </button>
         </div>
-        {!collapsed && otherTenants.length > 0 && (
-          <div className="tenant-switcher">
-            {otherTenants.map(t => (
-              <a
-                key={t.tenant_id}
-                href={t.default_port ? `http://localhost:${t.default_port}` : '#'}
-                className="tenant-switcher-link"
-                title={`Switch to ${t.display_name}`}
-              >
-                {t.display_name} &rarr;
-              </a>
-            ))}
-          </div>
-        )}
         {!collapsed ? (
           <nav className="sidebar-nav">
             {navGroups.map(group => (
@@ -489,41 +447,8 @@ export default function App() {
             ))}
           </nav>
         )}
-        {/* Project info — always visible, even when collapsed */}
-        {!collapsed && (
-          <div className="sidebar-info-area" style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-muted, #888)', borderTop: '1px solid var(--border, #333)', marginTop: 'auto' }}>
-            <div style={{ marginBottom: 2, opacity: 0.7 }}>Running at <strong>http://localhost:8002</strong></div>
-            <a href="https://github.com/tylerbvogel-max/Corvus-2.0" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'monospace', fontSize: '10px', opacity: 0.5, color: 'inherit', textDecoration: 'none' }} onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')} onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}>github.com/tylerbvogel-max/Corvus-2.0</a>
-          </div>
-        )}
-        {/* Advisor + Settings — always visible, even when collapsed */}
+        {/* Settings — always visible, even when collapsed */}
         <div className="sidebar-settings-area">
-          <button
-            className="sidebar-settings-btn"
-            onClick={() => setAdvisorOpen(o => !o)}
-            title="Advisor"
-            style={{ color: advisorOpen || screenCapture.isCapturing ? 'var(--accent)' : undefined, position: 'relative' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="2" fill="currentColor" />
-              <path d="M16.24 7.76a6 6 0 0 1 0 8.49" />
-              <path d="M7.76 16.24a6 6 0 0 1 0-8.49" />
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-              <path d="M4.93 19.07a10 10 0 0 1 0-14.14" />
-            </svg>
-            {advisorUnread > 0 && (
-              <span style={{
-                position: 'absolute', top: 1, right: 1,
-                width: advisorUnread > 9 ? 16 : 14, height: 14,
-                borderRadius: 7, background: '#ef4444',
-                color: '#fff', fontSize: '0.55rem', fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                lineHeight: 1,
-              }}>
-                {advisorUnread > 9 ? '9+' : advisorUnread}
-              </span>
-            )}
-          </button>
           <button
             className="sidebar-settings-btn"
             onClick={() => setThemeMenuOpen(o => !o)}
@@ -566,8 +491,6 @@ export default function App() {
       )}
       <main className="app-main">
         {tab === 'home' && <HomePage onNavigate={k => setTab(k as Tab)} />}
-        <AdvisorPanel open={advisorOpen} onClose={() => setAdvisorOpen(false)} screenCapture={screenCapture} />
-        <AdvisorToast panelOpen={advisorOpen} onOpenPanel={() => setAdvisorOpen(true)} onUnreadChange={setAdvisorUnread} />
         {tab === 'explorer' && <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />}
         {tab === 'engrams' && <EngramPage />}
         {tab === 'agents' && <AgentsPage />}
