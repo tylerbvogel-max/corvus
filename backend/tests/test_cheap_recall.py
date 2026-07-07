@@ -1,22 +1,17 @@
 """Cheap recall mode (plat-cheap-recall) — hermetic tests.
 
-Covers: keyword tokenizer, neighbor-vote tally, pipeline mode selection,
-cheap stage output shape, and adaptive escalation. No DB, no LLM — the
-embed/vote helpers are patched.
+Covers: keyword tokenizer, neighbor-vote tally, pipeline stage selection, and
+cheap stage output shape. No DB, no LLM — the embed/vote helpers are patched.
 """
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.config import settings
 from app.services.scoring_engine import extract_keywords
 from app.services.executor import _tally_neighbor_votes
 from app.services.pipeline.state import PipelineState
-from app.services.pipeline.stages import (
-    AdaptiveClassifyStage, CheapClassifyStage, ClassifyStage,
-    build_default_pipeline,
-)
+from app.services.pipeline.stages import CheapClassifyStage, build_default_pipeline
 
 
 class _Ctx:
@@ -85,14 +80,10 @@ def test_neighbor_vote_ignores_null_tags():
 
 # ── Pipeline mode selection ──────────────────────────────────────────
 
-def test_pipeline_mode_selects_classify_stage():
-    full = build_default_pipeline("full")
+def test_pipeline_uses_cheap_classify_stage():
     cheap = build_default_pipeline("cheap")
-    adaptive = build_default_pipeline("adaptive")
-    assert isinstance(full[1], ClassifyStage)
     assert isinstance(cheap[1], CheapClassifyStage)
-    assert isinstance(adaptive[1], AdaptiveClassifyStage)
-    assert len(full) == len(cheap) == len(adaptive) == 9
+    assert len(cheap) == 9
 
 
 def test_pipeline_rejects_unknown_mode():
@@ -135,51 +126,3 @@ async def test_cheap_stage_survives_embedding_failure():
     assert state.query_embedding is None
     assert state.departments == []
     assert len(state.keywords) > 0  # keyword-only recall still works
-
-
-# ── Adaptive escalation ──────────────────────────────────────────────
-
-@pytest.mark.asyncio
-async def test_adaptive_stays_cheap_when_confident():
-    confident = settings.cheap_recall_confidence_threshold + 0.2
-    with patch(
-        "app.services.executor._embed_query_async",
-        new=AsyncMock(return_value=[0.1] * 384),
-    ), patch(
-        "app.services.executor._neighbor_vote_classify",
-        new=AsyncMock(return_value=(["Engineering"], [], confident)),
-    ), patch(
-        "app.services.executor._embed_and_classify",
-        new=AsyncMock(side_effect=AssertionError("LLM classify must not run")),
-    ):
-        state = await AdaptiveClassifyStage().run(_state(), _Ctx())
-
-    assert state.classify_result["recall_mode"] == "adaptive:cheap"
-    assert state.classify_result["cost_usd"] == 0.0
-
-
-@pytest.mark.asyncio
-async def test_adaptive_escalates_when_uncertain():
-    uncertain = max(0.0, settings.cheap_recall_confidence_threshold - 0.2)
-    llm_result = (
-        {"classification": {"intent": "engineering", "departments": ["Engineering"],
-                            "role_keys": ["mech_eng"], "keywords": ["torque"]},
-         "input_tokens": 120, "output_tokens": 40, "cost_usd": 0.0002},
-        [0.1] * 384, "engineering", ["Engineering"], ["mech_eng"], ["torque"],
-    )
-    with patch(
-        "app.services.executor._embed_query_async",
-        new=AsyncMock(return_value=[0.1] * 384),
-    ), patch(
-        "app.services.executor._neighbor_vote_classify",
-        new=AsyncMock(return_value=([], [], uncertain)),
-    ), patch(
-        "app.services.executor._embed_and_classify",
-        new=AsyncMock(return_value=llm_result),
-    ):
-        state = await AdaptiveClassifyStage().run(_state(), _Ctx())
-
-    assert state.classify_result["recall_mode"] == "adaptive:full"
-    assert state.intent == "engineering"
-    assert state.classify_result["input_tokens"] == 120
-    assert state.classify_result["neighbor_top_similarity"] == round(uncertain, 4)

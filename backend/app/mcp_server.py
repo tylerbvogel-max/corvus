@@ -99,7 +99,7 @@ mcp = FastMCP(
 @mcp.tool()
 async def query_graph(
     query: str, top_k: int = 30, token_budget: int = 4000,
-    project_path: str | None = None, mode: str = "cheap",
+    project_path: str | None = None,
     requester_regions: list[str] | None = None,
 ) -> str:
     """Run the neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
@@ -112,18 +112,12 @@ async def query_graph(
         top_k: Maximum neurons to activate (default 30)
         token_budget: Token budget for the assembled prompt (default 4000)
         project_path: Optional project directory path for per-project neuron boosting
-        mode: Recall mode — "cheap" (default: embed-only recall, never calls an
-            LLM), "adaptive" (cheap first, escalate to LLM classify only when the
-            query is ambiguous), or "full" (LLM classify on every read)
         requester_regions: Optional region scope for the requester — recall is
             bounded to knowledge visible to these regions (restricted regions
             outside this list are excluded). Omit for unrestricted recall.
     """
     from app.services.executor import prepare_context
     from app.services.region_policy import RequesterContext
-
-    if mode not in ("adaptive", "cheap", "full"):
-        return json.dumps({"error": f"mode must be adaptive|cheap|full, got {mode!r}"})
 
     requester = None
     if requester_regions is not None:
@@ -137,7 +131,6 @@ async def query_graph(
             token_budget=token_budget,
             top_k=top_k,
             project_path=project_path,
-            recall_mode=mode,
             requester=requester,
         )
         hop_session_id = await _persist_hop_session(db, ctx)

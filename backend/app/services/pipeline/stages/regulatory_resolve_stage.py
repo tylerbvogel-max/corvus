@@ -41,6 +41,5 @@ class RegulatoryResolveStage:
         return {
             "resolved": len(resolved),
             "cached": sum(1 for r in resolved if getattr(r, "source", None) == "cache"),
-            "live": sum(1 for r in resolved if getattr(r, "source", None) == "live_api"),
             "fallback": sum(1 for r in resolved if getattr(r, "source", None) == "fallback_summary"),
         }

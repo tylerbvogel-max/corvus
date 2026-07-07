@@ -1,67 +1,26 @@
-"""Classify stages: full (LLM), cheap (embed-only), adaptive (escalating).
+"""Classify stage: embed-only classification (zero LLM calls).
 
-plat-cheap-recall: the per-query LLM classify call is a latency + cost tax
-when an external agent recalls memory every turn. Cheap mode reproduces the
-classify outputs without a model — the graph classifies itself via neighbor
-vote. Adaptive mode is recognition-first (System 1) with LLM deliberation
-(System 2) only when recognition is uncertain.
+plat-cheap-recall: the per-query LLM classify call was a latency + cost tax and,
+on evaluation, lower-performance than this free path — so it was removed entirely.
+The graph classifies itself via a similarity-weighted neighbor vote; keywords come
+from the stopword-filtered tokenizer.
 """
 
 from typing import Any
 
-from app.config import settings
 from app.services.pipeline.context import PipelineContext
 from app.services.pipeline.state import PipelineState
-
-
-class ClassifyStage:
-    """Embed + LLM classify (concurrent via asyncio).
-
-    Reads:  state.user_message
-    Writes: state.classify_result, query_embedding, intent, departments, role_keys, keywords
-    """
-
-    name = "classify"
-
-    async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
-        # Import inside run to keep the stage module lightweight at startup.
-        from app.services.executor import _embed_and_classify
-        (
-            classify_result,
-            query_embedding,
-            intent,
-            departments,
-            role_keys,
-            keywords,
-        ) = await _embed_and_classify(state.user_message)
-        state.classify_result = classify_result
-        state.query_embedding = query_embedding
-        state.intent = intent
-        state.departments = departments
-        state.role_keys = role_keys
-        state.keywords = keywords
-        return state
-
-    def describe(self, out: PipelineState) -> dict[str, Any]:
-        return {
-            "intent": out.intent,
-            "departments": out.departments,
-            "role_keys": out.role_keys,
-            "keywords": out.keywords,
-        }
 
 
 class CheapClassifyStage:
     """Embed-only classification — zero LLM calls, zero marginal cost.
 
-    Keywords come from the stopword-filtered tokenizer; region/role tags
-    from a similarity-weighted vote over the top-k nearest neurons; intent
-    stays neutral (it only drives the closing-format instruction, and a
-    neutral default is acceptable for the agent-memory use case).
+    Keywords come from the stopword-filtered tokenizer; region/role tags from a
+    similarity-weighted vote over the top-k nearest neurons; intent stays neutral
+    (it only drives the closing-format instruction).
 
     Reads:  state.user_message
-    Writes: same fields as ClassifyStage (classify_result carries
-            recall_mode + neighbor_top_similarity for telemetry/escalation)
+    Writes: classify_result, query_embedding, intent, departments, role_keys, keywords
     """
 
     name = "classify"
@@ -108,40 +67,6 @@ class CheapClassifyStage:
         return {
             "recall_mode": out.classify_result.get("recall_mode"),
             "neighbor_top_similarity": out.classify_result.get("neighbor_top_similarity"),
-            "departments": out.departments,
-            "role_keys": out.role_keys,
-            "keywords": out.keywords,
-        }
-
-
-class AdaptiveClassifyStage:
-    """Cheap recall first; escalate to LLM classify only when uncertain.
-
-    Recognition (fast, automatic) handles the common case; deliberation
-    (LLM) fires only when the top neighbor similarity is below
-    settings.cheap_recall_confidence_threshold. The escalation re-embeds
-    the query (~ms, local) — negligible next to the LLM call it precedes.
-    """
-
-    name = "classify"
-
-    async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
-        state = await CheapClassifyStage().run(state, ctx)
-        top_similarity = state.classify_result.get("neighbor_top_similarity", 0.0)
-        if top_similarity >= settings.cheap_recall_confidence_threshold:
-            state.classify_result["recall_mode"] = "adaptive:cheap"
-            return state
-
-        state = await ClassifyStage().run(state, ctx)
-        state.classify_result["recall_mode"] = "adaptive:full"
-        state.classify_result["neighbor_top_similarity"] = round(top_similarity, 4)
-        return state
-
-    def describe(self, out: PipelineState) -> dict[str, Any]:
-        return {
-            "recall_mode": out.classify_result.get("recall_mode"),
-            "neighbor_top_similarity": out.classify_result.get("neighbor_top_similarity"),
-            "intent": out.intent,
             "departments": out.departments,
             "role_keys": out.role_keys,
             "keywords": out.keywords,

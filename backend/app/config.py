@@ -79,17 +79,12 @@ class Settings(BaseSettings):
     min_cofire_score: float = 0.3
     edge_prune_min_cofires: int = 2
     edge_prune_stale_queries: int = 100
-    # Recall mode for the query-prep pipeline (plat-cheap-recall):
-    #   cheap    - embed-only, zero LLM: tokenizer keywords + neighbor-vote regions (DEFAULT)
-    #   full     - LLM classify on every read (available, not default)
-    #   adaptive - cheap first, escalate to LLM classify when the top semantic
-    #              neighbor similarity is below the confidence threshold
-    # The per-query Haiku classify was removed from the default hot path (executive
-    # decision, 2026-07): ~18s of variable extended-thinking, occasional empty output,
-    # and the nested-session failure mode — for a task the free neighbor-vote handles
-    # as well or better. full/adaptive remain selectable for comparison/escalation.
+    # Query-prep classification is embed-only (neighbor-vote). The per-query LLM
+    # classify (the old full/adaptive recall modes) was DELETED (2026-07): ~18s of
+    # variable extended-thinking, occasional empty output, and the nested-session
+    # failure mode, for a task the free neighbor-vote handles as well or better.
+    # recall_mode is retained for forward-compat but only "cheap" is registered.
     recall_mode: str = "cheap"
-    cheap_recall_confidence_threshold: float = 0.35
     cheap_recall_neighbor_k: int = 8
     # Semantic pre-filter (replaces org-chart filtering)
     semantic_prefilter_enabled: bool = True

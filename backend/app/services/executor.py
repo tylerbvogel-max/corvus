@@ -16,7 +16,6 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models import Neuron, Query, NeuronEdge, CitationHopSession
-from app.services.classifier import classify_query
 from app.services.llm_provider import llm_chat, MODEL_REGISTRY
 from app.services.neuron_service import (
     get_neurons_by_filter,
@@ -69,28 +68,6 @@ async def _embed_query_async(user_message: str):
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
         from app.services.embedding_service import embed_text
         return await loop.run_in_executor(pool, embed_text, user_message)
-
-
-async def _embed_and_classify(user_message: str) -> tuple[dict, object, str, list, list, list]:
-    embed_task = asyncio.create_task(_embed_query_async(user_message))
-    classify_task = asyncio.create_task(classify_query(user_message))
-
-    classify_result = await classify_task
-    query_embedding = None
-    try:
-        query_embedding = await embed_task
-    except Exception as e:
-        print(f"Query embedding failed, falling back to keywords: {e}")
-
-    classification = classify_result["classification"]
-    intent = classification.get("intent", "general_query")
-    departments = classification.get("departments", [])
-    role_keys = classification.get("role_keys", [])
-    keywords = classification.get("keywords", [])
-
-    assert isinstance(classify_result, dict), "classify_result must be a dict"
-    assert isinstance(intent, str), "intent must be a string"
-    return classify_result, query_embedding, intent, departments, role_keys, keywords
 
 
 def _tally_neighbor_votes(
@@ -309,7 +286,6 @@ async def _resolve_fired_engrams(db, scored_engrams, effective_budget, _emit):
     await _emit("regulatory_resolve", {"status": "done", "detail": {
         "resolved": len(resolved),
         "cached": sum(1 for r in resolved if r.source == "cache"),
-        "live": sum(1 for r in resolved if r.source == "live_api"),
         "fallback": sum(1 for r in resolved if r.source == "fallback_summary"),
     }})
     return resolved
@@ -327,9 +303,9 @@ async def prepare_context(
     emits timing + telemetry and any stage failure hard-fails with a
     `PipelineStageError` carrying the stage name.
 
-    recall_mode (full | cheap | adaptive) selects the classify stage;
-    None falls back to settings.recall_mode. requester (RequesterContext)
-    bounds recall to the requester's regions; None = unrestricted.
+    recall_mode selects the classify stage (only "cheap" is registered — the LLM
+    classify was removed); None falls back to settings.recall_mode. requester
+    (RequesterContext) bounds recall to the requester's regions; None = unrestricted.
     """
     assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
         "user_message must be a non-empty string"
