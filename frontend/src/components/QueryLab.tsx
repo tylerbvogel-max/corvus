@@ -771,6 +771,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     setLoading(true);
     setError('');
     setResult(null);
+    setSlotResults({});  // clear prior slots so progressive population starts blank
     setEvalText(null);
     setEvalScores([]);
     setEvalWinner(null);
@@ -809,6 +810,13 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     try {
       const { promise, abort } = submitQueryStream(message, (event) => {
         setStageStatuses(prev => ({ ...prev, [event.stage]: event }));
+
+        // Progressive population: render each slot's answer the moment it lands,
+        // instead of waiting for the slowest slot's final result.
+        if (event.stage === 'slot_result' && event.detail && event.detail.slot_index !== undefined) {
+          const idx = event.detail.slot_index as number;
+          setSlotResults(prev => ({ ...prev, [idx]: event.detail as unknown as SlotResult }));
+        }
 
         // Track per-slot completion: remove slot from loading set when it finishes
         if (event.stage === 'execute_llm' && event.detail && 'slot_index' in event.detail && event.detail.slot_index !== undefined) {

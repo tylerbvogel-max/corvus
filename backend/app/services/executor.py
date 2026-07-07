@@ -961,6 +961,12 @@ async def _execute_slot(
                 "duration_ms": duration_ms,
                 "output_tokens": result_data["output_tokens"],
             }})
+            # Progressive population: emit this slot's full answer the moment it
+            # finishes, so the UI fills slots in as they complete (fast models
+            # first) instead of all-at-once after the slowest slot.
+            await on_stage("slot_result", {"status": "done", "detail": {
+                "slot_index": slot_index, **result,
+            }})
 
         return result
     except Exception as e:
