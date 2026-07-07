@@ -751,7 +751,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: false },
+    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
@@ -1028,7 +1028,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       color: nextSlotColor(),
       isBaseline: false,
       effort: 'low',
-      priming: false,
+      priming: true,
     }]);
   }
 

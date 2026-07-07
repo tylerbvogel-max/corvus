@@ -1341,6 +1341,7 @@ async def execute_query(
             "mode": "haiku_neuron",
             "token_budget": settings.token_budget,
             "top_k": settings.top_k_neurons,
+            "priming": True,
         }]
 
     # Always run neuron pipeline once (classify → score → spread → assemble)

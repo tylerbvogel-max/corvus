@@ -544,7 +544,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           }
         }
 
-        const slot: SlotSpec = { mode: `${model}_neuron`, token_budget: 8000, top_k: 60 };
+        // Workspace priming always on for the hero chat (Query Lab keeps a toggle)
+        const slot: SlotSpec = { mode: `${model}_neuron`, token_budget: 8000, top_k: 60, priming: true };
         const { promise, abort } = submitQueryStream(
           userMessage,
           (event: StageEvent) => setPipelineStages(prev => ({ ...prev, [event.stage]: event })),

@@ -13,9 +13,11 @@ class QuerySlotRequest(BaseModel):
     # effort). Enables side-by-side effort comparisons: same model, low vs high.
     effort: str | None = Field(None, pattern="^(low|medium|high)$")
     # Workspace priming: prefix this slot's prompt with a one-line topic
-    # preamble built from the packed sources. Per-slot so primed vs unprimed
-    # can be A/B-compared in one query.
-    priming: bool = False
+    # preamble built from the packed sources. Default ON (A/B eval 2026-07:
+    # +0.83 completeness, no accuracy/faithfulness cost) — front-facing chat
+    # inherits it; Query Lab sends an explicit per-card value so it stays
+    # toggleable for A/B comparisons. No-op for raw slots (no packed context).
+    priming: bool = True
 
 
 class QueryRequest(BaseModel):
