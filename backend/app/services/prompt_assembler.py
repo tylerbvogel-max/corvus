@@ -280,9 +280,11 @@ def _append_citation_instruction(
             "bracketed citation key as shown in that source's header, e.g. "
             "[FQ-1A2B3C]. These keys are unique to this answer. Only cite keys that "
             "actually appear in the source headers above — never invent, alter, or "
-            "reuse a key from elsewhere, and do not cite a regulation by its CFR "
-            "number unless it carries a citation key here. If a claim cannot be "
-            "traced to a listed key, say so explicitly rather than fabricating one."
+            "reuse a key from elsewhere. Do NOT name any regulation, standard, or "
+            "specification as authority (do not pull clause or standard numbers from "
+            "memory) unless it carries a citation key here. If a claim cannot be "
+            "traced to a listed key, say so explicitly rather than fabricating one or "
+            "invoking an ungrounded source."
         )
         return
     parts.append(

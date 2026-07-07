@@ -5950,6 +5950,16 @@ details summary:hover { color: var(--text); }
   cursor: help;
 }
 
+.ungrounded-badge {
+  padding: 2px 6px;
+  background: rgba(212, 175, 55, 0.15);
+  color: #d4af37;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 3px;
+  font-weight: 600;
+  cursor: help;
+}
+
 .card-loading-indicator {
   position: absolute;
   top: 12px;

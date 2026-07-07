@@ -941,6 +941,13 @@ async def _execute_slot(
         result_data["response_text"], citations_fabricated = await _clean_answer_citations(
             ctx, user_message, result_data["response_text"],
         )
+        # Ungrounded-authority detection: standards/regs the answer NAMED that aren't
+        # in the retrieved context (the frequency-hop layer can't see these — they're
+        # not [FQ-] keys). Deterministic string check against the assembled prompt.
+        ungrounded_refs = 0
+        if ctx is not None and getattr(ctx, "system_prompt", None):
+            from app.services.regulatory_coverage import count_ungrounded_refs
+            ungrounded_refs = count_ungrounded_refs(result_data["response_text"], ctx.system_prompt)
 
         duration_ms = round((time.monotonic() - start_time) * 1000)
 
@@ -949,6 +956,7 @@ async def _execute_slot(
             "model": model_name,
             "neurons": uses_neurons,
             "citations_fabricated": citations_fabricated,
+            "ungrounded_refs": ungrounded_refs,
             "response": result_data["response_text"],
             "input_tokens": result_data["input_tokens"],
             "output_tokens": result_data["output_tokens"],

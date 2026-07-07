@@ -81,6 +81,7 @@ export interface SlotResult {
   label: string | null;
   error?: boolean;
   citations_fabricated?: number;  // fake citations this slot produced (stripped by the exit layer)
+  ungrounded_refs?: number;       // standards/regs named as authority but absent from the retrieved context
 }
 
 export interface NeuronScoreResponse {

@@ -369,6 +369,11 @@ function ModelCard({
                     ⚠ {slotResult.citations_fabricated} fabricated
                   </span>
                 )}
+                {(slotResult.ungrounded_refs ?? 0) > 0 && (
+                  <span className="ungrounded-badge" title="Standards or regulations this model named as authority (e.g. 'per MIL-STD-1521') that do NOT appear in the retrieved context — grounding unverified">
+                    ◇ {slotResult.ungrounded_refs} ungrounded
+                  </span>
+                )}
               </div>
             </>
           )}
