@@ -99,7 +99,7 @@ mcp = FastMCP(
 @mcp.tool()
 async def query_graph(
     query: str, top_k: int = 30, token_budget: int = 4000,
-    project_path: str | None = None, mode: str = "adaptive",
+    project_path: str | None = None, mode: str = "cheap",
     requester_regions: list[str] | None = None,
 ) -> str:
     """Run the neuron graph pipeline (classify → score → spread → inhibit → assemble) and return enriched context.
@@ -112,9 +112,9 @@ async def query_graph(
         top_k: Maximum neurons to activate (default 30)
         token_budget: Token budget for the assembled prompt (default 4000)
         project_path: Optional project directory path for per-project neuron boosting
-        mode: Recall mode — "adaptive" (default: embed-only recall, LLM classify
-            only when the query is ambiguous), "cheap" (never call an LLM), or
-            "full" (LLM classify on every read)
+        mode: Recall mode — "cheap" (default: embed-only recall, never calls an
+            LLM), "adaptive" (cheap first, escalate to LLM classify only when the
+            query is ambiguous), or "full" (LLM classify on every read)
         requester_regions: Optional region scope for the requester — recall is
             bounded to knowledge visible to these regions (restricted regions
             outside this list are excluded). Omit for unrestricted recall.

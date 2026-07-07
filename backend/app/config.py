@@ -80,12 +80,15 @@ class Settings(BaseSettings):
     edge_prune_min_cofires: int = 2
     edge_prune_stale_queries: int = 100
     # Recall mode for the query-prep pipeline (plat-cheap-recall):
-    #   full     - LLM classify on every read (legacy default; HTTP/UI path)
-    #   cheap    - embed-only, zero LLM: tokenizer keywords + neighbor-vote regions
+    #   cheap    - embed-only, zero LLM: tokenizer keywords + neighbor-vote regions (DEFAULT)
+    #   full     - LLM classify on every read (available, not default)
     #   adaptive - cheap first, escalate to LLM classify when the top semantic
     #              neighbor similarity is below the confidence threshold
-    # The MCP query_graph tool defaults to adaptive (the seamless agent layer).
-    recall_mode: str = "full"
+    # The per-query Haiku classify was removed from the default hot path (executive
+    # decision, 2026-07): ~18s of variable extended-thinking, occasional empty output,
+    # and the nested-session failure mode — for a task the free neighbor-vote handles
+    # as well or better. full/adaptive remain selectable for comparison/escalation.
+    recall_mode: str = "cheap"
     cheap_recall_confidence_threshold: float = 0.35
     cheap_recall_neighbor_k: int = 8
     # Semantic pre-filter (replaces org-chart filtering)

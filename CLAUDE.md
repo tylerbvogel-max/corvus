@@ -73,9 +73,13 @@ TENANT_ID=corvus-aero docker compose up --build
   Bayesian shrinkage on invocations). Weights per-region overridable.
 - **Edges**: stellate = intra-region, pyramidal = cross-region (derived from
   region membership at write time), instantiates = concept links.
-- **Recall modes**: full (LLM classify) | cheap (embed-only + neighbor vote,
-  ~$0, ~300-600ms) | adaptive (cheap with LLM escalation on low similarity).
-  MCP `query_graph` defaults to adaptive; HTTP defaults to `settings.recall_mode`.
+- **Recall modes**: cheap (embed-only + neighbor vote, ~$0, ~300-600ms) | full
+  (LLM classify) | adaptive (cheap with LLM escalation on low similarity).
+  **cheap is the default** for both HTTP (`settings.recall_mode`) and MCP
+  `query_graph` — the per-query Haiku classify was removed from the hot path
+  (executive decision, 2026-07): ~18s of variable extended-thinking, occasional
+  empty output, and the nested-session failure mode, for a task the free
+  neighbor-vote handles as well or better. full/adaptive stay selectable.
 - **Write gate**: tiered policy (tenant.yaml `write_gate:` + per-region
   overrides). Observational writes auto-commit through the same Action Bus
   proposal.apply tree as human approvals; authoritative writes queue.
