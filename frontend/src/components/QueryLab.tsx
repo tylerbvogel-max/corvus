@@ -116,6 +116,8 @@ interface EnhancedSlotConfig {
   // Per-slot reasoning effort (low|medium|high). Enables same-model effort
   // comparisons (opus low vs opus high).
   effort: string;
+  // Workspace priming: prepend a focus line naming the packed topics.
+  priming: boolean;
 }
 
 /** Model tier for baseline fallback: highest tier wins. */
@@ -330,6 +332,19 @@ function ModelCard({
 
         {hasKG && (
           <>
+            {/* Workspace priming toggle */}
+            <div className="control-group">
+              <label className="control-label" title="Prefix this slot's prompt with a one-line focus preamble naming the packed context's key topics — pre-loads the model's active workspace before it reads the context.">
+                <input
+                  type="checkbox"
+                  checked={slot.priming}
+                  disabled={isLoading}
+                  onChange={e => onUpdate({ priming: e.target.checked })}
+                  style={{ cursor: isLoading ? 'default' : 'pointer' }}
+                />
+                <span>Priming: {slot.priming ? 'On' : 'Off'}</span>
+              </label>
+            </div>
             {/* Input Context slider */}
             <div className="control-group">
               <label className="control-label">Input Context</label>
@@ -736,7 +751,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low' },
+    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: false },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
@@ -800,6 +815,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       top_k: 60, // Keep as internal default; hidden from users per plan
       max_output_tokens: sc.maxOutputTokens,
       effort: sc.effort,
+      priming: sc.priming,
     }));
   }
 
@@ -1012,6 +1028,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       color: nextSlotColor(),
       isBaseline: false,
       effort: 'low',
+      priming: false,
     }]);
   }
 

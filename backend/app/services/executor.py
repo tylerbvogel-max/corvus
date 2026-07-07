@@ -3,7 +3,7 @@
 import asyncio
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Callable, Awaitable
 
@@ -928,6 +928,31 @@ def _apply_primary_overrides(model_name: str, skip_effort: bool = False) -> str:
     return model_name
 
 
+def _primed_ctx(ctx: PreparedContext) -> PreparedContext:
+    """Slot-scoped workspace-priming variant of the shared prepared context.
+
+    Returns a shallow copy whose system prompt is prefixed with a one-line
+    topic preamble built from the PACKED sources only — packed neurons (score
+    order) plus resolved regulations. The copy (not a mutation) keeps the
+    priming strictly per-slot, and downstream grounding checks see exactly the
+    prompt the model saw.
+    """
+    assert ctx is not None, "ctx must be populated for priming"
+    from app.services.prompt_assembler import build_priming_line
+
+    packed_ids = set(ctx.hop_map.token_by_neuron.keys()) if ctx.hop_map else set(ctx.neuron_map.keys())
+    labels = [
+        ctx.neuron_map[s.neuron_id].label
+        for s in ctx.all_scored
+        if s.neuron_id in packed_ids and s.neuron_id in ctx.neuron_map
+    ]
+    labels.extend(r.cfr_ref for r in (ctx.resolved_regulations or []))
+    line = build_priming_line(ctx.intent, labels)
+    if not line:
+        return ctx
+    return replace(ctx, system_prompt=line + ctx.system_prompt)
+
+
 def _apply_slot_overrides(slot: dict, model_name: str, is_primary: bool) -> str:
     """Per-slot effort override + primary quality floor. Returns the effective
     model name. Must run INSIDE the slot's asyncio task (own context copy) so
@@ -1001,6 +1026,8 @@ async def _execute_slot(
 
     model_name = _apply_slot_overrides(slot, model_name, is_primary)
     effective_effort = effort_var.get() or settings.default_effort
+    if slot.get("priming") and ctx is not None:
+        ctx = _primed_ctx(ctx)
 
     start_time = time.monotonic()
 

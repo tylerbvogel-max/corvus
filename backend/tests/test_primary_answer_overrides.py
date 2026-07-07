@@ -179,3 +179,53 @@ def test_effort_isolated_between_slot_tasks(monkeypatch):
     primary_effort, compare_effort = _run_isolated(lambda: asyncio.run(main()))
     assert primary_effort == "high", "primary slot must see the raised effort"
     assert compare_effort == "low", "compare slot must keep the request effort"
+
+
+# ---- workspace priming (_primed_ctx / build_priming_line) ----
+
+def test_build_priming_line_dedups_caps_and_formats():
+    from app.services.prompt_assembler import build_priming_line, PRIMING_MAX_TOPICS
+    labels = ["Torque calibration", "Torque calibration", "", "  ", "AS9100 design controls"]
+    line = build_priming_line("regulatory_query", labels)
+    assert line.count("Torque calibration") == 1, "labels must be deduped"
+    assert "AS9100 design controls" in line
+    assert "regulatory query" in line, "intent underscores must read as words"
+    assert line.endswith("\n\n"), "preamble must separate from the packed context"
+    many = [f"Topic {i}" for i in range(30)]
+    capped = build_priming_line("", many)
+    assert capped.count("Topic ") == PRIMING_MAX_TOPICS, "must cap at workspace size"
+    assert build_priming_line("x", []) == "", "no topics -> no line"
+
+
+def test_primed_ctx_prefixes_prompt_without_mutating_shared_ctx():
+    from unittest.mock import MagicMock
+    from app.services.executor import _primed_ctx, PreparedContext
+    from app.services.citation_hopping import HopMap
+
+    neuron = MagicMock()
+    neuron.label = "Design review governance"
+    scored = MagicMock()
+    scored.neuron_id = 7
+    ctx = PreparedContext(
+        system_prompt="PACKED CONTEXT",
+        intent="general_query",
+        departments=[], role_keys=[], keywords=[],
+        neuron_map={7: neuron},
+        all_scored=[scored],
+        hop_map=HopMap(token_by_neuron={7: "FQ-ABC123"}, neuron_by_token={"FQ-ABC123": 7}),
+    )
+    primed = _primed_ctx(ctx)
+    assert primed is not ctx, "priming must return a copy, never mutate the shared ctx"
+    assert ctx.system_prompt == "PACKED CONTEXT", "shared ctx must be untouched"
+    assert primed.system_prompt.endswith("PACKED CONTEXT")
+    assert "Design review governance" in primed.system_prompt
+    assert primed.hop_map is ctx.hop_map, "hop map must be shared, not rebuilt"
+
+
+def test_primed_ctx_no_labels_returns_same_ctx():
+    from app.services.executor import _primed_ctx, PreparedContext
+    ctx = PreparedContext(
+        system_prompt="PACKED", intent="general_query",
+        departments=[], role_keys=[], keywords=[],
+    )
+    assert _primed_ctx(ctx) is ctx, "nothing to prime -> shared ctx unchanged"

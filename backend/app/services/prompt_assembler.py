@@ -315,6 +315,40 @@ def _get_closing_instruction(intent: str, max_relevance: float) -> str:
     return instruction
 
 
+# Workspace priming: stating the key concepts up front pre-loads the model's
+# active workspace before it reads the packed context (transformer-circuits
+# 2026 "global workspace" finding: instructions alone modulate which ~10-25
+# concepts a model holds active). Capped near that workspace size.
+PRIMING_MAX_TOPICS = 10
+
+
+def build_priming_line(intent: str, topic_labels: list[str]) -> str:
+    """One-line focus preamble naming the packed context's key topics.
+
+    MUST be built only from labels of sources actually packed into the prompt
+    (never raw classify keywords): a topic named here but absent from the pack
+    would register as "grounded" and rot the ungrounded-refs detector.
+    Returns "" when there is nothing to prime with.
+    """
+    assert isinstance(topic_labels, list), "topic_labels must be a list"
+    assert isinstance(intent, str), "intent must be a string"
+
+    seen: dict[str, None] = {}
+    for label in topic_labels:
+        clean = (label or "").strip()
+        if clean:
+            seen.setdefault(clean, None)
+        if len(seen) >= PRIMING_MAX_TOPICS:
+            break
+    if not seen:
+        return ""
+    intent_part = f" ({intent.replace('_', ' ')})" if intent else ""
+    return (
+        f"Focus{intent_part}: this question concerns the following topics from "
+        f"the knowledge context below — {'; '.join(seen)}.\n\n"
+    )
+
+
 def _build_citation_labels(
     scored_neurons: list[NeuronScoreBreakdown],
     citation_tokens: dict[int, str] | None,

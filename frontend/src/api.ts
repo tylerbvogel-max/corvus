@@ -306,6 +306,7 @@ export interface SlotSpec {
   max_output_tokens?: number;
   label?: string;
   effort?: string;  // per-slot reasoning effort override (low|medium|high)
+  priming?: boolean; // prefix this slot's prompt with a packed-topic focus line
 }
 
 export interface GraphCapacity {

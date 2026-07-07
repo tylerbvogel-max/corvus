@@ -12,6 +12,10 @@ class QuerySlotRequest(BaseModel):
     # Per-slot reasoning effort override (None = inherit the request-level
     # effort). Enables side-by-side effort comparisons: same model, low vs high.
     effort: str | None = Field(None, pattern="^(low|medium|high)$")
+    # Workspace priming: prefix this slot's prompt with a one-line topic
+    # preamble built from the packed sources. Per-slot so primed vs unprimed
+    # can be A/B-compared in one query.
+    priming: bool = False
 
 
 class QueryRequest(BaseModel):
