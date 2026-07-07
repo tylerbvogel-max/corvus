@@ -680,6 +680,7 @@ function nextSlotColor(): string {
 
 export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: (id: number) => void } = {}) {
   const [message, setMessage] = useState('');
+  const [effort, setEffort] = useState('low');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QueryResponse | null>(null);
   const [error, setError] = useState('');
@@ -829,7 +830,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
           setStageTimes(prev => ({ ...prev, [lastKey]: now - lastTime }));
         }
         stageTimestamps.current[event.stage] = now;
-      }, undefined, buildSlotSpecs());
+      }, undefined, buildSlotSpecs(), effort);
       abortRef.current = abort;
       const res = await promise;
       // Capture final stage duration
@@ -1075,6 +1076,11 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
                 </div>
               )}
               <div className="query-controls-bottom">
+                <select value={effort} onChange={e => setEffort(e.target.value)} title="Reasoning effort — applies to all slots">
+                  <option value="low">Effort: Low</option>
+                  <option value="medium">Effort: Medium</option>
+                  <option value="high">Effort: High</option>
+                </select>
                 <button className="btn" onClick={handleSubmit} disabled={loading || !message.trim()}>
                   {loading ? 'Processing...' : 'Submit'}
                 </button>

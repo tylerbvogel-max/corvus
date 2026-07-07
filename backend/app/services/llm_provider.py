@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import os
+from contextvars import ContextVar
 from dataclasses import dataclass
 from types import MappingProxyType
 
@@ -24,6 +25,12 @@ _CLAUDE_CLI_PATH = os.environ.get(
     "CLAUDE_CLI_PATH",
     os.path.expanduser("~/.config/nvm/versions/node/v20.20.0/bin/claude"),
 )
+
+# Per-request reasoning effort (low|medium|high), set by the API layer and
+# inherited by concurrent slot tasks. None -> fall back to settings.default_effort.
+# Whitelisted before use (it becomes a CLI arg) — never interpolate raw input.
+effort_var: ContextVar[str | None] = ContextVar("llm_effort", default=None)
+_VALID_EFFORT = ("low", "medium", "high")
 
 logger = logging.getLogger(__name__)
 
@@ -233,6 +240,10 @@ async def _anthropic_chat(
     ]
     if system_prompt:
         args.extend(["--system-prompt", system_prompt])
+
+    effort = effort_var.get() or settings.default_effort
+    if effort in _VALID_EFFORT:
+        args.extend(["--effort", effort])
 
     # Strip CLAUDECODE/CLAUDE_CODE_* from env — the CLI refuses to launch nested
     # inside another Claude Code session. See CLAUDE.md "Claude CLI nested session".

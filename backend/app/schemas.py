@@ -21,6 +21,7 @@ class QueryRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=50000)
     slots: list[QuerySlotRequest] | None = None  # Multi-slot testing; if None, use default single slot
     prior_neuron_ids: list[int] | None = None
+    effort: str | None = None  # reasoning effort: low|medium|high (None -> settings.default_effort)
 
 
 class SlotResult(BaseModel):

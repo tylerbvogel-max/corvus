@@ -342,6 +342,7 @@ export function submitQueryStream(
   onStage?: (event: StageEvent) => void,
   prior_neuron_ids?: number[],
   slots?: SlotSpec[],
+  effort?: string,
 ): { promise: Promise<QueryResponse>; abort: () => void } {
   const controller = new AbortController();
 
@@ -352,6 +353,9 @@ export function submitQueryStream(
     }
     if (prior_neuron_ids && prior_neuron_ids.length > 0) {
       body.prior_neuron_ids = prior_neuron_ids;
+    }
+    if (effort) {
+      body.effort = effort;
     }
     const res = await fetch('/query/stream', {
       method: 'POST',

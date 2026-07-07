@@ -24,7 +24,7 @@ from app.schemas import (
 from app.governance.output_guard import GuardResult, run_guards
 from app.services.executor import execute_query, prepare_context
 from app.services.pipeline import PipelineStageError
-from app.services.llm_provider import llm_chat, estimate_cost, get_available_models, MODEL_REGISTRY
+from app.services.llm_provider import llm_chat, estimate_cost, get_available_models, MODEL_REGISTRY, effort_var
 from app.services import action_bus
 from app.middleware.rbac import UserIdentity, resolve_identity
 
@@ -96,6 +96,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=10000)
     model: str = Field("haiku")
     history: list[dict] = Field(default_factory=list)
+    effort: str | None = None  # reasoning effort: low|medium|high
 
 
 class ChatResponse(BaseModel):
@@ -133,6 +134,7 @@ async def simple_chat(req: ChatRequest):
     valid_names = get_valid_model_names()
     if req.model not in valid_names:
         raise HTTPException(status_code=400, detail=f"Invalid or unavailable model: {req.model}")
+    effort_var.set(req.effort)
     result = await llm_chat(system_prompt, user_message, max_tokens=2048, model=req.model)
     cost = estimate_cost(req.model, result["input_tokens"], result["output_tokens"])
     return ChatResponse(
@@ -556,6 +558,7 @@ async def post_query(
             },
         )
 
+    effort_var.set(req.effort)
     try:
         slot_dicts = [s.model_dump() for s in req.slots] if req.slots else None
         result = await execute_query(
@@ -591,6 +594,8 @@ async def post_query(
 @router.post("/query/stream")
 async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db)):
     """SSE streaming version of POST /query — emits pipeline stage events in real time."""
+
+    effort_var.set(req.effort)  # inherited by the run_pipeline task + its slot tasks
 
     queue: asyncio.Queue[dict | None] = asyncio.Queue(maxsize=1000)
     # JPL Rule 5: queue must be bounded to prevent unbounded memory growth

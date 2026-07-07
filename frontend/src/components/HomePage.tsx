@@ -460,6 +460,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const abortRef = useRef<(() => void) | null>(null);
   const [canAbort, setCanAbort] = useState(false);
   const [useNeurons, setUseNeurons] = useState(true);
+  const [effort, setEffort] = useState('low');
   const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -549,6 +550,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           (event: StageEvent) => setPipelineStages(prev => ({ ...prev, [event.stage]: event })),
           priorNeuronIds.length > 0 ? priorNeuronIds : undefined,
           [slot],
+          effort,
         );
         abortRef.current = abort;
         setCanAbort(true);
@@ -768,6 +770,11 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
             <option key={`hdr-${group}`} disabled>── {group} ──</option>,
             ...models.map(m => <option key={m.display_name} value={m.display_name}>{m.display_name}</option>),
           ]))}
+        </select>
+        <select className="chat-model-select" value={effort} onChange={e => setEffort(e.target.value)} title="Reasoning effort — higher deliberates more but is slower">
+          <option value="low">Effort: Low</option>
+          <option value="medium">Effort: Medium</option>
+          <option value="high">Effort: High</option>
         </select>
         <button
           className={`chat-neuron-toggle${useNeurons ? ' active' : ''}`}

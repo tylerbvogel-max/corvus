@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     tenant_id: str = "corvus-aero"
     cors_origins: str = ""  # Comma-separated; empty = auto from port
     haiku_model: str = "claude-haiku-4-5-20251001"
+    # Reasoning effort for Claude CLI calls (low|medium|high). Default low: the
+    # answer LLM's extended-thinking is the dominant query latency, and most
+    # answers don't need deep deliberation. Per-request overridable via the UI.
+    default_effort: str = "low"
     token_budget: int = 8000
     propagation_decay: float = 0.6
     top_k_neurons: int = 60
