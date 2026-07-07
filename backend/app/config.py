@@ -153,8 +153,6 @@ class Settings(BaseSettings):
     engram_cache_ttl_hours: int = 24
     engram_max_concurrent_fetches: int = 5
     engram_token_budget_fraction: float = 0.25
-    engram_fallback_on_api_failure: bool = True
-    engram_haiku_extract_threshold: int = 2000
     # Engram<->neuron association (EngramEdge). Recording grows the edges when
     # regulations fire alongside neurons (fixes a gap — cofiring was never
     # recorded); the boost lets a neuron pull in the regulations it co-fires

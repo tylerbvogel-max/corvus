@@ -110,8 +110,7 @@ async def warm_engram_cache(db: AsyncSession, force: bool = False) -> dict:
     engrams = list((await db.execute(
         select(Engram).where(Engram.is_active == True)  # noqa: E712
     )).scalars().all())
-    client = get_ecfr_client()
-    sem = asyncio.Semaphore(max(1, settings.engram_max_concurrent_fetches))
+    client = get_ecfr_client()  # already bounds concurrency (its own semaphore)
     stats = {"total": len(engrams), "fetched": 0, "failed": 0, "fresh": 0}
     now = datetime.datetime.utcnow()
 
@@ -119,14 +118,13 @@ async def warm_engram_cache(db: AsyncSession, force: bool = False) -> dict:
         if not force and _cache_is_valid(engram):
             stats["fresh"] += 1
             return
-        async with sem:
-            try:
-                text_content = await client.fetch_section(
-                    title=engram.cfr_title, part=engram.cfr_part,
-                    section=engram.cfr_section,
-                )
-            except Exception:  # network/parse failure -> keep prior cache
-                text_content = None
+        try:
+            text_content = await client.fetch_section(
+                title=engram.cfr_title, part=engram.cfr_part,
+                section=engram.cfr_section,
+            )
+        except Exception:  # network/parse failure -> keep prior cache
+            text_content = None
         if text_content:
             engram.cached_text = text_content
             engram.cached_at = now

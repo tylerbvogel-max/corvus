@@ -61,6 +61,32 @@ async def refresh_centrality(db: AsyncSession) -> int:
     return result.rowcount or 0
 
 
+async def _decay_stale_utility(db: AsyncSession, total_queries: int) -> tuple[int, int]:
+    """Decay utility on neurons that haven't fired recently; deactivate reclaimable
+    low-utility ones. Returns (decayed_count, deactivated_count)."""
+    recent_window = max(0, total_queries - 200)
+    recent_fired = await db.execute(
+        select(NeuronFiring.neuron_id).where(
+            NeuronFiring.global_query_offset >= recent_window
+        ).distinct()
+    )
+    recently_active_ids = {r[0] for r in recent_fired.all()}
+
+    all_neurons = await db.execute(select(Neuron).where(Neuron.is_active == True))
+    decayed = 0
+    deactivated = 0
+    for neuron in all_neurons.scalars():
+        if neuron.id in recently_active_ids:
+            continue
+        neuron.avg_utility *= settings.consolidation_decay_rate
+        decayed += 1
+        low_utility = neuron.avg_utility < settings.consolidation_deactivation_threshold
+        if low_utility and neuron.invocations > 0 and _is_reclaimable(neuron):
+            neuron.is_active = False
+            deactivated += 1
+    return decayed, deactivated
+
+
 async def run_consolidation(db: AsyncSession) -> dict:
     """Run periodic consolidation: decay, prune, deactivate, refresh centrality."""
     state_result = await db.execute(select(SystemState).where(SystemState.id == 1))
@@ -81,26 +107,7 @@ async def run_consolidation(db: AsyncSession) -> dict:
         pruned = 0
 
     # 2. Decay utility on neurons that haven't fired recently
-    recent_window = max(0, total_queries - 200)
-    recent_fired = await db.execute(
-        select(NeuronFiring.neuron_id).where(
-            NeuronFiring.global_query_offset >= recent_window
-        ).distinct()
-    )
-    recently_active_ids = {r[0] for r in recent_fired.all()}
-
-    all_neurons = await db.execute(select(Neuron).where(Neuron.is_active == True))
-    decayed = 0
-    deactivated = 0
-    for neuron in all_neurons.scalars():
-        if neuron.id not in recently_active_ids:
-            neuron.avg_utility *= settings.consolidation_decay_rate
-            decayed += 1
-
-            low_utility = neuron.avg_utility < settings.consolidation_deactivation_threshold
-            if low_utility and neuron.invocations > 0 and _is_reclaimable(neuron):
-                neuron.is_active = False
-                deactivated += 1
+    decayed, deactivated = await _decay_stale_utility(db, total_queries)
 
     # 3. Refresh degree centrality (cold-start prior input)
     centrality_updates = await refresh_centrality(db)
