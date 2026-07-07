@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     spread_decay: float = 0.5
     spread_min_activation: float = 0.15
     spread_max_hops: int = 3
+    spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500
     # Co-firing edge management

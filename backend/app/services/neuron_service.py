@@ -763,6 +763,127 @@ async def _select_promotion_targets(
     return promotions
 
 
+def _spread_neighbors_python(
+    scored: list[NeuronScoreBreakdown], top_k_count: int,
+) -> dict[int, float]:
+    """Reference frontier-BFS spread. Returns {node_id: max activation}.
+
+    The authoritative semantics: multi-hop, per-edge-type decay, MAX-across-paths,
+    with `visited` gating re-propagation (not the running activation max) and
+    top-k never promoted.
+    """
+    top_k = scored[:top_k_count]
+    top_k_ids = {s.neuron_id for s in top_k}
+    neighbor_activation: dict[int, float] = {}
+    frontier: dict[int, float] = {s.neuron_id: s.combined for s in top_k}
+    visited: set[int] = set(top_k_ids)
+    for _hop in range(settings.spread_max_hops):
+        frontier_id_set = set(frontier.keys())
+        if not frontier_id_set:
+            break
+        adjacency = _fetch_frontier_neighbors_cached(frontier_id_set)
+        if not adjacency:
+            break
+        next_frontier = _propagate_frontier(
+            frontier, adjacency, top_k_ids, visited, neighbor_activation,
+        )
+        if not next_frontier:
+            break
+        visited.update(next_frontier.keys())
+        frontier = next_frontier
+    return neighbor_activation
+
+
+def _spread_edge_gates(csr: dict) -> tuple:
+    """Static per-edge decay array + weight-OK mask (mirrors _compute_edge_activation)."""
+    etype = csr["etype"]
+    decay = np.where(
+        etype == 1, settings.spread_stellate_decay,
+        np.where(etype == 2, settings.spread_instantiate_decay, settings.spread_decay),
+    ).astype(np.float64)
+    min_w = np.where(
+        etype == 0, settings.spread_pyramidal_min_weight, settings.spread_min_edge_weight,
+    ).astype(np.float64)
+    weight_ok = csr["weight"] >= np.maximum(min_w, float(settings.spread_min_edge_weight))
+    return decay, weight_ok
+
+
+def _spread_seed_frontier(
+    scored: list[NeuronScoreBreakdown], top_k_count: int, id2idx: dict, n: int,
+) -> tuple:
+    """Build top-k mask, visited mask, and the initial frontier index/activation arrays."""
+    topk_mask = np.zeros(n, dtype=bool)
+    visited = np.zeros(n, dtype=bool)
+    fr_idx: list[int] = []
+    fr_act: list[float] = []
+    for s in scored[:top_k_count]:
+        i = id2idx.get(s.neuron_id)
+        if i is None:
+            continue
+        topk_mask[i] = True
+        visited[i] = True
+        fr_idx.append(i)
+        fr_act.append(s.combined)
+    return (topk_mask, visited,
+            np.array(fr_idx, dtype=np.int64), np.array(fr_act, dtype=np.float64))
+
+
+def _spread_neighbors_vectorized(
+    scored: list[NeuronScoreBreakdown], top_k_count: int,
+) -> dict[int, float]:
+    """Vectorized frontier-BFS spread — numpy scatter-max over CSR frontier edges.
+
+    Provably equivalent to _spread_neighbors_python: same hop count (spread_max_hops,
+    no cap), the same per-edge decay/min-weight/min-activation rules, MAX-across-paths,
+    and the same visited/top-k gating. Only the inner per-edge Python loop is replaced;
+    all math is float64 to bit-match the reference at the min-activation boundary.
+    """
+    from app.services.adjacency_cache import get_adjacency_csr
+    csr = get_adjacency_csr()
+    if not csr or int(csr["id_list"].size) == 0:
+        return {}
+    id_list = csr["id_list"]
+    indptr = csr["indptr"]
+    indices = csr["indices"]
+    weight = csr["weight"]
+    n = int(id_list.size)
+    decay, weight_ok = _spread_edge_gates(csr)
+    min_act = float(settings.spread_min_activation)
+    topk_mask, visited, frontier_idx, frontier_act = _spread_seed_frontier(
+        scored, top_k_count, csr["id2idx"], n,
+    )
+    neighbor = np.zeros(n, dtype=np.float64)
+
+    for _hop in range(settings.spread_max_hops):
+        if frontier_idx.size == 0:
+            break
+        starts = indptr[frontier_idx]
+        lengths = indptr[frontier_idx + 1] - starts
+        total = int(lengths.sum())
+        if total == 0:
+            break
+        base = np.repeat(starts, lengths)                       # ragged gather of
+        within = np.arange(total) - np.repeat(np.cumsum(lengths) - lengths, lengths)
+        epos = base + within                                    # frontier out-edges
+        cand = np.repeat(frontier_act, lengths) * weight[epos] * decay[epos]
+        valid = weight_ok[epos] & (cand >= min_act)
+        dst_v = indices[epos][valid]
+        cand_v = cand[valid]
+        if dst_v.size == 0:
+            break
+        newact = np.zeros(n, dtype=np.float64)
+        np.maximum.at(newact, dst_v, cand_v)         # MAX across paths this hop
+        newact[topk_mask] = 0.0                       # top-k never promoted/re-propagated
+        np.maximum(neighbor, newact, out=neighbor)    # running MAX across hops
+        next_mask = (newact > 0.0) & (~visited)       # only newly-seen nodes re-propagate
+        frontier_idx = np.where(next_mask)[0]
+        frontier_act = newact[frontier_idx]
+        visited |= next_mask
+
+    nz = np.where(neighbor > 0.0)[0]
+    return {int(id_list[i]): float(neighbor[i]) for i in nz}
+
+
 async def spread_activation(
     db: AsyncSession,
     scored: list[NeuronScoreBreakdown],
@@ -788,27 +909,15 @@ async def spread_activation(
 
     top_k = scored[:top_k_count]
     below_cutoff = scored[top_k_count:]
-    top_k_ids = {s.neuron_id for s in top_k}
     score_by_id = {s.neuron_id: s for s in scored}
 
-    neighbor_activation: dict[int, float] = {}
-    frontier: dict[int, float] = {s.neuron_id: s.combined for s in top_k}
-    visited: set[int] = set(top_k_ids)
-
-    for hop in range(settings.spread_max_hops):
-        frontier_id_set = set(frontier.keys())
-        if not frontier_id_set:
-            break
-        adjacency = _fetch_frontier_neighbors_cached(frontier_id_set)
-        if not adjacency:
-            break
-        next_frontier = _propagate_frontier(
-            frontier, adjacency, top_k_ids, visited, neighbor_activation,
-        )
-        if not next_frontier:
-            break
-        visited.update(next_frontier.keys())
-        frontier = next_frontier
+    # Multi-hop neighbor discovery (3+ hops, max-across-paths). The vectorized
+    # path is the numpy scatter-max reimplementation of the same BFS; the Python
+    # path is the reference. Both return {node_id: max activation}.
+    if settings.spread_vectorized:
+        neighbor_activation = _spread_neighbors_vectorized(scored, top_k_count)
+    else:
+        neighbor_activation = _spread_neighbors_python(scored, top_k_count)
 
     if not neighbor_activation:
         return scored

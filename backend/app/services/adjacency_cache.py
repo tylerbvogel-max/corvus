@@ -15,6 +15,11 @@ Feature-flagged via settings.spread_enabled (if spread is off, cache is never lo
 
 import threading
 
+import numpy as np
+
+# Edge-type codes for the vectorized CSR view (must match _compute_edge_activation).
+_ETYPE_CODE = {"stellate": 1, "instantiates": 2}  # everything else (pyramidal/regulatory) -> 0
+
 
 class _AdjacencyCache:
     """Thread-safe in-memory cache of the co-firing edge graph as adjacency lists."""
@@ -24,6 +29,8 @@ class _AdjacencyCache:
         # neuron_id -> [(neighbor_id, weight, edge_type)]
         self._adjacency: dict[int, list[tuple[int, float, str]]] = {}
         self._loaded = False
+        # Lazily-built CSR view for vectorized spread; invalidated on any mutation.
+        self._csr: dict | None = None
 
     @property
     def is_loaded(self) -> bool:
@@ -45,12 +52,14 @@ class _AdjacencyCache:
                 adj.setdefault(tgt, []).append((src, weight, etype))
             self._adjacency = adj
             self._loaded = True
+            self._csr = None
 
     def invalidate(self) -> None:
         """Force reload on next access (e.g. after edge pruning)."""
         with self._lock:
             self._loaded = False
             self._adjacency = {}
+            self._csr = None
 
     def update_edges(
         self,
@@ -72,6 +81,7 @@ class _AdjacencyCache:
                 self._update_single_direction(src, tgt, weight, etype)
                 # Update or add tgt -> src
                 self._update_single_direction(tgt, src, weight, etype)
+            self._csr = None
 
     def _update_single_direction(
         self, from_id: int, to_id: int, weight: float, etype: str,
@@ -104,6 +114,7 @@ class _AdjacencyCache:
                     self._adjacency[nid] = [
                         (n, w, e) for n, w, e in peer_list if n != neuron_id
                     ]
+            self._csr = None
 
     def remove_edges(
         self,
@@ -117,6 +128,7 @@ class _AdjacencyCache:
             for src, tgt in pairs:
                 self._remove_single_direction(src, tgt)
                 self._remove_single_direction(tgt, src)
+            self._csr = None
 
     def _remove_single_direction(self, from_id: int, to_id: int) -> None:
         """Remove a single direction of an edge. Must hold self._lock."""
@@ -150,6 +162,48 @@ class _AdjacencyCache:
                     if filtered:
                         result[nid] = filtered
             return result
+
+    def get_csr(self) -> dict | None:
+        """Lazily build + cache a CSR-by-source view for vectorized spread.
+
+        Keys: id_list (int64 [N], index->node id), id2idx (dict), indptr
+        (int64 [N+1], CSR row pointers by source index), indices (int64 [E],
+        destination index per out-edge), weight (float32 [E]), etype (int8 [E],
+        0 pyramidal/other · 1 stellate · 2 instantiates). Built from the same
+        symmetric adjacency dict, so it carries both edge directions.
+        """
+        with self._lock:
+            if self._csr is not None:
+                return self._csr
+            if not self._loaded:
+                return None
+            id_list = list(self._adjacency.keys())
+            id2idx = {nid: i for i, nid in enumerate(id_list)}
+            n = len(id_list)
+            indptr = np.zeros(n + 1, dtype=np.int64)
+            dst: list[int] = []
+            wts: list[float] = []
+            ets: list[int] = []
+            for i in range(n):
+                cnt = 0
+                for tgt, weight, etype in self._adjacency[id_list[i]]:
+                    j = id2idx.get(tgt)
+                    if j is None:
+                        continue
+                    dst.append(j)
+                    wts.append(weight)
+                    ets.append(_ETYPE_CODE.get(etype, 0))
+                    cnt += 1
+                indptr[i + 1] = indptr[i] + cnt
+            self._csr = {
+                "id_list": np.array(id_list, dtype=np.int64),
+                "id2idx": id2idx,
+                "indptr": indptr,
+                "indices": np.array(dst, dtype=np.int64),
+                "weight": np.array(wts, dtype=np.float64),  # float64 to match the reference path exactly
+                "etype": np.array(ets, dtype=np.int8),
+            }
+            return self._csr
 
 
 # Module-level singleton
@@ -243,6 +297,11 @@ def get_cached_neighbors(
 ) -> dict[int, list[tuple[int, float, str]]]:
     """Return cached neighbor lists for spread activation."""
     return _cache.get_neighbors(neuron_ids, min_weight)
+
+
+def get_adjacency_csr() -> dict | None:
+    """Return the cached CSR-by-source view for vectorized spread (None if unloaded)."""
+    return _cache.get_csr()
 
 
 def is_adjacency_loaded() -> bool:
