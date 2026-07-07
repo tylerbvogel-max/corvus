@@ -63,14 +63,20 @@ def extract_standard_refs(text: str) -> set[str]:
     return refs
 
 
-def count_ungrounded_refs(answer: str, context_text: str) -> int:
-    """Count regulation/standard references named in the answer that do NOT appear
-    in the retrieved context — authority the model invoked without grounding (the
-    'per MIL-STD-1521' case the frequency-hop layer can't see since it's not an
-    [FQ-] key). Deterministic; conservative to avoid spurious flags."""
+def list_ungrounded_refs(answer: str, context_text: str) -> list[str]:
+    """Normalised regulation/standard references named in the answer that do NOT
+    appear in the retrieved context — authority the model invoked without
+    grounding (the 'per MIL-STD-1521' case the frequency-hop layer can't see
+    since it's not an [FQ-] key). Deterministic; conservative to avoid spurious
+    flags. Sorted so the output is stable for persistence and the UI."""
     if not answer or not context_text:
-        return 0
-    return len(extract_standard_refs(answer) - extract_standard_refs(context_text))
+        return []
+    return sorted(extract_standard_refs(answer) - extract_standard_refs(context_text))
+
+
+def count_ungrounded_refs(answer: str, context_text: str) -> int:
+    """Count of list_ungrounded_refs — kept as the badge/audit scalar."""
+    return len(list_ungrounded_refs(answer, context_text))
 
 
 def _cfr_family(ref: str) -> str | None:

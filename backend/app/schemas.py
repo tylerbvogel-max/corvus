@@ -75,6 +75,8 @@ class OutputCheckOut(BaseModel):
     mode: str | None = None
     risk_flags: list[dict] = []
     grounding: GroundingOut | None = None
+    # Opt-in claim-entailment pass (advisory): checked/unsupported_count/results/status
+    entailment: dict | None = None
 
 
 class OutputViolationOut(BaseModel):

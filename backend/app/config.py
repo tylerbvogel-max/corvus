@@ -39,6 +39,27 @@ class Settings(BaseSettings):
     # answer LLM's extended-thinking is the dominant query latency, and most
     # answers don't need deep deliberation. Per-request overridable via the UI.
     default_effort: str = "low"
+    # Primary-answer quality floor (grounding backlog §6.5). Slot 0 is the
+    # primary answer — the one persisted to query.response_text and audited by
+    # the citation-exit layer. Weak models at low effort invent references more
+    # freely, so the primary may run at higher effort and/or a stronger model
+    # while compare slots stay cheap.
+    # primary_answer_effort: minimum effort for the primary slot ("" = inherit
+    # the request effort unchanged). Acts as a FLOOR — never lowers an
+    # explicitly higher per-request effort.
+    primary_answer_effort: str = "medium"
+    # primary_answer_model: MODEL_REGISTRY key to swap the primary slot's model
+    # to ("" = keep the slot's own model). Invalid keys are ignored.
+    primary_answer_model: str = ""
+    # Entailment / claim-grounding check (grounding backlog §6.4). A valid [FQ]
+    # key proves the source was in context, NOT that the claim is entailed by
+    # it. This opt-in pass judges each cited claim of the PRIMARY answer
+    # against its cited source content — one extra batched LLM call per query,
+    # advisory only (never blocks or mutates the answer).
+    entailment_check_enabled: bool = False
+    entailment_check_model: str = "haiku"
+    entailment_max_claims: int = 10       # cap on judged claims per answer
+    entailment_source_chars: int = 1500   # per-source excerpt cap in the judge prompt
     token_budget: int = 8000
     propagation_decay: float = 0.6
     top_k_neurons: int = 60

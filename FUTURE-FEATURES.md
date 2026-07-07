@@ -100,32 +100,33 @@ it doesn't pollute the grounding context).
   numbers in it would make them appear in `ctx.system_prompt` and be treated as
   "grounded," causing false negatives.
 
-## 6. Pending features (pick one)
+## 6. Pending features
 
-### 3. Inline UI distinction: map-backed citation vs. bare prose reference
-Validated `[FQ]` citations already render as clean superscripts. *Visually mark*
-standard references in prose that carry no citation token (subtle underline / amber
-tint) so a reader sees which authority claims are grounded vs. asserted. Turns the
-`ungrounded_refs` count into inline context. **Frontend-only:** reuse
-`extract_standard_refs` (port the patterns to TS, or return positions from the
-backend) + the response `citation_map`. Start in `QueryLab.tsx` answer render.
-
-### 4. Entailment / claim-grounding check (deepest, opt-in)
-A valid `[FQ]` key proves the source is *in context*, not that the claim is
-*entailed* by it (hopping explicitly leaves entailment out of scope). Add an opt-in
-LLM grounding pass on the **primary** answer: check each cited claim against its
-cited neuron's content, flag "cited a real source, but it doesn't say that."
-High cost (extra LLM call) → primary-only + config-gated. Seam:
-`input_guard.check_output_grounding` (already run on the primary in `query.py`).
-
-### 5. Primary answer on higher effort / stronger model
-Haiku at low effort invents references more freely. Run the **primary** answer at
-medium effort (or sonnet) for better grounding while compare slots stay cheap.
-Expose as settings (`primary_answer_effort`, `primary_answer_model`) — don't
-hardcode. Wire in `execute_query`/`_execute_slot`; effort already flows via
-`effort_var`.
+*(all shipped 2026-07-07 — see §7; kept for reference)*
 
 ## 7. Shipped so far (context, not to redo)
+- **§6.5 Primary answer quality floor** — `primary_answer_effort` (default `medium`,
+  acts as a floor: never lowers an explicit higher request effort; `""` disables)
+  + `primary_answer_model` (`""` = keep slot model; must be a MODEL_REGISTRY key).
+  Applied to slot 0 only, inside its asyncio task context so the `effort_var` bump
+  can't leak to compare slots (`executor._apply_primary_overrides`).
+  Tests: `tests/test_primary_answer_overrides.py`.
+- **§6.3 Inline ungrounded-ref marks** — backend now returns
+  `ungrounded_ref_list` (normalised refs) per slot alongside the count
+  (`regulatory_coverage.list_ungrounded_refs`); frontend
+  (`src/standardRefs.ts`, pattern port — keep in sync with backend) wraps
+  occurrences in `<mark class="ungrounded-ref">` (gold dotted underline) in all
+  QueryLab answer renders. Backend decides WHICH refs are ungrounded; TS only
+  locates them.
+- **§6.4 Entailment check** — opt-in (`entailment_check_enabled`, default OFF;
+  knobs: `entailment_check_model/max_claims/source_chars`). One batched judge
+  call on the PRIMARY answer: sentences citing `[FQ]` keys are checked against
+  their cited neuron/engram content (`services/entailment_check.py`,
+  hop map loaded via `Query.citation_hop_session_id`). Advisory only — attaches
+  `entailment` to `output_checks[0]`, SSE stage `entailment_check`, QueryLab
+  badge "Entailment: n/m supported". Live-verified: caught a real
+  cited-source-doesn't-say-that (MIL-STD-882E) on query 497.
+  Tests: `tests/test_entailment_check.py`.
 - Per-slot citation exit + `⚠ fabricated` badge; `citation_hop_failure_mode` → `strip`. (commit 1c9cde2)
 - Ungrounded-reference detection + `◇ ungrounded` badge + generic guardrail. (commit 572135c)
 - Progressive per-slot streaming. (8a11ce0) · Effort control. (7fdd2ed) · Classifier deletion. (f669f2c)

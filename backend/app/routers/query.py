@@ -513,6 +513,22 @@ async def _run_output_gate(
         )
 
 
+async def _maybe_attach_entailment(db: AsyncSession, result: dict, output_checks: list[dict]) -> None:
+    """Attach the opt-in claim-entailment pass to the primary output check.
+
+    Advisory and config-gated (settings.entailment_check_enabled): one extra
+    batched LLM call judging each cited claim of the PRIMARY answer against
+    its cited source content. Never blocks or mutates the answer.
+    """
+    assert isinstance(output_checks, list), "output_checks must be a list"
+    if not settings.entailment_check_enabled or not output_checks:
+        return
+    from app.services.entailment_check import run_entailment_check
+    output_checks[0]["entailment"] = await run_entailment_check(
+        db, result.get("response_text", ""), result.get("query_id"),
+    )
+
+
 def _legacy_output_checks(result: dict) -> list[dict]:
     """Risk-flag + grounding check on combined response text (legacy path)."""
     response_text = result.get("response_text", "")
@@ -587,6 +603,7 @@ async def post_query(
 
     result["input_guard"] = guard_result.to_dict()
     result["output_checks"] = _legacy_output_checks(result)
+    await _maybe_attach_entailment(db, result, result["output_checks"])
 
     return QueryResponse(**result)
 
@@ -650,6 +667,18 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
                 })
 
             await on_stage("output_checks", {"status": "done", "detail": {"checked": len(output_checks)}})
+
+            # Opt-in entailment pass on the primary answer (one batched LLM
+            # call, advisory) — emitted as its own stage so the viz shows it.
+            if settings.entailment_check_enabled and output_checks:
+                await on_stage("entailment_check", {"status": "running", "detail": {}})
+                await _maybe_attach_entailment(db, result, output_checks)
+                ent = output_checks[0].get("entailment") or {}
+                await on_stage("entailment_check", {"status": "done", "detail": {
+                    "checked": ent.get("checked", 0),
+                    "unsupported": ent.get("unsupported_count", 0),
+                    "state": ent.get("status", "unknown"),
+                }})
 
             result["input_guard"] = guard_result.to_dict()
             result["output_checks"] = output_checks

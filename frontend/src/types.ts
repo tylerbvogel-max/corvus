@@ -82,6 +82,7 @@ export interface SlotResult {
   error?: boolean;
   citations_fabricated?: number;  // fake citations this slot produced (stripped by the exit layer)
   ungrounded_refs?: number;       // standards/regs named as authority but absent from the retrieved context
+  ungrounded_ref_list?: string[]; // the normalised refs behind that count — drives inline answer marks
 }
 
 export interface NeuronScoreResponse {
@@ -117,10 +118,30 @@ export interface GroundingOut {
   reason: string;
 }
 
+export interface EntailmentResultOut {
+  claim: string;
+  sources: string[];
+  supported: boolean | null;
+  reason: string;
+}
+
+// Opt-in claim-entailment pass on the primary answer (advisory).
+// status: ok | no_answer | no_hop_session | no_cited_claims |
+//         no_resolvable_sources | llm_error | parse_error
+export interface EntailmentOut {
+  checked: number;
+  status: string;
+  unsupported_count?: number;
+  results?: EntailmentResultOut[];
+  cost_usd?: number;
+  error?: string;
+}
+
 export interface OutputCheckOut {
   mode: string | null;
   risk_flags: { category: string; description: string; excerpt: string }[];
   grounding: GroundingOut | null;
+  entailment?: EntailmentOut | null;
 }
 
 export interface StageTelemetry {

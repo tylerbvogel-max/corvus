@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models import Neuron, Query, NeuronEdge, CitationHopSession
-from app.services.llm_provider import llm_chat, MODEL_REGISTRY
+from app.services.llm_provider import llm_chat, MODEL_REGISTRY, effort_var
 from app.services.neuron_service import (
     get_neurons_by_filter,
     get_system_state,
@@ -902,6 +902,58 @@ async def _update_counters_and_fire(
     await db.commit()
 
 
+_EFFORT_RANK = MappingProxyType({"low": 0, "medium": 1, "high": 2})
+
+
+def _apply_primary_overrides(model_name: str) -> str:
+    """Primary-slot quality floor: raise reasoning effort (never lower it) and
+    optionally swap to a stronger model, per settings. Returns the effective
+    model name.
+
+    Must run INSIDE the slot's asyncio task: each task gets its own copy of the
+    execution context, so the effort_var set here is visible only to this
+    slot's LLM calls — compare slots keep the request-level effort.
+    """
+    assert isinstance(model_name, str) and model_name, "model_name must be non-empty"
+
+    floor = settings.primary_answer_effort
+    if floor in _EFFORT_RANK:
+        current = effort_var.get() or settings.default_effort
+        if _EFFORT_RANK.get(current, 0) < _EFFORT_RANK[floor]:
+            effort_var.set(floor)
+
+    override = settings.primary_answer_model
+    if override and override in MODEL_REGISTRY:
+        return override
+    return model_name
+
+
+async def _slot_grounding_guards(
+    ctx: PreparedContext | None, user_message: str, response_text: str,
+) -> tuple[str, int, int]:
+    """Per-slot grounding exits, applied to EVERY slot's answer before it streams.
+
+    1. Citation exit: strip fabricated [FQ] citations and count them, so every
+       compare slot is guarded — not just the primary — and the UI can show
+       which models fabricate.
+    2. Ungrounded-authority detection: standards/regs the answer NAMED that
+       aren't in the retrieved context (the frequency-hop layer can't see
+       these — they're not [FQ-] keys). Deterministic string check against the
+       assembled prompt. The normalised ref list feeds the inline UI marks;
+       its length is the badge count.
+
+    Returns (cleaned_text, citations_fabricated, ungrounded_ref_list).
+    """
+    assert isinstance(response_text, str), "response_text must be a string"
+
+    cleaned, citations_fabricated = await _clean_answer_citations(ctx, user_message, response_text)
+    ungrounded_list: list[str] = []
+    if ctx is not None and getattr(ctx, "system_prompt", None):
+        from app.services.regulatory_coverage import list_ungrounded_refs
+        ungrounded_list = list_ungrounded_refs(cleaned, ctx.system_prompt)
+    return cleaned, citations_fabricated, ungrounded_list
+
+
 async def _execute_slot(
     db: AsyncSession,
     slot: dict,
@@ -909,6 +961,7 @@ async def _execute_slot(
     user_message: str,
     ctx: PreparedContext | None,
     on_stage: StageCallback = None,
+    is_primary: bool = False,
 ) -> dict:
     """Execute a single slot with its model configuration.
 
@@ -928,6 +981,9 @@ async def _execute_slot(
     slot_type = parts[1] if len(parts) > 1 else "neuron"
     uses_neurons = slot_type == "neuron"
 
+    if is_primary:
+        model_name = _apply_primary_overrides(model_name)
+
     start_time = time.monotonic()
 
     try:
@@ -935,19 +991,9 @@ async def _execute_slot(
             db, user_message, ctx, model_name, uses_neurons, on_stage,
         )
 
-        # Per-slot citation exit: strip fabricated citations from THIS slot's answer
-        # (before it streams) and count them, so every compare slot is guarded — not
-        # just the primary — and the UI can show which models fabricate.
-        result_data["response_text"], citations_fabricated = await _clean_answer_citations(
-            ctx, user_message, result_data["response_text"],
+        result_data["response_text"], citations_fabricated, ungrounded_list = (
+            await _slot_grounding_guards(ctx, user_message, result_data["response_text"])
         )
-        # Ungrounded-authority detection: standards/regs the answer NAMED that aren't
-        # in the retrieved context (the frequency-hop layer can't see these — they're
-        # not [FQ-] keys). Deterministic string check against the assembled prompt.
-        ungrounded_refs = 0
-        if ctx is not None and getattr(ctx, "system_prompt", None):
-            from app.services.regulatory_coverage import count_ungrounded_refs
-            ungrounded_refs = count_ungrounded_refs(result_data["response_text"], ctx.system_prompt)
 
         duration_ms = round((time.monotonic() - start_time) * 1000)
 
@@ -956,7 +1002,8 @@ async def _execute_slot(
             "model": model_name,
             "neurons": uses_neurons,
             "citations_fabricated": citations_fabricated,
-            "ungrounded_refs": ungrounded_refs,
+            "ungrounded_refs": len(ungrounded_list),
+            "ungrounded_ref_list": ungrounded_list,
             "response": result_data["response_text"],
             "input_tokens": result_data["input_tokens"],
             "output_tokens": result_data["output_tokens"],
@@ -965,7 +1012,8 @@ async def _execute_slot(
             "cache_read_tokens": result_data["cache_read"],
             "token_budget": token_budget,
             "top_k": ctx.neurons_activated if ctx else 0,
-            "label": label or _eval_slot_label(mode, uses_neurons, token_budget),
+            # Label from the EFFECTIVE model (primary override may differ from mode)
+            "label": label or _eval_slot_label(f"{model_name}_{slot_type}", uses_neurons, token_budget),
             "model_version": result_data.get("model_version"),
         }
 
@@ -1281,6 +1329,8 @@ async def execute_query(
         # Pass ctx only if this slot should receive neuron context
         slot_ctx = ctx if uses_neurons else None
 
+        # Slot 0 is the primary answer (persisted to query.response_text) —
+        # eligible for the primary_answer_effort/model quality floor.
         task = _execute_slot(
             db=db,
             slot=slot,
@@ -1288,6 +1338,7 @@ async def execute_query(
             user_message=user_message,
             ctx=slot_ctx,
             on_stage=on_stage,
+            is_primary=(i == 0),
         )
         slot_tasks.append(task)
 

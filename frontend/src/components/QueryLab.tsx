@@ -7,6 +7,7 @@ import TokenCharts from './TokenCharts'
 import NeuronTreeViz from './NeuronTreeViz'
 import { DetailChips, StatusPill, categorizeDetail, fmtDuration } from './pipelineDetail'
 import { marked } from 'marked'
+import { markUngroundedRefs } from '../standardRefs'
 
 
 
@@ -360,7 +361,7 @@ function ModelCard({
             <div className="response-error">{slotResult.response}</div>
           ) : (
             <>
-              <div className="response-text markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(slotResult.response ?? '', { async: false }) as string }} />
+              <div className="response-text markdown-body" dangerouslySetInnerHTML={{ __html: markUngroundedRefs(marked.parse(slotResult.response ?? '', { async: false }) as string, slotResult.ungrounded_ref_list) }} />
               <div className="response-meta">
                 <span className="cost-badge">${slotResult.cost_usd.toFixed(4)}</span>
                 <span className="tokens-badge">{slotResult.input_tokens + (slotResult.cache_creation_tokens ?? 0) + (slotResult.cache_read_tokens ?? 0) + slotResult.output_tokens} tokens</span>
@@ -1460,6 +1461,15 @@ function LiveResult({ result, loading, message, stageStatuses, slotLoadingSet, s
                             {rf.category}
                           </span>
                         ))}
+                        {check.entailment && check.entailment.checked > 0 && (
+                          <span style={{
+                            fontSize: '0.6rem', padding: '1px 5px', borderRadius: 3,
+                            background: (check.entailment.unsupported_count ?? 0) > 0 ? '#fb923c22' : '#22c55e22',
+                            color: (check.entailment.unsupported_count ?? 0) > 0 ? '#fb923c' : '#22c55e',
+                          }} title={(check.entailment.results ?? []).filter(r => r.supported === false).map(r => `✗ ${r.claim} — ${r.reason}`).join('\n') || 'Every cited claim is supported by its cited source'}>
+                            Entailment: {check.entailment.checked - (check.entailment.unsupported_count ?? 0)}/{check.entailment.checked} supported
+                          </span>
+                        )}
                       </div>
                     )}
                     {slot.error ? (
@@ -1467,7 +1477,7 @@ function LiveResult({ result, loading, message, stageStatuses, slotLoadingSet, s
                         {slot.response}
                       </div>
                     ) : (
-                      <div className="response-text markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(slot.response ?? '', { async: false }) as string }} />
+                      <div className="response-text markdown-body" dangerouslySetInnerHTML={{ __html: markUngroundedRefs(marked.parse(slot.response ?? '', { async: false }) as string, slot.ungrounded_ref_list) }} />
                     )}
                     {!slot.error && (slot.input_tokens > 0 || (slot.cache_creation_tokens ?? 0) > 0 || (slot.cache_read_tokens ?? 0) > 0) && (
                       <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: '0.75rem', color: 'var(--text-dim)', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
@@ -1685,7 +1695,7 @@ function HistoryDetail({ query, baseline, onNavigateToNeuron }: { query: QueryDe
               <div key={i} className="output-card" style={{ borderLeft: `3px solid ${getModeColor(slot.mode)}` }}>
                 <div className="output-card-header" style={{ color: getModeColor(slot.mode) }}>{slotDisplayLabel(slot)}</div>
                 {slot.error ? <div style={{ padding: '8px', background: '#ef444422', borderRadius: 4, color: '#fca5a5', fontSize: '0.82rem' }}>{slot.response}</div>
-                  : <div className="response-text markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(slot.response ?? '', { async: false }) as string }} />}
+                  : <div className="response-text markdown-body" dangerouslySetInnerHTML={{ __html: markUngroundedRefs(marked.parse(slot.response ?? '', { async: false }) as string, slot.ungrounded_ref_list) }} />}
               </div>
             ))}
           </div>

@@ -77,3 +77,27 @@ def test_upsert_bumps_existing_pending():
     asyncio.run(rc._upsert_coverage_gap(db, "48 CFR 31.205-6", 9))
     assert existing.detection_count == 2
     assert db.add.call_count == 0
+
+
+# ---- Ungrounded-reference detection (grounding backlog) ----
+
+def test_list_ungrounded_refs_flags_missing_standard():
+    answer = "Per MIL-STD-1521B and AS9100D, reviews are mandatory."
+    context = "Design reviews follow AS 9100 quality requirements."
+    refs = rc.list_ungrounded_refs(answer, context)
+    assert refs == ["MIL-STD-1521"], "only the standard absent from context is flagged"
+    assert rc.count_ungrounded_refs(answer, context) == 1
+
+
+def test_list_ungrounded_refs_sorted_and_normalised():
+    answer = "See DO-178C, 14 CFR 25.1309, and MIL-STD-882E."
+    context = "irrelevant context"
+    refs = rc.list_ungrounded_refs(answer, context)
+    assert refs == sorted(refs), "list must be stably sorted"
+    assert set(refs) == {"DO-178", "14 CFR 25.1309", "MIL-STD-882"}
+
+
+def test_list_ungrounded_refs_empty_inputs():
+    assert rc.list_ungrounded_refs("", "context") == []
+    assert rc.list_ungrounded_refs("per MIL-STD-1521", "") == []
+    assert rc.count_ungrounded_refs("", "") == 0
