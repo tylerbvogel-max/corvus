@@ -213,8 +213,41 @@ def get_valid_model_names() -> set[str]:
 
 # ── Provider implementations ──
 
+def _build_anthropic_args(
+    model_info: ModelInfo, system_prompt: str, effort: str, session: dict | None,
+) -> list[str]:
+    """Build the claude CLI argv. Pure — unit-testable without a subprocess.
+
+    session = {"session_id": <uuid>, "resume": bool} enables CLI session
+    persistence (hero chat): --session-id creates, --resume continues, and
+    --no-session-persistence is dropped so the transcript survives the call.
+    Resumed sessions get the conversation prefix served from the prompt cache
+    (measured: 17.8k tokens read at 0.1x instead of re-sent). Stateless calls
+    keep today's exact flags. The user message always goes over STDIN, never
+    argv: prompts that start with "-" would parse as CLI options.
+    """
+    args = [
+        _CLAUDE_CLI_PATH, "-p",
+        "--model", model_info.api_id,
+        "--output-format", "json",
+        "--strict-mcp-config",
+    ]
+    if session:
+        sid = session.get("session_id")
+        assert sid, "session requires a session_id"
+        args.extend(["--resume" if session.get("resume") else "--session-id", sid])
+    else:
+        args.append("--no-session-persistence")
+    if system_prompt:
+        args.extend(["--system-prompt", system_prompt])
+    if effort in _VALID_EFFORT:
+        args.extend(["--effort", effort])
+    return args
+
+
 async def _anthropic_chat(
     system_prompt: str, user_message: str, max_tokens: int, model_info: ModelInfo,
+    session: dict | None = None,
 ) -> dict:
     """Call Claude via the local Claude CLI (personal subscription, no API credits).
 
@@ -229,21 +262,8 @@ async def _anthropic_chat(
     """
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
-    # The user message goes over STDIN, never argv: prompts that start with
-    # "-" would be parsed as CLI options, and argv has size limits.
-    args = [
-        _CLAUDE_CLI_PATH, "-p",
-        "--model", model_info.api_id,
-        "--output-format", "json",
-        "--strict-mcp-config",
-        "--no-session-persistence",
-    ]
-    if system_prompt:
-        args.extend(["--system-prompt", system_prompt])
-
     effort = effort_var.get() or settings.default_effort
-    if effort in _VALID_EFFORT:
-        args.extend(["--effort", effort])
+    args = _build_anthropic_args(model_info, system_prompt, effort, session)
 
     # Strip CLAUDECODE/CLAUDE_CODE_* from env — the CLI refuses to launch nested
     # inside another Claude Code session. See CLAUDE.md "Claude CLI nested session".
@@ -275,7 +295,7 @@ async def _anthropic_chat(
     cost = _estimate_cost_anthropic(
         model_info, input_tokens, cache_create, cache_read, output_tokens,
     )
-    return {
+    result = {
         "text": text,
         "input_tokens": input_tokens,
         "cache_creation_tokens": cache_create,
@@ -284,6 +304,10 @@ async def _anthropic_chat(
         "cost_usd": cost,
         "model_version": payload.get("model") or model_info.api_id,
     }
+    if session:
+        # The CLI's returned id is authoritative (resume may fork a session).
+        result["session_id"] = payload.get("session_id") or session.get("session_id")
+    return result
 
 
 # Effort → Gemini 2.5 thinking-budget tokens (monotone; 128 is the 2.5 Pro
@@ -505,6 +529,7 @@ async def llm_chat(
     max_tokens: int = 2048,
     model: str | None = None,
     timeout: int = 180,
+    session: dict | None = None,
 ) -> dict:
     """Call an LLM and return {"text", "input_tokens", "output_tokens", "cost_usd", "model_version"}.
 
@@ -534,8 +559,15 @@ async def llm_chat(
     handler = _PROVIDER_DISPATCH.get(model_info.provider)
     assert handler is not None, f"No handler for provider: {model_info.provider}"
 
-    # Azure OpenAI handler accepts timeout; others ignore it for now
-    if model_info.provider == "azure_openai":
+    # Azure OpenAI handler accepts timeout; others ignore it for now.
+    # Session persistence is a Claude-CLI capability only — other providers
+    # run stateless and return no session_id (callers fall back to packing
+    # history into the message).
+    if model_info.provider == "anthropic":
+        result = await handler(
+            system_prompt, user_message, max_tokens, model_info, session,
+        )
+    elif model_info.provider == "azure_openai":
         result = await handler(
             system_prompt, user_message, max_tokens, model_info, timeout,
         )

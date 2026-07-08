@@ -39,6 +39,24 @@ from sqlalchemy import select, func
 
 router = APIRouter(tags=["query"])
 
+def _session_spec_from_request(req: QueryRequest) -> dict | None:
+    """Resolve the persisted-CLI-session spec for a query request.
+
+    Opt-in (persist_session) and gated by settings.chat_session_persistence.
+    A returned llm_session_id from a prior turn resumes that session; without
+    one, a fresh UUID is minted and --session-id creates it.
+    """
+    if not settings.chat_session_persistence:
+        return None
+    if not (req.persist_session or req.llm_session_id):
+        return None
+    import uuid
+    if req.llm_session_id:
+        return {"session_id": req.llm_session_id, "resume": True}
+    return {"session_id": str(uuid.uuid4()), "resume": False}
+
+
+
 
 # ── Lightweight context endpoint for Corvus integration ──
 
@@ -581,6 +599,7 @@ async def post_query(
             db, req.message,
             slots=slot_dicts,
             prior_neuron_ids=req.prior_neuron_ids,
+            session_spec=_session_spec_from_request(req),
         )
     except HTTPException:
         raise
@@ -650,6 +669,7 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
                 slots=slot_dicts,
                 on_stage=on_stage,
                 prior_neuron_ids=req.prior_neuron_ids,
+                session_spec=_session_spec_from_request(req),
             )
 
             # Output checks

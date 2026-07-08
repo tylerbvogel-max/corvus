@@ -161,6 +161,7 @@ export interface CitationSource {
 
 export interface QueryResponse {
   query_id: number;
+  llm_session_id?: string | null;  // persisted CLI session — pass back to resume
   intent: string | null;
   departments: string[];
   role_keys: string[];

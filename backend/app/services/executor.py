@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+import uuid
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Callable, Awaitable
@@ -570,27 +571,84 @@ def _create_query_record(
     )
 
 
+# Stable system prompt for persisted hero-chat sessions. MUST NOT vary per
+# turn or per query: it is the first block of the prompt-cache prefix, and any
+# change re-creates the whole cache instead of reading it at 0.1x price. The
+# per-turn packed context therefore travels INSIDE the user message.
+_CHAT_SESSION_PREAMBLE = (
+    "You are a knowledge assistant grounded in a curated organizational "
+    "knowledge graph. Each user message begins with a [Knowledge context] "
+    "block retrieved specifically for that question. Ground your answer in "
+    "that block and follow any citation-key instructions it contains, then "
+    "answer the [Question]. Prior turns' context blocks apply only to their "
+    "own turns; always prefer the current block when they disagree."
+)
+
+
+def _session_call_payload(
+    ctx: PreparedContext | None, user_message: str,
+) -> tuple[str, str]:
+    """(system_prompt, user_message) for a persisted-session call.
+
+    The system prompt is the static preamble (cache-stable across turns); the
+    freshly-packed neuron context rides in the user message, so the entire
+    conversation prefix — preamble + every prior turn — stays cacheable.
+    """
+    assert isinstance(user_message, str) and user_message.strip(), \
+        "user_message must be non-empty"
+    if ctx is None or not getattr(ctx, "system_prompt", ""):
+        return "", user_message
+    combined = (
+        f"[Knowledge context for this question]\n{ctx.system_prompt}\n\n"
+        f"[Question]\n{user_message}"
+    )
+    return _CHAT_SESSION_PREAMBLE, combined
+
+
 async def _run_direct_call(
     ctx: PreparedContext,
     user_message: str,
     on_stage: StageCallback,
     model: str = "haiku",
+    session_spec: dict | None = None,
 ) -> dict:
     """Execute direct call path: single LLM call with assembled neurons.
 
     Uses ctx.system_prompt (already assembled by prepare_context) + user message.
+    With session_spec ({"session_id", "resume"}), the call runs inside a
+    persisted CLI session: static system preamble, packed context in the user
+    message, conversation prefix served from the prompt cache. A failed resume
+    (expired/missing session) falls back once to a fresh session — the answer
+    still grounds in this turn's freshly-packed context; only cross-turn
+    conversational memory is lost.
     Returns dict with text, input_tokens, output_tokens, cost_usd, cache tokens.
     """
     assert ctx is not None, "ctx must be populated from prepare_context"
     assert model, "model must be non-empty"
 
     t0 = time.monotonic()
-    result = await llm_chat(
-        system_prompt=ctx.system_prompt,
-        user_message=user_message,
-        max_tokens=4096,
-        model=model,
-    )
+    if session_spec:
+        sys_prompt, message = _session_call_payload(ctx, user_message)
+        try:
+            result = await llm_chat(
+                system_prompt=sys_prompt, user_message=message,
+                max_tokens=4096, model=model, session=session_spec,
+            )
+        except AssertionError:
+            if not session_spec.get("resume"):
+                raise
+            fresh = {"session_id": str(uuid.uuid4()), "resume": False}
+            result = await llm_chat(
+                system_prompt=sys_prompt, user_message=message,
+                max_tokens=4096, model=model, session=fresh,
+            )
+    else:
+        result = await llm_chat(
+            system_prompt=ctx.system_prompt,
+            user_message=user_message,
+            max_tokens=4096,
+            model=model,
+        )
     duration_ms = round((time.monotonic() - t0) * 1000)
 
     if on_stage:
@@ -612,6 +670,7 @@ async def _run_direct_call(
         "cache_creation_tokens": result.get("cache_creation_tokens", 0),
         "cache_read_tokens": result.get("cache_read_tokens", 0),
         "model_version": result.get("model_version"),
+        "session_id": result.get("session_id"),
     }
 
 
@@ -691,6 +750,7 @@ def _build_response(
         "classify_cost": classify_result.get("cost_usd", 0),
         "classify_input_tokens": classify_result["input_tokens"],
         "classify_output_tokens": classify_result["output_tokens"],
+        "llm_session_id": (slot_results[0] or {}).get("llm_session_id") if slot_results else None,
         "slots": slot_results,
         "total_cost": total_cost,
         # Pattern #5: per-stage timing + status for the query-prep DAG.
@@ -854,6 +914,7 @@ async def _execute_slot(
     ctx: PreparedContext | None,
     on_stage: StageCallback = None,
     is_primary: bool = False,
+    session_spec: dict | None = None,
 ) -> dict:
     """Execute a single slot with its model configuration.
 
@@ -883,6 +944,7 @@ async def _execute_slot(
     try:
         result_data = await _execute_slot_llm(
             db, user_message, ctx, model_name, uses_neurons, on_stage,
+            session_spec=session_spec,
         )
 
         result_data["response_text"], citations_fabricated, ungrounded_list = (
@@ -910,6 +972,7 @@ async def _execute_slot(
             # Label from the EFFECTIVE model (primary override may differ from mode)
             "label": label or _eval_slot_label(f"{model_name}_{slot_type}", uses_neurons, token_budget),
             "model_version": result_data.get("model_version"),
+            "llm_session_id": result_data.get("llm_session_id"),
         }
 
         if on_stage:
@@ -952,6 +1015,7 @@ async def _execute_slot_llm(
     model_name: str,
     uses_neurons: bool,
     on_stage: StageCallback,
+    session_spec: dict | None = None,
 ) -> dict:
     """Run the LLM call for a single slot. Returns unified result dict.
 
@@ -963,7 +1027,9 @@ async def _execute_slot_llm(
 
     if uses_neurons and ctx:
         # Direct call path with neurons — uses slot's model, real API tokens
-        direct_result = await _run_direct_call(ctx, user_message, on_stage, model=model_name)
+        direct_result = await _run_direct_call(
+            ctx, user_message, on_stage, model=model_name, session_spec=session_spec,
+        )
         return {
             "response_text": direct_result.get("text", ""),
             "input_tokens": direct_result.get("input_tokens", 0),
@@ -972,6 +1038,7 @@ async def _execute_slot_llm(
             "cache_creation": direct_result.get("cache_creation_tokens", 0),
             "cache_read": direct_result.get("cache_read_tokens", 0),
             "model_version": direct_result.get("model_version"),
+            "llm_session_id": direct_result.get("session_id"),
         }
 
     # Raw path: no neurons, no system prompt — just the user's question.
@@ -981,6 +1048,7 @@ async def _execute_slot_llm(
         user_message=user_message,
         max_tokens=4096,
         model=model_name,
+        session=session_spec,
     )
     return {
         "response_text": llm_result.get("text", ""),
@@ -990,6 +1058,7 @@ async def _execute_slot_llm(
         "cache_creation": llm_result.get("cache_creation_tokens", 0),
         "cache_read": llm_result.get("cache_read_tokens", 0),
         "model_version": llm_result.get("model_version"),
+        "llm_session_id": llm_result.get("session_id"),
     }
 
 
@@ -1169,6 +1238,7 @@ async def execute_query(
     slots: list[dict] | None = None,
     prior_neuron_ids: list[int] | None = None,
     on_stage: StageCallback = None,
+    session_spec: dict | None = None,
 ) -> dict:
     """Run multi-slot query pipeline.
 
@@ -1232,6 +1302,8 @@ async def execute_query(
 
         # Slot 0 is the primary answer (persisted to query.response_text) —
         # eligible for the primary_answer_effort/model quality floor.
+        # Session persistence applies to the primary slot only (hero chat is
+        # single-slot); compare slots stay stateless.
         task = _execute_slot(
             db=db,
             slot=slot,
@@ -1240,6 +1312,7 @@ async def execute_query(
             ctx=slot_ctx,
             on_stage=on_stage,
             is_primary=(i == 0),
+            session_spec=session_spec if i == 0 else None,
         )
         slot_tasks.append(task)
 

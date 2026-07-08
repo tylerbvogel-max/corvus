@@ -465,6 +465,11 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   // Query Lab cards): hop cap 1-6 and min-activation floor 0-0.5.
   const [spreadHops, setSpreadHops] = useState<number | 'auto'>('auto');
   const [spreadFloor, setSpreadFloor] = useState(0.15);
+  // Persisted CLI session for this conversation (Claude models only). While
+  // set, the server carries conversation memory (prompt-cached) and we stop
+  // packing history into the message. Reset on model switch / new chat so
+  // non-Claude providers and fresh conversations fall back to history packing.
+  const [llmSessionId, setLlmSessionId] = useState<string | null>(null);
   const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -534,7 +539,9 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         // "Summarize older messages" button condenses older turns in place.
         const recentHistory = messages.slice(-10);
         let userMessage = text;
-        if (recentHistory.length > 0) {
+        // With a persisted CLI session, the server already holds the
+        // conversation (prompt-cached) — packing history would double it.
+        if (recentHistory.length > 0 && !llmSessionId) {
           const historyLines = recentHistory.map(m =>
             `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`
           ).join('\n');
@@ -559,10 +566,12 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           priorNeuronIds.length > 0 ? priorNeuronIds : undefined,
           [slot],
           effort,
+          { persist: true, llmSessionId },
         );
         abortRef.current = abort;
         setCanAbort(true);
         const res = await promise;
+        setLlmSessionId(res.llm_session_id ?? null);
         const slotResult = res.slots[0];
         assistantMsg = {
           role: 'assistant',
@@ -645,6 +654,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   function startNewChat() {
     setCurrentSessionId(null);
     setMessages([]);
+    setLlmSessionId(null);
     setNeuronSidebarOpen(false);
     neuronSidebarOpenedRef.current = false;
     refreshSessions();
@@ -773,7 +783,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const inputBar = (
     <div className="chat-input-bar">
       <div className="chat-input-controls">
-        <select className="chat-model-select" value={model} onChange={e => setModel(e.target.value)}>
+        <select className="chat-model-select" value={model} onChange={e => { setModel(e.target.value); setLlmSessionId(null); }}>
           {Object.entries(groupedModels).map(([group, models]) => ([
             <option key={`hdr-${group}`} disabled>── {group} ──</option>,
             ...models.map(m => <option key={m.display_name} value={m.display_name}>{m.display_name}</option>),

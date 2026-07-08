@@ -103,6 +103,9 @@ class Settings(BaseSettings):
     # after a restart doesn't pay the 17-39s lazy-load chain. Set false for
     # fast dev-reload cycles.
     preload_on_startup: bool = True
+    # Honor persist_session requests (hero chat CLI session persistence —
+    # conversation prefix served from the prompt cache). Kill switch.
+    chat_session_persistence: bool = True
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500

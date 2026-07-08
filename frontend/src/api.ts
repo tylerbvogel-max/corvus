@@ -341,12 +341,18 @@ export interface StageEvent {
   detail?: Record<string, unknown>;
 }
 
+export interface SessionOpts {
+  persist: boolean;           // opt in to server-side CLI session persistence
+  llmSessionId?: string | null; // prior turn's session id (resume)
+}
+
 export function submitQueryStream(
   message: string,
   onStage?: (event: StageEvent) => void,
   prior_neuron_ids?: number[],
   slots?: SlotSpec[],
   effort?: string,
+  sessionOpts?: SessionOpts,
 ): { promise: Promise<QueryResponse>; abort: () => void } {
   const controller = new AbortController();
 
@@ -360,6 +366,10 @@ export function submitQueryStream(
     }
     if (effort) {
       body.effort = effort;
+    }
+    if (sessionOpts?.persist) {
+      body.persist_session = true;
+      if (sessionOpts.llmSessionId) body.llm_session_id = sessionOpts.llmSessionId;
     }
     const res = await fetch('/query/stream', {
       method: 'POST',

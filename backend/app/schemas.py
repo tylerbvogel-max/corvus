@@ -36,6 +36,13 @@ class QueryRequest(BaseModel):
     slots: list[QuerySlotRequest] | None = None  # Multi-slot testing; if None, use default single slot
     prior_neuron_ids: list[int] | None = None
     effort: str | None = None  # reasoning effort: low|medium|high (None -> settings.default_effort)
+    # Persisted CLI session (hero chat): opt in with persist_session; pass the
+    # llm_session_id returned by the previous turn to resume it. The server
+    # then carries conversation memory (prompt-cached) so the client does NOT
+    # pack history into `message`. Claude models only; other providers return
+    # no session id and the client falls back to history packing.
+    persist_session: bool = False
+    llm_session_id: str | None = Field(None, max_length=64, pattern="^[0-9a-fA-F-]{8,64}$")
 
 
 class SlotResult(BaseModel):
@@ -116,6 +123,7 @@ class StageTelemetryOut(BaseModel):
 
 class QueryResponse(BaseModel):
     query_id: int
+    llm_session_id: str | None = None  # persisted-session id (pass back to resume)
     intent: str | None = None
     departments: list[str] = []
     role_keys: list[str] = []
