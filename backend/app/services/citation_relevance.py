@@ -44,10 +44,14 @@ _MAX_WINDOWS_PER_SOURCE = 12
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
 
+def _split_sentences(text: str) -> list[str]:
+    assert isinstance(text, str), "text must be a string"
+    return [s.strip() for s in _SENT_SPLIT.split(text) if s.strip()]
+
+
 def _sentence_windows(text: str) -> list[str]:
     """Overlapping windows of _WINDOW_SENTS sentences (stride 1), bounded."""
-    assert isinstance(text, str), "text must be a string"
-    sents = [s.strip() for s in _SENT_SPLIT.split(text) if s.strip()]
+    sents = _split_sentences(text)
     if not sents:
         return []
     if len(sents) <= _WINDOW_SENTS:
@@ -171,24 +175,62 @@ def apply_relevance_bands(payload: dict) -> dict:
     return payload
 
 
+def _centered_excerpt(claim_vec, text: str, limit: int) -> str:
+    """Excerpt of `text` centered on the sentences that best match the claim.
+
+    Head-truncation (text[:limit]) made the judge's evidence depend on WHERE
+    in a long source the relevant passage lives — a true claim supported by
+    paragraph four was ruled unsupported because the judge saw only paragraph
+    one (observed live, 2026-07-08). The relevance layer already knows how to
+    find the matching region: embed the source's sentence windows and center
+    the excerpt on the argmax. Ellipses mark cut edges so the judge knows it
+    is reading a window, not a whole document.
+    """
+    sents = _split_sentences(text)
+    if not sents:
+        return text[:limit]
+    windows = [
+        " ".join(sents[i:i + _WINDOW_SENTS])
+        for i in range(max(len(sents) - _WINDOW_SENTS + 1, 1))
+    ]
+    vecs = embed_batch(windows)
+    scores = [cosine_similarity(claim_vec, v) for v in vecs]
+    best = scores.index(max(scores))
+    lo, hi = best, best + _WINDOW_SENTS
+    # Grow symmetrically around the best window until the budget is spent.
+    while lo > 0 or hi < len(sents):
+        size = sum(len(x) + 1 for x in sents[lo:hi])
+        if size >= limit:
+            break
+        if lo > 0:
+            lo -= 1
+        if hi < len(sents):
+            hi += 1
+    prefix = "… " if lo > 0 else ""
+    suffix = " …" if hi < len(sents) else ""
+    return (prefix + " ".join(sents[lo:hi]))[:limit] + suffix
+
+
 def _source_excerpts(
-    tokens: list[str], hop_map, neuron_map: dict, regs_by_id: dict,
+    claim: str, tokens: list[str], hop_map, neuron_map: dict, regs_by_id: dict,
 ) -> list[tuple[str, str]]:
-    """(label, excerpt) pairs for the judge, from in-memory ctx sources."""
+    """(label, claim-centered excerpt) pairs for the judge, from ctx sources."""
     limit = settings.entailment_source_chars
+    claim_vec = embed_batch([claim])[0]
     sources: list[tuple[str, str]] = []
     for token in tokens:
         nid = hop_map.neuron_by_token.get(token)
         if nid is not None:
             n = neuron_map.get(nid)
             if n is not None:
-                sources.append((n.label or "source", (n.content or n.summary or n.label or "")[:limit]))
+                body = n.content or n.summary or n.label or ""
+                sources.append((n.label or "source", _centered_excerpt(claim_vec, body, limit)))
             continue
         eid = hop_map.engram_by_token.get(token)
         if eid is not None:
             reg = regs_by_id.get(eid)
             if reg is not None:
-                sources.append((reg.cfr_ref, (reg.text or "")[:limit]))
+                sources.append((reg.cfr_ref, _centered_excerpt(claim_vec, reg.text or "", limit)))
     return sources
 
 
@@ -206,11 +248,14 @@ async def escalate_borderline(
     verify = verify[: settings.entailment_max_claims]
     if not verify:
         return
+    import asyncio
     regs_by_id = {r.engram_id: r for r in (resolved_regulations or [])}
     pairs = []
     judged = []
     for c in verify:
-        sources = _source_excerpts(c["tokens"], hop_map, neuron_map, regs_by_id)
+        sources = await asyncio.to_thread(
+            _source_excerpts, c["claim"], c["tokens"], hop_map, neuron_map, regs_by_id,
+        )
         if sources:
             pairs.append((c["claim"], sources))
             judged.append(c)

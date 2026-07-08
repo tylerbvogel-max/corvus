@@ -169,6 +169,7 @@ async def test_escalation_judges_only_verify_band(monkeypatch):
             {"pair": 1, "supported": False, "reason": "source says otherwise"},
         ]})}
     monkeypatch.setattr(cr, "llm_chat", fake_judge)
+    monkeypatch.setattr(cr, "embed_batch", _fake_embed_batch)
     await cr.escalate_borderline(payload, _hop_map(), _NEURONS, [])
 
     assert len(calls) == 1, "one batched judge call"
@@ -198,6 +199,28 @@ async def test_escalation_llm_failure_degrades_to_status(monkeypatch):
     async def broken(**_k):
         raise AssertionError("claude CLI failed (exit 1)")
     monkeypatch.setattr(cr, "llm_chat", broken)
+    monkeypatch.setattr(cr, "embed_batch", _fake_embed_batch)
     await cr.escalate_borderline(payload, _hop_map(), _NEURONS, [])
     assert payload["escalation_status"].startswith("llm_error")
     assert payload["claims"][0]["band"] == "verify", "verdictless claim keeps its band"
+
+
+def test_centered_excerpt_finds_buried_evidence(monkeypatch):
+    """The evidence lives deep in a long source: the excerpt must center on
+    it (with cut markers) instead of head-truncating past it."""
+    monkeypatch.setattr(cr, "embed_batch", _fake_embed_batch)
+    filler = " ".join(f"Unrelated filler sentence number {i}." for i in range(20))
+    text = filler + " Torque wrenches are calibrated every six months. " + \
+        " ".join(f"More trailing filler {i}." for i in range(20))
+    claim_vec = cr.embed_batch(["What is the torque calibration interval?"])[0]
+    excerpt = cr._centered_excerpt(claim_vec, text, limit=200)
+    assert "Torque wrenches are calibrated" in excerpt
+    assert excerpt.startswith("… ") and excerpt.endswith(" …")
+
+
+def test_centered_excerpt_whole_short_source_no_markers(monkeypatch):
+    monkeypatch.setattr(cr, "embed_batch", _fake_embed_batch)
+    claim_vec = cr.embed_batch(["torque"])[0]
+    excerpt = cr._centered_excerpt(claim_vec, "Torque is verified. Records kept.", limit=500)
+    assert not excerpt.startswith("…") and not excerpt.endswith("…")
+    assert "Torque is verified." in excerpt
