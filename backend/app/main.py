@@ -627,6 +627,35 @@ async def _seed_compliance():
         logger.warning("Auto-snapshot skipped: %s", e)
 
 
+async def _preload_hot_caches():
+    """Warm every lazily-loaded hot-path dependency at startup.
+
+    Without this, the FIRST query after a restart pays the full load chain
+    inside its own latency (measured 17-39s in stage telemetry): BERT
+    embedder ~2-5s, semantic cache, adjacency cache + CSR build. Startup
+    absorbs the cost once instead. Gated by settings.preload_on_startup
+    (disable for fast dev-reload cycles).
+    """
+    import time
+    if not settings.preload_on_startup:
+        return
+    t0 = time.monotonic()
+    # 1. Sentence-transformer model (sync load; startup is single-threaded)
+    from app.services.embedding_service import _get_model
+    _get_model()
+    # 2. Semantic prefilter cache (neuron + engram embeddings)
+    from app.services.semantic_prefilter import ensure_cache_loaded
+    async with async_session() as db:
+        await ensure_cache_loaded(db)
+    # 3. Adjacency cache + CSR view (spread activation / derived hop cap)
+    if settings.spread_enabled:
+        from app.services.adjacency_cache import ensure_adjacency_loaded, get_adjacency_csr
+        async with async_session() as db:
+            await ensure_adjacency_loaded(db)
+        get_adjacency_csr()
+    print(f"Hot caches preloaded in {time.monotonic() - t0:.1f}s")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await _run_migrations(engine)
@@ -640,6 +669,7 @@ async def lifespan(app: FastAPI):
     await _auto_embed_neurons()
     await _seed_engrams()
     await _seed_compliance()
+    await _preload_hot_caches()
     # AIP Phase 1.5 GTM-B: start remote MCP session manager
     from app.mcp_http import mcp_lifespan
     async with mcp_lifespan():

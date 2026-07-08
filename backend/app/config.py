@@ -99,6 +99,10 @@ class Settings(BaseSettings):
     # instead of the fixed spread_max_hops. Per-slot spread_hops overrides
     # always win over both.
     spread_hops_auto: bool = True
+    # Warm BERT + semantic/adjacency caches in lifespan so the first query
+    # after a restart doesn't pay the 17-39s lazy-load chain. Set false for
+    # fast dev-reload cycles.
+    preload_on_startup: bool = True
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500
