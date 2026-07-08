@@ -57,8 +57,9 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         display_name="haiku",
         provider="anthropic",
         api_id="claude-haiku-4-5-20251001",
-        input_price=0.80,
-        output_price=4.00,
+        # Haiku 4.5 list price (verified 2026-07-08); 0.80/4.00 was Haiku 3.5
+        input_price=1.00,
+        output_price=5.00,
         tier="frontier",
         context_window_tokens=200_000,
     ),
@@ -75,8 +76,10 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         display_name="opus",
         provider="anthropic",
         api_id="claude-opus-4-6",
-        input_price=15.00,
-        output_price=75.00,
+        # Opus 4.5+ list price (verified 2026-07-08); 15/75 was Opus 4.1-era —
+        # 3x too high, inflating every historical opus cost estimate
+        input_price=5.00,
+        output_price=25.00,
         tier="frontier",
         context_window_tokens=200_000,
     ),
