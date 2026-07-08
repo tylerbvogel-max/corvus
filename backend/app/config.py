@@ -106,6 +106,13 @@ class Settings(BaseSettings):
     # Honor persist_session requests (hero chat CLI session persistence —
     # conversation prefix served from the prompt cache). Kill switch.
     chat_session_persistence: bool = True
+    # Drift-gated recall for persisted sessions: skip re-sending the packed
+    # context block when the fresh pack overlaps the session's active block
+    # by at least this fraction (near-duplicate). Conservative default —
+    # measured same-topic follow-ups overlap 0.28-0.47, so 0.6 fires only on
+    # repeats/rephrasings; lower after calibration to reuse more aggressively.
+    chat_context_drift_gate: bool = True
+    chat_context_reuse_overlap: float = 0.6
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500

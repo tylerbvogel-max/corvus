@@ -52,7 +52,8 @@ def _session_spec_from_request(req: QueryRequest) -> dict | None:
         return None
     import uuid
     if req.llm_session_id:
-        return {"session_id": req.llm_session_id, "resume": True}
+        return {"session_id": req.llm_session_id, "resume": True,
+                "refresh": req.refresh_context}
     return {"session_id": str(uuid.uuid4()), "resume": False}
 
 

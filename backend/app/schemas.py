@@ -43,6 +43,9 @@ class QueryRequest(BaseModel):
     # no session id and the client falls back to history packing.
     persist_session: bool = False
     llm_session_id: str | None = Field(None, max_length=64, pattern="^[0-9a-fA-F-]{8,64}$")
+    # Force a fresh context pack this turn even if the drift gate would reuse
+    # (user-driven re-ground, e.g. after consolidation).
+    refresh_context: bool = False
 
 
 class SlotResult(BaseModel):
@@ -124,6 +127,8 @@ class StageTelemetryOut(BaseModel):
 class QueryResponse(BaseModel):
     query_id: int
     llm_session_id: str | None = None  # persisted-session id (pass back to resume)
+    context_reused: bool = False       # drift gate reused the session's active context
+    context_overlap: float | None = None  # fresh-pack vs active-pack overlap (calibration)
     intent: str | None = None
     departments: list[str] = []
     role_keys: list[str] = []

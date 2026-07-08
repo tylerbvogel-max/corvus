@@ -162,6 +162,8 @@ export interface CitationSource {
 export interface QueryResponse {
   query_id: number;
   llm_session_id?: string | null;  // persisted CLI session — pass back to resume
+  context_reused?: boolean;        // drift gate reused the active context
+  context_overlap?: number | null; // fresh-pack vs active-pack overlap
   intent: string | null;
   departments: string[];
   role_keys: string[];

@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 import uuid
+from collections import OrderedDict
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Callable, Awaitable
@@ -571,33 +572,113 @@ def _create_query_record(
     )
 
 
+# Drift-gated recall (persisted sessions): the freshly-packed context block
+# is only re-sent when it materially differs from the session's ACTIVE block.
+# The gate metric is packed-set overlap — |fresh ∩ active| / |fresh| — NOT
+# question similarity: bare follow-up questions are anaphoric ("who signs off
+# on that?") and embed nowhere near their topic, so question-cosine cannot
+# separate follow-ups from drift (measured 2026-07: same-topic 0.16-0.77 vs
+# drift 0.06-0.19 — overlapping ranges). Overlap compares what recall
+# ACTUALLY produced, so reuse never changes what the model grounds on.
+# State is in-memory and bounded — losing it (restart/reload) merely forces
+# one extra repack, which is always safe.
+_session_ctx_cache: OrderedDict = OrderedDict()  # session_id -> {"packed_ids", "ctx"}
+_SESSION_CTX_MAX = 500
+
+
+def _packed_ids(ctx: PreparedContext) -> frozenset:
+    return frozenset(s.neuron_id for s in getattr(ctx, "all_scored", []) or [])
+
+
+def _remember_session_context(session_id: str, ctx: PreparedContext) -> None:
+    """Store/refresh a session's active context; evict oldest beyond the cap."""
+    assert session_id, "session_id must be non-empty"
+    assert ctx is not None, "ctx must not be None"
+    _session_ctx_cache[session_id] = {"packed_ids": _packed_ids(ctx), "ctx": ctx}
+    _session_ctx_cache.move_to_end(session_id)
+    while len(_session_ctx_cache) > _SESSION_CTX_MAX:
+        _session_ctx_cache.popitem(last=False)
+
+
+def _apply_drift_gate(
+    session_spec: dict | None, slots: list[dict],
+    fresh_ctx: PreparedContext | None,
+) -> tuple[PreparedContext | None, float | None]:
+    """Decide whether this turn can reuse the session's active context block.
+
+    Returns (reused_ctx, overlap). Reuse fires only when the fresh pack is a
+    near-duplicate of the active one (overlap >= chat_context_reuse_overlap,
+    conservative by default) — the block is already in the session transcript
+    (prompt-cached), so only the question is sent, and grounding guards grade
+    against the SAME stored ctx the model is citing. Everything else repacks:
+    first turn, real drift, explicit refresh, gate off, multi-slot compare,
+    state lost. Repacking is always safe — it is today's behavior.
+    """
+    if session_spec is None or fresh_ctx is None:
+        return None, None
+    if not settings.chat_context_drift_gate or len(slots) != 1:
+        return None, None
+    if not session_spec.get("resume") or session_spec.get("refresh"):
+        return None, None
+    state = _session_ctx_cache.get(session_spec.get("session_id", ""))
+    if not state:
+        return None, None
+    fresh_ids = _packed_ids(fresh_ctx)
+    if not fresh_ids:
+        return None, None
+    overlap = len(fresh_ids & state["packed_ids"]) / len(fresh_ids)
+    if overlap >= settings.chat_context_reuse_overlap:
+        session_spec["reuse_context"] = True
+        return state["ctx"], overlap
+    return None, overlap
+
+
+def _update_session_context(
+    session_spec: dict, slot_results: list[dict],
+    active_ctx: PreparedContext | None,
+) -> None:
+    """Re-key the active context to the session id the CLI actually returned
+    (resume can fork) and remember it for the next turn's gate."""
+    if active_ctx is None:
+        return
+    returned = (slot_results[0] or {}).get("llm_session_id") if slot_results else None
+    sid = returned or session_spec.get("session_id")
+    if sid:
+        _remember_session_context(sid, active_ctx)
+
+
 # Stable system prompt for persisted hero-chat sessions. MUST NOT vary per
 # turn or per query: it is the first block of the prompt-cache prefix, and any
 # change re-creates the whole cache instead of reading it at 0.1x price. The
 # per-turn packed context therefore travels INSIDE the user message.
 _CHAT_SESSION_PREAMBLE = (
     "You are a knowledge assistant grounded in a curated organizational "
-    "knowledge graph. Each user message begins with a [Knowledge context] "
-    "block retrieved specifically for that question. Ground your answer in "
-    "that block and follow any citation-key instructions it contains, then "
-    "answer the [Question]. Prior turns' context blocks apply only to their "
-    "own turns; always prefer the current block when they disagree."
+    "knowledge graph. User messages may begin with a [Knowledge context] "
+    "block retrieved for the current question. Ground your answers in the "
+    "MOST RECENT [Knowledge context] block in the conversation and follow "
+    "the citation-key instructions it contains. A message without a new "
+    "block continues under the most recent one; when blocks disagree, "
+    "always prefer the most recent."
 )
 
 
 def _session_call_payload(
-    ctx: PreparedContext | None, user_message: str,
+    ctx: PreparedContext | None, user_message: str, include_context: bool = True,
 ) -> tuple[str, str]:
     """(system_prompt, user_message) for a persisted-session call.
 
     The system prompt is the static preamble (cache-stable across turns); the
     freshly-packed neuron context rides in the user message, so the entire
     conversation prefix — preamble + every prior turn — stays cacheable.
+    include_context=False (drift-gate reuse) sends only the question: the
+    active block already sits in the session transcript.
     """
     assert isinstance(user_message, str) and user_message.strip(), \
         "user_message must be non-empty"
     if ctx is None or not getattr(ctx, "system_prompt", ""):
         return "", user_message
+    if not include_context:
+        return _CHAT_SESSION_PREAMBLE, user_message
     combined = (
         f"[Knowledge context for this question]\n{ctx.system_prompt}\n\n"
         f"[Question]\n{user_message}"
@@ -628,7 +709,8 @@ async def _run_direct_call(
 
     t0 = time.monotonic()
     if session_spec:
-        sys_prompt, message = _session_call_payload(ctx, user_message)
+        include_context = not session_spec.get("reuse_context")
+        sys_prompt, message = _session_call_payload(ctx, user_message, include_context)
         try:
             result = await llm_chat(
                 system_prompt=sys_prompt, user_message=message,
@@ -637,6 +719,9 @@ async def _run_direct_call(
         except AssertionError:
             if not session_spec.get("resume"):
                 raise
+            # Fresh session has no transcript — a reuse-turn fallback must
+            # carry the full context block or the answer would be ungrounded.
+            sys_prompt, message = _session_call_payload(ctx, user_message, True)
             fresh = {"session_id": str(uuid.uuid4()), "resume": False}
             result = await llm_chat(
                 system_prompt=sys_prompt, user_message=message,
@@ -1232,6 +1317,33 @@ async def _finalize_query_results(
     )
 
 
+async def _acquire_query_contexts(
+    db: AsyncSession,
+    user_message: str,
+    slots: list[dict],
+    on_stage: StageCallback,
+    prior_neuron_ids: list[int] | None,
+    session_spec: dict | None,
+) -> tuple:
+    """Contexts for this query: drift-gate reuse or fresh per-config prep.
+
+    Returns (ctx_by_cfg, classify_result, reused_ctx, overlap). The recall
+    pipeline ALWAYS runs (embed-only, $0) — the gate then swaps in the
+    session's active context when the fresh pack is a near-duplicate of it,
+    so the redundant block is not re-sent into the transcript.
+    """
+    assert isinstance(slots, list) and slots, "slots must be non-empty"
+    ctx_by_cfg, classify_result = await _prepare_slot_contexts(
+        db, user_message, slots, on_stage, prior_neuron_ids,
+    )
+    fresh_ctx = ctx_by_cfg.get(_slot_spread_cfg(slots[0])) if ctx_by_cfg else None
+    reused_ctx, overlap = _apply_drift_gate(session_spec, slots, fresh_ctx)
+    if reused_ctx is not None:
+        ctx_by_cfg = dict(ctx_by_cfg)
+        ctx_by_cfg[_slot_spread_cfg(slots[0])] = reused_ctx
+    return ctx_by_cfg, classify_result, reused_ctx, overlap
+
+
 async def execute_query(
     db: AsyncSession,
     user_message: str,
@@ -1263,11 +1375,10 @@ async def execute_query(
             "priming": True,
         }]
 
-    # Run the neuron pipeline once per distinct per-slot spread config —
-    # slots without spread overrides all share a single context prep.
-    ctx_by_cfg, classify_result = await _prepare_slot_contexts(
-        db, user_message, slots, on_stage, prior_neuron_ids,
+    gate = await _acquire_query_contexts(
+        db, user_message, slots, on_stage, prior_neuron_ids, session_spec,
     )
+    ctx_by_cfg, classify_result, reused_ctx, ctx_overlap = gate
 
     # Determine if neurons are actually needed based on slot composition
     needs_neurons = any(s["mode"] in NEURON_MODES for s in slots)
@@ -1287,23 +1398,16 @@ async def execute_query(
     all_scored = ctx.all_scored if ctx else []
     neuron_map = ctx.neuron_map if ctx else {}
 
-    # Execute each slot in parallel
+    # Execute each slot in parallel. Raw slots get no neuron context (vanilla
+    # control group); slot 0 is the primary answer (effort/model floor) and the
+    # only slot a persisted session applies to — compare slots stay stateless.
     slot_tasks = []
     for i, slot in enumerate(slots):
-        # Raw slots bypass neuron context; only neuron-enriched slots get it
-        # This ensures raw slots are vanilla Claude without any knowledge graph enrichment
         mode = slot.get("mode", "haiku_neuron")
         parts = mode.rsplit("_", 1)
         slot_type = parts[1] if len(parts) > 1 else "neuron"
         uses_neurons = slot_type == "neuron"
-
-        # Pass this slot's spread-config group context; raw slots get none
         slot_ctx = ctx_by_cfg.get(_slot_spread_cfg(slot)) if uses_neurons else None
-
-        # Slot 0 is the primary answer (persisted to query.response_text) —
-        # eligible for the primary_answer_effort/model quality floor.
-        # Session persistence applies to the primary slot only (hero chat is
-        # single-slot); compare slots stay stateless.
         task = _execute_slot(
             db=db,
             slot=slot,
@@ -1317,6 +1421,8 @@ async def execute_query(
         slot_tasks.append(task)
 
     slot_results = await asyncio.gather(*slot_tasks)
+    if session_spec:
+        _update_session_context(session_spec, slot_results, ctx)
     total_cost = classify_result.get("cost_usd", 0) + sum(s.get("cost_usd", 0) for s in slot_results)
 
     await _finalize_query_results(
@@ -1327,10 +1433,13 @@ async def execute_query(
     # Postcondition (JPL Rule 5)
     assert total_cost >= 0, f"total_cost must be non-negative, got {total_cost}"
 
-    return _build_response(
+    response = _build_response(
         query, ctx, needs_neurons=needs_neurons, all_scored=all_scored, max_top_k=len(all_scored),
         neuron_map=neuron_map, classify_result=classify_result, slot_results=slot_results, total_cost=total_cost,
     )
+    response["context_reused"] = reused_ctx is not None
+    response["context_overlap"] = ctx_overlap
+    return response
 
 
 async def _load_candidates_by_ids(

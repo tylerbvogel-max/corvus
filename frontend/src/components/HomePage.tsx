@@ -25,6 +25,9 @@ interface Message {
   cost?: number;
   neurons_activated?: number;
   neuron_scores?: NeuronScoreResponse[];
+  // Drift gate: this turn reused the session's active knowledge context
+  // (no fresh graph recall was packed into the prompt).
+  contextReused?: boolean;
   // Frequency-hop citations: token -> source, for numbered superscripts.
   citation_map?: Record<string, CitationSource>;
   isCondensed?: boolean;
@@ -577,6 +580,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           role: 'assistant',
           text: slotResult?.response ?? '',
           model,
+          contextReused: res.context_reused || undefined,
           tokens: {
             input: (res.classify_input_tokens || 0) + (slotResult?.input_tokens || 0),
             output: (res.classify_output_tokens || 0) + (slotResult?.output_tokens || 0),
@@ -991,6 +995,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                   {msg.role === 'assistant' && (
                     <div className="chat-meta">
                       {msg.model && <span>{msg.model}</span>}
+                      {msg.contextReused && <span title="This answer reused the conversation's active knowledge context — the question stayed close to the one that retrieved it. Ask about a new topic (or start a new chat) to trigger fresh retrieval.">ctx ↺</span>}
                       {msg.tokens && (() => {
                         const effectiveIn = (msg.tokens.input || 0)
                           + (msg.tokens.cache_creation || 0)
