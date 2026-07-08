@@ -995,11 +995,19 @@ async def _slot_grounding_guards(
     relevance = None
     if (settings.citation_relevance_enabled and ctx is not None
             and getattr(ctx, "hop_map", None) is not None):
-        from app.services.citation_relevance import score_citation_relevance
+        from app.services.citation_relevance import (
+            apply_relevance_bands, escalate_borderline, score_citation_relevance,
+        )
         relevance = await asyncio.to_thread(
             score_citation_relevance, cleaned, ctx.hop_map, ctx.neuron_map,
             ctx.resolved_regulations, settings.citation_relevance_max_claims,
         )
+        if relevance is not None:
+            apply_relevance_bands(relevance)
+            if settings.citation_relevance_escalate:
+                await escalate_borderline(
+                    relevance, ctx.hop_map, ctx.neuron_map, ctx.resolved_regulations,
+                )
     return cleaned, citations_fabricated, ungrounded_list, relevance
 
 

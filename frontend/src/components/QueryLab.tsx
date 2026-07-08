@@ -456,6 +456,20 @@ function ModelCard({
                     ◇ {slotResult.ungrounded_refs} ungrounded
                   </span>
                 )}
+                {(() => {
+                  const rel = slotResult.citation_relevance;
+                  const n = (rel?.flagged ?? 0) + (rel?.unsupported ?? 0);
+                  if (!rel || n === 0) return null;
+                  const detail = rel.claims
+                    .filter(c => c.band === 'flag' || c.band === 'unsupported')
+                    .map(c => `[${c.band}${c.reason ? ': ' + c.reason : ''}] ${c.claim.slice(0, 90)}`)
+                    .join('\n');
+                  return (
+                    <span className="ungrounded-badge" title={`Advisory citation checks (prose untouched):\nflag = claim scored below the relevance floor vs its cited source\nunsupported = entailment judge found the source does not state the claim\n\n${detail}`}>
+                      ⚑ {n} citation {n === 1 ? 'check' : 'checks'}
+                    </span>
+                  );
+                })()}
               </div>
             </>
           )}

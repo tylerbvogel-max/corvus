@@ -28,6 +28,8 @@ interface Message {
   // Drift gate: this turn reused the session's active knowledge context
   // (no fresh graph recall was packed into the prompt).
   contextReused?: boolean;
+  // Advisory citation checks: flagged (low relevance) + unsupported (judge)
+  citationChecks?: number;
   // Frequency-hop citations: token -> source, for numbered superscripts.
   citation_map?: Record<string, CitationSource>;
   isCondensed?: boolean;
@@ -581,6 +583,11 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           text: slotResult?.response ?? '',
           model,
           contextReused: res.context_reused || undefined,
+          citationChecks: (() => {
+            const rel = slotResult?.citation_relevance;
+            const n = (rel?.flagged ?? 0) + (rel?.unsupported ?? 0);
+            return n > 0 ? n : undefined;
+          })(),
           tokens: {
             input: (res.classify_input_tokens || 0) + (slotResult?.input_tokens || 0),
             output: (res.classify_output_tokens || 0) + (slotResult?.output_tokens || 0),
@@ -996,6 +1003,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     <div className="chat-meta">
                       {msg.model && <span>{msg.model}</span>}
                       {msg.contextReused && <span title="This answer reused the conversation's active knowledge context — the question stayed close to the one that retrieved it. Ask about a new topic (or start a new chat) to trigger fresh retrieval.">ctx ↺</span>}
+                      {(msg.citationChecks ?? 0) > 0 && <span title="Advisory citation checks: one or more cited claims scored below the relevance floor against their cited sources, or the entailment judge found the source does not state the claim. The answer text is untouched — treat the affected statements with extra scrutiny.">⚑ {msg.citationChecks}</span>}
                       {msg.tokens && (() => {
                         const effectiveIn = (msg.tokens.input || 0)
                           + (msg.tokens.cache_creation || 0)

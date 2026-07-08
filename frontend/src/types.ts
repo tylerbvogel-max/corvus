@@ -65,10 +65,32 @@ export interface CostReport {
   total_output_tokens: number;
 }
 
+export interface CitationRelevanceClaim {
+  claim: string;
+  tokens: string[];
+  score: number | null;
+  band?: 'flag' | 'verify' | 'pass' | 'unsupported' | null;
+  supported?: boolean;
+  reason?: string;
+}
+
+export interface CitationRelevance {
+  checked: number;
+  scored: number;
+  min: number | null;
+  mean: number | null;
+  flagged?: number;
+  escalated?: number;
+  unsupported?: number;
+  escalation_status?: string;
+  claims: CitationRelevanceClaim[];
+}
+
 export interface SlotResult {
   mode: string;
   model: string;
   neurons: boolean;
+  citation_relevance?: CitationRelevance | null;
   response: string;
   input_tokens: number;
   output_tokens: number;

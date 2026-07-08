@@ -69,6 +69,11 @@ def extract_cited_claims(answer: str, max_claims: int) -> list[tuple[str, list[s
         # list, not a self-contained claim — judging it alone yields noise.
         if clean.endswith(":"):
             continue
+        # Markdown headings are section titles, not claims — their citations
+        # decorate structure. Calibration (2026-07, 131 claims): headings
+        # scored 0.01-0.15 against sources they truthfully introduced.
+        if clean.lstrip().startswith("#"):
+            continue
         claims.append((clean, tokens))
         if len(claims) >= max_claims:
             break

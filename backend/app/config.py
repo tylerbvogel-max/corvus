@@ -119,6 +119,15 @@ class Settings(BaseSettings):
     # the real-usage distribution is measured.
     citation_relevance_enabled: bool = True
     citation_relevance_max_claims: int = 10
+    # Three-band routing, calibrated 2026-07 (131 true claims vs 126
+    # shuffle-negatives): below the floor almost no true citations exist
+    # (lowest verified-true prose: 0.263) -> advisory flag; above the pass
+    # threshold only 4% of wrong-source pairs survive -> pass; the band
+    # between routes to the entailment judge (~25-30% of claims), which is
+    # what lets entailment run default-on at a fraction of always-on cost.
+    citation_relevance_flag_floor: float = 0.25
+    citation_relevance_pass_threshold: float = 0.45
+    citation_relevance_escalate: bool = True
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500

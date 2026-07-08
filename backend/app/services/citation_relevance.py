@@ -12,18 +12,28 @@ the source has nothing to do with. What it CANNOT catch: topically-aligned
 misrepresentation (right source, wrong number/negation) — embeddings are
 nearly blind to those; that is the entailment layer's job.
 
-ADVISORY + LOG-ONLY by design: scores ride on the response and are
-persisted for calibration; nothing is flagged or stripped until a
-threshold is chosen from real distribution data (precedent: the drift-gate
-and export-control thresholds both moved after measurement).
+Phase 2 (calibrated 2026-07): three-band routing. Scores below the flag
+floor get an advisory "flag" band (never stripped — the prose is
+untouched); scores above the pass threshold pass; the ambiguous band
+between is escalated to the LLM entailment judge in one batched call, so
+genuine support-checking runs by default at a fraction of always-on cost.
+Bands are pure geometry over the score distribution — nothing here is
+domain- or industry-specific.
 """
 
 from __future__ import annotations
 
 import re
 
+from app.config import settings
 from app.services.embedding_service import embed_batch, cosine_similarity
-from app.services.entailment_check import extract_cited_claims
+from app.services.entailment_check import (
+    _JUDGE_SYSTEM_PROMPT,
+    _build_judge_message,
+    _parse_verdicts,
+    extract_cited_claims,
+)
+from app.services.llm_provider import llm_chat
 
 
 # Two-sentence windows keep the claim-vs-source comparison length-symmetric;
@@ -131,3 +141,106 @@ def score_citation_relevance(
         "mean": round(sum(scored) / len(scored), 4) if scored else None,
         "claims": results,
     }
+
+
+def apply_relevance_bands(payload: dict) -> dict:
+    """Annotate each scored claim with its routing band (pure geometry).
+
+    flag   — below the calibrated floor: almost no true citations score here.
+    verify — the ambiguous band: routed to the entailment judge.
+    pass   — above the pass threshold: wrong-source pairs rarely reach it.
+    Unscored claims (unresolvable keys) get no band — layer 1 owns those.
+    """
+    floor = settings.citation_relevance_flag_floor
+    pass_t = settings.citation_relevance_pass_threshold
+    assert 0.0 <= floor < pass_t <= 1.0, "bands must satisfy 0 <= floor < pass <= 1"
+    for c in payload.get("claims", []):
+        score = c.get("score")
+        if score is None:
+            c["band"] = None
+        elif score < floor:
+            c["band"] = "flag"
+        elif score >= pass_t:
+            c["band"] = "pass"
+        else:
+            c["band"] = "verify"
+    bands = [c.get("band") for c in payload.get("claims", [])]
+    payload["flagged"] = bands.count("flag")
+    payload["escalated"] = 0
+    payload["unsupported"] = 0
+    return payload
+
+
+def _source_excerpts(
+    tokens: list[str], hop_map, neuron_map: dict, regs_by_id: dict,
+) -> list[tuple[str, str]]:
+    """(label, excerpt) pairs for the judge, from in-memory ctx sources."""
+    limit = settings.entailment_source_chars
+    sources: list[tuple[str, str]] = []
+    for token in tokens:
+        nid = hop_map.neuron_by_token.get(token)
+        if nid is not None:
+            n = neuron_map.get(nid)
+            if n is not None:
+                sources.append((n.label or "source", (n.content or n.summary or n.label or "")[:limit]))
+            continue
+        eid = hop_map.engram_by_token.get(token)
+        if eid is not None:
+            reg = regs_by_id.get(eid)
+            if reg is not None:
+                sources.append((reg.cfr_ref, (reg.text or "")[:limit]))
+    return sources
+
+
+async def escalate_borderline(
+    payload: dict, hop_map, neuron_map: dict, resolved_regulations: list,
+) -> None:
+    """Judge the 'verify'-band claims for actual support — ONE batched call.
+
+    Mutates the payload in place: escalated claims gain supported/reason;
+    unsupported ones move to the 'unsupported' band (advisory — prose is
+    never touched). Any failure degrades to escalation_status; this layer
+    never raises into the answer path.
+    """
+    verify = [c for c in payload.get("claims", []) if c.get("band") == "verify"]
+    verify = verify[: settings.entailment_max_claims]
+    if not verify:
+        return
+    regs_by_id = {r.engram_id: r for r in (resolved_regulations or [])}
+    pairs = []
+    judged = []
+    for c in verify:
+        sources = _source_excerpts(c["tokens"], hop_map, neuron_map, regs_by_id)
+        if sources:
+            pairs.append((c["claim"], sources))
+            judged.append(c)
+    if not pairs:
+        return
+    try:
+        result = await llm_chat(
+            system_prompt=_JUDGE_SYSTEM_PROMPT,
+            user_message=_build_judge_message(pairs),
+            max_tokens=1024,
+            model=settings.entailment_check_model,
+        )
+    except (AssertionError, ValueError, OSError) as exc:
+        payload["escalation_status"] = f"llm_error: {str(exc)[:120]}"
+        return
+    verdicts = _parse_verdicts(result.get("text", ""), len(pairs))
+    if verdicts is None:
+        payload["escalation_status"] = "parse_error"
+        return
+    by_pair = {v["pair"]: v for v in verdicts}
+    unsupported = 0
+    for i, claim in enumerate(judged):
+        v = by_pair.get(i)
+        if v is None:
+            continue
+        claim["supported"] = bool(v.get("supported"))
+        claim["reason"] = str(v.get("reason", ""))[:200]
+        if not claim["supported"]:
+            claim["band"] = "unsupported"
+            unsupported += 1
+    payload["escalated"] = len(judged)
+    payload["unsupported"] = unsupported
+    payload["escalation_status"] = "ok"
