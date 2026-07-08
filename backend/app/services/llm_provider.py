@@ -231,6 +231,12 @@ def _build_anthropic_args(
         "--model", model_info.api_id,
         "--output-format", "json",
         "--strict-mcp-config",
+        # Disable ALL built-in CLI tools: every Corvus call is a pure
+        # completion (classify/judge/agent envelopes are text protocols, never
+        # CLI tool use), yet the tool schemas cost ~17.8k prompt tokens per
+        # call (measured 2026-07-08: 17,785 cache-create with tools vs 180
+        # plain input without).
+        "--tools", "",
     ]
     if session:
         sid = session.get("session_id")

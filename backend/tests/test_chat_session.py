@@ -26,6 +26,8 @@ def _haiku_info():
 def test_stateless_args_unchanged():
     args = lp._build_anthropic_args(_haiku_info(), "sys", "low", None)
     assert "--no-session-persistence" in args
+    ti = args.index("--tools")
+    assert args[ti + 1] == "", "built-in CLI tools must be disabled (~17.8k tokens/call)"
     assert "--session-id" not in args and "--resume" not in args
     assert args[args.index("--system-prompt") + 1] == "sys"
 
