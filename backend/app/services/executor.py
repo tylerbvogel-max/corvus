@@ -431,48 +431,6 @@ def _build_model_map() -> MappingProxyType:
 MODEL_MAP = _build_model_map()
 NEURON_MODES = frozenset(k for k in MODEL_MAP if k.endswith("_neuron"))
 
-# LLM PROMPT INTENT: Minimal baseline system prompt for raw (non-neuron) comparison slots.
-#   Provides only the organizational context without neuron-assembled knowledge, serving as
-#   a control condition to measure the value added by the neuron graph.
-# INPUT: User's natural-language query sent as user message. No neuron context is injected.
-# OUTPUT FORMAT: Free-form natural-language response (no structured format required).
-# FAILURE MODES: None specific to this prompt. LLM may produce generic or less domain-specific
-#   answers compared to neuron-enhanced slots, which is the expected baseline behavior.
-# Loaded from tenant config — each tenant defines its own baseline context.
-# Falls back to empty string if tenant.yaml omits baseline_prompt.
-def _get_raw_baseline_prompt() -> str:
-    from app.tenant import tenant
-    return tenant.baseline_prompt
-
-# LLM PROMPT INTENT: Efficiency prefix prepended to system prompts when using the Sonnet model,
-#   reducing verbosity and token waste since Sonnet tends toward longer, more elaborate responses.
-# INPUT: Prepended before either the neuron-assembled prompt or RAW_BASELINE_PROMPT.
-#   The user query is sent separately as the user message.
-# OUTPUT FORMAT: No change to expected format — this is a behavioral modifier, not a format constraint.
-# FAILURE MODES: If prepended to a non-Sonnet model by mistake, may cause unnecessarily terse
-#   responses but is otherwise harmless. The prefix is only applied when is_sonnet is True.
-SONNET_EFFICIENCY_PREFIX = "Be precise and concise. Prioritize accuracy over elaboration. Do not repeat the question or restate what is already known — lead with the answer.\n\n"
-
-# LLM PROMPT INTENT: Conversational style wrapper appended to system prompts when chat_style
-#   is "conversational". Makes responses shorter, more engaging, and format-friendly for human
-#   readers in the primary chat UI. Avoids markdown tables and encourages follow-up exploration.
-# INPUT: Appended after the neuron-assembled or raw system prompt.
-# OUTPUT FORMAT: Short conversational prose with bold/italic for emphasis, no markdown tables.
-# FAILURE MODES: If appended to Query Lab prompts by mistake, responses would be overly casual
-#   and truncated — gated on chat_style to prevent this.
-CONVERSATIONAL_STYLE_SUFFIX = (
-    "\n\n## Response Style\n"
-    "You are having a conversation, not writing a report. Follow these rules strictly:\n"
-    "- Keep answers SHORT — 2-4 sentences for simple questions, 1-2 short paragraphs max for complex ones.\n"
-    "- Write like you're talking to a colleague: warm, direct, no filler.\n"
-    "- Use **bold** and *italic* for emphasis. Never use markdown tables (no |---|---| separators).\n"
-    "- Use short bullet lists only when listing 3+ items. Prefer flowing prose otherwise.\n"
-    "- End with a brief engagement hook that connects to related topics from your knowledge context. "
-    "For example: 'This also ties into [related topic] — want me to dig into that?' or "
-    "'There's an interesting angle with [related concept] if you're curious.'\n"
-    "- Do NOT start with 'Great question' or similar filler. Lead with the answer."
-)
-
 
 def _build_neuron_score_dicts(
     scored: list[NeuronScoreBreakdown],
@@ -492,34 +450,6 @@ def _build_neuron_score_dicts(
          "summary": neuron_map[s.neuron_id].summary if s.neuron_id in neuron_map else None}
         for s in scored
     ]
-
-
-def _normalize_slot_specs(
-    modes: list[str],
-    token_budget: int | None,
-    slots_v2: list[dict] | None,
-) -> list[dict]:
-    assert (modes and len(modes) > 0) or (slots_v2 and len(slots_v2) > 0), \
-        "Either modes or slots_v2 must be provided and non-empty"
-    if slots_v2:
-        slot_specs = slots_v2
-    else:
-        slot_specs = [
-            {"mode": m, "token_budget": token_budget or settings.token_budget,
-             "top_k": settings.top_k_neurons, "label": None}
-            for m in modes
-        ]
-    assert len(slot_specs) > 0, "slot_specs must be non-empty after normalization"
-    return slot_specs
-
-
-def _compute_neuron_slot_max(slot_specs: list[dict], attr: str, default_val: int) -> int:
-    assert isinstance(slot_specs, list), "slot_specs must be a list"
-    assert isinstance(attr, str), "attr must be a string"
-    return max(
-        (s.get(attr, default_val) for s in slot_specs if s["mode"] in NEURON_MODES),
-        default=default_val,
-    )
 
 
 async def _run_neuron_pipeline(
@@ -553,22 +483,6 @@ async def _run_neuron_pipeline(
     return ctx, classify_result
 
 
-def _get_cached_prompt(
-    prompt_cache: dict[tuple[int, int], str],
-    budget: int,
-    slot_top_k: int,
-    intent: str,
-    all_scored: list[NeuronScoreBreakdown],
-    neuron_map: dict[int, Neuron],
-) -> str:
-    assert isinstance(budget, int) and budget > 0, "budget must be a positive int"
-    assert isinstance(slot_top_k, int) and slot_top_k > 0, "slot_top_k must be a positive int"
-    key = (budget, slot_top_k)
-    if key not in prompt_cache:
-        prompt_cache[key] = assemble_prompt(intent, all_scored[:slot_top_k], neuron_map, budget_tokens=budget)
-    return prompt_cache[key]
-
-
 def _create_query_record(
     user_message: str,
     ctx: PreparedContext | None,
@@ -597,128 +511,6 @@ def _create_query_record(
         run_opus=any(s["mode"] == "opus_raw" for s in slot_specs),
         stage_telemetry_json=stage_telemetry if stage_telemetry else None,
     )
-
-
-def _build_slot_system_prompt(
-    mode: str, neuron_prompt: str, chat_style: str | None = None,
-) -> tuple[str, int]:
-    assert mode in MODEL_MAP, f"Unknown mode: {mode}"
-    model = MODEL_MAP[mode]
-    is_sonnet = model == "sonnet"
-    if mode in NEURON_MODES:
-        prompt = (SONNET_EFFICIENCY_PREFIX + neuron_prompt) if is_sonnet else neuron_prompt
-        if chat_style == "conversational":
-            prompt += CONVERSATIONAL_STYLE_SUFFIX
-        return prompt, 4096
-    baseline = _get_raw_baseline_prompt()
-    raw = (SONNET_EFFICIENCY_PREFIX + baseline) if is_sonnet else baseline
-    if chat_style == "conversational":
-        raw += CONVERSATIONAL_STYLE_SUFFIX
-    return raw, 4096
-
-
-def _format_slot_result(spec: dict, result: dict) -> dict:
-    assert "mode" in spec, "spec must contain 'mode'"
-    assert "text" in result, "result must contain 'text'"
-    mode = spec["mode"]
-    budget = spec.get("token_budget", settings.token_budget)
-    slot_top_k = spec.get("top_k", settings.top_k_neurons)
-    return {
-        "mode": mode,
-        "model": MODEL_MAP.get(mode, mode.rsplit("_", 1)[0]),
-        "neurons": mode in NEURON_MODES,
-        "response": result["text"],
-        "input_tokens": result["input_tokens"],
-        "output_tokens": result["output_tokens"],
-        "cost_usd": result["cost_usd"],
-        "cache_creation_tokens": result.get("cache_creation_tokens", 0),
-        "cache_read_tokens": result.get("cache_read_tokens", 0),
-        "duration_ms": result.get("duration_ms", 0),
-        "token_budget": budget if mode in NEURON_MODES else None,
-        "top_k": slot_top_k if mode in NEURON_MODES else None,
-        "label": spec.get("label"),
-        "model_version": result.get("model_version"),
-        "error": result.get("error", False),
-    }
-
-
-async def _execute_and_collect_slots(
-    slot_specs: list[dict],
-    user_message: str,
-    prompt_cache: dict[tuple[int, int], str],
-    intent: str,
-    all_scored: list[NeuronScoreBreakdown],
-    neuron_map: dict[int, Neuron],
-    on_stage: StageCallback,
-    chat_style: str | None = None,
-) -> list[dict]:
-    assert len(slot_specs) > 0, "slot_specs must be non-empty"
-
-    async def _timed_chat(*args, **kwargs):
-        t0 = time.monotonic()
-        result = await llm_chat(*args, **kwargs)
-        result["duration_ms"] = round((time.monotonic() - t0) * 1000)
-        return result
-
-    tasks: list[asyncio.Task] = []
-    for spec in slot_specs:
-        mode = spec["mode"]
-        budget = spec.get("token_budget", settings.token_budget)
-        slot_top_k = spec.get("top_k", settings.top_k_neurons)
-        model = MODEL_MAP.get(mode)
-        if mode in NEURON_MODES:
-            neuron_prompt = _get_cached_prompt(prompt_cache, budget, slot_top_k, intent, all_scored, neuron_map)
-        else:
-            neuron_prompt = ""
-        prompt, default_max_tokens = _build_slot_system_prompt(mode, neuron_prompt, chat_style)
-        max_tokens = spec.get("max_output_tokens") or default_max_tokens
-        tasks.append(asyncio.create_task(
-            _timed_chat(prompt, user_message, max_tokens=max_tokens, model=model)
-        ))
-
-    slot_results: list[dict | None] = [None] * len(slot_specs)
-
-    async def _collect_slot(i: int, spec: dict, task: asyncio.Task):
-        try:
-            result = await task
-        except Exception as e:
-            # Per-slot resilience: capture error without killing other slots
-            error_msg = str(e)
-            # Extract a concise message from rate-limit / quota errors
-            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-                error_msg = f"Rate limited — try again shortly or use a different model"
-            elif "401" in error_msg or "403" in error_msg:
-                error_msg = f"Authentication failed for this provider"
-            slot_results[i] = _format_slot_result(spec, {
-                "text": f"[Error: {error_msg}]",
-                "input_tokens": 0,
-                "output_tokens": 0,
-                "cost_usd": 0.0,
-                "model_version": None,
-                "duration_ms": 0,
-                "error": True,
-            })
-            if on_stage:
-                await on_stage("execute_llm", {"status": "error", "detail": {
-                    "slot_index": i, "mode": spec["mode"],
-                    "error": error_msg,
-                }})
-            return
-        slot_results[i] = _format_slot_result(spec, result)
-        if on_stage:
-            await on_stage("execute_llm", {"status": "done", "detail": {
-                "slot_index": i, "mode": spec["mode"],
-                "model": MODEL_MAP.get(spec["mode"], spec["mode"].rsplit("_", 1)[0]),
-                "duration_ms": result.get("duration_ms", 0),
-            }})
-
-    collect_tasks = [
-        asyncio.create_task(_collect_slot(i, spec, tasks[i]))
-        for i, spec in enumerate(slot_specs)
-    ]
-    await asyncio.gather(*collect_tasks)
-    assert all(s is not None for s in slot_results), "All slot results must be populated"
-    return slot_results
 
 
 async def _run_direct_call(

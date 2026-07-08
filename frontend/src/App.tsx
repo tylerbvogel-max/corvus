@@ -295,7 +295,7 @@ export default function App() {
     });
   }, []);
 
-  // Build nav groups based on tenant (screen watcher only for apex)
+  // Build nav groups based on tenant
   const navGroups = buildNavGroups(tenantConfig?.tenant_id);
   const activeGroup = navGroups.find(g => g.landingKey === tab || g.items.some(i => i.key === tab))?.label;
 

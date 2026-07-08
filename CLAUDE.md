@@ -151,6 +151,8 @@ When the hook reports a guideline warning, fix it if the function was just creat
 - LLM evaluation proposals are advisory only — human approval required before graph modifications
 
 > The screen-capture/watcher subsystem (`backend/app/corvus/`, `/corvus/*`
-> endpoints, Advisor UI) was REMOVED 2026-07-07. Its DB tables (`corvus_*`)
-> were left in place (no destructive migration); the shared
+> endpoints, Advisor UI, browser extension) was REMOVED 2026-07-07. Its DB
+> tables (`corvus_*`) are dropped by migration `017_drop_corvus_tables`
+> (irreversible; final data snapshot at
+> `~/corvus-watcher-tables-final-2026-07-07.sql.gz`). The shared
 > `observation_queue` intake and `/ingest/observation` remain.
