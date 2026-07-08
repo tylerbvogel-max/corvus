@@ -84,17 +84,21 @@ def test_slot_schema_rejects_out_of_range(bad):
 
 # ── Executor grouping: one context prep per distinct spread config ───────
 
+class _FakeCtx:
+    classify_input_tokens = 10
+    classify_output_tokens = 5
+    classify_cost_usd = 0.01
+
+
 @pytest.mark.asyncio
 async def test_prepare_slot_contexts_groups_by_spread_cfg(monkeypatch):
     calls = []
 
-    async def fake_pipeline(db, msg, group, top_k, on_stage,
-                            prior_neuron_ids=None, spread_hops=None, spread_floor=None):
-        calls.append({"cfg": (spread_hops, spread_floor), "top_k": top_k,
-                      "on_stage": on_stage, "n_slots": len(group)})
-        return object(), {"input_tokens": 10, "output_tokens": 5, "cost_usd": 0.01}
+    async def fake_forked(db, msg, group_params, on_stage, prior_neuron_ids):
+        calls.append({"params": group_params, "on_stage": on_stage})
+        return [_FakeCtx() for _ in group_params]
 
-    monkeypatch.setattr(ex, "_run_neuron_pipeline", fake_pipeline)
+    monkeypatch.setattr(ex, "_prepare_contexts_forked", fake_forked)
     stage_cb = object()
     slots = [
         {"mode": "haiku_neuron", "top_k": 60},                                  # defaults
@@ -105,20 +109,21 @@ async def test_prepare_slot_contexts_groups_by_spread_cfg(monkeypatch):
     ctx_by_cfg, totals = await ex._prepare_slot_contexts(
         None, "question", slots, stage_cb, None)
 
-    assert len(calls) == 2, "two distinct spread configs -> two context preps"
+    assert len(calls) == 1, "ONE forked prep call covers all groups"
+    params = calls[0]["params"]
+    assert len(params) == 2, "two distinct spread configs -> two groups"
     assert set(ctx_by_cfg) == {(None, None), (5, 0.05)}
-    default_call = next(c for c in calls if c["cfg"] == (None, None))
-    assert default_call["n_slots"] == 2 and default_call["top_k"] == 80
-    assert calls[0]["on_stage"] is stage_cb and calls[1]["on_stage"] is None, \
-        "stage events must stream only for the first prep"
-    assert totals["input_tokens"] == 20 and totals["cost_usd"] == pytest.approx(0.02)
+    default_group = next(p for p in params if p["spread_hops"] is None)
+    assert default_group["top_k"] == 80, "group takes max top_k of its slots"
+    assert calls[0]["on_stage"] is stage_cb
+    assert totals["input_tokens"] == 10, "classify runs (and is counted) once"
 
 
 @pytest.mark.asyncio
 async def test_prepare_slot_contexts_raw_only_skips_prep(monkeypatch):
     async def boom(*_a, **_k):
         raise AssertionError("must not prepare context for raw-only slots")
-    monkeypatch.setattr(ex, "_run_neuron_pipeline", boom)
+    monkeypatch.setattr(ex, "_prepare_contexts_forked", boom)
     ctx_by_cfg, totals = await ex._prepare_slot_contexts(
         None, "question", [{"mode": "haiku_raw"}], None, None)
     assert ctx_by_cfg == {}

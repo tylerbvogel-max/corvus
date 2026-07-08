@@ -475,6 +475,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   // packing history into the message. Reset on model switch / new chat so
   // non-Claude providers and fresh conversations fall back to history packing.
   const [llmSessionId, setLlmSessionId] = useState<string | null>(null);
+  // One-shot: force fresh retrieval on the next question (drift gate bypass).
+  const [refreshNext, setRefreshNext] = useState(false);
   const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -571,8 +573,9 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           priorNeuronIds.length > 0 ? priorNeuronIds : undefined,
           [slot],
           effort,
-          { persist: true, llmSessionId },
+          { persist: true, llmSessionId, refreshContext: refreshNext },
         );
+        setRefreshNext(false);
         abortRef.current = abort;
         setCanAbort(true);
         const res = await promise;
@@ -819,6 +822,15 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
               ))}
             </select>
           </>
+        )}
+        {llmSessionId && useNeurons && (
+          <button
+            className={`chat-neuron-toggle${refreshNext ? ' active' : ''}`}
+            onClick={() => setRefreshNext(v => !v)}
+            title="Force fresh knowledge retrieval on the next question, even if the current topic hasn't drifted — use after big graph updates or when an answer feels stale."
+          >
+            ⟳ {refreshNext ? 'Fresh context next' : 'Refresh context'}
+          </button>
         )}
         <button
           className={`chat-neuron-toggle${useNeurons ? ' active' : ''}`}

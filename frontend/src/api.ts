@@ -344,6 +344,7 @@ export interface StageEvent {
 export interface SessionOpts {
   persist: boolean;           // opt in to server-side CLI session persistence
   llmSessionId?: string | null; // prior turn's session id (resume)
+  refreshContext?: boolean;   // force fresh retrieval this turn (skip drift-gate reuse)
 }
 
 export function submitQueryStream(
@@ -370,6 +371,7 @@ export function submitQueryStream(
     if (sessionOpts?.persist) {
       body.persist_session = true;
       if (sessionOpts.llmSessionId) body.llm_session_id = sessionOpts.llmSessionId;
+      if (sessionOpts.refreshContext) body.refresh_context = true;
     }
     const res = await fetch('/query/stream', {
       method: 'POST',

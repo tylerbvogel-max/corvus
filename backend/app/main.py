@@ -627,6 +627,36 @@ async def _seed_compliance():
         logger.warning("Auto-snapshot skipped: %s", e)
 
 
+def _cleanup_llm_session_transcripts() -> None:
+    """Prune old persisted-chat CLI transcripts (~/.claude/projects/-tmp).
+
+    Hero-chat session persistence stores one JSONL transcript per
+    conversation in the CLI's session store for cwd=/tmp. They are only
+    needed while a conversation can still be resumed; prune anything older
+    than the TTL at startup so the store doesn't grow unbounded.
+    """
+    import time
+    from pathlib import Path
+
+    ttl_days = settings.chat_session_transcript_ttl_days
+    if ttl_days <= 0:
+        return
+    store = Path.home() / ".claude" / "projects" / "-tmp"
+    if not store.is_dir():
+        return
+    cutoff = time.time() - ttl_days * 86400
+    removed = 0
+    for f in sorted(store.glob("*.jsonl"))[:5000]:  # bounded sweep (JPL-2)
+        try:
+            if f.stat().st_mtime < cutoff:
+                f.unlink()
+                removed += 1
+        except OSError:
+            continue
+    if removed:
+        print(f"Pruned {removed} expired chat-session transcript(s)")
+
+
 async def _preload_hot_caches():
     """Warm every lazily-loaded hot-path dependency at startup.
 
@@ -670,6 +700,7 @@ async def lifespan(app: FastAPI):
     await _seed_engrams()
     await _seed_compliance()
     await _preload_hot_caches()
+    _cleanup_llm_session_transcripts()
     # AIP Phase 1.5 GTM-B: start remote MCP session manager
     from app.mcp_http import mcp_lifespan
     async with mcp_lifespan():

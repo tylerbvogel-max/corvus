@@ -457,39 +457,73 @@ def _build_neuron_score_dicts(
     ]
 
 
-async def _run_neuron_pipeline(
+# Stage name where per-spread-config groups diverge: everything before it
+# (structural resolve, classify, prefilter, scoring, continuity boost) is
+# identical across groups and runs ONCE; spread onward differs per config.
+_PIPELINE_FORK_STAGE = "spread_activation"
+
+
+async def _prepare_contexts_forked(
     db: AsyncSession,
     user_message: str,
-    slot_specs: list[dict],
-    max_top_k: int,
+    group_params: list[dict],
     on_stage: StageCallback,
-    prior_neuron_ids: list[int] | None = None,
-    spread_hops: int | None = None,
-    spread_floor: float | None = None,
-) -> tuple[PreparedContext | None, dict]:
-    assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
-        "user_message must be non-empty"
-    needs_neurons = any(s["mode"] in NEURON_MODES for s in slot_specs)
-    default_classify = {"classification": {}, "input_tokens": 0, "output_tokens": 0}
-    if not needs_neurons:
-        return None, default_classify
-    neuron_budget = max(s["token_budget"] for s in slot_specs if s["mode"] in NEURON_MODES)
-    ctx = await prepare_context(
-        db, user_message,
-        token_budget=neuron_budget,
-        top_k=max_top_k,
-        on_stage=on_stage,
+    prior_neuron_ids: list[int] | None,
+) -> list[PreparedContext]:
+    """Run the recall pipeline with a shared prefix and per-group suffixes.
+
+    classify -> prefilter -> score -> continuity run once; each group then
+    gets its own spread -> inhibit -> resolve -> assemble pass over a DEEP
+    COPY of the scored list (post-fork stages mutate score objects in
+    place: spread_boost, combined). Stage events stream only for the first
+    group. Returns one PreparedContext per group, same order.
+    """
+    import copy
+
+    from app.services.pipeline import PipelineContext, run_pipeline
+    from app.services.pipeline.state import PipelineState
+    from app.services.pipeline.stages import build_default_pipeline
+
+    assert group_params, "group_params must be non-empty"
+    stages = build_default_pipeline(settings.recall_mode)
+    split = next(i for i, st in enumerate(stages) if st.name == _PIPELINE_FORK_STAGE)
+    prefix, suffix = stages[:split], stages[split:]
+
+    initial = PipelineState(
+        user_message=user_message,
+        effective_top_k=max(g["top_k"] for g in group_params),
+        effective_pool=settings.semantic_prefilter_top_n,
+        effective_budget=max(g["budget"] for g in group_params),
         prior_neuron_ids=prior_neuron_ids,
-        spread_hops=spread_hops,
-        spread_floor=spread_floor,
     )
-    classify_result = {
-        "classification": {},
-        "input_tokens": ctx.classify_input_tokens,
-        "output_tokens": ctx.classify_output_tokens,
-        "cost_usd": ctx.classify_cost_usd,
-    }
-    return ctx, classify_result
+    shared_pctx = PipelineContext(db=db, on_stage=on_stage)
+    shared = await run_pipeline(prefix, initial, shared_pctx)
+    if isinstance(shared, PreparedContext):
+        # Structural resolve short-circuit: one answer context for everyone.
+        shared.stage_telemetry = shared_pctx.telemetry_json()
+        return [shared for _ in group_params]
+
+    results: list[PreparedContext] = []
+    for i, g in enumerate(group_params):
+        st = copy.copy(shared)
+        st.scored = copy.deepcopy(shared.scored)
+        st.scored_engrams = copy.deepcopy(shared.scored_engrams)
+        st.effective_top_k = g["top_k"]
+        st.effective_budget = g["budget"]
+        st.spread_hops = g.get("spread_hops")
+        st.spread_floor = g.get("spread_floor")
+        group_pctx = PipelineContext(
+            db=db,
+            on_stage=on_stage if i == 0 else None,
+            telemetry=list(shared_pctx.telemetry),
+        )
+        final = await run_pipeline(suffix, st, group_pctx)
+        if isinstance(final, PreparedContext):
+            final.stage_telemetry = group_pctx.telemetry_json()
+            results.append(final)
+        else:
+            results.append(_state_to_prepared_context(final, group_pctx))
+    return results
 
 
 def _slot_spread_cfg(slot: dict) -> tuple[int | None, float | None]:
@@ -507,13 +541,11 @@ async def _prepare_slot_contexts(
 ) -> tuple[dict[tuple, PreparedContext | None], dict]:
     """One context prep per distinct per-slot spread config.
 
-    Slots sharing (spread_hops, spread_floor) share a PreparedContext, so the
-    common case (no overrides, or every card set the same values) still runs
-    the recall pipeline exactly once. Distinct configs each get their own
-    classify -> score -> spread -> assemble pass — that's the point: the
-    packed context differs, enabling side-by-side associative-reach A/Bs.
-    Classify token totals are summed across preps. Stage events stream only
-    for the first prep so the pipeline viz isn't duplicated.
+    Slots sharing (spread_hops, spread_floor) share a PreparedContext. The
+    pipeline prefix (classify -> prefilter -> score) runs ONCE regardless of
+    group count; distinct configs fork at the spread stage and get their own
+    spread -> assemble suffix, so the packed context differs where the knobs
+    differ and nowhere else. Stage events stream only for the first group.
     """
     assert isinstance(slots, list) and slots, "slots must be non-empty"
     neuron_slots = [s for s in slots if s.get("mode", "") in NEURON_MODES]
@@ -525,20 +557,23 @@ async def _prepare_slot_contexts(
         key = _slot_spread_cfg(s)
         if key not in group_keys:
             group_keys.append(key)
-    ctx_by_cfg: dict[tuple, PreparedContext | None] = {}
-    for i, key in enumerate(group_keys):
+    group_params = []
+    for key in group_keys:
         group = [s for s in neuron_slots if _slot_spread_cfg(s) == key]
-        ctx, classify = await _run_neuron_pipeline(
-            db, user_message, group,
-            max(s.get("top_k", settings.top_k_neurons) for s in group),
-            on_stage if i == 0 else None,
-            prior_neuron_ids=prior_neuron_ids,
-            spread_hops=key[0], spread_floor=key[1],
-        )
-        ctx_by_cfg[key] = ctx
-        totals["input_tokens"] += classify.get("input_tokens", 0)
-        totals["output_tokens"] += classify.get("output_tokens", 0)
-        totals["cost_usd"] += classify.get("cost_usd", 0)
+        group_params.append({
+            "top_k": max(s.get("top_k", settings.top_k_neurons) for s in group),
+            "budget": max(s.get("token_budget", settings.token_budget) for s in group),
+            "spread_hops": key[0],
+            "spread_floor": key[1],
+        })
+    ctxs = await _prepare_contexts_forked(
+        db, user_message, group_params, on_stage, prior_neuron_ids,
+    )
+    ctx_by_cfg: dict[tuple, PreparedContext | None] = dict(zip(group_keys, ctxs))
+    first = ctxs[0]
+    totals["input_tokens"] = first.classify_input_tokens
+    totals["output_tokens"] = first.classify_output_tokens
+    totals["cost_usd"] = first.classify_cost_usd
     return ctx_by_cfg, totals
 
 

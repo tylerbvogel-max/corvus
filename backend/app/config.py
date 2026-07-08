@@ -113,6 +113,12 @@ class Settings(BaseSettings):
     # repeats/rephrasings; lower after calibration to reuse more aggressively.
     chat_context_drift_gate: bool = True
     chat_context_reuse_overlap: float = 0.6
+    # Persisted-chat CLI transcripts (~/.claude/projects/-tmp) are pruned at
+    # startup when older than this. 0 disables pruning.
+    chat_session_transcript_ttl_days: int = 14
+    # asyncpg connection pool (was NullPool — see database.py)
+    db_pool_size: int = 10
+    db_max_overflow: int = 10
     # Layer-2 citation grounding: embedding-cosine relevance of each cited
     # claim vs its cited sources. LOG-ONLY (advisory calibration data on every
     # response + queries.citation_relevance_json); no flagging threshold until
