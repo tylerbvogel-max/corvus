@@ -109,6 +109,11 @@ def test_pii_policy_detects_ssn():
 # ── Export-control policy ─────────────────────────────────────────────
 
 
+def _ec_check(cfg: dict, text: str):
+    ctx = PolicyContext(response_text=text, firings=[], tenant_policy=cfg)
+    return list(ExportControlPolicy(cfg).check(ctx))
+
+
 def test_export_control_policy_blocks_itar_term():
     cfg = {
         "enabled": True,
@@ -116,25 +121,67 @@ def test_export_control_policy_blocks_itar_term():
         "severity": "critical",
         "terms": ["ITAR", "missile"],
     }
-    ctx = PolicyContext(
-        response_text="This design relates to missile guidance.",
-        firings=[],
-        tenant_policy=cfg,
-    )
-    drafts = list(ExportControlPolicy(cfg).check(ctx))
+    drafts = _ec_check(cfg, "This design relates to missile guidance.")
     assert drafts, "export-control policy should flag ITAR term"
     assert any(d.action == "block" for d in drafts)
 
 
 def test_export_control_policy_clean_text():
     cfg = {"enabled": True, "terms": ["ITAR"]}
-    ctx = PolicyContext(
-        response_text="A benign statement about cheese.",
-        firings=[],
-        tenant_policy=cfg,
+    assert _ec_check(cfg, "A benign statement about cheese.") == []
+
+
+def test_export_control_word_boundary_no_substring_hits():
+    """"ITAR" is a substring of "military"; "classified" of "declassified".
+    The substring matcher blocked benign answers on both — must not recur."""
+    cfg = {"enabled": True, "block_terms": ["ITAR", "classified"]}
+    text = "Military-grade fasteners; the memo was declassified in 1998."
+    assert _ec_check(cfg, text) == []
+
+
+def test_export_control_flag_terms_never_block():
+    """Regression for the 2026-07 priming batch: topical vocabulary in a
+    benign process answer must annotate, not discard the response."""
+    cfg = {
+        "enabled": True,
+        "block_terms": ["USML"],
+        "flag_terms": ["classified", "propulsion"],
+    }
+    text = (
+        "Torque wrenches are classified by drive size. First-article "
+        "inspection of propulsion brackets follows AS9102."
     )
-    drafts = list(ExportControlPolicy(cfg).check(ctx))
-    assert drafts == []
+    drafts = _ec_check(cfg, text)
+    assert len(drafts) == 2
+    assert all(d.action == "flag" for d in drafts)
+    assert all(d.severity == "warn" for d in drafts)
+
+
+def test_export_control_block_terms_still_block():
+    cfg = {
+        "enabled": True,
+        "block_terms": ["USML", "restricted data"],
+        "flag_terms": ["propulsion"],
+    }
+    text = "This assembly falls under USML Category VIII."
+    drafts = _ec_check(cfg, text)
+    assert [d.action for d in drafts] == ["block"]
+    assert drafts[0].severity == "critical"
+    assert drafts[0].detail["tier"] == "block"
+
+
+def test_export_control_multiword_term_flexible_whitespace():
+    cfg = {"enabled": True, "flag_terms": ["guidance system"]}
+    drafts = _ec_check(cfg, "The guidance\n system calibration procedure.")
+    assert len(drafts) == 1
+    assert drafts[0].detail["term"] == "guidance system"
+
+
+def test_export_control_block_tier_wins_duplicate_term():
+    """A term listed in both tiers must resolve to the stricter action."""
+    cfg = {"enabled": True, "block_terms": ["missile"], "flag_terms": ["missile"]}
+    drafts = _ec_check(cfg, "missile telemetry")
+    assert [d.action for d in drafts] == ["block"]
 
 
 # ── run_guards orchestrator ───────────────────────────────────────────

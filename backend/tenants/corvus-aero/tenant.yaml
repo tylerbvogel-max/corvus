@@ -37,20 +37,29 @@ output_policies:
     severity: error
   export_control:
     enabled: true
-    action: block             # ITAR keyword hit halts the response
+    action: block             # block_terms hit halts the response
     severity: critical
-    # Aero-specific controlled-tech vocabulary. Not a substitute for
-    # human export-control review; this is a tripwire.
-    terms:
+    flag_severity: warn
+    # Not a substitute for human export-control review; this is a tripwire.
+    # Matching is word-boundary, so "ITAR" no longer fires inside "military".
+    # block_terms: export-control MARKINGS — text explicitly invoking
+    # controlled status. A hit discards the answer.
+    block_terms:
       - "ITAR"
       - "USML"
       - "EAR99"
+      - "restricted data"
+    # flag_terms: ordinary aerospace vocabulary that benign process answers
+    # use constantly ("fasteners are classified by grade", propulsion
+    # inspection steps). A hit writes an OutputViolation audit row but the
+    # answer still ships — blocking on these killed legitimate first-article
+    # and torque-calibration answers (2026-07 priming batch).
+    flag_terms:
       - "classified"
       - "propulsion"
       - "guidance system"
       - "missile"
       - "warhead"
-      - "restricted data"
 
 # Tiered write gate (plat-write-gate): observational writes auto-commit with
 # audit + decay reclamation; authoritative writes (organizational and above)
