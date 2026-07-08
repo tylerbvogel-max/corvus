@@ -55,6 +55,7 @@ def _clean_cache():
 
 def test_three_hop_reach_preserved(monkeypatch):
     """A node reachable ONLY at hop 3 is discovered by both paths — and lost at 2 hops."""
+    monkeypatch.setattr(settings, "spread_hops_auto", False)
     monkeypatch.setattr(settings, "spread_max_hops", 3)
     # chain 1->2->3->4, strong pyramidal edges + strong seed so hop-3 clears the floor
     _load([(1, 2, 0.9, "pyramidal"), (2, 3, 0.9, "pyramidal"), (3, 4, 0.9, "pyramidal")])
@@ -65,6 +66,7 @@ def test_three_hop_reach_preserved(monkeypatch):
     assert 2 in py and 3 in py
 
     # The 3-hop reach is load-bearing: at 2 hops, node 4 disappears in BOTH.
+    monkeypatch.setattr(settings, "spread_hops_auto", False)
     monkeypatch.setattr(settings, "spread_max_hops", 2)
     py2, vec2 = _both(scored, 1)
     _assert_equivalent(py2, vec2)
@@ -73,6 +75,7 @@ def test_three_hop_reach_preserved(monkeypatch):
 
 def test_max_across_paths_not_sum(monkeypatch):
     """A node reachable by two paths gets the MAX activation, not the sum — in both paths."""
+    monkeypatch.setattr(settings, "spread_hops_auto", False)
     monkeypatch.setattr(settings, "spread_max_hops", 3)
     # diamond: 1->2, 1->3, 2->4, 3->4. Path via 2 is stronger than via 3.
     _load([
@@ -90,6 +93,7 @@ def test_max_across_paths_not_sum(monkeypatch):
 
 def test_edge_type_decays_and_weight_gates(monkeypatch):
     """Per-edge-type decay + the pyramidal min-weight gate match in both paths."""
+    monkeypatch.setattr(settings, "spread_hops_auto", False)
     monkeypatch.setattr(settings, "spread_max_hops", 1)
     # Seed=3.0 so activations clear the 0.15 floor and the WEIGHT gate is isolated.
     # From seed 1: stellate(0.3), pyramidal(0.5), instantiates(0.6); plus a pyramidal
@@ -116,6 +120,7 @@ def test_edge_type_decays_and_weight_gates(monkeypatch):
 
 def test_topk_never_promoted(monkeypatch):
     """Seed (top-k) nodes are never returned as promoted neighbors."""
+    monkeypatch.setattr(settings, "spread_hops_auto", False)
     monkeypatch.setattr(settings, "spread_max_hops", 3)
     _load([(1, 2, 0.9, "pyramidal"), (2, 1, 0.9, "pyramidal"), (2, 3, 0.9, "pyramidal")])
     scored = _seeds([(1, 2.0), (2, 2.0)])
@@ -127,6 +132,7 @@ def test_topk_never_promoted(monkeypatch):
 @pytest.mark.parametrize("trial", range(12))
 def test_equivalence_random_graphs(monkeypatch, trial):
     """Fuzz: on random graphs + seeds, vectorized == reference exactly."""
+    monkeypatch.setattr(settings, "spread_hops_auto", False)
     monkeypatch.setattr(settings, "spread_max_hops", 3)
     rng = random.Random(1000 + trial)
     n_nodes = rng.randint(30, 250)

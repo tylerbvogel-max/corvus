@@ -118,9 +118,10 @@ interface EnhancedSlotConfig {
   effort: string;
   // Workspace priming: prepend a focus line naming the packed topics.
   priming: boolean;
-  // Spread-activation reach: hop cap (1-6) and min-activation floor (0-0.5).
-  // Slots with distinct values get their own context prep server-side.
-  spreadHops: number;
+  // Spread-activation reach: hop cap ('auto' = graph-derived via
+  // ceil(log N / log avg-degree); 1-6 manual) and min-activation floor
+  // (0-0.5). Slots with distinct values get their own context prep.
+  spreadHops: number | 'auto';
   spreadFloor: number;
 }
 
@@ -356,13 +357,14 @@ function ModelCard({
               <label className="control-label">Hops</label>
               <select
                 value={slot.spreadHops}
-                onChange={e => onUpdate({ spreadHops: parseInt(e.target.value, 10) })}
+                onChange={e => onUpdate({ spreadHops: e.target.value === 'auto' ? 'auto' : parseInt(e.target.value, 10) })}
                 disabled={isLoading}
                 className="control-select"
-                title="Spread-activation hop cap: how many edge hops associative recall may travel from the top-scored neurons. Decay usually exhausts the frontier by hop 2-3; deeper hops only matter with a lower activation floor."
+                title="Spread-activation hop cap. Auto derives it from graph structure (log N / log avg-degree) and self-terminates when deeper hops can't change the promoted set; 1-6 pins it manually."
               >
+                <option value="auto">Auto (graph-derived)</option>
                 {[1, 2, 3, 4, 5, 6].map(h => (
-                  <option key={h} value={h}>{h}{h === 3 ? ' (default)' : ''}</option>
+                  <option key={h} value={h}>{h}</option>
                 ))}
               </select>
             </div>
@@ -787,7 +789,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true, spreadHops: 3, spreadFloor: 0.15 },
+    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true, spreadHops: 'auto' as const, spreadFloor: 0.15 },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
@@ -852,7 +854,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       max_output_tokens: sc.maxOutputTokens,
       effort: sc.effort,
       priming: sc.priming,
-      spread_hops: sc.spreadHops,
+      spread_hops: sc.spreadHops === 'auto' ? undefined : sc.spreadHops,
       spread_floor: sc.spreadFloor,
     }));
   }
@@ -1067,7 +1069,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       isBaseline: false,
       effort: 'low',
       priming: true,
-      spreadHops: 3,
+      spreadHops: 'auto' as const,
       spreadFloor: 0.15,
     }]);
   }

@@ -463,7 +463,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const [effort, setEffort] = useState('low');
   // Spread-activation reach for KG recall (hero exposes the same knobs as
   // Query Lab cards): hop cap 1-6 and min-activation floor 0-0.5.
-  const [spreadHops, setSpreadHops] = useState(3);
+  const [spreadHops, setSpreadHops] = useState<number | 'auto'>('auto');
   const [spreadFloor, setSpreadFloor] = useState(0.15);
   const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -551,7 +551,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         // Workspace priming always on for the hero chat (Query Lab keeps a toggle)
         const slot: SlotSpec = {
           mode: `${model}_neuron`, token_budget: 8000, top_k: 60, priming: true,
-          spread_hops: spreadHops, spread_floor: spreadFloor,
+          spread_hops: spreadHops === 'auto' ? undefined : spreadHops, spread_floor: spreadFloor,
         };
         const { promise, abort } = submitQueryStream(
           userMessage,
@@ -786,9 +786,10 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         </select>
         {useNeurons && (
           <>
-            <select className="chat-model-select" value={spreadHops} onChange={e => setSpreadHops(parseInt(e.target.value, 10))} title="Spread-activation hop cap — how far associative recall may travel from the top-scored neurons. Decay usually exhausts the frontier by hop 2-3 unless the floor is lowered.">
+            <select className="chat-model-select" value={spreadHops} onChange={e => setSpreadHops(e.target.value === 'auto' ? 'auto' : parseInt(e.target.value, 10))} title="Spread-activation hop cap. Auto derives it from graph structure (log N / log avg-degree) and self-terminates when deeper hops can't change the promoted set; 1-6 pins it manually.">
+              <option value="auto">Hops: Auto</option>
               {[1, 2, 3, 4, 5, 6].map(h => (
-                <option key={h} value={h}>Hops: {h}{h === 3 ? ' (default)' : ''}</option>
+                <option key={h} value={h}>Hops: {h}</option>
               ))}
             </select>
             <select className="chat-model-select" value={spreadFloor} onChange={e => setSpreadFloor(parseFloat(e.target.value))} title="Minimum activation for a spread neighbor to survive. Lower = deeper associative reach; higher = only the strongest associations.">

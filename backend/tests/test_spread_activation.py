@@ -72,6 +72,8 @@ async def test_no_qualifying_edges_passthrough(mock_cache_fn, mock_settings):
     mock_settings.spread_enabled = True
     mock_settings.spread_min_edge_weight = 0.15
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_cache_fn.return_value = {}
     db = _mock_db()
@@ -92,6 +94,8 @@ async def test_below_threshold_activation_excluded(mock_cache_fn, mock_settings)
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 
@@ -118,6 +122,8 @@ async def test_above_threshold_neighbor_displaces_lowest(mock_cache_fn, mock_set
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 
@@ -144,6 +150,8 @@ async def test_below_cutoff_neuron_gets_additive_boost(mock_cache_fn, mock_setti
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 
@@ -172,6 +180,8 @@ async def test_spread_max_neurons_cap(mock_cache_fn, mock_settings):
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 2
 
@@ -204,6 +214,8 @@ async def test_both_in_top_k_edges_skipped(mock_cache_fn, mock_settings):
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 
@@ -231,6 +243,8 @@ async def test_inactive_neurons_filtered(mock_cache_fn, mock_settings):
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 
@@ -257,6 +271,8 @@ async def test_unscored_neighbor_gets_pure_activation(mock_cache_fn, mock_settin
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 
@@ -288,6 +304,8 @@ async def test_multiple_edges_to_same_neighbor_max_wins(mock_cache_fn, mock_sett
     mock_settings.spread_stellate_decay = 0.3
     mock_settings.spread_pyramidal_min_weight = 0.20
     mock_settings.spread_max_hops = 3
+    mock_settings.spread_hops_auto = False  # pin the mocked hop cap
+    mock_settings.spread_instantiate_decay = 0.6
     mock_settings.spread_vectorized = False  # these tests mock the reference-path frontier fetch
     mock_settings.spread_max_neurons = 10
 

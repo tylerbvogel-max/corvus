@@ -94,7 +94,11 @@ class Settings(BaseSettings):
     spread_min_edge_weight: float = 0.15
     spread_decay: float = 0.5
     spread_min_activation: float = 0.15
-    spread_max_hops: int = 3
+    spread_max_hops: int = 3  # manual fallback when spread_hops_auto is off / cache unloaded
+    # Derive the hop cap from graph structure (ceil(log N / log avg-degree))
+    # instead of the fixed spread_max_hops. Per-slot spread_hops overrides
+    # always win over both.
+    spread_hops_auto: bool = True
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500

@@ -55,6 +55,7 @@ def test_spread_floor_override_prunes_depth(chain_adjacency):
 
 
 def test_spread_none_falls_back_to_settings(chain_adjacency, monkeypatch):
+    monkeypatch.setattr(ns.settings, "spread_hops_auto", False)
     monkeypatch.setattr(ns.settings, "spread_max_hops", 2)
     monkeypatch.setattr(ns.settings, "spread_min_activation", 0.15)
     out = ns._spread_neighbors_python([_mk(1)], 1)
@@ -122,3 +123,74 @@ async def test_prepare_slot_contexts_raw_only_skips_prep(monkeypatch):
         None, "question", [{"mode": "haiku_raw"}], None, None)
     assert ctx_by_cfg == {}
     assert totals["input_tokens"] == 0
+
+
+# ── Graph-derived hop cap: hops = ceil(log N / log avg-degree) ───────────
+
+import app.services.adjacency_cache as ac
+
+
+@pytest.mark.parametrize("n_nodes,n_edges,expected", [
+    (2015, 164643, 2),    # today's aero graph (deg ~82) -> 2
+    (10_000, 800_000, 3),  # same density at 10k neurons -> 3
+    (100, 200, 7),         # sparse (deg 2): small graph still needs 7
+    (10, 100, 1),          # tiny + dense -> 1
+    (100, 100, 8),         # degenerate near-chain (deg 1) -> clamp
+    (5000, 25_000, 6),     # young tenant graph (deg 5) -> 6
+])
+def test_hop_cap_formula(n_nodes, n_edges, expected):
+    assert ac.hop_cap_formula(n_nodes, n_edges) == expected
+
+
+def test_hop_cap_formula_rejects_degenerate_inputs():
+    with pytest.raises(AssertionError):
+        ac.hop_cap_formula(1, 5)
+
+
+def test_effective_hop_cap_resolution(monkeypatch):
+    # Explicit per-query override always wins
+    assert ns._effective_hop_cap(4) == 4
+    # Auto on + cache loaded -> derived value
+    monkeypatch.setattr(ns.settings, "spread_hops_auto", True)
+    monkeypatch.setattr(ac, "derived_hop_cap", lambda: 5)
+    assert ns._effective_hop_cap(None) == 5
+    # Auto on + cache unloaded -> settings fallback
+    monkeypatch.setattr(ac, "derived_hop_cap", lambda: None)
+    monkeypatch.setattr(ns.settings, "spread_max_hops", 3)
+    assert ns._effective_hop_cap(None) == 3
+    # Auto off -> settings, even with a loaded cache
+    monkeypatch.setattr(ac, "derived_hop_cap", lambda: 7)
+    monkeypatch.setattr(ns.settings, "spread_hops_auto", False)
+    assert ns._effective_hop_cap(None) == 3
+
+
+# ── Self-terminating loop: marginal-yield early exit ─────────────────────
+
+def _star_adjacency(n_leaves):
+    """Hub 1 -> n strong leaves; each leaf chains onward one more hop."""
+    adj = {1: [(100 + i, 1.0, "instantiates") for i in range(n_leaves)]}
+    for i in range(n_leaves):
+        adj[100 + i] = [(200 + i, 1.0, "instantiates")]
+    return adj
+
+
+@pytest.mark.parametrize("n_leaves,expected_fetches", [
+    (35, 1),  # 35 secured >= 10 slots x3 margin: hop 2 provably can't compete
+    (10, 2),  # only 10 secured < 30: margin unmet, loop must keep going
+])
+def test_marginal_yield_stop(monkeypatch, n_leaves, expected_fetches):
+    adj = _star_adjacency(n_leaves)
+    fetches = []
+    def spy(ids):
+        fetches.append(set(ids))
+        return {i: adj.get(i, []) for i in ids}
+    monkeypatch.setattr(ns, "_fetch_frontier_neighbors_cached", spy)
+    monkeypatch.setattr(ns.settings, "spread_max_neurons", 10)
+    monkeypatch.setattr(ns.settings, "spread_instantiate_decay", 0.6)
+    monkeypatch.setattr(ns.settings, "spread_instantiate_min_weight", 0.1)
+    out = ns._spread_neighbors_python([_mk(1)], 1, max_hops=2, min_activation=0.0)
+    assert len(fetches) == expected_fetches
+    # Correctness invariant: the strongest candidates (the promotion set)
+    # are identical whether or not the stop fired.
+    top10 = sorted(out.values(), reverse=True)[:10]
+    assert all(v == pytest.approx(0.6) for v in top10)

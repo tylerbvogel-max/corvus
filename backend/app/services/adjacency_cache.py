@@ -13,6 +13,7 @@ Cache architecture:
 Feature-flagged via settings.spread_enabled (if spread is off, cache is never loaded).
 """
 
+import math
 import threading
 
 import numpy as np
@@ -307,3 +308,39 @@ def get_adjacency_csr() -> dict | None:
 def is_adjacency_loaded() -> bool:
     """Check if the adjacency cache has been loaded."""
     return _cache.is_loaded
+
+
+# Derived hop caps above this are clamped — past ~8 hops, multiplicative
+# decay has extinguished any signal regardless of graph shape.
+_HOP_CAP_MAX = 8
+
+
+def hop_cap_formula(n_nodes: int, n_edges: int) -> int:
+    """Characteristic-path-length hop cap: ceil(log N / log avg-degree).
+
+    Small-world result: expected hops to reach any node from any node scales
+    with log(N)/log(k) for average degree k. Dense graphs (high k) need few
+    hops however large N grows; sparse graphs need more. Degenerate
+    near-chain graphs (avg degree < 2, log <= ~0.7 would explode the ratio)
+    clamp to the max.
+    """
+    assert n_nodes >= 2, f"hop_cap_formula needs >= 2 nodes, got {n_nodes}"
+    assert n_edges >= 1, f"hop_cap_formula needs >= 1 edge, got {n_edges}"
+    avg_degree = n_edges / n_nodes
+    if avg_degree < 2.0:
+        return _HOP_CAP_MAX
+    cap = math.ceil(math.log(n_nodes) / math.log(avg_degree))
+    return max(1, min(cap, _HOP_CAP_MAX))
+
+
+def derived_hop_cap() -> int | None:
+    """Graph-derived spread hop cap, or None when the cache isn't loaded.
+
+    Reads node/edge counts from the cached CSR view (O(1); the CSR build is
+    itself cached and invalidated on edge mutations), so the cap re-derives
+    automatically as the graph grows or densifies.
+    """
+    csr = get_adjacency_csr()
+    if not csr or int(csr["id_list"].size) < 2 or int(csr["indices"].size) < 1:
+        return None
+    return hop_cap_formula(int(csr["id_list"].size), int(csr["indices"].size))

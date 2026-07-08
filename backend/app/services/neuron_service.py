@@ -775,6 +775,44 @@ async def _select_promotion_targets(
     return promotions
 
 
+# Secured-candidate multiple of spread_max_neurons required before the
+# marginal-yield stop fires. The margin absorbs post-spread filtering
+# (is_active + ACL at promotion time) that the BFS cannot see.
+_SPREAD_STOP_MARGIN = 3
+
+
+def _effective_hop_cap(max_hops: int | None) -> int:
+    """Resolve the hop cap: explicit per-query override > graph-derived > setting."""
+    if max_hops is not None:
+        assert 1 <= max_hops <= 10, f"max_hops must be in [1, 10], got {max_hops}"
+        return max_hops
+    if settings.spread_hops_auto:
+        from app.services.adjacency_cache import derived_hop_cap
+        derived = derived_hop_cap()
+        if derived is not None:
+            return derived
+    return settings.spread_max_hops
+
+
+def _spread_should_stop(candidate_activations, next_frontier_max: float) -> bool:
+    """Marginal-yield early exit shared by both BFS implementations.
+
+    The strongest candidate the NEXT hop can produce is bounded by
+    max(frontier activation) x best decay x max edge weight (weights are
+    <= 1.0 in the graph). Once 3x the promotion-slot count of candidates
+    already sit at or above that bound, deeper hops cannot change the
+    promoted set — stop. Conservative: it only skips hops that are provably
+    (modulo the filter margin) non-competitive.
+    """
+    assert next_frontier_max >= 0.0, "frontier activation must be non-negative"
+    slots_needed = settings.spread_max_neurons * _SPREAD_STOP_MARGIN
+    best_decay = max(settings.spread_stellate_decay,
+                     settings.spread_instantiate_decay, settings.spread_decay)
+    bound = next_frontier_max * best_decay
+    secured = sum(1 for a in candidate_activations if a >= bound)
+    return secured >= slots_needed
+
+
 def _spread_neighbors_python(
     scored: list[NeuronScoreBreakdown], top_k_count: int,
     max_hops: int | None = None, min_activation: float | None = None,
@@ -784,10 +822,9 @@ def _spread_neighbors_python(
     The authoritative semantics: multi-hop, per-edge-type decay, MAX-across-paths,
     with `visited` gating re-propagation (not the running activation max) and
     top-k never promoted. max_hops/min_activation are per-query overrides;
-    None falls back to tenant settings.
+    None falls back to the graph-derived cap (spread_hops_auto) or settings.
     """
-    hop_cap = max_hops if max_hops is not None else settings.spread_max_hops
-    assert 1 <= hop_cap <= 10, f"max_hops must be in [1, 10], got {hop_cap}"
+    hop_cap = _effective_hop_cap(max_hops)
     top_k = scored[:top_k_count]
     top_k_ids = {s.neuron_id for s in top_k}
     neighbor_activation: dict[int, float] = {}
@@ -808,6 +845,8 @@ def _spread_neighbors_python(
             break
         visited.update(next_frontier.keys())
         frontier = next_frontier
+        if _spread_should_stop(neighbor_activation.values(), max(frontier.values())):
+            break
     return neighbor_activation
 
 
@@ -855,11 +894,10 @@ def _spread_neighbors_vectorized(
     no cap), the same per-edge decay/min-weight/min-activation rules, MAX-across-paths,
     and the same visited/top-k gating. Only the inner per-edge Python loop is replaced;
     all math is float64 to bit-match the reference at the min-activation boundary.
-    max_hops/min_activation are per-query overrides; None = tenant settings.
+    max_hops/min_activation are per-query overrides; None = derived cap / settings.
     """
     from app.services.adjacency_cache import get_adjacency_csr
-    hop_cap = max_hops if max_hops is not None else settings.spread_max_hops
-    assert 1 <= hop_cap <= 10, f"max_hops must be in [1, 10], got {hop_cap}"
+    hop_cap = _effective_hop_cap(max_hops)
     csr = get_adjacency_csr()
     if not csr or int(csr["id_list"].size) == 0:
         return {}
@@ -902,6 +940,9 @@ def _spread_neighbors_vectorized(
         frontier_idx = np.where(next_mask)[0]
         frontier_act = newact[frontier_idx]
         visited |= next_mask
+        if frontier_idx.size and _spread_should_stop(
+                neighbor[neighbor > 0.0], float(frontier_act.max())):
+            break
 
     nz = np.where(neighbor > 0.0)[0]
     return {int(id_list[i]): float(neighbor[i]) for i in nz}
