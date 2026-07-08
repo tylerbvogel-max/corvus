@@ -280,6 +280,9 @@ class Query(Base):
     # Pattern #5: typed pipeline DAG telemetry — per-stage timing + status snapshot.
     # Shape: list[{stage, status, duration_ms, detail?, error_message?}]
     stage_telemetry_json: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    # Layer-2 citation grounding calibration data (per-claim relevance scores
+    # for the primary answer); advisory/log-only — see citation_relevance.py.
+    citation_relevance_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     # Frequency-hopped citation grounding: link to the CitationHopSession whose
     # secret key<->neuron map graded this answer's citations (NULL when disabled).
     citation_hop_session_id: Mapped[int | None] = mapped_column(Integer, nullable=True)

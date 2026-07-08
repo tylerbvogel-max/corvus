@@ -979,7 +979,11 @@ async def _slot_grounding_guards(
        assembled prompt. The normalised ref list feeds the inline UI marks;
        its length is the badge count.
 
-    Returns (cleaned_text, citations_fabricated, ungrounded_ref_list).
+    3. Citation relevance (layer 2, LOG-ONLY): max-pooled embedding cosine of
+       each cited claim vs its cited sources — catches wrong-source citation.
+       Advisory calibration data; nothing is flagged or stripped.
+
+    Returns (cleaned_text, citations_fabricated, ungrounded_ref_list, relevance).
     """
     assert isinstance(response_text, str), "response_text must be a string"
 
@@ -988,7 +992,46 @@ async def _slot_grounding_guards(
     if ctx is not None and getattr(ctx, "system_prompt", None):
         from app.services.regulatory_coverage import list_ungrounded_refs
         ungrounded_list = list_ungrounded_refs(cleaned, ctx.system_prompt)
-    return cleaned, citations_fabricated, ungrounded_list
+    relevance = None
+    if (settings.citation_relevance_enabled and ctx is not None
+            and getattr(ctx, "hop_map", None) is not None):
+        from app.services.citation_relevance import score_citation_relevance
+        relevance = await asyncio.to_thread(
+            score_citation_relevance, cleaned, ctx.hop_map, ctx.neuron_map,
+            ctx.resolved_regulations, settings.citation_relevance_max_claims,
+        )
+    return cleaned, citations_fabricated, ungrounded_list, relevance
+
+
+def _format_slot_result_dict(
+    mode, model_name, slot_type, uses_neurons, effective_effort,
+    citations_fabricated, ungrounded_list, relevance, result_data,
+    token_budget, ctx, label,
+) -> dict:
+    """Shape one slot's SlotResult payload from its execution artifacts."""
+    assert isinstance(result_data, dict), "result_data must be a dict"
+    return {
+        "mode": mode,
+        "model": model_name,
+        "neurons": uses_neurons,
+        "effort": effective_effort,
+        "citations_fabricated": citations_fabricated,
+        "ungrounded_refs": len(ungrounded_list),
+        "ungrounded_ref_list": ungrounded_list,
+        "citation_relevance": relevance,
+        "response": result_data["response_text"],
+        "input_tokens": result_data["input_tokens"],
+        "output_tokens": result_data["output_tokens"],
+        "cost_usd": result_data["cost_usd"],
+        "cache_creation_tokens": result_data["cache_creation"],
+        "cache_read_tokens": result_data["cache_read"],
+        "token_budget": token_budget,
+        "top_k": ctx.neurons_activated if ctx else 0,
+        # Label from the EFFECTIVE model (primary override may differ from mode)
+        "label": label or _eval_slot_label(f"{model_name}_{slot_type}", uses_neurons, token_budget),
+        "model_version": result_data.get("model_version"),
+        "llm_session_id": result_data.get("llm_session_id"),
+    }
 
 
 async def _execute_slot(
@@ -1032,33 +1075,17 @@ async def _execute_slot(
             session_spec=session_spec,
         )
 
-        result_data["response_text"], citations_fabricated, ungrounded_list = (
+        result_data["response_text"], citations_fabricated, ungrounded_list, relevance = (
             await _slot_grounding_guards(ctx, user_message, result_data["response_text"])
         )
 
         duration_ms = round((time.monotonic() - start_time) * 1000)
 
-        result = {
-            "mode": mode,
-            "model": model_name,
-            "neurons": uses_neurons,
-            "effort": effective_effort,
-            "citations_fabricated": citations_fabricated,
-            "ungrounded_refs": len(ungrounded_list),
-            "ungrounded_ref_list": ungrounded_list,
-            "response": result_data["response_text"],
-            "input_tokens": result_data["input_tokens"],
-            "output_tokens": result_data["output_tokens"],
-            "cost_usd": result_data["cost_usd"],
-            "cache_creation_tokens": result_data["cache_creation"],
-            "cache_read_tokens": result_data["cache_read"],
-            "token_budget": token_budget,
-            "top_k": ctx.neurons_activated if ctx else 0,
-            # Label from the EFFECTIVE model (primary override may differ from mode)
-            "label": label or _eval_slot_label(f"{model_name}_{slot_type}", uses_neurons, token_budget),
-            "model_version": result_data.get("model_version"),
-            "llm_session_id": result_data.get("llm_session_id"),
-        }
+        result = _format_slot_result_dict(
+            mode, model_name, slot_type, uses_neurons, effective_effort,
+            citations_fabricated, ungrounded_list, relevance, result_data,
+            token_budget, ctx, label,
+        )
 
         if on_stage:
             await on_stage("execute_llm", {"status": "done", "detail": {
@@ -1297,6 +1324,7 @@ async def _finalize_query_results(
             query.execute_input_tokens = slot_result.get("input_tokens", 0)
             query.execute_output_tokens = slot_result.get("output_tokens", 0)
             query.model_version = slot_result.get("model")
+            query.citation_relevance_json = slot_result.get("citation_relevance")
             break
 
     # Exit layer: verify citation keys against the secret per-query hop map.

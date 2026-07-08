@@ -113,6 +113,12 @@ class Settings(BaseSettings):
     # repeats/rephrasings; lower after calibration to reuse more aggressively.
     chat_context_drift_gate: bool = True
     chat_context_reuse_overlap: float = 0.6
+    # Layer-2 citation grounding: embedding-cosine relevance of each cited
+    # claim vs its cited sources. LOG-ONLY (advisory calibration data on every
+    # response + queries.citation_relevance_json); no flagging threshold until
+    # the real-usage distribution is measured.
+    citation_relevance_enabled: bool = True
+    citation_relevance_max_claims: int = 10
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
     # Candidate selection limits
     candidate_limit: int = 500

@@ -52,6 +52,8 @@ class SlotResult(BaseModel):
     mode: str
     model: str
     neurons: bool
+    # Layer-2 citation grounding (log-only): per-claim relevance scores
+    citation_relevance: dict | None = None
     response: str
     input_tokens: int
     output_tokens: int
