@@ -118,7 +118,13 @@ interface EnhancedSlotConfig {
   effort: string;
   // Workspace priming: prepend a focus line naming the packed topics.
   priming: boolean;
+  // Spread-activation reach: hop cap (1-6) and min-activation floor (0-0.5).
+  // Slots with distinct values get their own context prep server-side.
+  spreadHops: number;
+  spreadFloor: number;
 }
+
+const SPREAD_FLOOR_OPTIONS = [0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5];
 
 /** Model tier for baseline fallback: highest tier wins. */
 const MODEL_TIER: Record<string, number> = { haiku: 1, sonnet: 2, opus: 3 };
@@ -344,6 +350,36 @@ function ModelCard({
                 />
                 <span>Priming: {slot.priming ? 'On' : 'Off'}</span>
               </label>
+            </div>
+            {/* Spread-activation reach: hop cap */}
+            <div className="control-group">
+              <label className="control-label">Hops</label>
+              <select
+                value={slot.spreadHops}
+                onChange={e => onUpdate({ spreadHops: parseInt(e.target.value, 10) })}
+                disabled={isLoading}
+                className="control-select"
+                title="Spread-activation hop cap: how many edge hops associative recall may travel from the top-scored neurons. Decay usually exhausts the frontier by hop 2-3; deeper hops only matter with a lower activation floor."
+              >
+                {[1, 2, 3, 4, 5, 6].map(h => (
+                  <option key={h} value={h}>{h}{h === 3 ? ' (default)' : ''}</option>
+                ))}
+              </select>
+            </div>
+            {/* Spread-activation reach: min-activation floor */}
+            <div className="control-group">
+              <label className="control-label">Activation Floor</label>
+              <select
+                value={slot.spreadFloor}
+                onChange={e => onUpdate({ spreadFloor: parseFloat(e.target.value) })}
+                disabled={isLoading}
+                className="control-select"
+                title="Minimum activation for a spread neighbor to survive. Lower = deeper associative reach (more, weaker neighbors compete for promotion); higher = only the strongest associations."
+              >
+                {SPREAD_FLOOR_OPTIONS.map(f => (
+                  <option key={f} value={f}>{f.toFixed(2)}{f === 0.15 ? ' (default)' : ''}</option>
+                ))}
+              </select>
             </div>
             {/* Input Context slider */}
             <div className="control-group">
@@ -751,7 +787,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true },
+    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true, spreadHops: 3, spreadFloor: 0.15 },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
@@ -816,6 +852,8 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       max_output_tokens: sc.maxOutputTokens,
       effort: sc.effort,
       priming: sc.priming,
+      spread_hops: sc.spreadHops,
+      spread_floor: sc.spreadFloor,
     }));
   }
 
@@ -1029,6 +1067,8 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
       isBaseline: false,
       effort: 'low',
       priming: true,
+      spreadHops: 3,
+      spreadFloor: 0.15,
     }]);
   }
 

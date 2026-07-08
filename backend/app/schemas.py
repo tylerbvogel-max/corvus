@@ -18,6 +18,11 @@ class QuerySlotRequest(BaseModel):
     # inherits it; Query Lab sends an explicit per-card value so it stays
     # toggleable for A/B comparisons. No-op for raw slots (no packed context).
     priming: bool = True
+    # Per-slot spread-activation overrides (None = tenant defaults, currently
+    # 3 hops / 0.15 floor). Slots with distinct values get their own context
+    # prep so associative reach is comparable side-by-side. No-op for raw slots.
+    spread_hops: int | None = Field(None, ge=1, le=6)
+    spread_floor: float | None = Field(None, ge=0.0, le=0.5)
 
 
 class QueryRequest(BaseModel):

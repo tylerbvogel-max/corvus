@@ -29,6 +29,9 @@ class PipelineState:
     prior_neuron_ids: list[int] | None = None
     # Requester ACL scope (RequesterContext) — None = unrestricted local default
     requester: Any = None
+    # Per-query spread-activation overrides — None = tenant settings
+    spread_hops: int | None = None
+    spread_floor: float | None = None
 
     # --- classify stage ---
     classify_result: dict[str, Any] = field(default_factory=dict)

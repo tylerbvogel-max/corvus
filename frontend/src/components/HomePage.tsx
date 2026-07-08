@@ -461,6 +461,10 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const [canAbort, setCanAbort] = useState(false);
   const [useNeurons, setUseNeurons] = useState(true);
   const [effort, setEffort] = useState('low');
+  // Spread-activation reach for KG recall (hero exposes the same knobs as
+  // Query Lab cards): hop cap 1-6 and min-activation floor 0-0.5.
+  const [spreadHops, setSpreadHops] = useState(3);
+  const [spreadFloor, setSpreadFloor] = useState(0.15);
   const { models: availableModels, grouped: groupedModels } = useModels();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -545,7 +549,10 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         }
 
         // Workspace priming always on for the hero chat (Query Lab keeps a toggle)
-        const slot: SlotSpec = { mode: `${model}_neuron`, token_budget: 8000, top_k: 60, priming: true };
+        const slot: SlotSpec = {
+          mode: `${model}_neuron`, token_budget: 8000, top_k: 60, priming: true,
+          spread_hops: spreadHops, spread_floor: spreadFloor,
+        };
         const { promise, abort } = submitQueryStream(
           userMessage,
           (event: StageEvent) => setPipelineStages(prev => ({ ...prev, [event.stage]: event })),
@@ -777,6 +784,20 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
           <option value="medium">Effort: Medium</option>
           <option value="high">Effort: High</option>
         </select>
+        {useNeurons && (
+          <>
+            <select className="chat-model-select" value={spreadHops} onChange={e => setSpreadHops(parseInt(e.target.value, 10))} title="Spread-activation hop cap — how far associative recall may travel from the top-scored neurons. Decay usually exhausts the frontier by hop 2-3 unless the floor is lowered.">
+              {[1, 2, 3, 4, 5, 6].map(h => (
+                <option key={h} value={h}>Hops: {h}{h === 3 ? ' (default)' : ''}</option>
+              ))}
+            </select>
+            <select className="chat-model-select" value={spreadFloor} onChange={e => setSpreadFloor(parseFloat(e.target.value))} title="Minimum activation for a spread neighbor to survive. Lower = deeper associative reach; higher = only the strongest associations.">
+              {[0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5].map(f => (
+                <option key={f} value={f}>Floor: {f.toFixed(2)}{f === 0.15 ? ' (default)' : ''}</option>
+              ))}
+            </select>
+          </>
+        )}
         <button
           className={`chat-neuron-toggle${useNeurons ? ' active' : ''}`}
           onClick={() => setUseNeurons(v => !v)}

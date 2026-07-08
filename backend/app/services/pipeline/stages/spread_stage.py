@@ -24,6 +24,8 @@ class SpreadActivationStage:
         state.scored = await spread_activation(
             ctx.db, state.scored, state.effective_top_k,
             requester=state.requester,
+            max_hops=state.spread_hops,
+            min_activation=state.spread_floor,
         )
         return state
 

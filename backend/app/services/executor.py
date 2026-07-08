@@ -296,6 +296,7 @@ async def prepare_context(
     top_k: int | None = None, project_path: str | None = None,
     on_stage: StageCallback = None, prior_neuron_ids: list[int] | None = None,
     recall_mode: str | None = None, requester=None,
+    spread_hops: int | None = None, spread_floor: float | None = None,
 ) -> PreparedContext:
     """Run the classify → score → spread → inhibit → resolve → assemble pipeline.
 
@@ -323,6 +324,8 @@ async def prepare_context(
         project_path=project_path,
         prior_neuron_ids=prior_neuron_ids,
         requester=requester,
+        spread_hops=spread_hops,
+        spread_floor=spread_floor,
     )
     pipeline_ctx = PipelineContext(db=db, on_stage=on_stage)
 
@@ -459,6 +462,8 @@ async def _run_neuron_pipeline(
     max_top_k: int,
     on_stage: StageCallback,
     prior_neuron_ids: list[int] | None = None,
+    spread_hops: int | None = None,
+    spread_floor: float | None = None,
 ) -> tuple[PreparedContext | None, dict]:
     assert isinstance(user_message, str) and len(user_message.strip()) > 0, \
         "user_message must be non-empty"
@@ -473,6 +478,8 @@ async def _run_neuron_pipeline(
         top_k=max_top_k,
         on_stage=on_stage,
         prior_neuron_ids=prior_neuron_ids,
+        spread_hops=spread_hops,
+        spread_floor=spread_floor,
     )
     classify_result = {
         "classification": {},
@@ -481,6 +488,56 @@ async def _run_neuron_pipeline(
         "cost_usd": ctx.classify_cost_usd,
     }
     return ctx, classify_result
+
+
+def _slot_spread_cfg(slot: dict) -> tuple[int | None, float | None]:
+    """A slot's (spread_hops, spread_floor) override pair; Nones = tenant defaults."""
+    assert isinstance(slot, dict), "slot must be a dict"
+    return (slot.get("spread_hops"), slot.get("spread_floor"))
+
+
+async def _prepare_slot_contexts(
+    db: AsyncSession,
+    user_message: str,
+    slots: list[dict],
+    on_stage: StageCallback,
+    prior_neuron_ids: list[int] | None,
+) -> tuple[dict[tuple, PreparedContext | None], dict]:
+    """One context prep per distinct per-slot spread config.
+
+    Slots sharing (spread_hops, spread_floor) share a PreparedContext, so the
+    common case (no overrides, or every card set the same values) still runs
+    the recall pipeline exactly once. Distinct configs each get their own
+    classify -> score -> spread -> assemble pass — that's the point: the
+    packed context differs, enabling side-by-side associative-reach A/Bs.
+    Classify token totals are summed across preps. Stage events stream only
+    for the first prep so the pipeline viz isn't duplicated.
+    """
+    assert isinstance(slots, list) and slots, "slots must be non-empty"
+    neuron_slots = [s for s in slots if s.get("mode", "") in NEURON_MODES]
+    totals = {"classification": {}, "input_tokens": 0, "output_tokens": 0, "cost_usd": 0}
+    if not neuron_slots:
+        return {}, totals
+    group_keys: list[tuple] = []
+    for s in neuron_slots:
+        key = _slot_spread_cfg(s)
+        if key not in group_keys:
+            group_keys.append(key)
+    ctx_by_cfg: dict[tuple, PreparedContext | None] = {}
+    for i, key in enumerate(group_keys):
+        group = [s for s in neuron_slots if _slot_spread_cfg(s) == key]
+        ctx, classify = await _run_neuron_pipeline(
+            db, user_message, group,
+            max(s.get("top_k", settings.top_k_neurons) for s in group),
+            on_stage if i == 0 else None,
+            prior_neuron_ids=prior_neuron_ids,
+            spread_hops=key[0], spread_floor=key[1],
+        )
+        ctx_by_cfg[key] = ctx
+        totals["input_tokens"] += classify.get("input_tokens", 0)
+        totals["output_tokens"] += classify.get("output_tokens", 0)
+        totals["cost_usd"] += classify.get("cost_usd", 0)
+    return ctx_by_cfg, totals
 
 
 def _create_query_record(
@@ -1136,15 +1193,20 @@ async def execute_query(
             "priming": True,
         }]
 
-    # Always run neuron pipeline once (classify → score → spread → assemble)
-    # Slots will reuse this context
-    ctx, classify_result = await _run_neuron_pipeline(
-        db, user_message, slots, max(s.get("top_k", settings.top_k_neurons) for s in slots),
-        on_stage, prior_neuron_ids=prior_neuron_ids,
+    # Run the neuron pipeline once per distinct per-slot spread config —
+    # slots without spread overrides all share a single context prep.
+    ctx_by_cfg, classify_result = await _prepare_slot_contexts(
+        db, user_message, slots, on_stage, prior_neuron_ids,
     )
 
     # Determine if neurons are actually needed based on slot composition
     needs_neurons = any(s["mode"] in NEURON_MODES for s in slots)
+    # The primary (slot 0) group's context represents the query for
+    # persistence / response metadata; falls back to the first prepared one.
+    primary_key = _slot_spread_cfg(slots[0])
+    ctx = ctx_by_cfg.get(primary_key) if needs_neurons else None
+    if ctx is None and ctx_by_cfg:
+        ctx = next(iter(ctx_by_cfg.values()))
 
     # Create query record early (before execution)
     query = _create_query_record(user_message, ctx, needs_neurons=needs_neurons, slot_specs=slots, primary_prompt="", classify_result=classify_result)
@@ -1165,8 +1227,8 @@ async def execute_query(
         slot_type = parts[1] if len(parts) > 1 else "neuron"
         uses_neurons = slot_type == "neuron"
 
-        # Pass ctx only if this slot should receive neuron context
-        slot_ctx = ctx if uses_neurons else None
+        # Pass this slot's spread-config group context; raw slots get none
+        slot_ctx = ctx_by_cfg.get(_slot_spread_cfg(slot)) if uses_neurons else None
 
         # Slot 0 is the primary answer (persisted to query.response_text) —
         # eligible for the primary_answer_effort/model quality floor.

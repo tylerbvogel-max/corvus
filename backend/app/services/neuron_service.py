@@ -644,8 +644,10 @@ def _compute_edge_activation(
     source_activation: float,
     edge_weight: float,
     edge_type: str,
+    min_activation: float | None = None,
 ) -> float | None:
     """Return activation for an edge, or None if the edge should be skipped."""
+    floor = settings.spread_min_activation if min_activation is None else min_activation
     if edge_type == "stellate":
         decay = settings.spread_stellate_decay
     elif edge_type == "instantiates":
@@ -657,7 +659,7 @@ def _compute_edge_activation(
         if edge_weight < settings.spread_pyramidal_min_weight:
             return None
     activation = source_activation * edge_weight * decay
-    if activation < settings.spread_min_activation:
+    if activation < floor:
         return None
     return activation
 
@@ -668,12 +670,14 @@ def _propagate_frontier(
     top_k_ids: set[int],
     visited: set[int],
     neighbor_activation: dict[int, float],
+    min_activation: float | None = None,
 ) -> dict[int, float]:
     """Propagate activation from frontier through adjacency, return next frontier."""
     next_frontier: dict[int, float] = {}
     for source_id, source_act in frontier.items():
         for neighbor_id, edge_weight, edge_type in adjacency.get(source_id, []):
-            activation = _compute_edge_activation(source_act, edge_weight, edge_type)
+            activation = _compute_edge_activation(
+                source_act, edge_weight, edge_type, min_activation)
             if activation is None:
                 continue
             if neighbor_id in top_k_ids:
@@ -773,19 +777,23 @@ async def _select_promotion_targets(
 
 def _spread_neighbors_python(
     scored: list[NeuronScoreBreakdown], top_k_count: int,
+    max_hops: int | None = None, min_activation: float | None = None,
 ) -> dict[int, float]:
     """Reference frontier-BFS spread. Returns {node_id: max activation}.
 
     The authoritative semantics: multi-hop, per-edge-type decay, MAX-across-paths,
     with `visited` gating re-propagation (not the running activation max) and
-    top-k never promoted.
+    top-k never promoted. max_hops/min_activation are per-query overrides;
+    None falls back to tenant settings.
     """
+    hop_cap = max_hops if max_hops is not None else settings.spread_max_hops
+    assert 1 <= hop_cap <= 10, f"max_hops must be in [1, 10], got {hop_cap}"
     top_k = scored[:top_k_count]
     top_k_ids = {s.neuron_id for s in top_k}
     neighbor_activation: dict[int, float] = {}
     frontier: dict[int, float] = {s.neuron_id: s.combined for s in top_k}
     visited: set[int] = set(top_k_ids)
-    for _hop in range(settings.spread_max_hops):
+    for _hop in range(hop_cap):
         frontier_id_set = set(frontier.keys())
         if not frontier_id_set:
             break
@@ -794,6 +802,7 @@ def _spread_neighbors_python(
             break
         next_frontier = _propagate_frontier(
             frontier, adjacency, top_k_ids, visited, neighbor_activation,
+            min_activation,
         )
         if not next_frontier:
             break
@@ -838,6 +847,7 @@ def _spread_seed_frontier(
 
 def _spread_neighbors_vectorized(
     scored: list[NeuronScoreBreakdown], top_k_count: int,
+    max_hops: int | None = None, min_activation: float | None = None,
 ) -> dict[int, float]:
     """Vectorized frontier-BFS spread — numpy scatter-max over CSR frontier edges.
 
@@ -845,8 +855,11 @@ def _spread_neighbors_vectorized(
     no cap), the same per-edge decay/min-weight/min-activation rules, MAX-across-paths,
     and the same visited/top-k gating. Only the inner per-edge Python loop is replaced;
     all math is float64 to bit-match the reference at the min-activation boundary.
+    max_hops/min_activation are per-query overrides; None = tenant settings.
     """
     from app.services.adjacency_cache import get_adjacency_csr
+    hop_cap = max_hops if max_hops is not None else settings.spread_max_hops
+    assert 1 <= hop_cap <= 10, f"max_hops must be in [1, 10], got {hop_cap}"
     csr = get_adjacency_csr()
     if not csr or int(csr["id_list"].size) == 0:
         return {}
@@ -856,13 +869,15 @@ def _spread_neighbors_vectorized(
     weight = csr["weight"]
     n = int(id_list.size)
     decay, weight_ok = _spread_edge_gates(csr)
-    min_act = float(settings.spread_min_activation)
+    min_act = float(
+        settings.spread_min_activation if min_activation is None else min_activation
+    )
     topk_mask, visited, frontier_idx, frontier_act = _spread_seed_frontier(
         scored, top_k_count, csr["id2idx"], n,
     )
     neighbor = np.zeros(n, dtype=np.float64)
 
-    for _hop in range(settings.spread_max_hops):
+    for _hop in range(hop_cap):
         if frontier_idx.size == 0:
             break
         starts = indptr[frontier_idx]
@@ -897,6 +912,8 @@ async def spread_activation(
     scored: list[NeuronScoreBreakdown],
     top_k_count: int,
     requester=None,
+    max_hops: int | None = None,
+    min_activation: float | None = None,
 ) -> list[NeuronScoreBreakdown]:
     """Multi-hop spread activation through NeuronEdge co-firing graph.
 
@@ -908,6 +925,8 @@ async def spread_activation(
 
     Each hop compounds decay: hop-N activation = source_activation * edge_weight * decay.
     Uses max (not sum) across paths to prevent hub bias.
+    max_hops/min_activation are per-query overrides (Query Lab / hero chat
+    spread controls); None falls back to tenant settings.
     """
     assert top_k_count > 0, f"top_k_count must be positive, got {top_k_count}"
     input_length = len(scored)
@@ -923,9 +942,11 @@ async def spread_activation(
     # path is the numpy scatter-max reimplementation of the same BFS; the Python
     # path is the reference. Both return {node_id: max activation}.
     if settings.spread_vectorized:
-        neighbor_activation = _spread_neighbors_vectorized(scored, top_k_count)
+        neighbor_activation = _spread_neighbors_vectorized(
+            scored, top_k_count, max_hops, min_activation)
     else:
-        neighbor_activation = _spread_neighbors_python(scored, top_k_count)
+        neighbor_activation = _spread_neighbors_python(
+            scored, top_k_count, max_hops, min_activation)
 
     if not neighbor_activation:
         return scored

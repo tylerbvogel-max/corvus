@@ -307,6 +307,8 @@ export interface SlotSpec {
   label?: string;
   effort?: string;  // per-slot reasoning effort override (low|medium|high)
   priming?: boolean; // prefix this slot's prompt with a packed-topic focus line
+  spread_hops?: number;  // spread-activation hop cap override (1-6; server default 3)
+  spread_floor?: number; // spread-activation min-activation floor (0-0.5; server default 0.15)
 }
 
 export interface GraphCapacity {
