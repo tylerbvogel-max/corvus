@@ -11,7 +11,6 @@ from alembic import context
 from app.config import settings
 from app.models import Base
 from app.compliance.models import ComplianceSuiteRun, ComplianceProviderResult, ComplianceAttestation  # noqa: F401
-from app.models_corvus import CorvusCapture, CorvusInterpretation, CorvusKnownApp, CorvusSession  # noqa: F401
 
 config = context.config
 
