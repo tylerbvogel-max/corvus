@@ -628,6 +628,38 @@ async def post_query(
     return QueryResponse(**result)
 
 
+async def _stream_output_checks(db, result: dict, on_stage) -> list[dict]:
+    """Run output risk/grounding checks + the opt-in entailment pass for the
+    SSE path, emitting each as its own stage event for the pipeline viz."""
+    output_checks: list[dict] = []
+    response_text = result.get("response_text", "")
+    if response_text:
+        risk_flags = check_output_risk(response_text)
+        grounding = check_output_grounding(
+            response_text, result.get("assembled_prompt"),
+        ) if result.get("neuron_scores") else {"grounded": None, "confidence": None, "reason": "No neuron context"}
+        output_checks.append({
+            "mode": "direct",
+            "risk_flags": risk_flags,
+            "grounding": grounding,
+        })
+
+    await on_stage("output_checks", {"status": "done", "detail": {"checked": len(output_checks)}})
+
+    # Opt-in entailment pass on the primary answer (one batched LLM
+    # call, advisory) — emitted as its own stage so the viz shows it.
+    if settings.entailment_check_enabled and output_checks:
+        await on_stage("entailment_check", {"status": "running", "detail": {}})
+        await _maybe_attach_entailment(db, result, output_checks)
+        ent = output_checks[0].get("entailment") or {}
+        await on_stage("entailment_check", {"status": "done", "detail": {
+            "checked": ent.get("checked", 0),
+            "unsupported": ent.get("unsupported_count", 0),
+            "state": ent.get("status", "unknown"),
+        }})
+    return output_checks
+
+
 @router.post("/query/stream")
 async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db)):
     """SSE streaming version of POST /query — emits pipeline stage events in real time."""
@@ -673,33 +705,7 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
                 session_spec=_session_spec_from_request(req),
             )
 
-            # Output checks
-            output_checks: list[dict] = []
-            response_text = result.get("response_text", "")
-            if response_text:
-                risk_flags = check_output_risk(response_text)
-                grounding = check_output_grounding(
-                    response_text, result.get("assembled_prompt"),
-                ) if result.get("neuron_scores") else {"grounded": None, "confidence": None, "reason": "No neuron context"}
-                output_checks.append({
-                    "mode": "direct",
-                    "risk_flags": risk_flags,
-                    "grounding": grounding,
-                })
-
-            await on_stage("output_checks", {"status": "done", "detail": {"checked": len(output_checks)}})
-
-            # Opt-in entailment pass on the primary answer (one batched LLM
-            # call, advisory) — emitted as its own stage so the viz shows it.
-            if settings.entailment_check_enabled and output_checks:
-                await on_stage("entailment_check", {"status": "running", "detail": {}})
-                await _maybe_attach_entailment(db, result, output_checks)
-                ent = output_checks[0].get("entailment") or {}
-                await on_stage("entailment_check", {"status": "done", "detail": {
-                    "checked": ent.get("checked", 0),
-                    "unsupported": ent.get("unsupported_count", 0),
-                    "state": ent.get("status", "unknown"),
-                }})
+            output_checks = await _stream_output_checks(db, result, on_stage)
 
             result["input_guard"] = guard_result.to_dict()
             result["output_checks"] = output_checks
@@ -750,6 +756,23 @@ def _eval_slot_label(slot: SlotResult) -> str:
     return " ".join(parts)
 
 
+def _strip_citation_keys(text: str) -> str:
+    """Remove [FQ-] citation keys from text bound for an eval/refine judge.
+
+    Keys are per-query random secrets; a judge working from a DIFFERENT
+    context prep sees different keys and rules valid citations "fabricated"
+    (root cause of the systematic faithfulness ~2/5 on citing answers,
+    diagnosed 2026-07-08). Key validity is layer 1's job, verified at answer
+    time against the correct map — judges evaluate CONTENT, so keys are
+    noise to them regardless.
+    """
+    if not text:
+        return text
+    from app.services.citation_hopping import extract_citation_tokens, strip_hallucinated
+    tokens = extract_citation_tokens(text)
+    return strip_hallucinated(text, tokens) if tokens else text
+
+
 def _build_eval_prompts(
     user_message: str, slots: list[SlotResult], domain_knowledge: str = "",
 ) -> tuple[str, str, list[tuple[str, SlotResult]]]:
@@ -759,7 +782,8 @@ def _build_eval_prompts(
         label = _eval_slot_label(slot)
         letter = chr(65 + i)
         answer_map.append((letter, slot))
-        sections.append(f"Answer {letter} ({label}):\n{slot.response}")
+        sections.append(
+            f"Answer {letter} ({label}):\n{_strip_citation_keys(slot.response)}")
 
     score_template = []
     for letter, slot in answer_map:
@@ -1015,16 +1039,21 @@ async def evaluate_query(
         raise HTTPException(status_code=400, detail="Need at least two responses to compare")
     assert len(slots) >= 2, f"evaluate_query requires >= 2 slots, got {len(slots)}"
 
-    # Assemble neuron context (ground truth for evaluation)
-    from app.services.executor import prepare_context
-    neuron_context = None
-    domain_knowledge = ""
-    try:
-        neuron_context = await prepare_context(db, query.user_message, token_budget=8000, top_k=50)
-        domain_knowledge = neuron_context.system_prompt if neuron_context else ""
-    except Exception:
-        # If prepare_context fails, fall back to blind evaluation
-        domain_knowledge = ""
+    # Ground truth for evaluation: the ORIGINAL briefing the answers were
+    # generated from. A fresh prepare_context here re-scores a live graph
+    # (usage signals shift) and mints new citation keys, so true statements
+    # can be absent from the judge's ground truth. Fresh prep is only the
+    # fallback for legacy queries without a stored prompt.
+    domain_knowledge = query.assembled_prompt or ""
+    if not domain_knowledge:
+        from app.services.executor import prepare_context
+        try:
+            neuron_context = await prepare_context(db, query.user_message, token_budget=8000, top_k=50)
+            domain_knowledge = neuron_context.system_prompt if neuron_context else ""
+        except Exception:
+            # If prepare_context fails, fall back to blind evaluation
+            domain_knowledge = ""
+    domain_knowledge = _strip_citation_keys(domain_knowledge)
 
     merged_scores, winner, verdict_text, eval_in, eval_out = await _run_counterbalanced_eval(
         query.user_message, slots, domain_knowledge, req.model,
@@ -1464,14 +1493,16 @@ async def refine_query(
     """
     query, eval_scores, neurons = await _load_refine_prerequisites(query_id, db)
 
-    # Assemble fresh neuron context (ground truth for analysis)
-    from app.services.executor import prepare_context
-    domain_knowledge = ""
-    try:
-        neuron_context = await prepare_context(db, query.user_message, token_budget=8000, top_k=50)
-        domain_knowledge = neuron_context.system_prompt if neuron_context else ""
-    except Exception:
-        domain_knowledge = ""
+    # Ground truth for analysis: prefer the original briefing (see evaluate).
+    domain_knowledge = query.assembled_prompt or ""
+    if not domain_knowledge:
+        from app.services.executor import prepare_context
+        try:
+            neuron_context = await prepare_context(db, query.user_message, token_budget=8000, top_k=50)
+            domain_knowledge = neuron_context.system_prompt if neuron_context else ""
+        except Exception:
+            domain_knowledge = ""
+    domain_knowledge = _strip_citation_keys(domain_knowledge)
 
     system_prompt = _build_refine_system_prompt(domain_knowledge)
     user_prompt = _build_refine_user_prompt(query, neurons, eval_scores, req.user_context)
