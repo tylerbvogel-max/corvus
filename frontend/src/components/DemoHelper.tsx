@@ -8,12 +8,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
    and fall back to a hint ("open it via …") when they don't; optional
    steps (dock, demo-only pill) are skipped silently when absent. */
 
+/** App.tsx listens for this and opens (or focuses) the window in detail. */
+export const OPEN_WINDOW_EVENT = 'corvus-open-window';
+
 interface TourStep {
   title: string;
   body: string;
   find?: () => HTMLElement | null;
-  hint?: string;       // shown when find() comes up empty
+  hint?: string;       // shown when find() comes up empty (and there's no open action)
   optional?: boolean;  // skip silently when missing
+  /** One-click way to bring this section up when its target is closed. */
+  open?: { label: string; run: () => void };
 }
 
 const q = (sel: string) => () => document.querySelector(sel) as HTMLElement | null;
@@ -22,6 +27,10 @@ const windowByTitle = (title: string) => () => {
     .find(t => t.textContent?.trim() === title);
   return (el?.closest('.app-window') as HTMLElement) ?? null;
 };
+const openWin = (key: string) => () =>
+  window.dispatchEvent(new CustomEvent(OPEN_WINDOW_EVENT, { detail: key }));
+const expandNav = () =>
+  (document.querySelector('.sidebar-pill-btn') as HTMLElement | null)?.click();
 
 const STEPS: TourStep[] = [
   {
@@ -37,25 +46,25 @@ const STEPS: TourStep[] = [
     title: 'The navigation menu',
     body: 'CHAT opens the main conversation. The groups below it (Query, Autopilot, Knowledge, Evaluate, History) expand into that area\'s pages — each one opens as its own window. Numbers on items are pending proposals awaiting review.',
     find: q('.sidebar-nav'),
-    hint: 'Click the pulsing logo pill to expand the navigation, then revisit this tip.',
+    open: { label: 'Expand the navigation', run: expandNav },
   },
   {
     title: 'Settings gear',
     body: 'Themes live here — and so does live tuning for the water itself (cell size, damping, wake strength, ambient drops…). Slide things around and watch the background react instantly.',
     find: q('.sidebar-settings-btn'),
-    hint: 'Expand the navigation to reveal the gear at its bottom.',
+    open: { label: 'Expand the navigation', run: expandNav },
   },
   {
     title: 'The chat',
     body: 'Ask anything — answers are grounded in internal documentation, with numbered citations you can click and a sources chip under each response. Starting a chat also opens the Chat History and Neuron Graph windows.',
     find: () => (document.querySelector('.chat-hero, .chat-main')?.closest('.app-window') as HTMLElement) ?? null,
-    hint: 'Open CHAT from the navigation menu to see it.',
+    open: { label: 'Open the chat', run: openWin('home') },
   },
   {
     title: 'Model picker',
     body: 'Chooses which LLM answers. The roster reflects what this system actually has available right now.',
     find: q('.chat-model-select'),
-    hint: 'Open the chat window first — the picker sits in its input bar.',
+    open: { label: 'Open the chat', run: openWin('home') },
   },
   {
     title: 'Seed prompts',
@@ -67,7 +76,7 @@ const STEPS: TourStep[] = [
     title: 'Windows work like a desktop',
     body: 'Drag by the title bar. Drag to a screen edge to snap half-screen, to a corner for quarters, to the top to maximize (double-clicking the title bar does that too). ─ minimizes to the dock, ✕ closes. Click any window to bring it to front.',
     find: q('.app-window-titlebar'),
-    hint: 'Open any page from the navigation to get a window.',
+    open: { label: 'Open a window', run: openWin('home') },
   },
   {
     title: 'Resize from any edge',
@@ -79,13 +88,13 @@ const STEPS: TourStep[] = [
     title: 'Chat History',
     body: 'Every conversation, searchable. Click one to load it into the chat (even if the chat window is closed — it reopens), double-click a title to rename, × to delete, + New Chat for a fresh start.',
     find: windowByTitle('Chat History'),
-    hint: 'It opens automatically when you start a chat.',
+    open: { label: 'Open Chat History', run: openWin('chat-history') },
   },
   {
     title: 'Neuron Graph',
     body: 'The activation graph behind the latest answer — which knowledge neurons fired and how strongly. It updates live as you chat.',
     find: windowByTitle('Neuron Graph'),
-    hint: 'It opens automatically when you start a chat.',
+    open: { label: 'Open the Neuron Graph', run: openWin('chat-graph') },
   },
   {
     title: 'The dock',
@@ -236,7 +245,12 @@ export default function DemoHelper() {
               <button className="tour-close" onClick={() => setStep(null)} title="End tour">✕</button>
             </div>
             <p className="tour-body">{current.body}</p>
-            {missing && current.hint && <p className="tour-hint">{current.hint}</p>}
+            {missing && current.open && (
+              <button className="tour-open" onClick={current.open.run}>
+                {current.open.label} →
+              </button>
+            )}
+            {missing && !current.open && current.hint && <p className="tour-hint">{current.hint}</p>}
             <div className="tour-footer">
               <span className="tour-count">{(step ?? 0) + 1} / {STEPS.length}</span>
               <div className="tour-btns">

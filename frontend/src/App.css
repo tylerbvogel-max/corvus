@@ -444,6 +444,20 @@ body {
   color: var(--accent-light);
   font-style: italic;
 }
+.tour-open {
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px 0;
+  background: var(--accent-glow, rgba(200, 117, 51, 0.15));
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent-light);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tour-open:hover { background: var(--accent); color: #fff; }
 .tour-footer {
   display: flex;
   align-items: center;

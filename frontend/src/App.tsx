@@ -8,7 +8,7 @@ import corvusLogo128 from './assets/corvus-logo-128.png'
 import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
 import ChatHistoryWindow from './components/ChatHistoryWindow'
-import DemoHelper from './components/DemoHelper'
+import DemoHelper, { OPEN_WINDOW_EVENT } from './components/DemoHelper'
 import NeuronGraphWindow from './components/NeuronGraphWindow'
 import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
@@ -417,6 +417,13 @@ export default function App() {
     window.addEventListener(CHAT_STARTED_EVENT, onChatStarted);
     return () => window.removeEventListener(CHAT_STARTED_EVENT, onChatStarted);
   }, [openWindow, focusWindow]);
+
+  // Walkthrough "open this section" actions (see DemoHelper.tsx).
+  useEffect(() => {
+    const onOpen = (e: Event) => openWindow((e as CustomEvent).detail as string);
+    window.addEventListener(OPEN_WINDOW_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_WINDOW_EVENT, onOpen);
+  }, [openWindow]);
 
   // History-window actions must work even when the chat window is closed:
   // "New Chat" opens a fresh hero, and a session click opens Home, whose
