@@ -36,6 +36,8 @@ const SNAP_EDGE = 28;   // px from a screen edge that arms snapping
 const DRAG_DEADZONE = 4;
 
 type SnapZone = 'left' | 'right' | 'max' | 'tl' | 'tr' | 'bl' | 'br';
+type ResizeDir = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+const RESIZE_DIRS: readonly ResizeDir[] = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
 
 function detectSnapZone(px: number, py: number): SnapZone | null {
   const vw = window.innerWidth, vh = window.innerHeight;
@@ -88,6 +90,7 @@ export default function AppWindow({
     let moved = false;
     let zone: SnapZone | null = null;
     let fx = floating.x, fy = floating.y; // live floating position
+    document.body.style.userSelect = 'none'; // no text selection mid-drag
 
     const onMove = (ev: PointerEvent) => {
       if (!moved && Math.hypot(ev.clientX - startX, ev.clientY - startY) < DRAG_DEADZONE) return;
@@ -115,6 +118,7 @@ export default function AppWindow({
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      document.body.style.userSelect = '';
       setSnapPreview(null);
       if (!moved) return;
       if (zone === 'max') {
@@ -132,25 +136,37 @@ export default function AppWindow({
     window.addEventListener('pointerup', onUp);
   };
 
-  const onResizeDown = (e: React.PointerEvent) => {
+  // Any edge or corner resizes; west/north edges move the window origin so
+  // the opposite edge stays anchored. Text selection is suppressed for the
+  // whole gesture (preventDefault + body user-select), otherwise the drag
+  // highlights the window's content.
+  const startResize = (dir: ResizeDir) => (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    e.preventDefault();
     e.stopPropagation();
     const el = rootRef.current;
     if (!el) return;
-    const startX = e.clientX, startY = e.clientY;
-    const ow = state.w, oh = state.h;
-    let w = ow, h = oh;
+    const sx = e.clientX, sy = e.clientY;
+    const o = { x: state.x, y: state.y, w: state.w, h: state.h };
+    const r = { ...o };
+    document.body.style.userSelect = 'none';
     const onMove = (ev: PointerEvent) => {
       ev.preventDefault();
-      w = Math.max(MIN_W, ow + ev.clientX - startX);
-      h = Math.max(MIN_H, oh + ev.clientY - startY);
-      el.style.width = w + 'px';
-      el.style.height = h + 'px';
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (dir.includes('e')) r.w = Math.max(MIN_W, o.w + dx);
+      if (dir.includes('s')) r.h = Math.max(MIN_H, o.h + dy);
+      if (dir.includes('w')) { r.w = Math.max(MIN_W, o.w - dx); r.x = o.x + o.w - r.w; }
+      if (dir.includes('n')) { r.h = Math.max(MIN_H, o.h - dy); r.y = o.y + o.h - r.h; }
+      el.style.left = r.x + 'px';
+      el.style.top = r.y + 'px';
+      el.style.width = r.w + 'px';
+      el.style.height = r.h + 'px';
     };
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      if (w !== ow || h !== oh) onCommit({ w, h });
+      document.body.style.userSelect = '';
+      if (r.x !== o.x || r.y !== o.y || r.w !== o.w || r.h !== o.h) onCommit({ ...r });
       wakeRefresh();
     };
     onFocus();
@@ -179,7 +195,15 @@ export default function AppWindow({
         </div>
       </div>
       <div className="app-window-body">{children}</div>
-      {!state.max && <div className="app-window-resize" onPointerDown={onResizeDown} title="Resize" />}
+      {!state.max && (
+        <>
+          {RESIZE_DIRS.map(d => (
+            <div key={d} className={`app-window-edge app-window-edge--${d}`} onPointerDown={startResize(d)} />
+          ))}
+          {/* Visible corner grip (functionally the same as the se edge) */}
+          <div className="app-window-resize" onPointerDown={startResize('se')} title="Resize" />
+        </>
+      )}
       {snapPreview && (
         <div
           className="snap-preview"

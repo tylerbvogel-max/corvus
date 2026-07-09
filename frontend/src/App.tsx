@@ -5,8 +5,11 @@ import type { ReactNode } from 'react'
 // (ChromeOS Chrome never revalidates same-URL images).
 import corvusLogo from './assets/corvus-logo.png'
 import corvusLogo128 from './assets/corvus-logo-128.png'
-import AppWindow, { MIN_W, MIN_H, type WinState } from './components/AppWindow'
+import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
+import ChatHistoryWindow from './components/ChatHistoryWindow'
+import NeuronGraphWindow from './components/NeuronGraphWindow'
+import { CHAT_STARTED_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
 import WakeSettingsPanel from './components/WakeSettingsPanel'
 import Explorer from './components/Explorer'
@@ -65,7 +68,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -339,16 +342,21 @@ export default function App() {
   }, []);
 
   // Accepts any window key: static Tab keys plus dynamic ones ("agent:<name>").
-  const openWindow = useCallback((key: string) => {
+  // `rect` sets a preferred initial placement for windows that aren't open yet.
+  const openWindow = useCallback((key: string, rect?: WinRect) => {
     setWindows(prev => {
       const top = Object.values(prev).reduce((m, v) => Math.max(m, v.z), 9);
       const existing = prev[key];
       if (existing) return { ...prev, [key]: { ...existing, min: false, z: top + 1 } };
       // Cascade new windows down-right from just beside the nav's default spot.
       const off = (Object.keys(prev).length % 7) * 26;
-      const w = Math.min(1000, window.innerWidth - 340);
-      const h = Math.min(660, window.innerHeight - 120);
-      return { ...prev, [key]: { x: 280 + off, y: 56 + off, w, h, z: top + 1, min: false, max: false } };
+      const fallback: WinRect = {
+        x: 280 + off,
+        y: 56 + off,
+        w: Math.min(1000, window.innerWidth - 340),
+        h: Math.min(660, window.innerHeight - 120),
+      };
+      return { ...prev, [key]: { ...(rect ?? fallback), z: top + 1, min: false, max: false } };
     });
   }, []);
   // Historical name — every pre-windowing call site "switches tab" by
@@ -388,6 +396,19 @@ export default function App() {
     localStorage.setItem(WINDOWS_STORE_KEY, JSON.stringify(windows));
     window.dispatchEvent(new Event('corvus-wake-refresh'));
   }, [windows]);
+
+  // When a chat starts in the Home window, open its two companion windows
+  // (history left, neuron graph right) and keep the chat focused.
+  useEffect(() => {
+    const onChatStarted = () => {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      openWindow('chat-history', { x: 16, y: Math.max(72, vh - 480), w: 300, h: Math.min(440, vh - 96) });
+      openWindow('chat-graph', { x: Math.max(320, vw - 436), y: 56, w: 420, h: Math.min(620, vh - 120) });
+      focusWindow('home');
+    };
+    window.addEventListener(CHAT_STARTED_EVENT, onChatStarted);
+    return () => window.removeEventListener(CHAT_STARTED_EVENT, onChatStarted);
+  }, [openWindow, focusWindow]);
 
   // Topmost non-minimized window drives nav highlighting.
   const focusedKey = useMemo(() => {
@@ -487,6 +508,8 @@ export default function App() {
 
   const windowTitle = useCallback((key: string): string => {
     if (key === 'home') return displayName;
+    if (key === 'chat-history') return 'Chat History';
+    if (key === 'chat-graph') return 'Neuron Graph';
     if (key.startsWith('agent:')) return friendlyName(key.slice(6));
     for (const g of navGroups) {
       if (g.landingKey === key) return g.label;
@@ -503,6 +526,8 @@ export default function App() {
     if (key.startsWith('agent:')) return <SingleAgentPane name={key.slice(6)} />;
     switch (key as Tab) {
       case 'home': return <HomePage onNavigate={k => openWindow(k as Tab)} />;
+      case 'chat-history': return <ChatHistoryWindow />;
+      case 'chat-graph': return <NeuronGraphWindow />;
       case 'explorer': return <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />;
       case 'engrams': return <EngramPage />;
       case 'agents': return <AgentsPage onOpenAgent={name => openWindow(`agent:${name}`)} />;

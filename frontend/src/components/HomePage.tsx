@@ -9,9 +9,12 @@ import {
 import type { NeuronScoreResponse, CitationSource } from '../types';
 import { useModels } from '../hooks/useModels';
 import { marked } from 'marked';
-import NeuronTreeViz from './NeuronTreeViz';
 // Via Vite so the URL is content-fingerprinted (cache-busts on logo swaps)
 import corvusLogo from '../assets/corvus-logo.png';
+import {
+  announceChatStarted, announceSessionsChanged, publishGraph,
+  CHAT_LOAD_SESSION_EVENT, CHAT_NEW_EVENT,
+} from '../chatBus';
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -106,7 +109,7 @@ function formatMessageTime(iso: string): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function SessionTitle({
+export function SessionTitle({
   title, onRename,
 }: { title: string; onRename: (newTitle: string) => Promise<void> | void }) {
   const [editing, setEditing] = useState(false);
@@ -332,7 +335,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 
-function relativeTime(iso: string): string {
+export function relativeTime(iso: string): string {
   // Backend returns naive UTC timestamps without a trailing `Z`. JS's
   // Date parser treats tz-less ISO as LOCAL time, which makes every
   // session look "just now" on machines not running UTC. Append Z so
@@ -486,22 +489,19 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
-  // B2: client-side substring filter over session titles. Cheap at typical
-  // scale (<500 sessions); no backend change needed.
-  const [sessionQuery, setSessionQuery] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const sessionCreatingRef = useRef(false);
 
   const [pipelineStages, setPipelineStages] = useState<Record<string, StageEvent>>({});
-  const [neuronSidebarOpen, setNeuronSidebarOpen] = useState(false);
-  const neuronSidebarOpenedRef = useRef(false); // tracks if we already opened it this session
 
   useEffect(() => {
     listSessions().then(setSessions).catch(() => {}).finally(() => setSessionsLoading(false));
   }, []);
 
   const refreshSessions = useCallback(() => {
-    listSessions().then(setSessions).catch(() => {});
+    listSessions().then(rows => {
+      setSessions(rows);
+      announceSessionsChanged(); // keep the Chat History window in sync
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -671,8 +671,6 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
     setCurrentSessionId(null);
     setMessages([]);
     setLlmSessionId(null);
-    setNeuronSidebarOpen(false);
-    neuronSidebarOpenedRef.current = false;
     refreshSessions();
   }
 
@@ -747,6 +745,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   async function archiveSession(id: number) {
     await deleteSession(id).catch(() => {});
     setSessions(prev => prev.filter(s => s.id !== id));
+    announceSessionsChanged();
     if (currentSessionId === id) startNewChat();
   }
 
@@ -795,6 +794,35 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   }
   // We don't have queryId per message in chat, but NeuronTreeViz can work without it (just won't fetch spread trail)
   latestQueryId = undefined;
+
+  // ── Cross-window bus wiring ──
+  // The chat lives in the Home window; Chat History and the Neuron Graph
+  // are separate windows (opened by App when a chat starts). See chatBus.ts.
+  const prevHasMessagesRef = useRef(hasMessages);
+  useEffect(() => {
+    if (hasMessages && !prevHasMessagesRef.current) announceChatStarted();
+    prevHasMessagesRef.current = hasMessages;
+  }, [hasMessages]);
+
+  // Latest-closure refs so the mount-once listeners never go stale.
+  const loadSessionRef = useRef(loadSession);
+  loadSessionRef.current = loadSession;
+  const startNewChatRef = useRef(startNewChat);
+  startNewChatRef.current = startNewChat;
+  useEffect(() => {
+    const onLoad = (e: Event) => { void loadSessionRef.current((e as CustomEvent).detail as number); };
+    const onNew = () => startNewChatRef.current();
+    window.addEventListener(CHAT_LOAD_SESSION_EVENT, onLoad);
+    window.addEventListener(CHAT_NEW_EVENT, onNew);
+    return () => {
+      window.removeEventListener(CHAT_LOAD_SESSION_EVENT, onLoad);
+      window.removeEventListener(CHAT_NEW_EVENT, onNew);
+    };
+  }, []);
+
+  useEffect(() => {
+    publishGraph({ queryId: latestQueryId, neuronScores: latestNeuronScores });
+  }, [latestNeuronScores, latestQueryId]);
 
   const inputBar = (
     // data-wake-obstacle: masks the hero ASCII wake (no-op in chat state)
@@ -922,6 +950,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
                     onRename={async (newTitle) => {
                       await updateSessionTitle(s.id, newTitle);
                       setSessions(prev => prev.map(ss => ss.id === s.id ? { ...ss, title: newTitle } : ss));
+                      announceSessionsChanged();
                     }}
                   />
                   <span className="chat-session-time">{relativeTime(s.updated_at)}</span>
@@ -938,55 +967,6 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   // ── Chat state ──
   return (
     <div className="chat-layout">
-      {/* Session sidebar */}
-      <div className={`chat-sidebar${sidebarOpen ? '' : ' chat-sidebar--collapsed'}`}>
-        <div className="chat-sidebar-header">
-          <button className="chat-sidebar-toggle" onClick={() => setSidebarOpen(v => !v)}>
-            {sidebarOpen ? '\u25C0' : '\u25B6'}
-          </button>
-          {sidebarOpen && <button className="chat-new-btn" onClick={startNewChat}>+ New Chat</button>}
-        </div>
-        {sidebarOpen && (
-          <>
-            <div className="chat-sidebar-search">
-              <input
-                type="text"
-                className="chat-sidebar-search-input"
-                placeholder="Search conversations…"
-                value={sessionQuery}
-                onChange={e => setSessionQuery(e.target.value)}
-                aria-label="Search conversations"
-              />
-            </div>
-            <div className="chat-sidebar-list">
-            {sessions
-              .filter(s => {
-                const q = sessionQuery.trim().toLowerCase();
-                if (!q) return true;
-                return (s.title || '').toLowerCase().includes(q);
-              })
-              .map(s => (
-              <div
-                key={s.id}
-                className={`chat-session-item${currentSessionId === s.id ? ' active' : ''}`}
-                onClick={() => loadSession(s.id)}
-              >
-                <SessionTitle
-                  title={s.title || 'Untitled'}
-                  onRename={async (newTitle) => {
-                    await updateSessionTitle(s.id, newTitle);
-                    setSessions(prev => prev.map(ss => ss.id === s.id ? { ...ss, title: newTitle } : ss));
-                  }}
-                />
-                <span className="chat-session-time">{relativeTime(s.updated_at)}</span>
-                <button className="chat-session-del" onClick={e => { e.stopPropagation(); archiveSession(s.id); }}>×</button>
-              </div>
-            ))}
-            </div>
-          </>
-        )}
-      </div>
-
       {/* Messages */}
       <div className="chat-main">
         {/* A5: grounded banner — reinforces "this is a regulated, sourced
@@ -1147,33 +1127,6 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
         {inputBar}
       </div>
 
-      {/* Neuron graph sidebar */}
-      {neuronSidebarOpen && latestNeuronScores && (
-        <div className="chat-neuron-panel">
-          <div className="chat-neuron-panel-header">
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Neuron Graph</span>
-            <button className="chat-neuron-panel-close" onClick={() => setNeuronSidebarOpen(false)}>&times;</button>
-          </div>
-          <div className="chat-neuron-panel-body">
-            <NeuronTreeViz
-              queryId={latestQueryId}
-              neuronScores={latestNeuronScores}
-            />
-          </div>
-        </div>
-      )}
-      {!neuronSidebarOpen && latestNeuronScores && (
-        <button
-          className="chat-neuron-panel-toggle"
-          onClick={() => setNeuronSidebarOpen(true)}
-          title="Show neuron graph"
-        >
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="8" cy="8" r="3" /><line x1="8" y1="1" x2="8" y2="4" /><line x1="8" y1="12" x2="8" y2="15" />
-            <line x1="1" y1="8" x2="4" y2="8" /><line x1="12" y1="8" x2="15" y2="8" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }
