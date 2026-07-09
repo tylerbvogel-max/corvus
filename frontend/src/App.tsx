@@ -224,9 +224,9 @@ function getInitialTheme(): Theme {
 const WINDOWS_STORE_KEY = 'corvus-windows-v1';
 
 function defaultWindows(): Record<string, WinState> {
-  const w = Math.min(1000, window.innerWidth - 340);
-  const h = Math.min(660, window.innerHeight - 120);
-  return { home: { x: 280, y: 56, w, h, z: 10, min: false, max: false } };
+  // Fresh state is a bare desktop: just the water and the collapsed nav
+  // pill. Everything opens from the nav.
+  return {};
 }
 
 function loadWindows(): Record<string, WinState> {
@@ -258,8 +258,9 @@ export default function App() {
   const [totalProposed, setTotalProposed] = useState(0);
   const [queueInitialOrigin, setQueueInitialOrigin] = useState<OriginFilter | undefined>(undefined);
   // Floating nav: collapsed = logo-only pill; position is draggable and
-  // persisted. Defaults just off the top-left corner.
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('corvus-nav-collapsed') === '1');
+  // persisted. Defaults just off the top-left corner, collapsed (a fresh
+  // page opens as a bare desktop with only the pulsing logo).
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('corvus-nav-collapsed') !== '0');
   const [navPos, setNavPos] = useState<{ x: number; y: number }>(() => {
     try {
       const p = JSON.parse(localStorage.getItem('corvus-nav-pos') ?? '');
@@ -660,17 +661,27 @@ export default function App() {
         ref={navRef}
         className={`sidebar${collapsed ? ' sidebar-pill' : ''}`}
         style={{ left: navPos.x, top: navPos.y }}
-        data-wake-obstacle
+        data-wake-obstacle={collapsed ? undefined : true}
       >
         {collapsed ? (
-          /* Logo pill: drag to move, click to expand */
+          /* Logo pill: drag to move, click to expand. The img itself is the
+             wake obstacle (pad 0) so the water breaks at the logo's edges,
+             and data-wake-pulse gives it a gentle periodic ripple. */
           <button
             className="sidebar-pill-btn"
             onPointerDown={startNavDrag}
             onClick={() => { if (!navDragMovedRef.current) setCollapsed(false); }}
             title="Open navigation (drag to move)"
           >
-            <img src={corvusLogo128} alt="Corvus" className="sidebar-logo" draggable={false} />
+            <img
+              src={corvusLogo128}
+              alt="Corvus"
+              className="sidebar-logo"
+              draggable={false}
+              data-wake-obstacle
+              data-wake-pad="0"
+              data-wake-pulse
+            />
           </button>
         ) : (
           <>

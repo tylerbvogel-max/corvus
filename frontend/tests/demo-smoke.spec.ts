@@ -13,13 +13,24 @@ const fixtures = JSON.parse(readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'demo', 'fixtures.json'), 'utf8',
 ));
 
+/** Fresh state is a bare desktop with the collapsed nav pill; the Home
+    window opens via pill → expanded nav → logo click. */
+async function openHomeWindow(page: import('@playwright/test').Page) {
+  await page.locator('.sidebar-pill-btn').click();
+  await page.locator('.sidebar-header .sidebar-logo').click();
+  await expect(page.locator('.chat-hero-title').first()).toBeVisible();
+}
+
 test('demo boots, replays a grounded chat answer, opens companion windows', async ({ page }) => {
   await page.goto('/');
 
-  // Desktop shell: floating nav, ASCII substrate, Home window with hero
-  await expect(page.locator('.sidebar')).toBeVisible();
+  // Bare desktop: ASCII substrate + collapsed nav pill, no windows yet
   await expect(page.locator('canvas.ascii-wake')).toBeVisible();
-  await expect(page.locator('.chat-hero-title').first()).toBeVisible();
+  await expect(page.locator('.sidebar-pill-btn .sidebar-logo')).toBeVisible();
+  await expect(page.locator('.app-window')).toHaveCount(0);
+
+  // Open the Home window through the nav
+  await openHomeWindow(page);
 
   // Demo affordances: replay pill, honest single-entry model roster
   await expect(page.locator('.demo-llm-pill')).toContainText('Replay mode');
@@ -52,6 +63,7 @@ test('demo boots, replays a grounded chat answer, opens companion windows', asyn
 
 test('history "New Chat" reopens the chat window after it is closed', async ({ page }) => {
   await page.goto('/');
+  await openHomeWindow(page);
 
   // Enter chat state so the companion windows open
   const input = page.locator('.chat-input').first();

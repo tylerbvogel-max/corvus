@@ -493,29 +493,54 @@ body {
   overflow: hidden; /* header + settings stay pinned; .sidebar-nav scrolls */
 }
 
+/* Collapsed pill: no card box — the bare logo floats on the water (its
+   img is the wake obstacle, so ripples break at the logo's own edges).
+   The silhouette gets an inverse-color outline (--text is near-white on
+   dark themes, near-black on light) so it reads on any theme, plus a
+   slow glow pulse matching its ripple in the water. */
 .sidebar-pill {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  overflow: hidden;
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .sidebar-pill-btn {
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   background: none;
   border: none;
-  padding: 0;
+  padding: 4px;
   cursor: grab;
   touch-action: none;
 }
 .sidebar-pill-btn:active { cursor: grabbing; }
+
 .sidebar-pill .sidebar-logo {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  filter: drop-shadow(0 0 1px var(--text)) drop-shadow(0 0 1px var(--text));
+  animation: pill-pulse 3.3s ease-in-out infinite;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.sidebar-pill-btn:hover .sidebar-logo {
+  transform: scale(1.18);
+  filter: drop-shadow(0 0 1.5px var(--text)) drop-shadow(0 0 1.5px var(--text)) drop-shadow(0 0 10px var(--accent));
+  animation-play-state: paused;
+}
+
+@keyframes pill-pulse {
+  0%, 100% { opacity: 0.82; }
+  50% { opacity: 1; filter: drop-shadow(0 0 1px var(--text)) drop-shadow(0 0 1px var(--text)) drop-shadow(0 0 6px var(--accent-glow, rgba(200,117,51,0.3))); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-pill .sidebar-logo { animation: none; }
 }
 
 .sidebar-header {

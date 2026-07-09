@@ -255,12 +255,33 @@ export default function AsciiWake() {
     };
     window.addEventListener(WAKE_SETTINGS_EVENT, onSettings);
 
+    // Elements tagged data-wake-pulse (the collapsed nav logo) emit a
+    // gentle ripple ring from their center every few seconds — a quiet
+    // "I'm alive" beacon in the water.
+    const PULSE_EVERY_FRAMES = 200; // ~3.3s at 60fps
+    let pulseCountdown = 60; // first pulse shortly after load
+    const emitPulses = () => {
+      const base = container.getBoundingClientRect();
+      document.querySelectorAll('[data-wake-pulse]').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0) return;
+        const gx = (r.left + r.width / 2 - base.left) / cellW;
+        const gy = (r.top + r.height / 2 - base.top) / cellH;
+        const radius = Math.max(r.width, r.height) / 2 / cellW + 2.5;
+        splat(gx, gy, radius, -0.4);
+      });
+    };
+
     let raf = 0;
     let rainCountdown = cfg.rainEvery;
     const loop = () => {
       if (cfg.rain && --rainCountdown <= 0) {
         rainCountdown = cfg.rainEvery;
         splat(2 + Math.random() * (W - 4), 2 + Math.random() * (H - 4), 2.5, -1.2);
+      }
+      if (--pulseCountdown <= 0) {
+        pulseCountdown = PULSE_EVERY_FRAMES;
+        emitPulses();
       }
       for (let s = 0; s < cfg.substeps; s++) simStep();
       draw();
