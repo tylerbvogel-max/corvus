@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
@@ -204,7 +204,22 @@ export default function App() {
   const [proposedByOrigin, setProposedByOrigin] = useState<Record<string, number>>({});
   const [totalProposed, setTotalProposed] = useState(0);
   const [queueInitialOrigin, setQueueInitialOrigin] = useState<OriginFilter | undefined>(undefined);
-  const [collapsed, setCollapsed] = useState(false);
+  // Floating nav: collapsed = logo-only pill; position is draggable and
+  // persisted. Defaults just off the top-left corner.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('corvus-nav-collapsed') === '1');
+  const [navPos, setNavPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem('corvus-nav-pos') ?? '');
+      if (typeof p?.x === 'number' && typeof p?.y === 'number') return p;
+    } catch { /* fall through to default */ }
+    return { x: 18, y: 18 };
+  });
+  const navRef = useRef<HTMLElement>(null);
+  const navPosRef = useRef(navPos);
+  navPosRef.current = navPos;
+  // True while the current pointer interaction moved the panel — used to
+  // suppress the click that fires after a drag ends on the same element.
+  const navDragMovedRef = useRef(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
@@ -286,6 +301,53 @@ export default function App() {
     setTab('explorer');
   }
 
+  // Keep the floating nav fully on-screen (8px margin all around).
+  const clampNavPos = useCallback((p: { x: number; y: number }) => {
+    const el = navRef.current;
+    const w = el?.offsetWidth ?? 220;
+    const h = el?.offsetHeight ?? 52;
+    const x = Math.max(8, Math.min(p.x, window.innerWidth - w - 8));
+    const y = Math.max(8, Math.min(p.y, window.innerHeight - h - 8));
+    return x === p.x && y === p.y ? p : { x, y };
+  }, []);
+
+  const startNavDrag = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    const startX = e.clientX, startY = e.clientY;
+    const origin = navPosRef.current;
+    navDragMovedRef.current = false;
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      // 4px dead zone so ordinary clicks on the handle never jiggle the panel
+      if (!navDragMovedRef.current && Math.hypot(dx, dy) < 4) return;
+      navDragMovedRef.current = true;
+      ev.preventDefault();
+      setNavPos(clampNavPos({ x: origin.x + dx, y: origin.y + dy }));
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [clampNavPos]);
+
+  useEffect(() => {
+    localStorage.setItem('corvus-nav-pos', JSON.stringify(navPos));
+  }, [navPos]);
+
+  useEffect(() => {
+    localStorage.setItem('corvus-nav-collapsed', collapsed ? '1' : '0');
+    // Panel size just changed (pill ↔ full panel): re-clamp to the viewport.
+    setNavPos(p => clampNavPos(p));
+  }, [collapsed, clampNavPos]);
+
+  useEffect(() => {
+    const onResize = () => setNavPos(p => clampNavPos(p));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [clampNavPos]);
+
   const toggleGroup = useCallback((label: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
@@ -350,19 +412,41 @@ export default function App() {
   return (
     <div className="app app-sidebar-layout">
       <SystemUseBanner />
-      <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
-        <div className="sidebar-header">
-          <img src="/corvus-logo-128.png" alt="Corvus" className="sidebar-logo" onClick={() => setTab('home')} style={{ cursor: 'pointer' }} />
-          {!collapsed && <h1 className="app-title" onClick={() => setTab('home')} style={{ cursor: 'pointer' }}>{displayName}</h1>}
+      <aside
+        ref={navRef}
+        className={`sidebar${collapsed ? ' sidebar-pill' : ''}`}
+        style={{ left: navPos.x, top: navPos.y }}
+      >
+        {collapsed ? (
+          /* Logo pill: drag to move, click to expand */
+          <button
+            className="sidebar-pill-btn"
+            onPointerDown={startNavDrag}
+            onClick={() => { if (!navDragMovedRef.current) setCollapsed(false); }}
+            title="Open navigation (drag to move)"
+          >
+            <img src="/corvus-logo-128.png" alt="Corvus" className="sidebar-logo" draggable={false} />
+          </button>
+        ) : (
+          <>
+        <div className="sidebar-header" onPointerDown={startNavDrag} title="Drag to move">
+          <img
+            src="/corvus-logo-128.png"
+            alt="Corvus"
+            className="sidebar-logo"
+            draggable={false}
+            onClick={() => { if (!navDragMovedRef.current) setTab('home'); }}
+            style={{ cursor: 'pointer' }}
+          />
+          <h1 className="app-title" onClick={() => { if (!navDragMovedRef.current) setTab('home'); }} style={{ cursor: 'pointer' }}>{displayName}</h1>
           <button
             className="sidebar-toggle"
-            onClick={() => setCollapsed(c => !c)}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={() => { if (!navDragMovedRef.current) setCollapsed(true); }}
+            title="Collapse to logo"
           >
-            {collapsed ? '\u25B6' : '\u25C0'}
+            {'\u2212'}
           </button>
         </div>
-        {!collapsed ? (
           <nav className="sidebar-nav">
             {navGroups.map(group => (
               <div key={group.label} className={`sidebar-group${activeGroup === group.label ? ' sidebar-group-active' : ''}`}>
@@ -433,21 +517,7 @@ export default function App() {
               </div>
             ))}
           </nav>
-        ) : (
-          <nav className="sidebar-collapsed-nav">
-            {navGroups.map(group => (
-              <button
-                key={group.label}
-                className={`sidebar-collapsed-icon-btn${activeGroup === group.label ? ' active' : ''}`}
-                onClick={() => setTab(group.landingKey)}
-                title={group.label}
-              >
-                {group.icon}
-              </button>
-            ))}
-          </nav>
-        )}
-        {/* Settings — always visible, even when collapsed */}
+        {/* Settings — pinned to the bottom of the expanded panel */}
         <div className="sidebar-settings-area">
           <button
             className="sidebar-settings-btn"
@@ -460,13 +530,27 @@ export default function App() {
             </svg>
           </button>
         </div>
+          </>
+        )}
       </aside>
 
       {/* Settings popup */}
       {themeMenuOpen && (
         <>
           <div className="settings-overlay" onClick={() => setThemeMenuOpen(false)} />
-          <div className="settings-popup">
+          {/* Anchored just below the floating nav panel, clamped on-screen */}
+          <div
+            className="settings-popup"
+            style={(() => {
+              const r = navRef.current?.getBoundingClientRect();
+              if (!r) return undefined;
+              return {
+                left: Math.max(8, Math.min(r.left, window.innerWidth - 252)),
+                top: Math.max(8, Math.min(r.bottom + 8, window.innerHeight - 300)),
+                bottom: 'auto',
+              };
+            })()}
+          >
             <div className="settings-popup-header">
               <span>Settings</span>
               <button className="settings-popup-close" onClick={() => setThemeMenuOpen(false)}>&times;</button>
