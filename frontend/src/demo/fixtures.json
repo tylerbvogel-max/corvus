@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-07-09T14:46:37.964Z",
+  "capturedAt": "2026-07-09T20:49:37.892Z",
   "source": "http://localhost:8002",
   "fixtures": {
     "/neurons/stats": {
@@ -138,14 +138,14 @@
           "role": "Facilities Manager",
           "department": "Manufacturing & Operations",
           "neuron_count": 197,
-          "total_invocations": 3026,
+          "total_invocations": 3068,
           "avg_utility": 0.315
         },
         {
           "role": "Manufacturing Engineer",
           "department": "Engineering",
           "neuron_count": 137,
-          "total_invocations": 8451,
+          "total_invocations": 8479,
           "avg_utility": 0.359
         },
         {
@@ -166,7 +166,7 @@
           "role": "Quality Manager",
           "department": "Manufacturing & Operations",
           "neuron_count": 84,
-          "total_invocations": 3785,
+          "total_invocations": 3797,
           "avg_utility": 0.364
         },
         {
@@ -257,7 +257,7 @@
           "role": "MIL-STD Series",
           "department": "Regulatory",
           "neuron_count": 28,
-          "total_invocations": 726,
+          "total_invocations": 738,
           "avg_utility": 0.376
         },
         {
@@ -506,7 +506,7 @@
           "avg_utility": 0.262
         }
       ],
-      "total_firings": 22525
+      "total_firings": 22577
     },
     "/tenant": {
       "tenant_id": "corvus-aero",
