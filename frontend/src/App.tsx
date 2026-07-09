@@ -661,27 +661,22 @@ export default function App() {
         ref={navRef}
         className={`sidebar${collapsed ? ' sidebar-pill' : ''}`}
         style={{ left: navPos.x, top: navPos.y }}
-        data-wake-obstacle={collapsed ? undefined : true}
+        data-wake-obstacle
+        data-wake-pad={collapsed ? '0' : undefined}
+        data-wake-pulse={collapsed ? true : undefined}
       >
         {collapsed ? (
-          /* Logo pill: drag to move, click to expand. The img itself is the
-             wake obstacle (pad 0) so the water breaks at the logo's edges,
-             and data-wake-pulse gives it a gentle periodic ripple. */
+          /* Logo pill: drag to move, click to expand. Collapsed, the card
+             itself is the wake obstacle with zero padding — the water
+             breaks exactly at the card's border — and it emits a gentle
+             periodic ripple (data-wake-pulse). */
           <button
             className="sidebar-pill-btn"
             onPointerDown={startNavDrag}
             onClick={() => { if (!navDragMovedRef.current) setCollapsed(false); }}
             title="Open navigation (drag to move)"
           >
-            <img
-              src={corvusLogo128}
-              alt="Corvus"
-              className="sidebar-logo"
-              draggable={false}
-              data-wake-obstacle
-              data-wake-pad="0"
-              data-wake-pulse
-            />
+            <img src={corvusLogo128} alt="Corvus" className="sidebar-logo" draggable={false} />
           </button>
         ) : (
           <>
