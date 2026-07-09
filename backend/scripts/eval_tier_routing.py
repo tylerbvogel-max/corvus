@@ -45,14 +45,20 @@ JUDGE_SYSTEM = (
 
 # Same rubric as the 2026-07-08 3-mode eval that produced the routing
 # evidence (haiku 4.4 / sonnet 4.7 overall) — keeps the stay-set adequacy
-# scores comparable to the measured baselines.
+# scores comparable to the measured baselines. The judge MUST see the packed
+# context the answer grounded on: without it, faithfulness is unverifiable
+# and the judge penalizes every specific detail as potentially invented
+# (measured artifact: 2.5 vs the baseline's 4.9).
 RUBRIC_SYSTEM = (
     "You are grading one answer to an aerospace organization's internal "
-    "knowledge question. Score 1-5 on: accuracy (factually correct), "
-    "completeness (covers what the question needs), clarity, and faithfulness "
-    "(no invented specifics beyond the provided context). Respond with ONLY a "
-    'JSON object: {"accuracy": n, "completeness": n, "clarity": n, "faithfulness": n}'
+    "knowledge question. The answer was generated from the provided knowledge "
+    "context. Score 1-5 on: accuracy (factually correct), completeness "
+    "(covers what the question needs), clarity, and faithfulness (claims are "
+    "supported by the provided context, no invented specifics). Respond with "
+    'ONLY a JSON object: {"accuracy": n, "completeness": n, "clarity": n, "faithfulness": n}'
 )
+
+_RUBRIC_CONTEXT_CHARS = 16000  # context excerpt cap in the judge prompt
 
 
 async def _load_questions(live_sample: int) -> list[str]:
@@ -163,13 +169,16 @@ async def _judge_pair(question: str, haiku_text: str, sonnet_text: str) -> str:
     return "tie"
 
 
-async def _rubric_score(question: str, answer: str) -> dict | None:
+async def _rubric_score(question: str, answer: str, context: str) -> dict | None:
     """Absolute rubric grade (sonnet judge) for one answer; None on parse miss."""
     from app.services.llm_provider import llm_chat
 
     result = await llm_chat(
         system_prompt=RUBRIC_SYSTEM,
-        user_message=f"Question:\n{question}\n\n--- Answer ---\n{answer}",
+        user_message=(
+            f"--- Knowledge context (excerpt) ---\n{context[:_RUBRIC_CONTEXT_CHARS]}\n\n"
+            f"Question:\n{question}\n\n--- Answer ---\n{answer}"
+        ),
         max_tokens=200, model="sonnet",
     )
     match = re.search(r"\{[^{}]*\}", result.get("text", ""))
@@ -186,7 +195,7 @@ async def _rubric_score(question: str, answer: str) -> dict | None:
     return scores
 
 
-async def _rubric_check(stay: list[dict], quality_n: int) -> dict:
+async def _rubric_check(stay: list[dict], quality_n: int, model: str = "haiku") -> dict:
     """Absolute adequacy of the routed (haiku) answer on the stay set, on the
     SAME rubric as the 2026-07-08 baselines — pairwise preference alone can't
     show adequacy (a judge may prefer sonnet even when haiku suffices)."""
@@ -194,8 +203,8 @@ async def _rubric_check(stay: list[dict], quality_n: int) -> dict:
     rows: list[dict] = []
     for d in stay[:quality_n]:
         q = d["question"]
-        haiku = await _answer(d["ctx"], q, "haiku")
-        scores = await _rubric_score(q, haiku["text"])
+        answer = await _answer(d["ctx"], q, model)
+        scores = await _rubric_score(q, answer["text"], d["ctx"].system_prompt)
         rows.append({"question": q[:90], "scores": scores})
         head = scores["overall"] if scores else "parse-miss"
         print(f"  [rubric {head}] {q[:66]}", file=sys.stderr, flush=True)
@@ -243,7 +252,9 @@ async def main() -> None:
     parser.add_argument("--skip-pairwise", action="store_true",
                         help="skip the pairwise haiku-vs-sonnet phase (rubric-only runs)")
     parser.add_argument("--rubric", action="store_true",
-                        help="also rubric-grade the routed haiku answers on the stay set")
+                        help="also rubric-grade the routed answers on the stay set")
+    parser.add_argument("--rubric-model", type=str, default="haiku",
+                        help="model whose stay-set answers the rubric grades (counterfactual runs)")
     parser.add_argument("--out", type=str, default="")
     args = parser.parse_args()
 
@@ -264,7 +275,7 @@ async def main() -> None:
             report["quality"] = await _quality_check(stay, args.quality_n)
         if args.rubric:
             print("Phase 3: rubric adequacy of routed answers on the stay set", file=sys.stderr)
-            report["rubric"] = await _rubric_check(stay, args.quality_n)
+            report["rubric"] = await _rubric_check(stay, args.quality_n, args.rubric_model)
 
     report["decisions"] = [
         {k: v for k, v in d.items() if k != "ctx"} for d in decisions
