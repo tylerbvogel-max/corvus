@@ -1,5 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import type { ReactNode } from 'react'
+import AppWindow, { MIN_W, MIN_H, type WinState } from './components/AppWindow'
+import AsciiWake from './components/AsciiWake'
 import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
@@ -198,8 +200,39 @@ function getInitialTheme(): Theme {
   return 'corvus-native';
 }
 
+// ── Window manager ──
+// Every page opens as a floating window over the ASCII-substrate desktop
+// (one window per page; the nav panel is the only unclosable surface).
+const WINDOWS_STORE_KEY = 'corvus-windows-v1';
+
+function defaultWindows(): Record<string, WinState> {
+  const w = Math.min(1000, window.innerWidth - 340);
+  const h = Math.min(660, window.innerHeight - 120);
+  return { home: { x: 280, y: 56, w, h, z: 10, min: false, max: false } };
+}
+
+function loadWindows(): Record<string, WinState> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(WINDOWS_STORE_KEY) ?? '');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+      const out: Record<string, WinState> = {};
+      for (const [key, v] of Object.entries(saved as Record<string, WinState>)) {
+        if (typeof v?.x !== 'number' || typeof v?.w !== 'number') continue;
+        // Clamp restored rects so a window can never come back off-screen.
+        const w = Math.max(MIN_W, Math.min(v.w, window.innerWidth - 16));
+        const h = Math.max(MIN_H, Math.min(v.h, window.innerHeight - 16));
+        const x = Math.max(8 - w + 100, Math.min(v.x, window.innerWidth - 100));
+        const y = Math.max(0, Math.min(v.y, window.innerHeight - 60));
+        out[key] = { ...v, x, y, w, h };
+      }
+      if (Object.keys(out).length > 0) return out;
+    }
+  } catch { /* fall through to default */ }
+  return defaultWindows();
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('home');
+  const [windows, setWindows] = useState<Record<string, WinState>>(loadWindows);
   const [explorerNeuronId, setExplorerNeuronId] = useState<number | null>(null);
   const [proposedByOrigin, setProposedByOrigin] = useState<Record<string, number>>({});
   const [totalProposed, setTotalProposed] = useState(0);
@@ -275,6 +308,84 @@ export default function App() {
     return () => { cancelled = true; window.clearInterval(handle); };
   }, [authStatus]);
 
+  // ── Window manager callbacks ──
+  const focusWindow = useCallback((key: string) => {
+    setWindows(prev => {
+      const win = prev[key];
+      if (!win) return prev;
+      const top = Object.values(prev).reduce((m, v) => Math.max(m, v.z), 9);
+      if (win.z === top && !win.min) return prev;
+      let next: Record<string, WinState> = { ...prev, [key]: { ...win, z: top + 1, min: false } };
+      // z grows monotonically with every focus; renormalize before it
+      // collides with the nav layer (z 900).
+      if (top + 1 > 500) {
+        const sorted = Object.entries(next).sort((a, b) => a[1].z - b[1].z);
+        next = {};
+        sorted.forEach(([k, v], i) => { next[k] = { ...v, z: 10 + i }; });
+      }
+      return next;
+    });
+  }, []);
+
+  const openWindow = useCallback((key: Tab) => {
+    setWindows(prev => {
+      const top = Object.values(prev).reduce((m, v) => Math.max(m, v.z), 9);
+      const existing = prev[key];
+      if (existing) return { ...prev, [key]: { ...existing, min: false, z: top + 1 } };
+      // Cascade new windows down-right from just beside the nav's default spot.
+      const off = (Object.keys(prev).length % 7) * 26;
+      const w = Math.min(1000, window.innerWidth - 340);
+      const h = Math.min(660, window.innerHeight - 120);
+      return { ...prev, [key]: { x: 280 + off, y: 56 + off, w, h, z: top + 1, min: false, max: false } };
+    });
+  }, []);
+  // Historical name — every pre-windowing call site "switches tab" by
+  // opening (or focusing) that page's window.
+  const setTab = openWindow;
+
+  const closeWindow = useCallback((key: string) => {
+    setWindows(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const minimizeWindow = useCallback((key: string) => {
+    setWindows(prev => prev[key] ? { ...prev, [key]: { ...prev[key], min: true } } : prev);
+  }, []);
+
+  const toggleMaxWindow = useCallback((key: string) => {
+    setWindows(prev => {
+      const win = prev[key];
+      if (!win) return prev;
+      if (win.max) {
+        const r = win.restore ?? { x: 80, y: 60, w: 900, h: 600 };
+        return { ...prev, [key]: { ...win, ...r, max: false } };
+      }
+      return { ...prev, [key]: { ...win, max: true, restore: { x: win.x, y: win.y, w: win.w, h: win.h } } };
+    });
+  }, []);
+
+  const commitWindow = useCallback((key: string, patch: Partial<WinState>) => {
+    setWindows(prev => prev[key] ? { ...prev, [key]: { ...prev[key], ...patch } } : prev);
+  }, []);
+
+  // Persist the layout and let the wake re-mask around the new rects.
+  useEffect(() => {
+    localStorage.setItem(WINDOWS_STORE_KEY, JSON.stringify(windows));
+    window.dispatchEvent(new Event('corvus-wake-refresh'));
+  }, [windows]);
+
+  // Topmost non-minimized window drives nav highlighting.
+  const focusedKey = useMemo(() => {
+    let k: string | null = null, top = -1;
+    for (const [key, w] of Object.entries(windows)) {
+      if (!w.min && w.z > top) { top = w.z; k = key; }
+    }
+    return k;
+  }, [windows]);
+
   // Reverse deep-link: Proposal Queue row → producer page.
   const navigateToProducer = useCallback((target: ProposalProducerTarget) => {
     const origin = target.origin as OriginKey;
@@ -296,10 +407,10 @@ export default function App() {
     setThemeMenuOpen(false);
   }
 
-  function navigateToNeuron(id: number) {
+  const navigateToNeuron = useCallback((id: number) => {
     setExplorerNeuronId(id);
-    setTab('explorer');
-  }
+    openWindow('explorer');
+  }, [openWindow]);
 
   // Keep the floating nav fully on-screen (8px margin all around).
   const clampNavPos = useCallback((p: { x: number; y: number }) => {
@@ -357,9 +468,72 @@ export default function App() {
     });
   }, []);
 
-  // Build nav groups based on tenant
-  const navGroups = buildNavGroups(tenantConfig?.tenant_id);
-  const activeGroup = navGroups.find(g => g.landingKey === tab || g.items.some(i => i.key === tab))?.label;
+  // Build nav groups based on tenant (memoized — page-element identity
+  // depends on it, so it must be referentially stable between renders)
+  const navGroups = useMemo(() => buildNavGroups(tenantConfig?.tenant_id), [tenantConfig?.tenant_id]);
+  const activeGroup = navGroups.find(g => g.landingKey === focusedKey || g.items.some(i => i.key === focusedKey))?.label;
+
+  const windowTitle = useCallback((key: string): string => {
+    if (key === 'home') return displayName;
+    for (const g of navGroups) {
+      if (g.landingKey === key) return g.label;
+      const item = g.items.find(i => i.key === key);
+      if (item) return item.label;
+    }
+    return key;
+  }, [displayName, navGroups]);
+
+  // Page content per open window. Memoized so drag/resize commits and the
+  // 30s proposal poll re-render App without re-rendering every mounted page
+  // (element identity unchanged → React bails out of those subtrees).
+  const renderPage = useCallback((key: string): ReactNode => {
+    switch (key as Tab) {
+      case 'home': return <HomePage onNavigate={k => openWindow(k as Tab)} />;
+      case 'explorer': return <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />;
+      case 'engrams': return <EngramPage />;
+      case 'agents': return <AgentsPage />;
+      case 'graph': return <CirclePacking />;
+      case 'universe': return <NeuronUniverse />;
+      case 'dashboard': return <Dashboard />;
+      case 'layer-heatmap': return <LayerHeatmap />;
+      case 'query': return <QueryLab onNavigateToNeuron={navigateToNeuron} />;
+      case 'evaluation': return <EvaluationPage />;
+      case 'eval-runs': return <EvalRunsPage />;
+      case 'refinements': return <RefinementHistory />;
+      case 'samples': return <SampleQueries />;
+      case 'autopilot': return <AutopilotPage />;
+      case 'proposal-queue': return <ProposalQueuePage initialOriginFilter={queueInitialOrigin} onNavigateToProducer={navigateToProducer} />;
+      case 'emergent-queue': return <EmergentQueuePage />;
+      case 'document-ingest': return <DocumentIngestPage />;
+      case 'integrity': return <IntegrityPage />;
+      case 'synaptic-learning': return <SynapticLearningPage />;
+      case 'quality': return <QualityPage />;
+      case 'fairness': return <FairnessPage />;
+      case 'performance': return <PerformancePage />;
+      case 'pipeline-timing': return <PipelineTimingPage />;
+      case 'knowledge-governance': return <KnowledgeGovernancePage />;
+      default: {
+        const group = navGroups.find(g => g.landingKey === key);
+        if (!group) return <div style={{ padding: 24, color: 'var(--text-dim)' }}>Unknown page: {key}</div>;
+        return (
+          <GroupLandingPage
+            title={group.label}
+            icon={group.icon}
+            description={group.description}
+            items={group.items.map(i => ({ key: i.key, label: i.label, description: i.description }))}
+            onNavigate={k => openWindow(k as Tab)}
+          />
+        );
+      }
+    }
+  }, [explorerNeuronId, queueInitialOrigin, navigateToProducer, navigateToNeuron, openWindow, navGroups]);
+
+  const openKeysSig = Object.keys(windows).join('|');
+  const pageElements = useMemo(() => {
+    const m: Record<string, ReactNode> = {};
+    for (const key of openKeysSig ? openKeysSig.split('|') : []) m[key] = renderPage(key);
+    return m;
+  }, [openKeysSig, renderPage]);
 
   // Auth gate
   if (authStatus === 'checking') {
@@ -410,12 +584,24 @@ export default function App() {
   }
 
   return (
-    <div className="app app-sidebar-layout">
+    <div className="app app-desktop">
       <SystemUseBanner />
+      {/* Desktop: always-present ASCII substrate + faint brand mark.
+          Windows float above it; the wake breaks around every
+          [data-wake-obstacle] (windows, nav, dock). */}
+      <div className="desktop-layer">
+        <AsciiWake />
+        <div className="desktop-brand">
+          <img src="/corvus-logo.png" alt="" draggable={false} />
+          <span>{displayName}</span>
+        </div>
+      </div>
       <aside
         ref={navRef}
         className={`sidebar${collapsed ? ' sidebar-pill' : ''}`}
         style={{ left: navPos.x, top: navPos.y }}
+        data-wake-obstacle
+        data-wake-pad="6"
       >
         {collapsed ? (
           /* Logo pill: drag to move, click to expand */
@@ -467,7 +653,7 @@ export default function App() {
                       return (
                         <button
                           key={item.key}
-                          className={`sidebar-item${tab === item.key ? ' active' : ''}${item.className ? ' ' + item.className : ''}`}
+                          className={`sidebar-item${focusedKey === item.key ? ' active' : ''}${windows[item.key] ? ' open' : ''}${item.className ? ' ' + item.className : ''}`}
                           onClick={() => {
                             // Click body of nav item goes to the page itself. Badge
                             // has its own click handler (see below) that deep-links
@@ -573,49 +759,38 @@ export default function App() {
           </div>
         </>
       )}
-      <main className="app-main">
-        {tab === 'home' && <HomePage onNavigate={k => setTab(k as Tab)} />}
-        {tab === 'explorer' && <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />}
-        {tab === 'engrams' && <EngramPage />}
-        {tab === 'agents' && <AgentsPage />}
-        {tab === 'graph' && <CirclePacking />}
-        {tab === 'universe' && <NeuronUniverse />}
-        {tab === 'dashboard' && <Dashboard />}
-        {tab === 'layer-heatmap' && <LayerHeatmap />}
-        <div style={{ display: tab === 'query' ? 'contents' : 'none' }}><QueryLab onNavigateToNeuron={navigateToNeuron} /></div>
-        {tab === 'evaluation' && <EvaluationPage />}
-        {tab === 'eval-runs' && <EvalRunsPage />}
-        {tab === 'refinements' && <RefinementHistory />}
-        {tab === 'samples' && <SampleQueries />}
-        {tab === 'autopilot' && <AutopilotPage />}
-        {tab === 'proposal-queue' && (
-          <ProposalQueuePage
-            initialOriginFilter={queueInitialOrigin}
-            onNavigateToProducer={navigateToProducer}
-          />
-        )}
-        {tab === 'emergent-queue' && <EmergentQueuePage />}
-        {tab === 'document-ingest' && <DocumentIngestPage />}
-        {tab === 'integrity' && <IntegrityPage />}
-        {tab === 'synaptic-learning' && <SynapticLearningPage />}
-        {tab === 'quality' && <QualityPage />}
-        {tab === 'fairness' && <FairnessPage />}
-        {tab === 'performance' && <PerformancePage />}
-        {tab === 'pipeline-timing' && <PipelineTimingPage />}
-        {tab === 'knowledge-governance' && <KnowledgeGovernancePage />}
-        {navGroups.map(group => (
-          tab === group.landingKey && (
-            <GroupLandingPage
-              key={group.landingKey}
-              title={group.label}
-              icon={group.icon}
-              description={group.description}
-              items={group.items.map(i => ({ key: i.key, label: i.label, description: i.description }))}
-              onNavigate={k => setTab(k as Tab)}
-            />
-          )
-        ))}
-      </main>
+      {/* Floating windows — one per open page, kept mounted while minimized */}
+      {Object.keys(windows).map(key => (
+        <AppWindow
+          key={key}
+          title={windowTitle(key)}
+          state={windows[key]}
+          focused={focusedKey === key}
+          onFocus={() => focusWindow(key)}
+          onClose={() => closeWindow(key)}
+          onMinimize={() => minimizeWindow(key)}
+          onToggleMax={() => toggleMaxWindow(key)}
+          onCommit={patch => commitWindow(key, patch)}
+        >
+          {pageElements[key]}
+        </AppWindow>
+      ))}
+
+      {/* Dock of minimized windows */}
+      {Object.values(windows).some(w => w.min) && (
+        <div className="window-dock" data-wake-obstacle data-wake-pad="6">
+          {Object.keys(windows).filter(k => windows[k].min).map(k => (
+            <button
+              key={k}
+              className="window-dock-pill"
+              onClick={() => focusWindow(k)}
+              title={`Restore ${windowTitle(k)}`}
+            >
+              {windowTitle(k)}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

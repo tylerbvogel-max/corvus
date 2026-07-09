@@ -10,7 +10,6 @@ import type { NeuronScoreResponse, CitationSource } from '../types';
 import { useModels } from '../hooks/useModels';
 import { marked } from 'marked';
 import NeuronTreeViz from './NeuronTreeViz';
-import AsciiWake from './AsciiWake';
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -877,11 +876,11 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   if (!hasMessages) {
     return (
       <div className="chat-hero">
-        {/* Interactive ASCII water substrate — draws only where no
-            [data-wake-obstacle] element sits (tuning notes in AsciiWake.tsx).
-            The faint logo deliberately carries no obstacle tag so water
-            passes beneath it. */}
-        <AsciiWake />
+        {/* The ASCII wake substrate now lives at the app root (the desktop
+            behind all windows) — see App.tsx / AsciiWake.tsx. The
+            data-wake-obstacle attrs below are harmless inside a window
+            (the window rect is already masked) and matter only if this
+            hero is ever rendered directly on the desktop again. */}
         <div className="chat-hero-center">
           <img src="/corvus-logo.png" alt="Corvus" className="chat-hero-logo" />
           <h1 className="chat-hero-title" data-wake-obstacle>{getTenantConfig()?.display_name ?? 'Corvus'}</h1>

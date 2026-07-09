@@ -166,11 +166,185 @@ body {
 }
 
 /* App Layout — Sidebar */
-.app-sidebar-layout {
-  display: flex;
-  flex-direction: row;
-  height: 100vh;
+/* Desktop-style shell: ASCII substrate behind floating windows */
+.app-desktop {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
 }
+
+.desktop-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.desktop-brand {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: none;
+  user-select: none;
+}
+.desktop-brand img {
+  width: min(46vw, 380px);
+  opacity: 0.07;
+}
+.desktop-brand span {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--text-dim);
+  opacity: 0.35;
+  text-transform: uppercase;
+}
+
+/* ── Floating windows ── */
+.app-window {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  min-width: 360px;
+  min-height: 240px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.app-window--focused {
+  border-color: var(--accent-dim);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55);
+}
+.app-window--max {
+  left: 8px !important;
+  top: 8px !important;
+  width: calc(100vw - 16px) !important;
+  height: calc(100vh - 16px) !important;
+}
+
+.app-window-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 34px;
+  padding: 0 6px 0 12px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.app-window-titlebar:active { cursor: grabbing; }
+
+.app-window-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-window--focused .app-window-title { color: var(--text); }
+
+.app-window-btns { display: flex; gap: 2px; flex-shrink: 0; }
+.app-window-btns button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.app-window-btns button:hover { color: var(--text); background: var(--bg-input); }
+.app-window-btns .app-window-close:hover { color: #fff; background: #b8545088; }
+
+.app-window-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+  background: var(--bg);
+}
+
+.app-window-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.app-window-resize::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  border-bottom-right-radius: 3px;
+}
+.app-window:hover .app-window-resize::after {
+  border-color: var(--text-dim);
+}
+
+.snap-preview {
+  position: fixed;
+  z-index: 940;
+  border: 1.5px solid var(--accent);
+  background: var(--accent-glow);
+  border-radius: 12px;
+  pointer-events: none;
+  transition: left 0.08s ease, top 0.08s ease, width 0.08s ease, height 0.08s ease;
+}
+
+/* Dock of minimized windows */
+.window-dock {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 905;
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  max-width: calc(100vw - 40px);
+  overflow-x: auto;
+}
+.window-dock-pill {
+  padding: 5px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.window-dock-pill:hover { color: var(--text); border-color: var(--accent); }
 
 /* Floating navigation: a fixed, draggable panel (position set inline from
    React state) that collapses down to a logo-only pill. */
@@ -339,13 +513,12 @@ body {
   border-left: 2px solid transparent;
 }
 .sidebar-item:hover { color: var(--text); background: var(--bg-input); }
+.sidebar-item.open { color: var(--text); } /* window is open somewhere on the desktop */
 .sidebar-item.active {
   color: var(--accent);
   background: var(--accent-glow, rgba(56, 189, 248, 0.06));
   border-left-color: var(--accent);
 }
-
-.app-main { flex: 1; overflow: auto; position: relative; }
 
 /* Settings gear */
 .sidebar-settings-area {

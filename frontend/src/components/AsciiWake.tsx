@@ -1,17 +1,21 @@
 import { useEffect, useRef } from 'react';
 
 /* ═══════════════════════════════════════════════════════════════════
-   AsciiWake — interactive ASCII "water wake" substrate for the hero.
+   AsciiWake — interactive ASCII "water wake" desktop substrate.
 
-   A canvas behind the hero content renders a grid of monospace
-   characters driven by a classic two-buffer wave simulation. Mouse
-   movement pushes a wake into the water (scaled by mouse speed),
-   clicks drop a splash, and occasional ambient drops keep it alive.
-   Characters are NEVER drawn where hero content sits: any element
-   inside the hero carrying `data-wake-obstacle` is masked out (with
-   padding), and waves reflect off those masked regions like rocks in
-   a pond. The palette is read from the active theme's CSS variables,
-   so it follows theme switches automatically.
+   A canvas filling its parent (the app's desktop layer) renders a grid
+   of monospace characters driven by a classic two-buffer wave
+   simulation. Mouse movement pushes a wake into the water (scaled by
+   mouse speed), clicks drop a splash, and occasional ambient drops
+   keep it alive. Characters are NEVER drawn where UI sits: any element
+   in the document carrying `data-wake-obstacle` (floating windows, the
+   nav panel, the dock) is masked out — padded by WAKE.pad, or by a
+   per-element `data-wake-pad="N"` override — and waves reflect off
+   those masked regions like rocks in a pond. The mask refreshes on a
+   short interval and immediately on a `corvus-wake-refresh` window
+   event (dispatched after window drags/resizes and layout changes).
+   The palette is read from the active theme's CSS variables, so it
+   follows theme switches automatically.
 
    ── TUNING REFERENCE ────────────────────────────────────────────
    The interactive playground for re-tuning lives at
@@ -37,7 +41,10 @@ import { useEffect, useRef } from 'react';
      substrateAlpha  brightness (0–1) of that resting texture.
      ramp            characters from calm → crest. First char must be
                      a space; index scales with wave brightness.
-     pad             px of inflation around each obstacle rect.
+     pad             default px of inflation around each obstacle rect
+                     (override per element with data-wake-pad="N";
+                     windows/nav use 6 — solid-bg surfaces need less
+                     breathing room than the bare hero text did).
      rain            ambient random drops on/off.
      rainEvery       frames between ambient drops (lower = rainier).
 
@@ -72,7 +79,7 @@ const WAKE = {
 } as const;
 
 const BUCKETS = 24;
-const OBSTACLE_REFRESH_MS = 2000; // async content (sessions list, logo img) shifts layout
+const OBSTACLE_REFRESH_MS = 400; // catches layout shifts between explicit refresh events
 
 function hexToRgb(raw: string): [number, number, number] | null {
   const m = raw.trim().match(/^#([0-9a-f]{6})$/i);
@@ -136,13 +143,16 @@ export default function AsciiWake() {
     const computeObstacles = () => {
       blocked.fill(0);
       const base = container.getBoundingClientRect();
-      container.querySelectorAll('[data-wake-obstacle]').forEach(el => {
+      // Document-wide: floating windows/nav/dock are siblings of the
+      // desktop layer, not children of it.
+      document.querySelectorAll('[data-wake-obstacle]').forEach(el => {
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) return;
-        const x0 = Math.max(0, Math.floor((r.left - base.left - WAKE.pad) / cellW));
-        const x1 = Math.min(W - 1, Math.ceil((r.right - base.left + WAKE.pad) / cellW));
-        const y0 = Math.max(0, Math.floor((r.top - base.top - WAKE.pad) / cellH));
-        const y1 = Math.min(H - 1, Math.ceil((r.bottom - base.top + WAKE.pad) / cellH));
+        const pad = Number(el.getAttribute('data-wake-pad') ?? WAKE.pad);
+        const x0 = Math.max(0, Math.floor((r.left - base.left - pad) / cellW));
+        const x1 = Math.min(W - 1, Math.ceil((r.right - base.left + pad) / cellW));
+        const y0 = Math.max(0, Math.floor((r.top - base.top - pad) / cellH));
+        const y1 = Math.min(H - 1, Math.ceil((r.bottom - base.top + pad) / cellH));
         for (let y = y0; y <= y1; y++)
           for (let x = x0; x <= x1; x++) blocked[y * W + x] = 1;
       });
@@ -256,9 +266,11 @@ export default function AsciiWake() {
       splat(x / cellW, y / cellH, WAKE.radius * 2.2, -WAKE.strength * 3.5);
     };
     const onLeave = () => { lastX = lastY = null; };
-    container.addEventListener('pointermove', onMove);
-    container.addEventListener('pointerdown', onDown);
-    container.addEventListener('pointerleave', onLeave);
+    // Window-level: pointer moves anywhere on the desktop drive the wake
+    // (splats over windows/nav are masked out by the blocked cells).
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerdown', onDown);
+    window.addEventListener('blur', onLeave);
 
     // ── Lifecycle: resize, theme switches, async layout shifts, main loop
     const ro = new ResizeObserver(rebuild);
@@ -266,6 +278,7 @@ export default function AsciiWake() {
     const themeObs = new MutationObserver(buildPalette);
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     const obstacleTimer = window.setInterval(computeObstacles, OBSTACLE_REFRESH_MS);
+    window.addEventListener('corvus-wake-refresh', computeObstacles);
 
     let raf = 0;
     let rainCountdown = WAKE.rainEvery;
@@ -288,9 +301,10 @@ export default function AsciiWake() {
       window.clearInterval(obstacleTimer);
       ro.disconnect();
       themeObs.disconnect();
-      container.removeEventListener('pointermove', onMove);
-      container.removeEventListener('pointerdown', onDown);
-      container.removeEventListener('pointerleave', onLeave);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('blur', onLeave);
+      window.removeEventListener('corvus-wake-refresh', computeObstacles);
     };
   }, []);
 
