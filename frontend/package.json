@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "build:demo": "tsc -b && VITE_DEMO=1 vite build",
     "demo:capture": "node scripts/capture-demo-fixtures.mjs",
+    "demo:check": "node scripts/check-demo.mjs",
+    "demo:publish": "npm run demo:capture && npm run demo:check && npm run build:demo",
     "preview": "vite preview"
   },
   "dependencies": {

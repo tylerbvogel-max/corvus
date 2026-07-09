@@ -10,11 +10,14 @@
 #   main never touch the public demo.
 #
 # Publishing a new demo iteration:
-#   1. cd frontend && npm run demo:capture     # local backend running
+#   1. cd frontend && npm run demo:publish     # capture → contract checks → build
+#      (local backend must be running; fails loudly on contract drift)
 #   2. REVIEW src/demo/fixtures.json           # it ships publicly, verbatim
-#   3. npm run build:demo && npx vite preview  # sanity-check locally
-#   4. git add/commit, then:  git push private main:demo
+#      Optional visual pass: npx vite preview
+#   3. git add/commit, then:  git push private main:demo
 #      Render auto-deploys the demo branch.
+#   Broke it anyway? Render dashboard → corvus-demo → Deploys →
+#   pick the previous deploy → "Redeploy" rolls back instantly.
 #
 # Source protection: visitors receive only the minified bundle (no source
 # maps are generated). The repo stays private; the Python backend never
