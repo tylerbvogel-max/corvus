@@ -1,5 +1,10 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import type { ReactNode } from 'react'
+// Imported through Vite (not public/) so the served URL carries a content
+// fingerprint — logo swaps bust the browser cache without manual refreshes
+// (ChromeOS Chrome never revalidates same-URL images).
+import corvusLogo from './assets/corvus-logo.png'
+import corvusLogo128 from './assets/corvus-logo-128.png'
 import AppWindow, { MIN_W, MIN_H, type WinState } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
@@ -555,7 +560,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)' }}>
         <div style={{ textAlign: 'center', maxWidth: 360 }}>
-          <img src="/corvus-logo.png" alt="Corvus" style={{ width: 64, height: 64, marginBottom: 16, opacity: 0.8 }} />
+          <img src={corvusLogo} alt="Corvus" style={{ width: 64, height: 64, marginBottom: 16, opacity: 0.8 }} />
           <h2 style={{ color: 'var(--text)', fontSize: 18, margin: '0 0 8px' }}>Corvus Access</h2>
           <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: '0 0 20px' }}>Enter your access key to continue.</p>
           <form onSubmit={e => {
@@ -603,7 +608,7 @@ export default function App() {
       <div className="desktop-layer">
         <AsciiWake />
         <div className="desktop-brand">
-          <img src="/corvus-logo.png" alt="" draggable={false} />
+          <img src={corvusLogo} alt="" draggable={false} />
           <span>{displayName}</span>
         </div>
       </div>
@@ -621,13 +626,13 @@ export default function App() {
             onClick={() => { if (!navDragMovedRef.current) setCollapsed(false); }}
             title="Open navigation (drag to move)"
           >
-            <img src="/corvus-logo-128.png" alt="Corvus" className="sidebar-logo" draggable={false} />
+            <img src={corvusLogo128} alt="Corvus" className="sidebar-logo" draggable={false} />
           </button>
         ) : (
           <>
         <div className="sidebar-header" onPointerDown={startNavDrag} title="Drag to move">
           <img
-            src="/corvus-logo-128.png"
+            src={corvusLogo128}
             alt="Corvus"
             className="sidebar-logo"
             draggable={false}

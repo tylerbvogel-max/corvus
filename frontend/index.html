@@ -7,8 +7,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/corvus-favicon-32.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/corvus-touch-180.png" />
+    <!-- ?v= busts ChromeOS Chrome's stubborn icon cache — bump it whenever
+         these files change (the in-app logos cache-bust automatically via
+         Vite asset fingerprinting; these two live in public/ and don't). -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/corvus-favicon-32.png?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/corvus-touch-180.png?v=2" />
     <title>Corvus</title>
   </head>
   <body>

@@ -10,6 +10,8 @@ import type { NeuronScoreResponse, CitationSource } from '../types';
 import { useModels } from '../hooks/useModels';
 import { marked } from 'marked';
 import NeuronTreeViz from './NeuronTreeViz';
+// Via Vite so the URL is content-fingerprinted (cache-busts on logo swaps)
+import corvusLogo from '../assets/corvus-logo.png';
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -882,7 +884,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
             (the window rect is already masked) and matter only if this
             hero is ever rendered directly on the desktop again. */}
         <div className="chat-hero-center">
-          <img src="/corvus-logo.png" alt="Corvus" className="chat-hero-logo" />
+          <img src={corvusLogo} alt="Corvus" className="chat-hero-logo" />
           <h1 className="chat-hero-title" data-wake-obstacle>{getTenantConfig()?.display_name ?? 'Corvus'}</h1>
           <p className="chat-hero-subtitle" data-wake-obstacle>I know our company's internal documentation — ask me anything.</p>
           {inputBar}
