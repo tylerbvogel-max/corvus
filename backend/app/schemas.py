@@ -23,6 +23,11 @@ class QuerySlotRequest(BaseModel):
     # prep so associative reach is comparable side-by-side. No-op for raw slots.
     spread_hops: int | None = Field(None, ge=1, le=6)
     spread_floor: float | None = Field(None, ge=0.0, le=0.5)
+    # Audit-grade answer (arch-tier-routing): the explicit opus@low action —
+    # max-precision terse answers (measured acc 4.7 / faithfulness 5.0). Forces
+    # opus at low effort, bypassing the effort floor and tier routing. An
+    # explicit user action, deliberately NOT a routing tier.
+    audit: bool = False
 
 
 class QueryRequest(BaseModel):
@@ -46,6 +51,10 @@ class QueryRequest(BaseModel):
     # Force a fresh context pack this turn even if the drift gate would reuse
     # (user-driven re-ground, e.g. after consolidation).
     refresh_context: bool = False
+    # Audit-grade answer action: run the primary slot as opus@low (see
+    # QuerySlotRequest.audit). Convenience for single-slot callers (hero chat)
+    # — marks slot 0 audit, creating the default slot when none was sent.
+    audit_grade: bool = False
 
 
 class SlotResult(BaseModel):
@@ -63,6 +72,12 @@ class SlotResult(BaseModel):
     token_budget: int | None = None
     top_k: int | None = None
     label: str | None = None
+    # Tier-elastic routing telemetry (primary slot of single-slot queries):
+    # {escalated, model, reasons, signals} — recorded even when not escalated
+    # so thresholds stay recalibratable. None for compare/audit/raw slots.
+    routing: dict | None = None
+    # True when this slot ran as the explicit audit-grade action (opus@low).
+    audit_grade: bool = False
 
 
 class NeuronScoreResponse(BaseModel):
@@ -131,6 +146,9 @@ class QueryResponse(BaseModel):
     llm_session_id: str | None = None  # persisted-session id (pass back to resume)
     context_reused: bool = False       # drift gate reused the session's active context
     context_overlap: float | None = None  # fresh-pack vs active-pack overlap (calibration)
+    # Tier-elastic routing decision for the primary slot (None when routing
+    # didn't run: disabled, multi-slot compare, raw slot, or audit action).
+    tier_routing: dict | None = None
     intent: str | None = None
     departments: list[str] = []
     role_keys: list[str] = []

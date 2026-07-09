@@ -51,6 +51,27 @@ class Settings(BaseSettings):
     # primary_answer_model: MODEL_REGISTRY key to swap the primary slot's model
     # to ("" = keep the slot's own model). Invalid keys are ignored.
     primary_answer_model: str = ""
+    # ── Tier-elastic escalation routing (roadmap arch-tier-routing) ──
+    # Single-slot queries default to haiku and escalate the primary slot to
+    # tier_routing_escalation_model BEFORE execution when prep-time uncertainty
+    # signals fire (see services/tier_routing.py). Never downgrades; skipped
+    # for multi-slot compares (A/B integrity) and audit-grade slots. A set
+    # primary_answer_model wins over routing (explicit beats adaptive).
+    tier_routing_enabled: bool = True
+    tier_routing_escalation_model: str = "sonnet"
+    # Thresholds calibrated 2026-07-09 over 63 live corvus-aero queries + the
+    # smoke suite (union escalation rate ≈ 29%); distributions documented in
+    # services/tier_routing.py and scripts/eval_tier_routing.py.
+    # Coverage floor: escalate when the mean stimulus relevance of the packed
+    # slice's top 5 is below this (live p25 ≈ 0.84; direct hits sit 0.95+).
+    tier_routing_coverage_floor: float = 0.82
+    # Spread density: escalate when at least this fraction of the packed slice
+    # arrived via spreading activation (hop-heavy pack = synthesis burden;
+    # live p90 = 0.30).
+    tier_routing_spread_share: float = 0.30
+    # Regulatory stakes: an explicit regulatory citation in the query text
+    # (tenant reference patterns) escalates directly.
+    tier_routing_regulatory_escalates: bool = True
     # Entailment / claim-grounding check (grounding backlog §6.4). A valid [FQ]
     # key proves the source was in context, NOT that the claim is entailed by
     # it. This opt-in pass judges each cited claim of the PRIMARY answer

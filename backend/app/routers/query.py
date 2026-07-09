@@ -568,6 +568,29 @@ def _legacy_output_checks(result: dict) -> list[dict]:
     }]
 
 
+def _slot_dicts_from_request(req: QueryRequest) -> list[dict] | None:
+    """Executor slot dicts for a request, applying the audit-grade action.
+
+    audit_grade marks slot 0 as the explicit opus@low audit action
+    (arch-tier-routing), creating the default single slot when the request
+    sent none — so the hero chat can request an audit-grade answer without
+    knowing the slot vocabulary.
+    """
+    assert req is not None, "req must be a QueryRequest"
+    slot_dicts = [s.model_dump() for s in req.slots] if req.slots else None
+    if not req.audit_grade:
+        return slot_dicts
+    if slot_dicts is None:
+        slot_dicts = [{
+            "mode": "opus_neuron",
+            "token_budget": settings.token_budget,
+            "top_k": settings.top_k_neurons,
+            "priming": True,
+        }]
+    slot_dicts[0]["audit"] = True
+    return slot_dicts
+
+
 @router.post("/query", response_model=QueryResponse)
 async def post_query(
     req: QueryRequest,
@@ -595,7 +618,7 @@ async def post_query(
 
     effort_var.set(req.effort)
     try:
-        slot_dicts = [s.model_dump() for s in req.slots] if req.slots else None
+        slot_dicts = _slot_dicts_from_request(req)
         result = await execute_query(
             db, req.message,
             slots=slot_dicts,
@@ -692,10 +715,7 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
                 return
 
             # Execute pipeline with stage callbacks (Session 3+ multi-slot path)
-            # Convert QuerySlotRequest list to dict list for executor
-            slot_dicts = None
-            if req.slots:
-                slot_dicts = [s.model_dump() for s in req.slots]
+            slot_dicts = _slot_dicts_from_request(req)
 
             result = await execute_query(
                 db, req.message,

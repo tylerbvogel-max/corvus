@@ -33,6 +33,7 @@ from app.services.propagation import propagate_activation
 from app.services.neuron_service import NeuronCandidate
 from app.services.scoring_engine import NeuronScoreBreakdown
 from app.services.citation_hopping import HopMap, mint_hop_map, serialize_hop_map
+from app.services.tier_routing import TierDecision, decide_tier_escalation, escalated_model
 from app.tenant import tenant
 
 
@@ -934,10 +935,19 @@ async def _update_counters_and_fire(
 _EFFORT_RANK = MappingProxyType({"low": 0, "medium": 1, "high": 2})
 
 
-def _apply_primary_overrides(model_name: str, skip_effort: bool = False) -> str:
+def _apply_primary_overrides(
+    model_name: str,
+    skip_effort: bool = False,
+    tier_decision: TierDecision | None = None,
+) -> str:
     """Primary-slot quality floor: raise reasoning effort (never lower it) and
     optionally swap to a stronger model, per settings. Returns the effective
     model name. skip_effort=True leaves effort alone (the slot set its own).
+
+    tier_decision (tier-elastic routing, arch-tier-routing) escalates the
+    model one tier when prep-time uncertainty signals fired; an explicit
+    primary_answer_model setting wins over routing, and routing never
+    downgrades (see tier_routing.escalated_model).
 
     Must run INSIDE the slot's asyncio task: each task gets its own copy of the
     execution context, so the effort_var set here is visible only to this
@@ -954,7 +964,7 @@ def _apply_primary_overrides(model_name: str, skip_effort: bool = False) -> str:
     override = settings.primary_answer_model
     if override and override in MODEL_REGISTRY:
         return override
-    return model_name
+    return escalated_model(model_name, tier_decision)
 
 
 def _primed_ctx(ctx: PreparedContext) -> PreparedContext:
@@ -982,7 +992,10 @@ def _primed_ctx(ctx: PreparedContext) -> PreparedContext:
     return replace(ctx, system_prompt=line + ctx.system_prompt)
 
 
-def _apply_slot_overrides(slot: dict, model_name: str, is_primary: bool) -> str:
+def _apply_slot_overrides(
+    slot: dict, model_name: str, is_primary: bool,
+    tier_decision: TierDecision | None = None,
+) -> str:
     """Per-slot effort override + primary quality floor. Returns the effective
     model name. Must run INSIDE the slot's asyncio task (own context copy) so
     the effort_var set here stays slot-local.
@@ -990,13 +1003,23 @@ def _apply_slot_overrides(slot: dict, model_name: str, is_primary: bool) -> str:
     An EXPLICIT slot effort always wins — including over the primary floor: a
     user comparing the same model at low vs high effort must not have slot 0
     silently bumped to the floor.
+
+    An audit-grade slot is the explicit opus@low action (arch-tier-routing):
+    the measured audit profile — max faithfulness, terse — exists ONLY at low
+    effort, so the effort floor, tier routing, and primary_answer_model are
+    all bypassed. Explicit action beats every adaptive override.
     """
     assert isinstance(slot, dict), "slot must be a dict"
+    if slot.get("audit"):
+        effort_var.set("low")
+        return "opus"
     explicit = slot.get("effort") in _EFFORT_RANK
     if explicit:
         effort_var.set(slot["effort"])
     if is_primary:
-        return _apply_primary_overrides(model_name, skip_effort=explicit)
+        return _apply_primary_overrides(
+            model_name, skip_effort=explicit, tier_decision=tier_decision,
+        )
     return model_name
 
 
@@ -1086,6 +1109,7 @@ async def _execute_slot(
     on_stage: StageCallback = None,
     is_primary: bool = False,
     session_spec: dict | None = None,
+    tier_decision: TierDecision | None = None,
 ) -> dict:
     """Execute a single slot with its model configuration.
 
@@ -1098,6 +1122,8 @@ async def _execute_slot(
     mode = slot.get("mode", "haiku_neuron")
     token_budget = slot.get("token_budget", settings.token_budget)
     label = slot.get("label")
+    if slot.get("audit") and not label:
+        label = "Audit-grade (Opus @ low)"
 
     # Parse mode: "{model}_{type}" (e.g., "haiku_neuron", "sonnet_raw")
     parts = mode.rsplit("_", 1)
@@ -1105,7 +1131,7 @@ async def _execute_slot(
     slot_type = parts[1] if len(parts) > 1 else "neuron"
     uses_neurons = slot_type == "neuron"
 
-    model_name = _apply_slot_overrides(slot, model_name, is_primary)
+    model_name = _apply_slot_overrides(slot, model_name, is_primary, tier_decision)
     effective_effort = effort_var.get() or settings.default_effort
     if slot.get("priming") and ctx is not None:
         ctx = _primed_ctx(ctx)
@@ -1129,6 +1155,13 @@ async def _execute_slot(
             citations_fabricated, ungrounded_list, relevance, result_data,
             token_budget, ctx, label,
         )
+        # Routing telemetry rides the persisted slot result (results_json):
+        # signals are recorded on every routed query — escalated or not — so
+        # thresholds stay recalibratable from production data.
+        if slot.get("audit"):
+            result["audit_grade"] = True
+        if tier_decision is not None:
+            result["routing"] = tier_decision.to_payload()
 
         if on_stage:
             await on_stage("execute_llm", {"status": "done", "detail": {
@@ -1415,6 +1448,23 @@ async def _acquire_query_contexts(
     return ctx_by_cfg, classify_result, reused_ctx, overlap
 
 
+def _decide_primary_tier(
+    slots: list[dict], ctx: PreparedContext | None,
+    user_message: str, ctx_overlap: float | None,
+) -> TierDecision | None:
+    """Tier-elastic routing (arch-tier-routing): decide the primary slot's tier
+    BEFORE execution from prep-time signals. Single-slot neuron queries only —
+    multi-slot compares must not have slot 0 silently swapped (A/B integrity),
+    and the audit action is explicit, never routed.
+    """
+    assert isinstance(slots, list) and slots, "slots must be non-empty"
+    if not settings.tier_routing_enabled or len(slots) != 1 or ctx is None:
+        return None
+    if slots[0].get("mode", "haiku_neuron") not in NEURON_MODES or slots[0].get("audit"):
+        return None
+    return decide_tier_escalation(ctx, user_message, ctx_overlap)
+
+
 async def execute_query(
     db: AsyncSession,
     user_message: str,
@@ -1469,6 +1519,8 @@ async def execute_query(
     all_scored = ctx.all_scored if ctx else []
     neuron_map = ctx.neuron_map if ctx else {}
 
+    tier_decision = _decide_primary_tier(slots, ctx, user_message, ctx_overlap)
+
     # Execute each slot in parallel. Raw slots get no neuron context (vanilla
     # control group); slot 0 is the primary answer (effort/model floor) and the
     # only slot a persisted session applies to — compare slots stay stateless.
@@ -1488,6 +1540,7 @@ async def execute_query(
             on_stage=on_stage,
             is_primary=(i == 0),
             session_spec=session_spec if i == 0 else None,
+            tier_decision=tier_decision if i == 0 else None,
         )
         slot_tasks.append(task)
 
@@ -1510,6 +1563,7 @@ async def execute_query(
     )
     response["context_reused"] = reused_ctx is not None
     response["context_overlap"] = ctx_overlap
+    response["tier_routing"] = tier_decision.to_payload() if tier_decision else None
     return response
 
 
