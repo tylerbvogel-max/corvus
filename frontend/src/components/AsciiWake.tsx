@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { loadWakeSettings, WAKE_SETTINGS_EVENT } from '../wakeSettings';
 
 /* ═══════════════════════════════════════════════════════════════════
    AsciiWake — interactive ASCII "water wake" desktop substrate.
@@ -9,74 +10,33 @@ import { useEffect, useRef } from 'react';
    mouse speed), clicks drop a splash, and occasional ambient drops
    keep it alive. Characters are NEVER drawn where UI sits: any element
    in the document carrying `data-wake-obstacle` (floating windows, the
-   nav panel, the dock) is masked out — padded by WAKE.pad, or by a
-   per-element `data-wake-pad="N"` override — and waves reflect off
+   nav panel, the dock) is masked out — padded by the `pad` setting, or
+   a per-element `data-wake-pad="N"` override — and waves reflect off
    those masked regions like rocks in a pond. The mask refreshes on a
    short interval and immediately on a `corvus-wake-refresh` window
    event (dispatched after window drags/resizes and layout changes).
    The palette is read from the active theme's CSS variables, so it
    follows theme switches automatically.
 
-   ── TUNING REFERENCE ────────────────────────────────────────────
-   The interactive playground for re-tuning lives at
-   `experiments/ascii-wake/index.html` (repo root):
+   ── TUNING ──────────────────────────────────────────────────────
+   All knobs live in src/wakeSettings.ts (defaults = the values
+   hand-tuned in the playground at experiments/ascii-wake/index.html,
+   2026-07-08) and are adjustable at runtime from the Settings popup
+   (gear on the nav panel), persisted under localStorage key
+   'corvus-wake-settings'. This component re-reads them on the
+   `corvus-wake-settings-changed` event: grid-shape changes
+   (cell/aspect/substrate) rebuild the simulation, everything else
+   applies live. See WakeSettings in wakeSettings.ts for what each
+   knob does.
 
-       cd experiments/ascii-wake && python3 -m http.server 8040
-       # open http://localhost:8040, tune, then "Copy JSON"
-
-   Paste the exported JSON values into WAKE below. Knob meanings:
-
-     cell            char cell width in px; height = cell * aspect.
-                     Smaller = finer water, more cells to simulate.
-     aspect          cell height/width ratio (~monospace glyph ratio).
-     damping         energy kept per sim step (0.90–0.995). Higher =
-                     ripples travel farther / longer trails.
-     substeps        sim steps per frame (1–3) = wave speed.
-     gain            wave height → character brightness multiplier.
-     radius          splat radius in cells around the pointer.
-     strength        splat amplitude (wake intensity).
-     speedRef        px-per-event of mouse speed that yields 1×
-                     strength; lower = more speed-sensitive.
-     substrate       fraction of cells showing a faint resting char.
-     substrateAlpha  brightness (0–1) of that resting texture.
-     ramp            characters from calm → crest. First char must be
-                     a space; index scales with wave brightness.
-     pad             default px of inflation around each obstacle rect
-                     (override per element with data-wake-pad="N";
-                     windows/nav use 6 — solid-bg surfaces need less
-                     breathing room than the bare hero text did).
-     rain            ambient random drops on/off.
-     rainEvery       frames between ambient drops (lower = rainier).
-
-   Values below were hand-tuned in the playground on 2026-07-08:
-   { cell: 7, damping: 0.952, gain: 3.4, radius: 1, strength: 0.5,
-     speedRef: 36, substrate: 0.05, substrateAlpha: 0.21,
-     ramp: ' .,-~:;=!*#%@' (playground ramp #1), solid: true,
-     logoBlocks: false (the 8%-opacity logo lets water pass under),
-     pad: 24, rain: true }
-
+   To re-tune from scratch: run the playground
+   (`cd experiments/ascii-wake && python3 -m http.server 8040`), tune,
+   "Copy JSON", and update WAKE_DEFAULTS — or just use the gear.
    Palette stops come from --accent-dim → --accent → --accent-light
    → --text of the active theme; to change the water color
    independently of the theme, replace readPaletteStops().
    Respects prefers-reduced-motion (renders nothing).
    ──────────────────────────────────────────────────────────────── */
-
-const WAKE = {
-  cell: 7,
-  aspect: 1.9,
-  damping: 0.952,
-  substeps: 1,
-  gain: 3.4,
-  radius: 1,
-  strength: 0.5,
-  speedRef: 36,
-  substrate: 0.05,
-  substrateAlpha: 0.21,
-  ramp: ' .,-~:;=!*#%@',
-  pad: 24,
-  rain: true,
-  rainEvery: 50,
-} as const;
 
 const BUCKETS = 24;
 const OBSTACLE_REFRESH_MS = 400; // catches layout shifts between explicit refresh events
@@ -118,9 +78,11 @@ export default function AsciiWake() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let W = 0, H = 0;
-    const cellW = WAKE.cell;
-    const cellH = Math.round(WAKE.cell * WAKE.aspect);
+    // Mutable settings object: closures below always read the latest
+    // values; the settings-changed listener updates it in place.
+    const cfg = loadWakeSettings();
+
+    let W = 0, H = 0, cellW = 0, cellH = 0;
     let curr = new Float32Array(0);
     let prev = new Float32Array(0);
     let blocked = new Uint8Array(0);
@@ -148,7 +110,7 @@ export default function AsciiWake() {
       document.querySelectorAll('[data-wake-obstacle]').forEach(el => {
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0) return;
-        const pad = Number(el.getAttribute('data-wake-pad') ?? WAKE.pad);
+        const pad = Number(el.getAttribute('data-wake-pad') ?? cfg.pad);
         const x0 = Math.max(0, Math.floor((r.left - base.left - pad) / cellW));
         const x1 = Math.min(W - 1, Math.ceil((r.right - base.left + pad) / cellW));
         const y0 = Math.max(0, Math.floor((r.top - base.top - pad) / cellH));
@@ -170,6 +132,8 @@ export default function AsciiWake() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
+      cellW = cfg.cell;
+      cellH = Math.round(cfg.cell * cfg.aspect);
       W = Math.ceil(cw / cellW);
       H = Math.ceil(ch / cellH);
       curr = new Float32Array(W * H);
@@ -177,19 +141,19 @@ export default function AsciiWake() {
       blocked = new Uint8Array(W * H);
       substrateMask = new Uint8Array(W * H);
       const rand = mulberry32(1337);
-      for (let i = 0; i < W * H; i++) substrateMask[i] = rand() < WAKE.substrate ? 1 : 0;
+      for (let i = 0; i < W * H; i++) substrateMask[i] = rand() < cfg.substrate ? 1 : 0;
       computeObstacles();
     };
 
     // Two-buffer wave equation; blocked cells are held at zero so waves
-    // reflect off hero content instead of passing beneath it.
+    // reflect off UI surfaces instead of passing beneath them.
     const simStep = () => {
       for (let y = 1; y < H - 1; y++) {
         const row = y * W;
         for (let x = 1; x < W - 1; x++) {
           const i = row + x;
           if (blocked[i]) { prev[i] = 0; continue; }
-          let v = ((curr[i - 1] + curr[i + 1] + curr[i - W] + curr[i + W]) * 0.5 - prev[i]) * WAKE.damping;
+          let v = ((curr[i - 1] + curr[i + 1] + curr[i - W] + curr[i + W]) * 0.5 - prev[i]) * cfg.damping;
           if (v > -0.0004 && v < 0.0004) v = 0;
           prev[i] = v;
         }
@@ -215,7 +179,8 @@ export default function AsciiWake() {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.font = `${Math.round(cellH * 0.82)}px ui-monospace, "Cascadia Mono", Menlo, monospace`;
-      const rampMax = WAKE.ramp.length - 1;
+      const ramp = cfg.ramp;
+      const rampMax = ramp.length - 1;
       const halfW = cellW / 2, halfH = cellH / 2;
       let bucketCache = -1;
       for (let y = 0; y < H; y++) {
@@ -223,15 +188,15 @@ export default function AsciiWake() {
         const row = y * W;
         for (let x = 0; x < W; x++) {
           const i = row + x;
-          if (blocked[i]) continue; // never draw where hero content lives
-          let intensity = Math.min(1, Math.abs(curr[i]) * WAKE.gain);
+          if (blocked[i]) continue; // never draw where UI lives
+          let intensity = Math.min(1, Math.abs(curr[i]) * cfg.gain);
           if (intensity < 0.03) {
             if (!substrateMask[i]) continue;
-            intensity = WAKE.substrateAlpha;
-          } else if (substrateMask[i] && intensity < WAKE.substrateAlpha) {
-            intensity = WAKE.substrateAlpha;
+            intensity = cfg.substrateAlpha;
+          } else if (substrateMask[i] && intensity < cfg.substrateAlpha) {
+            intensity = cfg.substrateAlpha;
           }
-          const ch = WAKE.ramp[Math.min(rampMax, Math.max(1, Math.round(intensity * rampMax)))];
+          const ch = ramp[Math.min(rampMax, Math.max(1, Math.round(intensity * rampMax)))];
           const bucket = Math.min(BUCKETS - 1, Math.floor(intensity * BUCKETS));
           if (bucket !== bucketCache) { ctx.fillStyle = palette[bucket]; bucketCache = bucket; }
           ctx.fillText(ch, x * cellW + halfW, py);
@@ -239,7 +204,8 @@ export default function AsciiWake() {
       }
     };
 
-    // ── Input (listeners on the hero container, canvas stays pointer-events:none)
+    // ── Input (window-level: pointer moves anywhere on the desktop drive
+    // the wake; splats over windows/nav are masked out by blocked cells)
     let lastX: number | null = null, lastY: number | null = null;
     const toLocal = (e: PointerEvent) => {
       const r = container.getBoundingClientRect();
@@ -251,11 +217,11 @@ export default function AsciiWake() {
         const dx = x - lastX, dy = y - lastY;
         const dist = Math.hypot(dx, dy);
         if (dist > 0.5) {
-          const speedF = Math.min(2.5, Math.max(0.15, dist / WAKE.speedRef));
+          const speedF = Math.min(2.5, Math.max(0.15, dist / cfg.speedRef));
           const steps = Math.max(1, Math.ceil(dist / (cellW * 0.9)));
           for (let s = 1; s <= steps; s++) {
             const px = lastX + dx * (s / steps), py = lastY + dy * (s / steps);
-            splat(px / cellW, py / cellH, WAKE.radius, -WAKE.strength * speedF);
+            splat(px / cellW, py / cellH, cfg.radius, -cfg.strength * speedF);
           }
         }
       }
@@ -263,16 +229,14 @@ export default function AsciiWake() {
     };
     const onDown = (e: PointerEvent) => {
       const [x, y] = toLocal(e);
-      splat(x / cellW, y / cellH, WAKE.radius * 2.2, -WAKE.strength * 3.5);
+      splat(x / cellW, y / cellH, cfg.radius * 2.2, -cfg.strength * 3.5);
     };
     const onLeave = () => { lastX = lastY = null; };
-    // Window-level: pointer moves anywhere on the desktop drive the wake
-    // (splats over windows/nav are masked out by the blocked cells).
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('blur', onLeave);
 
-    // ── Lifecycle: resize, theme switches, async layout shifts, main loop
+    // ── Lifecycle: resize, theme switches, settings changes, main loop
     const ro = new ResizeObserver(rebuild);
     ro.observe(container);
     const themeObs = new MutationObserver(buildPalette);
@@ -280,14 +244,25 @@ export default function AsciiWake() {
     const obstacleTimer = window.setInterval(computeObstacles, OBSTACLE_REFRESH_MS);
     window.addEventListener('corvus-wake-refresh', computeObstacles);
 
+    const onSettings = () => {
+      const next = loadWakeSettings();
+      const needsRebuild = next.cell !== cfg.cell
+        || next.aspect !== cfg.aspect
+        || next.substrate !== cfg.substrate;
+      Object.assign(cfg, next);
+      if (needsRebuild) rebuild();
+      else computeObstacles(); // pad may have changed
+    };
+    window.addEventListener(WAKE_SETTINGS_EVENT, onSettings);
+
     let raf = 0;
-    let rainCountdown = WAKE.rainEvery;
+    let rainCountdown = cfg.rainEvery;
     const loop = () => {
-      if (WAKE.rain && --rainCountdown <= 0) {
-        rainCountdown = WAKE.rainEvery;
+      if (cfg.rain && --rainCountdown <= 0) {
+        rainCountdown = cfg.rainEvery;
         splat(2 + Math.random() * (W - 4), 2 + Math.random() * (H - 4), 2.5, -1.2);
       }
-      for (let s = 0; s < WAKE.substeps; s++) simStep();
+      for (let s = 0; s < cfg.substeps; s++) simStep();
       draw();
       raf = requestAnimationFrame(loop);
     };
@@ -305,6 +280,7 @@ export default function AsciiWake() {
       window.removeEventListener('pointerdown', onDown);
       window.removeEventListener('blur', onLeave);
       window.removeEventListener('corvus-wake-refresh', computeObstacles);
+      window.removeEventListener(WAKE_SETTINGS_EVENT, onSettings);
     };
   }, []);
 

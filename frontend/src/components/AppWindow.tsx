@@ -168,7 +168,6 @@ export default function AppWindow({
         display: state.min ? 'none' : undefined,
       }}
       data-wake-obstacle
-      data-wake-pad="6"
       onPointerDownCapture={onFocus}
     >
       <div className="app-window-titlebar" onPointerDown={onTitleDown} onDoubleClick={onToggleMax}>

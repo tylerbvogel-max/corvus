@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import AppWindow, { MIN_W, MIN_H, type WinState } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
+import WakeSettingsPanel from './components/WakeSettingsPanel'
 import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
@@ -514,7 +515,7 @@ export default function App() {
       case 'emergent-queue': return <EmergentQueuePage />;
       case 'document-ingest': return <DocumentIngestPage />;
       case 'integrity-dashboard': return <IntegrityPage panel="dashboard" />;
-      case 'integrity-scan': return <IntegrityPage panel="scan" onOpenPanel={p => openWindow(`integrity-${p}`)} />;
+      case 'integrity-scan': return <IntegrityPage panel="scan" />;
       case 'integrity-findings': return <IntegrityPage panel="findings" />;
       case 'synaptic-learning': return <SynapticLearningPage />;
       case 'quality': return <QualityPage />;
@@ -611,7 +612,6 @@ export default function App() {
         className={`sidebar${collapsed ? ' sidebar-pill' : ''}`}
         style={{ left: navPos.x, top: navPos.y }}
         data-wake-obstacle
-        data-wake-pad="6"
       >
         {collapsed ? (
           /* Logo pill: drag to move, click to expand */
@@ -741,8 +741,8 @@ export default function App() {
               const r = navRef.current?.getBoundingClientRect();
               if (!r) return undefined;
               return {
-                left: Math.max(8, Math.min(r.left, window.innerWidth - 252)),
-                top: Math.max(8, Math.min(r.bottom + 8, window.innerHeight - 300)),
+                left: Math.max(8, Math.min(r.left, window.innerWidth - 272)),
+                top: Math.max(8, Math.min(r.bottom + 8, window.innerHeight - 620)),
                 bottom: 'auto',
               };
             })()}
@@ -766,6 +766,10 @@ export default function App() {
                 ))}
               </div>
             </div>
+            <div className="settings-popup-section">
+              <label className="settings-label">ASCII Wake</label>
+              <WakeSettingsPanel />
+            </div>
           </div>
         </>
       )}
@@ -788,7 +792,7 @@ export default function App() {
 
       {/* Dock of minimized windows */}
       {Object.values(windows).some(w => w.min) && (
-        <div className="window-dock" data-wake-obstacle data-wake-pad="6">
+        <div className="window-dock" data-wake-obstacle>
           {Object.keys(windows).filter(k => windows[k].min).map(k => (
             <button
               key={k}

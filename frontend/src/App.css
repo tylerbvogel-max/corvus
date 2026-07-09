@@ -644,14 +644,70 @@ body {
   bottom: 48px;
   left: 12px;
   z-index: 1000;
-  width: 240px;
+  width: 260px;
+  max-height: calc(100vh - 24px);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   padding: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+
+/* ASCII Wake tuning section (see components/WakeSettingsPanel.tsx) */
+.wake-settings {
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.wake-settings-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 36px;
+  align-items: center;
+  gap: 6px;
+}
+.wake-settings-row label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wake-settings-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.wake-settings-row output {
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.wake-settings-row select {
+  grid-column: 2 / 4;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  padding: 3px 4px;
+}
+.wake-settings-check {
+  display: flex;
+  gap: 6px;
+}
+.wake-settings-check input { accent-color: var(--accent); }
+.wake-settings-reset {
+  margin-top: 2px;
+  padding: 5px 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+}
+.wake-settings-reset:hover { border-color: var(--accent); color: var(--text); }
 
 .settings-popup-header {
   display: flex;
