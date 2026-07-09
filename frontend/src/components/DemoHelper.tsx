@@ -1,0 +1,254 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+/* Demo helper — a floating "?" pill (deliberate sibling of the nav
+   logo pill: same card form, but dashed accent border so it reads as
+   the guide, not the app) that runs a spotlight walkthrough of every
+   frontend surface. Present in all builds. Draggable like the nav
+   pill; position persists. Steps target live elements when they exist
+   and fall back to a hint ("open it via …") when they don't; optional
+   steps (dock, demo-only pill) are skipped silently when absent. */
+
+interface TourStep {
+  title: string;
+  body: string;
+  find?: () => HTMLElement | null;
+  hint?: string;       // shown when find() comes up empty
+  optional?: boolean;  // skip silently when missing
+}
+
+const q = (sel: string) => () => document.querySelector(sel) as HTMLElement | null;
+const windowByTitle = (title: string) => () => {
+  const el = Array.from(document.querySelectorAll('.app-window-title'))
+    .find(t => t.textContent?.trim() === title);
+  return (el?.closest('.app-window') as HTMLElement) ?? null;
+};
+
+const STEPS: TourStep[] = [
+  {
+    title: 'Welcome to the Corvus desktop',
+    body: 'Everything floats on a live water simulation — move your mouse across the dark areas to carve a wake, click for a splash. Pages open as windows you can arrange however you like, and your layout is remembered.',
+  },
+  {
+    title: 'The heartbeat logo is your navigation',
+    body: 'Click it to expand the menu; click the title bar to collapse it back to this pill. Drag it anywhere — it stays where you put it. The water breaks against its edges, and it beats once a second.',
+    find: q('.sidebar'),
+  },
+  {
+    title: 'The navigation menu',
+    body: 'CHAT opens the main conversation. The groups below it (Query, Autopilot, Knowledge, Evaluate, History) expand into that area\'s pages — each one opens as its own window. Numbers on items are pending proposals awaiting review.',
+    find: q('.sidebar-nav'),
+    hint: 'Click the pulsing logo pill to expand the navigation, then revisit this tip.',
+  },
+  {
+    title: 'Settings gear',
+    body: 'Themes live here — and so does live tuning for the water itself (cell size, damping, wake strength, ambient drops…). Slide things around and watch the background react instantly.',
+    find: q('.sidebar-settings-btn'),
+    hint: 'Expand the navigation to reveal the gear at its bottom.',
+  },
+  {
+    title: 'The chat',
+    body: 'Ask anything — answers are grounded in internal documentation, with numbered citations you can click and a sources chip under each response. Starting a chat also opens the Chat History and Neuron Graph windows.',
+    find: () => (document.querySelector('.chat-hero, .chat-main')?.closest('.app-window') as HTMLElement) ?? null,
+    hint: 'Open CHAT from the navigation menu to see it.',
+  },
+  {
+    title: 'Model picker',
+    body: 'Chooses which LLM answers. The roster reflects what this system actually has available right now.',
+    find: q('.chat-model-select'),
+    hint: 'Open the chat window first — the picker sits in its input bar.',
+  },
+  {
+    title: 'Seed prompts',
+    body: 'One-click sample questions, good first taps to see grounded answers and the neuron graph light up.',
+    find: q('.chat-seed-prompts'),
+    optional: true,
+  },
+  {
+    title: 'Windows work like a desktop',
+    body: 'Drag by the title bar. Drag to a screen edge to snap half-screen, to a corner for quarters, to the top to maximize (double-clicking the title bar does that too). ─ minimizes to the dock, ✕ closes. Click any window to bring it to front.',
+    find: q('.app-window-titlebar'),
+    hint: 'Open any page from the navigation to get a window.',
+  },
+  {
+    title: 'Resize from any edge',
+    body: 'Every edge and corner drags — the little grip bottom-right is just the visible hint. The water re-flows around windows as you move and resize them.',
+    find: q('.app-window-resize'),
+    optional: true,
+  },
+  {
+    title: 'Chat History',
+    body: 'Every conversation, searchable. Click one to load it into the chat (even if the chat window is closed — it reopens), double-click a title to rename, × to delete, + New Chat for a fresh start.',
+    find: windowByTitle('Chat History'),
+    hint: 'It opens automatically when you start a chat.',
+  },
+  {
+    title: 'Neuron Graph',
+    body: 'The activation graph behind the latest answer — which knowledge neurons fired and how strongly. It updates live as you chat.',
+    find: windowByTitle('Neuron Graph'),
+    hint: 'It opens automatically when you start a chat.',
+  },
+  {
+    title: 'The dock',
+    body: 'Minimized windows land here as pills — click to restore.',
+    find: q('.window-dock'),
+    optional: true,
+  },
+  {
+    title: 'Demo chat setup',
+    body: 'This public demo replays pre-recorded answers by default. Connect your own LLM API key here (it stays in your browser, sent only to your provider) to ask real questions against the demo corpus.',
+    find: q('.demo-llm-pill'),
+    optional: true,
+  },
+  {
+    title: 'That\'s the tour',
+    body: 'Good next taps: Knowledge → 3D Universe for the full graph in space, Autopilot for the self-improvement pipeline, Evaluate → Dashboard for system health. This helper stays put — drag it wherever, revisit anytime.',
+  },
+];
+
+const POS_KEY = 'corvus-helper-pos';
+
+export default function DemoHelper() {
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem(POS_KEY) ?? '');
+      if (typeof p?.x === 'number' && typeof p?.y === 'number') return p;
+    } catch { /* default below */ }
+    return { x: 18, y: window.innerHeight - 70 };
+  });
+  const posRef = useRef(pos);
+  posRef.current = pos;
+  const movedRef = useRef(false);
+  const [step, setStep] = useState<number | null>(null); // null = tour closed
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+
+  const clamp = useCallback((p: { x: number; y: number }) => {
+    const x = Math.max(8, Math.min(p.x, window.innerWidth - 60));
+    const y = Math.max(8, Math.min(p.y, window.innerHeight - 60));
+    return x === p.x && y === p.y ? p : { x, y };
+  }, []);
+
+  useEffect(() => { localStorage.setItem(POS_KEY, JSON.stringify(pos)); }, [pos]);
+  useEffect(() => {
+    const onResize = () => setPos(p => clamp(p));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [clamp]);
+
+  const startDrag = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    const sx = e.clientX, sy = e.clientY;
+    const origin = posRef.current;
+    movedRef.current = false;
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      if (!movedRef.current && Math.hypot(dx, dy) < 4) return;
+      movedRef.current = true;
+      ev.preventDefault();
+      setPos(clamp({ x: origin.x + dx, y: origin.y + dy }));
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  // Advance to the next/previous step, silently skipping optional steps
+  // whose target isn't on screen.
+  const seek = useCallback((from: number, dir: 1 | -1): number | null => {
+    let i = from + dir;
+    while (i >= 0 && i < STEPS.length) {
+      const s = STEPS[i];
+      if (!s.optional || s.find?.()) return i;
+      i += dir;
+    }
+    return null;
+  }, []);
+
+  // Track the current target's rect while the tour is open (windows move).
+  useEffect(() => {
+    if (step === null) return;
+    const update = () => {
+      const el = STEPS[step].find?.();
+      const r = el?.getBoundingClientRect() ?? null;
+      setTargetRect(prev => {
+        if (!r) return null;
+        if (prev && Math.abs(prev.x - r.x) < 1 && Math.abs(prev.y - r.y) < 1
+          && Math.abs(prev.width - r.width) < 1 && Math.abs(prev.height - r.height) < 1) return prev;
+        return r;
+      });
+    };
+    update();
+    const t = window.setInterval(update, 250);
+    return () => window.clearInterval(t);
+  }, [step]);
+
+  const current = step !== null ? STEPS[step] : null;
+  const missing = current?.find !== undefined && targetRect === null;
+
+  // Tooltip card placement: below the target if there's room, else above,
+  // else centered.
+  const cardStyle = (() => {
+    if (step === null) return {};
+    const W = 320, H = 190, M = 12;
+    if (!targetRect) {
+      return { left: Math.max(M, (window.innerWidth - W) / 2), top: Math.max(M, (window.innerHeight - H) / 2) };
+    }
+    const left = Math.max(M, Math.min(targetRect.left, window.innerWidth - W - M));
+    const below = targetRect.bottom + M;
+    const top = below + H < window.innerHeight ? below : Math.max(M, targetRect.top - H - M);
+    return { left, top };
+  })();
+
+  return (
+    <>
+      <button
+        className="helper-pill"
+        style={{ left: pos.x, top: pos.y }}
+        data-wake-obstacle
+        data-wake-pad="0"
+        onPointerDown={startDrag}
+        onClick={() => { if (!movedRef.current) setStep(s => (s === null ? 0 : null)); }}
+        title="Walkthrough — what everything does (drag to move)"
+      >
+        ?
+      </button>
+
+      {current && (
+        <div className="tour-layer">
+          {targetRect ? (
+            <div
+              className="tour-ring"
+              style={{
+                left: targetRect.left - 6,
+                top: targetRect.top - 6,
+                width: targetRect.width + 12,
+                height: targetRect.height + 12,
+              }}
+            />
+          ) : (
+            <div className="tour-dim" />
+          )}
+          <div className="tour-card" style={cardStyle}>
+            <div className="tour-card-header">
+              <span>{current.title}</span>
+              <button className="tour-close" onClick={() => setStep(null)} title="End tour">✕</button>
+            </div>
+            <p className="tour-body">{current.body}</p>
+            {missing && current.hint && <p className="tour-hint">{current.hint}</p>}
+            <div className="tour-footer">
+              <span className="tour-count">{(step ?? 0) + 1} / {STEPS.length}</span>
+              <div className="tour-btns">
+                <button disabled={seek(step!, -1) === null} onClick={() => setStep(seek(step!, -1))}>Back</button>
+                {seek(step!, 1) !== null
+                  ? <button className="tour-next" onClick={() => setStep(seek(step!, 1))}>Next</button>
+                  : <button className="tour-next" onClick={() => setStep(null)}>Done</button>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

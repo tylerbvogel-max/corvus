@@ -29,6 +29,12 @@ test('demo boots, replays a grounded chat answer, opens companion windows', asyn
   await expect(page.locator('.sidebar-pill-btn .sidebar-logo')).toBeVisible();
   await expect(page.locator('.app-window')).toHaveCount(0);
 
+  // Walkthrough helper opens and closes
+  await page.locator('.helper-pill').click();
+  await expect(page.locator('.tour-card')).toContainText('Welcome');
+  await page.locator('.tour-close').click();
+  await expect(page.locator('.tour-card')).toHaveCount(0);
+
   // Open the Home window through the nav
   await openHomeWindow(page);
 

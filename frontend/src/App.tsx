@@ -8,6 +8,7 @@ import corvusLogo128 from './assets/corvus-logo-128.png'
 import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
 import ChatHistoryWindow from './components/ChatHistoryWindow'
+import DemoHelper from './components/DemoHelper'
 import NeuronGraphWindow from './components/NeuronGraphWindow'
 import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
@@ -860,6 +861,7 @@ export default function App() {
       ))}
 
       {DemoKeyWizard && <Suspense fallback={null}><DemoKeyWizard /></Suspense>}
+      <DemoHelper />
 
       {/* Dock of minimized windows */}
       {Object.values(windows).some(w => w.min) && (
