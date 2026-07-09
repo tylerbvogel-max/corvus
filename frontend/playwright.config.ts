@@ -15,7 +15,9 @@ export default defineConfig({
   webServer: {
     command: 'npx vite preview --port 4173 --strictPort',
     url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
+    // Never reuse: a leftover preview serves a stale dist/ (e.g. the
+    // normal build overwriting the demo build) and fails confusingly.
+    reuseExistingServer: false,
     timeout: 30_000,
   },
 });

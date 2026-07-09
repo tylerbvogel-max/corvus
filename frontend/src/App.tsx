@@ -680,25 +680,33 @@ export default function App() {
           </button>
         ) : (
           <>
-        <div className="sidebar-header" onPointerDown={startNavDrag} title="Drag to move">
-          <img
-            src={corvusLogo128}
-            alt="Corvus"
-            className="sidebar-logo"
-            draggable={false}
-            onClick={() => { if (!navDragMovedRef.current) setTab('home'); }}
-            style={{ cursor: 'pointer' }}
-          />
-          <h1 className="app-title" onClick={() => { if (!navDragMovedRef.current) setTab('home'); }} style={{ cursor: 'pointer' }}>{displayName}</h1>
-          <button
-            className="sidebar-toggle"
-            onClick={() => { if (!navDragMovedRef.current) setCollapsed(true); }}
-            title="Collapse to logo"
-          >
-            {'\u2212'}
-          </button>
+        {/* Whole title bar collapses to the pill on click (drag still moves).
+            Home/chat navigation lives in the Chat nav entry below. */}
+        <div
+          className="sidebar-header"
+          onPointerDown={startNavDrag}
+          onClick={() => { if (!navDragMovedRef.current) setCollapsed(true); }}
+          title="Click to collapse \u00b7 drag to move"
+        >
+          <img src={corvusLogo128} alt="Corvus" className="sidebar-logo" draggable={false} />
+          <h1 className="app-title">{displayName}</h1>
         </div>
           <nav className="sidebar-nav">
+            {/* Chat: a direct top-level link (no sub-items) to the primary
+                chat page, peer to the expandable groups below. */}
+            <div className={`sidebar-group${focusedKey === 'home' ? ' sidebar-group-active' : ''}`}>
+              <button
+                className="sidebar-group-header"
+                onClick={() => { setQueueInitialOrigin(undefined); setTab('home'); }}
+              >
+                <span className="sidebar-chevron">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                </span>
+                <span>Chat</span>
+              </button>
+            </div>
             {navGroups.map(group => (
               <div key={group.label} className={`sidebar-group${activeGroup === group.label ? ' sidebar-group-active' : ''}`}>
                 <button

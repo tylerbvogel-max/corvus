@@ -14,10 +14,10 @@ const fixtures = JSON.parse(readFileSync(
 ));
 
 /** Fresh state is a bare desktop with the collapsed nav pill; the Home
-    window opens via pill → expanded nav → logo click. */
+    window opens via pill → expanded nav → the top-level Chat entry. */
 async function openHomeWindow(page: import('@playwright/test').Page) {
   await page.locator('.sidebar-pill-btn').click();
-  await page.locator('.sidebar-header .sidebar-logo').click();
+  await page.locator('.sidebar-group-header', { hasText: 'Chat' }).click();
   await expect(page.locator('.chat-hero-title').first()).toBeVisible();
 }
 
