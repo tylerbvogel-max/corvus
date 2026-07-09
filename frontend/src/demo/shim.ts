@@ -321,6 +321,17 @@ export function installDemoShim(): void {
     const path = u.pathname;
 
     if (method === 'GET') {
+      // The dev environment's model roster doesn't apply here — the demo
+      // offers exactly one "model": the canned replay, or the visitor's
+      // own BYOK model. (The wizard reloads the page on save/disconnect
+      // so this list is refetched.)
+      if (path === '/models') {
+        const cfg = getDemoLLM();
+        return jsonResponse([cfg
+          ? { display_name: cfg.model, provider: cfg.provider, api_id: cfg.model, tier: 'Your key (BYOK)', input_price: 0, output_price: 0, context_window_tokens: 200_000 }
+          : { display_name: 'demo replay', provider: 'demo', api_id: 'demo', tier: 'Demo', input_price: 0, output_price: 0, context_window_tokens: 200_000 },
+        ]);
+      }
       const hit = fixtures[path + u.search] ?? fixtures[path];
       if (hit !== undefined) return jsonResponse(hit);
       return jsonResponse({ detail: 'Not included in this demo build.' }, 404);

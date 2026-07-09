@@ -26,7 +26,9 @@ const GET_PATHS = [
   '/neurons/stats',        // also serves as the auth-gate probe → demo is "open"
   '/tenant',
   '/tenants',
-  '/models',
+  // '/models' is intentionally NOT captured: the shim serves a demo-aware
+  // roster (replay entry, or the visitor's BYOK model) instead of the dev
+  // environment's model list.
   '/chat/sessions',
   '/admin/proposals/stats',
 ];

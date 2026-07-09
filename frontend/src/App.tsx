@@ -9,7 +9,7 @@ import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './componen
 import AsciiWake from './components/AsciiWake'
 import ChatHistoryWindow from './components/ChatHistoryWindow'
 import NeuronGraphWindow from './components/NeuronGraphWindow'
-import { CHAT_STARTED_EVENT } from './chatBus'
+import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
 import WakeSettingsPanel from './components/WakeSettingsPanel'
 import Explorer from './components/Explorer'
@@ -415,6 +415,19 @@ export default function App() {
     window.addEventListener(CHAT_STARTED_EVENT, onChatStarted);
     return () => window.removeEventListener(CHAT_STARTED_EVENT, onChatStarted);
   }, [openWindow, focusWindow]);
+
+  // History-window actions must work even when the chat window is closed:
+  // "New Chat" opens a fresh hero, and a session click opens Home, whose
+  // mount consumes the pending session id (see chatBus.ts).
+  useEffect(() => {
+    const onChatIntent = () => openWindow('home');
+    window.addEventListener(CHAT_NEW_EVENT, onChatIntent);
+    window.addEventListener(CHAT_LOAD_SESSION_EVENT, onChatIntent);
+    return () => {
+      window.removeEventListener(CHAT_NEW_EVENT, onChatIntent);
+      window.removeEventListener(CHAT_LOAD_SESSION_EVENT, onChatIntent);
+    };
+  }, [openWindow]);
 
   // Topmost non-minimized window drives nav highlighting.
   const focusedKey = useMemo(() => {

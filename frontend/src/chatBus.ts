@@ -31,8 +31,20 @@ export function announceChatStarted(): void {
   window.dispatchEvent(new Event(CHAT_STARTED_EVENT));
 }
 
+// Pending-session store: if the chat window is CLOSED when a history
+// click fires, no HomePage listener exists yet — App opens the window
+// and the freshly mounted HomePage consumes the pending id.
+let pendingSessionId: number | null = null;
+
 export function requestLoadSession(id: number): void {
+  pendingSessionId = id;
   window.dispatchEvent(new CustomEvent(CHAT_LOAD_SESSION_EVENT, { detail: id }));
+}
+
+export function consumePendingSession(): number | null {
+  const v = pendingSessionId;
+  pendingSessionId = null;
+  return v;
 }
 
 export function requestNewChat(): void {

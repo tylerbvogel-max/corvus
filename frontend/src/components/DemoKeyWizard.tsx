@@ -44,7 +44,9 @@ export default function DemoKeyWizard() {
       // One tiny live call proves key + model before we commit.
       await callProvider(candidate, 'Reply with the single word: ok');
       setDemoLLM(candidate);
-      setOpen(false);
+      // Reload so mode-dependent data (the /models roster) refetches and
+      // the chat starts clean in the new mode.
+      window.location.reload();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -123,7 +125,7 @@ export default function DemoKeyWizard() {
                 {cfg && (
                   <button
                     className="demo-llm-clear"
-                    onClick={() => { clearDemoLLM(); setKey(''); setError(null); }}
+                    onClick={() => { clearDemoLLM(); window.location.reload(); }}
                   >
                     Disconnect
                   </button>

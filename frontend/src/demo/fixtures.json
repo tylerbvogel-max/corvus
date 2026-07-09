@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-07-09T14:23:27.016Z",
+  "capturedAt": "2026-07-09T14:46:37.964Z",
   "source": "http://localhost:8002",
   "fixtures": {
     "/neurons/stats": {
@@ -565,89 +565,6 @@
         "tenant_id": "corvus-roost",
         "display_name": "Corvus Roost",
         "default_port": 8005
-      }
-    ],
-    "/models": [
-      {
-        "display_name": "haiku",
-        "provider": "anthropic",
-        "api_id": "claude-haiku-4-5-20251001",
-        "tier": "frontier",
-        "input_price": 1,
-        "output_price": 5,
-        "context_window_tokens": 200000
-      },
-      {
-        "display_name": "sonnet",
-        "provider": "anthropic",
-        "api_id": "claude-sonnet-4-6",
-        "tier": "frontier",
-        "input_price": 3,
-        "output_price": 15,
-        "context_window_tokens": 200000
-      },
-      {
-        "display_name": "opus",
-        "provider": "anthropic",
-        "api_id": "claude-opus-4-6",
-        "tier": "frontier",
-        "input_price": 5,
-        "output_price": 25,
-        "context_window_tokens": 200000
-      },
-      {
-        "display_name": "gemini-pro",
-        "provider": "google",
-        "api_id": "gemini-2.5-pro",
-        "tier": "frontier",
-        "input_price": 1.25,
-        "output_price": 10,
-        "context_window_tokens": 1048576
-      },
-      {
-        "display_name": "gemini-flash",
-        "provider": "google",
-        "api_id": "gemini-2.0-flash",
-        "tier": "free",
-        "input_price": 0,
-        "output_price": 0,
-        "context_window_tokens": 1048576
-      },
-      {
-        "display_name": "gemini-flash-lite",
-        "provider": "google",
-        "api_id": "gemini-2.0-flash-lite",
-        "tier": "free",
-        "input_price": 0,
-        "output_price": 0,
-        "context_window_tokens": 1048576
-      },
-      {
-        "display_name": "groq-llama-70b",
-        "provider": "groq",
-        "api_id": "llama-3.3-70b-versatile",
-        "tier": "free",
-        "input_price": 0,
-        "output_price": 0,
-        "context_window_tokens": 131072
-      },
-      {
-        "display_name": "groq-llama-8b",
-        "provider": "groq",
-        "api_id": "llama-3.1-8b-instant",
-        "tier": "free",
-        "input_price": 0,
-        "output_price": 0,
-        "context_window_tokens": 131072
-      },
-      {
-        "display_name": "groq-gemma-9b",
-        "provider": "groq",
-        "api_id": "gemma2-9b-it",
-        "tier": "free",
-        "input_price": 0,
-        "output_price": 0,
-        "context_window_tokens": 8192
       }
     ],
     "/chat/sessions": [

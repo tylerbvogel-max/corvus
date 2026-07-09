@@ -13,7 +13,7 @@ import { marked } from 'marked';
 import corvusLogo from '../assets/corvus-logo.png';
 import {
   announceChatStarted, announceSessionsChanged, publishGraph,
-  CHAT_LOAD_SESSION_EVENT, CHAT_NEW_EVENT,
+  consumePendingSession, CHAT_LOAD_SESSION_EVENT, CHAT_NEW_EVENT,
 } from '../chatBus';
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -483,6 +483,15 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   // One-shot: force fresh retrieval on the next question (drift gate bypass).
   const [refreshNext, setRefreshNext] = useState(false);
   const { models: availableModels, grouped: groupedModels } = useModels();
+  // If the default model isn't in the served roster (e.g. the demo build
+  // serves a single entry), snap to the first available so the select
+  // never sits on a phantom value.
+  useEffect(() => {
+    if (availableModels.length > 0 && !availableModels.some(m => m.display_name === model)) {
+      setModel(availableModels[0].display_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableModels]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -810,7 +819,15 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const startNewChatRef = useRef(startNewChat);
   startNewChatRef.current = startNewChat;
   useEffect(() => {
-    const onLoad = (e: Event) => { void loadSessionRef.current((e as CustomEvent).detail as number); };
+    // A history click made while this window was closed left a pending
+    // session id — honor it now that we're mounted. (A fresh mount is
+    // already the hero, so a pending "new chat" needs nothing.)
+    const pending = consumePendingSession();
+    if (pending !== null) void loadSessionRef.current(pending);
+    const onLoad = (e: Event) => {
+      consumePendingSession(); // clear the store; the live event carries the id
+      void loadSessionRef.current((e as CustomEvent).detail as number);
+    };
     const onNew = () => startNewChatRef.current();
     window.addEventListener(CHAT_LOAD_SESSION_EVENT, onLoad);
     window.addEventListener(CHAT_NEW_EVENT, onNew);
