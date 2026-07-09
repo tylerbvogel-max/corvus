@@ -235,6 +235,8 @@ export default function AsciiWake() {
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('blur', onLeave);
+    // Cursor leaving the viewport = "far away" for the heartbeat
+    document.documentElement.addEventListener('mouseleave', onLeave);
 
     // ── Lifecycle: resize, theme switches, settings changes, main loop
     const ro = new ResizeObserver(rebuild);
@@ -255,33 +257,56 @@ export default function AsciiWake() {
     };
     window.addEventListener(WAKE_SETTINGS_EVENT, onSettings);
 
-    // Elements tagged data-wake-pulse (the collapsed nav logo) emit a
-    // gentle ripple ring from their center every few seconds — a quiet
-    // "I'm alive" beacon in the water.
-    const PULSE_EVERY_FRAMES = 200; // ~3.3s at 60fps
-    let pulseCountdown = 60; // first pulse shortly after load
-    const emitPulses = () => {
+    // Elements tagged data-wake-pulse (the collapsed nav logo) have a
+    // heartbeat: a ripple ring in the water plus a synced glow beat on
+    // the element itself. The beat rate scales with cursor proximity —
+    // pointer far away or off-screen ≈ 3.6s between beats, hovering the
+    // element ≈ 0.55s — and closer beats hit harder.
+    const BEAT_NEAR_MS = 550, BEAT_FAR_MS = 3600;
+    const BEAT_NEAR_DIST = 40, BEAT_FAR_DIST = 800;
+    const nextBeatAt = new Map<Element, number>();
+    const heartbeat = (now: number) => {
       const base = container.getBoundingClientRect();
       document.querySelectorAll('[data-wake-pulse]').forEach(el => {
         const r = el.getBoundingClientRect();
         if (r.width === 0) return;
-        const gx = (r.left + r.width / 2 - base.left) / cellW;
-        const gy = (r.top + r.height / 2 - base.top) / cellH;
+        const cx = r.left + r.width / 2 - base.left;
+        const cy = r.top + r.height / 2 - base.top;
+        const dist = (lastX !== null && lastY !== null)
+          ? Math.hypot(lastX - cx, lastY - cy)
+          : Infinity;
+        // 0 = cursor on the element … 1 = far/off-screen
+        const t = Math.min(1, Math.max(0, (dist - BEAT_NEAR_DIST) / (BEAT_FAR_DIST - BEAT_NEAR_DIST)));
+        const due = nextBeatAt.get(el) ?? 0;
+        if (now < due) return;
+        const period = BEAT_NEAR_MS + t * (BEAT_FAR_MS - BEAT_NEAR_MS);
+        nextBeatAt.set(el, now + period);
+        // Water ring — harder thump when the cursor is close
         const radius = Math.max(r.width, r.height) / 2 / cellW + 2.5;
-        splat(gx, gy, radius, -0.4);
+        splat(cx / cellW, cy / cellH, radius, -(0.6 + (1 - t) * 0.9));
+        // Synced glow beat (box-shadow only: the CSS hover scale owns transform)
+        (el as HTMLElement).animate(
+          [
+            { boxShadow: '0 0 0 rgba(0, 0, 0, 0)' },
+            { boxShadow: `0 0 ${Math.round(10 + (1 - t) * 16)}px var(--accent)`, offset: 0.3 },
+            { boxShadow: '0 0 0 rgba(0, 0, 0, 0)' },
+          ],
+          { duration: Math.min(period * 0.7, 900), easing: 'ease-out' },
+        );
       });
     };
 
     let raf = 0;
     let rainCountdown = cfg.rainEvery;
+    let heartbeatCountdown = 30; // check ~every 6 frames; first beat shortly after load
     const loop = () => {
       if (cfg.rain && --rainCountdown <= 0) {
         rainCountdown = cfg.rainEvery;
         splat(2 + Math.random() * (W - 4), 2 + Math.random() * (H - 4), 2.5, -1.2);
       }
-      if (--pulseCountdown <= 0) {
-        pulseCountdown = PULSE_EVERY_FRAMES;
-        emitPulses();
+      if (--heartbeatCountdown <= 0) {
+        heartbeatCountdown = 6;
+        heartbeat(performance.now());
       }
       for (let s = 0; s < cfg.substeps; s++) simStep();
       draw();
@@ -300,6 +325,7 @@ export default function AsciiWake() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerdown', onDown);
       window.removeEventListener('blur', onLeave);
+      document.documentElement.removeEventListener('mouseleave', onLeave);
       window.removeEventListener('corvus-wake-refresh', computeObstacles);
       window.removeEventListener(WAKE_SETTINGS_EVENT, onSettings);
     };

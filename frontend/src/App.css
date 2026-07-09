@@ -510,14 +510,13 @@ body {
   background: var(--bg-card);
   border: 1.5px solid var(--text);
   overflow: hidden;
-  animation: pill-pulse 3.3s ease-in-out infinite;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  /* the heartbeat glow is JS-driven (AsciiWake data-wake-pulse beats,
+     proximity-paced), so no CSS animation here */
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 .sidebar-pill:hover {
   transform: scale(1.12);
   border-color: var(--accent);
-  box-shadow: 0 0 14px var(--accent-glow, rgba(200, 117, 51, 0.35)), 0 12px 32px rgba(0, 0, 0, 0.4);
-  animation-play-state: paused;
 }
 
 .sidebar-pill-btn {
@@ -539,14 +538,6 @@ body {
   height: 32px;
 }
 
-@keyframes pill-pulse {
-  0%, 100% { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); }
-  50% { box-shadow: 0 0 12px var(--accent-glow, rgba(200, 117, 51, 0.3)), 0 12px 32px rgba(0, 0, 0, 0.4); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-pill { animation: none; }
-}
 
 .sidebar-header {
   display: flex;
@@ -2765,9 +2756,12 @@ details summary:hover { color: var(--text); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* `safe` keeps the top (logo) reachable instead of clipping when the
+     content is taller than a small window */
+  justify-content: safe center;
   height: 100%;
-  padding: 20px 24px;
+  padding: 16px 24px;
+  overflow-y: auto;
 }
 
 /* ASCII water-wake substrate (see components/AsciiWake.tsx for tuning) */
@@ -2795,7 +2789,7 @@ details summary:hover { color: var(--text); }
   width: 48px;
   height: auto;
   opacity: 0.8;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 
 .chat-hero-title {

@@ -929,9 +929,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
             (the window rect is already masked) and matter only if this
             hero is ever rendered directly on the desktop again. */}
         <div className="chat-hero-center">
+          {/* Minimal hero: just the mark and the chat itself */}
           <img src={corvusLogo} alt="Corvus" className="chat-hero-logo" />
-          <h1 className="chat-hero-title" data-wake-obstacle>{getTenantConfig()?.display_name ?? 'Corvus'}</h1>
-          <p className="chat-hero-subtitle" data-wake-obstacle>I know our company's internal documentation — ask me anything.</p>
           {inputBar}
           {(() => {
             const prompts: SeedPrompt[] = getTenantConfig()?.seed_prompts ?? [];

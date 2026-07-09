@@ -18,7 +18,7 @@ const fixtures = JSON.parse(readFileSync(
 async function openHomeWindow(page: import('@playwright/test').Page) {
   await page.locator('.sidebar-pill-btn').click();
   await page.locator('.sidebar-group-header', { hasText: 'Chat' }).click();
-  await expect(page.locator('.chat-hero-title').first()).toBeVisible();
+  await expect(page.locator('.chat-hero-logo')).toBeVisible();
 }
 
 test('demo boots, replays a grounded chat answer, opens companion windows', async ({ page }) => {
@@ -78,5 +78,5 @@ test('history "New Chat" reopens the chat window after it is closed', async ({ p
 
   // "New Chat" in the history window must bring back a fresh hero
   await page.locator('.chat-new-btn').click();
-  await expect(page.locator('.chat-hero-title').first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.chat-hero-logo')).toBeVisible({ timeout: 10_000 });
 });
