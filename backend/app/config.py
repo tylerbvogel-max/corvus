@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     # Regulatory stakes: an explicit regulatory citation in the query text
     # (tenant reference patterns) escalates directly.
     tier_routing_regulatory_escalates: bool = True
+    # ── Tier-1 compliance: query-telemetry retention (FedRAMP AU-11) ──
+    # Days to keep Query rows + per-query telemetry. 0 = keep forever
+    # (default: purging history is a tenant-policy decision, not a default).
+    # Audit-bearing artifacts (actions, output_violations, proposals,
+    # eval_run_cases) are detached, never deleted — see services/retention.py.
+    query_retention_days: int = 0
+    retention_purge_batch: int = 500  # queries deleted per batch (bounded pass)
     # Entailment / claim-grounding check (grounding backlog §6.4). A valid [FQ]
     # key proves the source was in context, NOT that the claim is entailed by
     # it. This opt-in pass judges each cited claim of the PRIMARY answer

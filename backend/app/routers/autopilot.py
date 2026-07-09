@@ -13,7 +13,7 @@ from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -210,6 +210,29 @@ async def _run_consolidation_if_due(db: AsyncSession) -> None:
     logger.info("Consolidation (tick heartbeat): %s", result)
 
 
+async def _run_retention_if_due(db: AsyncSession) -> None:
+    """Query-telemetry retention riding the tick heartbeat (fwd-tier1, AU-11).
+
+    Off unless query_retention_days > 0. No last-run timestamp needed: the
+    purge is idempotent and this existence probe (indexed, LIMIT 1) makes the
+    no-work case ~free, so it can ride every tick.
+    """
+    from app.config import settings
+    from app.services.retention import retention_cutoff, run_retention_purge
+
+    cutoff = retention_cutoff()
+    if cutoff is None:
+        return
+    due = (await db.execute(
+        text("SELECT 1 FROM queries WHERE created_at < :cutoff LIMIT 1"),
+        {"cutoff": cutoff.replace(tzinfo=None)},
+    )).scalar()
+    if not due:
+        return
+    result = await run_retention_purge(db)
+    logger.info("Retention purge (tick heartbeat): %s", result)
+
+
 async def _run_reconciler_if_due(db: AsyncSession) -> None:
     """The horizontal loop riding the tick heartbeat (plat-reconciler).
 
@@ -273,6 +296,7 @@ async def tick(db: AsyncSession = Depends(get_db)):
     if _tick_running:
         return AutopilotTickResponse(status="skipped", message="A tick is already running")
     await _run_consolidation_if_due(db)
+    await _run_retention_if_due(db)
     await _run_reconciler_if_due(db)
     global_config = await _get_or_create_config(db)
     config = await _pick_due_config(db)

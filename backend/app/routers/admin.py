@@ -66,6 +66,18 @@ async def reset_firings(db: AsyncSession = Depends(get_db)):
     return ResetResponse(status="reset_complete")
 
 
+@router.post("/retention/purge")
+async def retention_purge_now(db: AsyncSession = Depends(get_db)):
+    """Run the query-telemetry retention purge now (fwd-tier1, FedRAMP AU-11).
+
+    Honors settings.query_retention_days — returns status "disabled" (and
+    purges nothing) when the retention window is 0/unset. Audit-bearing
+    artifacts are detached, never deleted; see services/retention.py.
+    """
+    from app.services.retention import run_retention_purge
+    return await run_retention_purge(db)
+
+
 @router.post("/checkpoint", response_model=CheckpointResponse)
 async def create_checkpoint(db: AsyncSession = Depends(get_db)):
     """Export all neurons to a JSON checkpoint file and commit it."""
