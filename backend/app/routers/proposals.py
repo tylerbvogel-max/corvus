@@ -281,6 +281,25 @@ def _classify_origin_tuple(run_id: int | None, src: str | None) -> str:
     return "manual"
 
 
+# NOTE: declared before /{proposal_id} — FastAPI matches routes in order and
+# "dedup-clusters" must not be swallowed as a proposal_id.
+@router.get("/dedup-clusters")
+async def dedup_clusters(
+    state: str = "proposed",
+    threshold: float = 0.88,
+    db: AsyncSession = Depends(get_db),
+):
+    """Semantic near-duplicate clusters over proposals in `state`.
+
+    Embeds gap_description locally ($0) and greedily clusters by cosine >=
+    threshold so reviewers handle one cluster instead of N re-detected
+    copies. Advisory: never mutates proposals; the UI uses it for grouping.
+    """
+    assert 0.0 < threshold <= 1.0, "threshold must be a cosine in (0, 1]"
+    from app.services.proposal_dedup import compute_dedup_clusters
+    return await compute_dedup_clusters(db, state=state, threshold=threshold)
+
+
 @router.get("/{proposal_id}", response_model=ProposalDetailOut)
 async def get_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
     """Full proposal detail with evidence chain and items."""

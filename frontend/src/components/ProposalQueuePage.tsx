@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
 import {
   fetchProposals,
+  fetchDedupClusters,
   fetchProposalDetail,
   reviewProposal,
   applyProposal,
@@ -16,6 +17,7 @@ import {
 } from '../api';
 import { getReviewerName, setReviewerName } from '../auth';
 import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
+import { diffWords } from 'diff';
 
 type StateFilter = 'all' | 'proposed' | 'approved' | 'rejected' | 'applied';
 export type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
@@ -53,10 +55,10 @@ const inputStyle: React.CSSProperties = {
   ...selectStyle, width: '100%', boxSizing: 'border-box' as const,
 };
 
-// Client-side grouping key — approximates semantic-cluster bulk review without
-// a schema change. Proposals with the same (origin, gap_source) typically have
-// the same structural fix (e.g. "missing provenance" on 12 neurons) and are
-// safe to approve together after spot-check. True cosine-dedup is deferred.
+// Structural grouping key — proposals with the same (origin, gap_source)
+// typically have the same structural fix (e.g. "missing provenance" on 12
+// neurons). Used as the FALLBACK when a proposal is not in a semantic
+// near-duplicate cluster (server-side embedding cosine, /dedup-clusters).
 function groupKey(p: ProposalSummary): string {
   return `${p.origin}::${p.gap_source || 'directive'}`;
 }
@@ -108,6 +110,9 @@ export default function ProposalQueuePage({
   // New state — batch UX
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [groupByCluster, setGroupByCluster] = useState(false);
+  // proposalId -> semantic-cluster index + each cluster's representative text.
+  // null until fetched; fetch failure degrades to structural grouping only.
+  const [semClusters, setSemClusters] = useState<{ byId: Map<number, number>; reps: string[] } | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [diffItem, setDiffItem] = useState<ProposalItem | null>(null);
   const [showCheatsheet, setShowCheatsheet] = useState(false);
@@ -135,6 +140,18 @@ export default function ProposalQueuePage({
   }, [filter, sourceFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch semantic near-duplicate clusters the first time grouping turns on.
+  useEffect(() => {
+    if (!groupByCluster || semClusters) return;
+    fetchDedupClusters('proposed')
+      .then(out => {
+        const byId = new Map<number, number>();
+        out.clusters.forEach((c, i) => c.proposal_ids.forEach(id => byId.set(id, i)));
+        setSemClusters({ byId, reps: out.clusters.map(c => c.representative) });
+      })
+      .catch(() => setSemClusters({ byId: new Map(), reps: [] }));
+  }, [groupByCluster, semClusters]);
 
   // Persist reviewer name so the X-Corvus-User header is sent on every
   // authed request — the server uses this as authoritative reviewed_by /
@@ -252,17 +269,19 @@ export default function ProposalQueuePage({
     });
   }, []);
 
-  // Grouped view for cluster-approve ergonomics.
+  // Grouped view for cluster-approve ergonomics: semantic near-duplicate
+  // clusters first (embedding cosine, server-side), structural key fallback.
   const grouped = useMemo(() => {
     const m = new Map<string, ProposalSummary[]>();
     for (const p of proposals) {
-      const k = groupKey(p);
+      const sem = semClusters?.byId.get(p.id);
+      const k = sem !== undefined ? `sem::${sem}` : groupKey(p);
       const arr = m.get(k);
       if (arr) arr.push(p);
       else m.set(k, [p]);
     }
     return Array.from(m.entries());
-  }, [proposals]);
+  }, [proposals, semClusters]);
 
   // Keyboard shortcuts — scoped to the page, ignored when typing.
   useEffect(() => {
@@ -284,6 +303,14 @@ export default function ProposalQueuePage({
       }
       if (e.key === '?') { e.preventDefault(); setShowCheatsheet(s => !s); return; }
       if (e.key === '/') { e.preventDefault(); filterSelectRef.current?.focus(); return; }
+
+      if (e.key === 'd') {
+        if (selected?.items?.length) {
+          setDiffItem(selected.items[0]);
+          e.preventDefault();
+        }
+        return;
+      }
 
       // j/k navigation is handled by useListKeyboardNav below.
 
@@ -548,7 +575,9 @@ export default function ProposalQueuePage({
                         onClick={() => toggleGroupCollapsed(key)}
                         style={{ flex: 1, fontSize: '0.75rem', fontWeight: 600 }}
                       >
-                        {collapsed ? '▸' : '▾'} {groupLabel(rows[0])} <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {rows.length}</span>
+                        {collapsed ? '▸' : '▾'} {key.startsWith('sem::')
+                          ? `≈ ${semClusters?.reps[Number(key.slice(5))] || 'near-duplicates'}`
+                          : groupLabel(rows[0])} <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>· {rows.length}</span>
                       </span>
                     </div>
                     {!collapsed && (
@@ -1029,6 +1058,25 @@ function maybePretty(s: string | null | undefined): string {
   catch { return s; }
 }
 
+// Word-level diff of the two panes: deletions marked red on the left,
+// additions green on the right, unchanged text plain in both.
+function renderDiff(oldText: string, newText: string): [ReactNode[], ReactNode[]] {
+  const parts = diffWords(oldText || '', newText || '');
+  const left: ReactNode[] = [];
+  const right: ReactNode[] = [];
+  parts.forEach((part, i) => {
+    if (part.removed) {
+      left.push(<mark key={i} style={{ background: '#fca5a5', color: '#7f1d1d' }}>{part.value}</mark>);
+    } else if (part.added) {
+      right.push(<mark key={i} style={{ background: '#86efac', color: '#14532d' }}>{part.value}</mark>);
+    } else {
+      left.push(<span key={`l${i}`}>{part.value}</span>);
+      right.push(<span key={`r${i}`}>{part.value}</span>);
+    }
+  });
+  return [left, right];
+}
+
 function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void }) {
   const oldText = item.action === 'create'
     ? ''
@@ -1036,6 +1084,7 @@ function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void 
   const newText = item.action === 'create'
     ? maybePretty(item.neuron_spec_json)
     : maybePretty(item.new_value);
+  const [leftDiff, rightDiff] = renderDiff(oldText, newText);
 
   return (
     <div
@@ -1082,7 +1131,7 @@ function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void 
               margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               fontSize: '0.78rem', fontFamily: 'monospace',
               color: 'var(--text)',
-            }}>{oldText || <span style={{ color: 'var(--text-dim)' }}>(empty)</span>}</pre>
+            }}>{oldText ? leftDiff : <span style={{ color: 'var(--text-dim)' }}>(empty)</span>}</pre>
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#4caf50', marginBottom: 6 }}>
@@ -1092,7 +1141,7 @@ function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void 
               margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               fontSize: '0.78rem', fontFamily: 'monospace',
               color: 'var(--text)',
-            }}>{newText || <span style={{ color: 'var(--text-dim)' }}>(empty)</span>}</pre>
+            }}>{newText ? rightDiff : <span style={{ color: 'var(--text-dim)' }}>(empty)</span>}</pre>
           </div>
         </div>
       </div>
@@ -1103,6 +1152,7 @@ function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void 
 function Cheatsheet({ onClose }: { onClose: () => void }) {
   const rows: [string, string][] = [
     ['j / k', 'Next / previous proposal'],
+    ['d', 'Open diff for focused proposal'],
     ['a', 'Approve focused proposal'],
     ['Shift+A', 'Approve & apply to graph'],
     ['r', 'Reject focused proposal'],

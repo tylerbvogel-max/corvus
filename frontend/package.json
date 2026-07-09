@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@types/d3": "^7.4.3",
+    "@types/diff": "^7.0.2",
     "chart.js": "^4.5.1",
     "d3": "^7.9.0",
     "d3-force-3d": "^3.0.6",
+    "diff": "^9.0.0",
     "graphology": "^0.26.0",
     "graphology-layout-forceatlas2": "^0.10.1",
     "graphology-layout-noverlap": "^0.4.2",

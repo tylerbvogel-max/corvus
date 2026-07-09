@@ -1701,6 +1701,24 @@ export interface ProposalStats {
   proposed_by_origin: Record<string, number>;
 }
 
+export interface DedupCluster {
+  proposal_ids: number[];
+  size: number;
+  representative: string;
+}
+
+export interface DedupClustersOut {
+  clusters: DedupCluster[];
+  scanned: number;
+  threshold: number;
+}
+
+// Semantic near-duplicate clusters over pending proposals (embedding cosine,
+// computed server-side at $0). Advisory grouping data for the queue UI.
+export function fetchDedupClusters(state = 'proposed'): Promise<DedupClustersOut> {
+  return json<DedupClustersOut>(`/admin/proposals/dedup-clusters?state=${state}`);
+}
+
 export function fetchProposals(
   state?: string, gapSource?: string, origin?: string,
 ): Promise<ProposalSummary[]> {
