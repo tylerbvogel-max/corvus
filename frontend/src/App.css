@@ -2603,7 +2603,7 @@ details summary:hover { color: var(--text); }
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 48px 24px;
+  padding: 20px 24px;
 }
 
 /* ASCII water-wake substrate (see components/AsciiWake.tsx for tuning) */
@@ -2625,11 +2625,13 @@ details summary:hover { color: var(--text); }
   max-width: 600px;
 }
 
+/* Minimal mark — the chat is the hero's focus; everything should fit
+   the window without scrolling. */
 .chat-hero-logo {
-  width: min(70vw, 500px);
+  width: 48px;
   height: auto;
-  opacity: 0.08;
-  margin-bottom: 8px;
+  opacity: 0.8;
+  margin-bottom: 4px;
 }
 
 .chat-hero-title {
