@@ -1,7 +1,7 @@
 """External customer-facing API surface (AIP Phase 1.5 GTM-A).
 
 ``POST /v1/query`` is the hardened contract that external LLM frontends
-(Fluent, Claude Enterprise, Copilot, Cursor, …) call when they need
+(Claude Enterprise, Copilot, Cursor, …) call when they need
 Corvus domain context injected into their prompt pipeline. It differs
 from the internal ``/query`` surface in three ways:
 

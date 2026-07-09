@@ -1,7 +1,7 @@
-"""GET /admin/tool-definitions — OpenAI function-calling schemas for Fluent.
+"""GET /admin/tool-definitions — OpenAI function-calling schemas.
 
 Transforms FastAPI's auto-generated OpenAPI spec into OpenAI tool definitions
-that Fluent (Azure OpenAI) can register as function-calling tools.
+that any OpenAI-compatible assistant can register as function-calling tools.
 """
 
 import re
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/admin", tags=["tools"])
 
 
 # ── Tool catalog: which endpoints to expose and how ──
-# Key: "METHOD /path" → category + Fluent-oriented description.
+# Key: "METHOD /path" → category + assistant-oriented description.
 # Paths use OpenAPI format ({param}) not FastAPI format.
 
 _TOOL_CATALOG = MappingProxyType({
@@ -221,7 +221,7 @@ async def get_tool_definitions(
     category: str = "all",
     _user=Depends(require_role("reader")),
 ):
-    """Return OpenAI function-calling tool definitions for Fluent integration.
+    """Return OpenAI function-calling tool definitions for external assistants.
 
     Query params:
       - category: "all", "context", "reporting", "governance", "ingestion", "maintenance"

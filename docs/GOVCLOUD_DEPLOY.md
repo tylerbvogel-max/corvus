@@ -1,6 +1,6 @@
 # Corvus GovCloud Deployment Guide
 
-Corvus deploys as a backend knowledge service inside the GovCloud boundary (CMMC L2 / FedRAMP Medium). Fluent (Azure OpenAI) calls Corvus via REST API to get domain-enriched system prompts. No Corvus frontend is required.
+Corvus deploys as a backend knowledge service inside the GovCloud boundary (CMMC L2 / FedRAMP Medium). The tenant's LLM assistant (any OpenAI-compatible frontend) calls Corvus via REST API to get domain-enriched system prompts. No Corvus frontend is required.
 
 ## Prerequisites
 
@@ -77,7 +77,7 @@ Copy `.env.govcloud.example` to `.env` and fill in:
 | `PORT` | No | Default: `8002` |
 | `CORS_ORIGINS` | No | Comma-separated allowed origins |
 
-## Registering Tools with Fluent
+## Registering Tools with an LLM Assistant
 
 Corvus exposes an OpenAI function-calling schema endpoint:
 
@@ -86,22 +86,12 @@ curl http://localhost:8002/admin/tool-definitions \
   -H "Authorization: Bearer $CORVUS_ACCESS_KEY"
 ```
 
-This returns JSON that can be registered as Fluent tool definitions. Categories:
+This returns JSON that any OpenAI-compatible assistant can register as function-calling tools. Categories:
 - **context** — Primary integration (`corvus_query_context`)
 - **reporting** — Cost, health, governance dashboards
 - **governance** — Proposal review, observation triage
 - **ingestion** — Document parsing, observation submission
 - **maintenance** — Seeding, pruning, integrity scans
-
-### Fluent Workflow Endpoints
-
-For conversational governance, use the `/fluent/*` wrappers:
-- `POST /fluent/ingest-document` — Parse document, return review summary
-- `POST /fluent/batch-review` — Approve/reject multiple proposals
-- `GET /fluent/health-summary` — Combined system health overview
-- `GET /fluent/cost-summary` — Conversational cost report
-- `GET /fluent/graph-status` — Knowledge graph statistics
-- `GET /fluent/triage-observations` — Observation queue summary
 
 ## RBAC Roles
 

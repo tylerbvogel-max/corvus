@@ -17,7 +17,7 @@ A biomimetic, multi-tenant neuron graph for prompt preparation. Instead of tradi
 5. **Spread activation** — typed edges (stellate / pyramidal / etc.) over promoted-edge table; weak edges live in JSONB
 6. **Inhibitory regulation** — three-pass GABAergic / chandelier / neuromodulatory dampening
 7. **Prompt assembly** — top-K neurons packed into a 4000-token system prompt
-8. **Execute** — Haiku (or Sonnet/Opus via multi-slot blind A/B) answers with enriched context. Also served via MCP for external agents, and via `/context` for Fluent (no LLM execution).
+8. **Execute** — Haiku (or Sonnet/Opus via multi-slot blind A/B) answers with enriched context. Also served via MCP for external agents, and via `/context` for external REST consumers (no LLM execution).
 
 Domain: defense aerospace (X-plane prototype development, modeled as `corvus-aero`). Additional tenants: `corvus-flow` (plumbing), `corvus-roost` (real estate), `corvus-hedge` (investment), `corvus-apex` (personal workstation).
 
