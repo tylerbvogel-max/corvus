@@ -67,6 +67,18 @@ test('demo boots, replays a grounded chat answer, opens companion windows', asyn
   await expect(page.getByText('Ask something in the chat')).toHaveCount(0);
 });
 
+test.describe('phone viewport', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('shows the desktop gate with a continue path', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.mobile-gate')).toBeVisible();
+    await expect(page.locator('canvas.ascii-wake')).toHaveCount(0);
+    await page.locator('.mobile-gate-continue').click();
+    await expect(page.locator('canvas.ascii-wake')).toBeVisible();
+  });
+});
+
 test('history "New Chat" reopens the chat window after it is closed', async ({ page }) => {
   await page.goto('/');
   await openHomeWindow(page);

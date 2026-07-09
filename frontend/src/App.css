@@ -356,6 +356,49 @@ body {
   padding: 12px 4px;
 }
 
+/* "Best viewed on desktop" gate (see MobileGate.tsx) */
+.mobile-gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 28px;
+  background: var(--bg);
+  text-align: center;
+}
+.mobile-gate-logo {
+  width: 72px;
+  height: auto;
+  margin-bottom: 8px;
+}
+.mobile-gate h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.mobile-gate p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 340px;
+  margin: 0;
+}
+.mobile-gate-continue {
+  margin-top: 16px;
+  padding: 10px 26px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.mobile-gate-continue:active { border-color: var(--accent); color: var(--text); }
+
 /* Demo helper: sibling of the nav pill — same card form, but the dashed
    accent border and the "?" mark it as the guide (see DemoHelper.tsx) */
 .helper-pill {

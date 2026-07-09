@@ -9,6 +9,7 @@ import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './componen
 import AsciiWake from './components/AsciiWake'
 import ChatHistoryWindow from './components/ChatHistoryWindow'
 import DemoHelper, { OPEN_WINDOW_EVENT } from './components/DemoHelper'
+import MobileGate, { useMobileGate } from './components/MobileGate'
 import NeuronGraphWindow from './components/NeuronGraphWindow'
 import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
@@ -278,6 +279,7 @@ export default function App() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
+  const [mobileGated, dismissMobileGate] = useMobileGate();
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
@@ -609,6 +611,11 @@ export default function App() {
     for (const key of openKeysSig ? openKeysSig.split('|') : []) m[key] = renderPage(key);
     return m;
   }, [openKeysSig, renderPage]);
+
+  // "Best viewed on desktop" gate — before anything else renders
+  if (mobileGated) {
+    return <MobileGate onContinue={dismissMobileGate} />;
+  }
 
   // Auth gate
   if (authStatus === 'checking') {
