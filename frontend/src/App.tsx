@@ -512,6 +512,12 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize);
   }, [clampNavPos]);
 
+  // Content-driven width: expanding a group widens the panel, so re-clamp
+  // in case it now pokes past the right screen edge.
+  useEffect(() => {
+    setNavPos(p => clampNavPos(p));
+  }, [expandedGroups, clampNavPos]);
+
   const toggleGroup = useCallback((label: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);

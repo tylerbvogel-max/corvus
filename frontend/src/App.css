@@ -478,11 +478,15 @@ body {
 .window-dock-pill:hover { color: var(--text); border-color: var(--accent); }
 
 /* Floating navigation: a fixed, draggable panel (position set inline from
-   React state) that collapses down to a logo-only pill. */
+   React state) that collapses down to a logo-only pill. Width is
+   content-driven: collapsed groups keep it as narrow as the header/group
+   labels allow; expanding a group widens it to fit the item text. */
 .sidebar {
   position: fixed;
   z-index: 900;
-  width: 220px;
+  width: max-content;
+  min-width: 148px;
+  max-width: 300px;
   max-height: calc(100vh - 24px);
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -547,7 +551,7 @@ body {
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
   height: 48px;
@@ -568,7 +572,9 @@ body {
 }
 
 .app-title {
-  font-size: 1.1rem;
+  flex: 1; /* centers the title between the logo's edge and the panel's right side */
+  text-align: center;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 1px;
@@ -655,6 +661,7 @@ body {
 }
 
 .sidebar-item {
+  white-space: nowrap; /* items define the expanded panel's width */
   display: block;
   width: 100%;
   background: none;
