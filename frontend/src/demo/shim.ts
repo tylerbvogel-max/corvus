@@ -54,6 +54,7 @@ const neuronPool: NeuronScoreLike[] =
   (fixturesData as { neuronPool?: NeuronScoreLike[] }).neuronPool ?? [];
 
 let answerIdx = 0;
+let querySeq = 0;
 let demoSessionSeq = 90000;
 
 // ── BYOK: visitor-supplied provider key (their browser, their quota) ──
@@ -241,7 +242,7 @@ function nextAnswer(): DemoAnswer {
 
 function makeResult(text: string, scores: NeuronScoreLike[], citationMap?: Record<string, unknown>) {
   return {
-    query_id: 900000 + ++answerIdx,
+    query_id: 900000 + ++querySeq,
     llm_session_id: null,
     context_reused: false,
     classify_input_tokens: 0,

@@ -1,0 +1,45 @@
+# Smoke-tests the seeded demo build (contract checks + Playwright).
+#
+# Runs on:
+#   - every push to `demo` (what Render actually deploys — failures here
+#     mean the LIVE demo is likely broken; roll back via Render → Deploys)
+#   - pushes to `main` that touch the frontend (early warning, before
+#     anything is published)
+#   - manual dispatch
+#
+# Note: fixtures.json is committed, so the demo builds in CI with no
+# backend. demo:capture is NOT run here — capturing stays a local,
+# reviewed step.
+
+name: demo-smoke
+
+on:
+  push:
+    branches: [demo, main]
+    paths: ['frontend/**', '.github/workflows/demo-smoke.yml']
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run demo:check
+      - run: npm run build:demo
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: frontend/test-results/
+          retention-days: 7
