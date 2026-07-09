@@ -13,11 +13,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npx vite preview --port 4173 --strictPort',
+    // Build the demo bundle as part of serving: the tests assert demo
+    // behaviors, and dist/ may hold a normal build from an interleaved
+    // `npm run build` — testing that is a guaranteed confusing failure.
+    command: 'npm run build:demo && npx vite preview --port 4173 --strictPort',
     url: 'http://localhost:4173',
-    // Never reuse: a leftover preview serves a stale dist/ (e.g. the
-    // normal build overwriting the demo build) and fails confusingly.
+    // Never reuse: a leftover preview serves a stale dist/.
     reuseExistingServer: false,
-    timeout: 30_000,
+    timeout: 120_000,
   },
 });
