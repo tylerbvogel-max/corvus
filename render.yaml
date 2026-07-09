@@ -1,0 +1,39 @@
+# Render blueprint — seeded demo of the Corvus frontend.
+#
+# A fully static build: no backend, no database, no LLM. All data comes
+# from fixtures baked into the bundle at build time (see
+# frontend/src/demo/shim.ts for how, and the publish workflow below).
+#
+# One-time setup in the Render dashboard:
+#   New → Blueprint → connect the private repo → it reads this file.
+#   The service watches the `demo` branch only, so day-to-day pushes to
+#   main never touch the public demo.
+#
+# Publishing a new demo iteration:
+#   1. cd frontend && npm run demo:capture     # local backend running
+#   2. REVIEW src/demo/fixtures.json           # it ships publicly, verbatim
+#   3. npm run build:demo && npx vite preview  # sanity-check locally
+#   4. git add/commit, then:  git push private main:demo
+#      Render auto-deploys the demo branch.
+#
+# Source protection: visitors receive only the minified bundle (no source
+# maps are generated). The repo stays private; the Python backend never
+# ships at all in this mode.
+
+services:
+  - type: web
+    name: corvus-demo
+    runtime: static
+    branch: demo
+    rootDir: frontend
+    buildCommand: npm ci && npm run build:demo
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+    routes:
+      # SPA fallback — client-side routing/deep links resolve to index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
