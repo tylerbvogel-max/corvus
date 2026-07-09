@@ -9,7 +9,7 @@ import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './componen
 import AsciiWake from './components/AsciiWake'
 import ChatHistoryWindow from './components/ChatHistoryWindow'
 import DemoHelper, { OPEN_WINDOW_EVENT } from './components/DemoHelper'
-import MobileGate, { useMobileGate } from './components/MobileGate'
+import MobileShell, { useIsMobile } from './components/MobileShell'
 import NeuronGraphWindow from './components/NeuronGraphWindow'
 import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
@@ -279,7 +279,7 @@ export default function App() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
-  const [mobileGated, dismissMobileGate] = useMobileGate();
+  const isMobile = useIsMobile();
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
@@ -449,16 +449,6 @@ export default function App() {
     return k;
   }, [windows]);
 
-  // Reverse deep-link: Proposal Queue row → producer page.
-  const navigateToProducer = useCallback((target: ProposalProducerTarget) => {
-    const origin = target.origin as OriginKey;
-    const nextTab = ORIGIN_TO_TAB[origin] ?? 'proposal-queue';
-    setTab(nextTab);
-    // Future: stash target.autopilot_run_id / finding_id / scan_id in
-    // a per-page focus state so the producer page can highlight the row.
-    // For now the tab switch alone is the deep-link payload.
-  }, []);
-
   // Forward deep-link: producer nav badge → Proposal Queue filtered to origin.
   const navigateToFilteredQueue = useCallback((origin: OriginKey | 'all') => {
     setQueueInitialOrigin(origin === 'all' ? undefined : (origin as OriginFilter));
@@ -469,11 +459,6 @@ export default function App() {
     setThemeState(t);
     setThemeMenuOpen(false);
   }
-
-  const navigateToNeuron = useCallback((id: number) => {
-    setExplorerNeuronId(id);
-    openWindow('explorer');
-  }, [openWindow]);
 
   // Keep the floating nav fully on-screen (8px margin all around).
   const clampNavPos = useCallback((p: { x: number; y: number }) => {
@@ -555,29 +540,40 @@ export default function App() {
     return key;
   }, [displayName, navGroups]);
 
-  // Page content per open window. Memoized so drag/resize commits and the
-  // 30s proposal poll re-render App without re-rendering every mounted page
-  // (element identity unchanged → React bails out of those subtrees).
-  const renderPage = useCallback((key: string): ReactNode => {
+  // Page content factory. The opener is INJECTED so the same pages work in
+  // both shells: desktop passes openWindow, the mobile shell passes its
+  // openView — in-page navigation (Home links, landing pages, proposal
+  // deep-links) then targets whichever shell is actually rendered. Memoized
+  // so drag/resize commits and the 30s proposal poll re-render App without
+  // re-rendering every mounted page (element identity unchanged → React
+  // bails out of those subtrees).
+  const makeRenderPage = useCallback((open: (key: string) => void) => {
+    const goToNeuron = (id: number) => { setExplorerNeuronId(id); open('explorer'); };
+    // Reverse deep-link: Proposal Queue row → producer page. (Future: stash
+    // target ids in per-page focus state so the producer highlights the row.)
+    const goToProducer = (target: ProposalProducerTarget) => {
+      open(ORIGIN_TO_TAB[target.origin as OriginKey] ?? 'proposal-queue');
+    };
+    return (key: string): ReactNode => {
     if (key.startsWith('agent:')) return <SingleAgentPane name={key.slice(6)} />;
     switch (key as Tab) {
-      case 'home': return <HomePage onNavigate={k => openWindow(k as Tab)} />;
+      case 'home': return <HomePage onNavigate={k => open(k)} />;
       case 'chat-history': return <ChatHistoryWindow />;
       case 'chat-graph': return <NeuronGraphWindow />;
       case 'explorer': return <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />;
       case 'engrams': return <EngramPage />;
-      case 'agents': return <AgentsPage onOpenAgent={name => openWindow(`agent:${name}`)} />;
+      case 'agents': return <AgentsPage onOpenAgent={name => open(`agent:${name}`)} />;
       case 'graph': return <CirclePacking />;
       case 'universe': return <NeuronUniverse />;
       case 'dashboard': return <Dashboard />;
       case 'layer-heatmap': return <LayerHeatmap />;
-      case 'query': return <QueryLab onNavigateToNeuron={navigateToNeuron} />;
+      case 'query': return <QueryLab onNavigateToNeuron={goToNeuron} />;
       case 'evaluation': return <EvaluationPage />;
       case 'eval-runs': return <EvalRunsPage />;
       case 'refinements': return <RefinementHistory />;
       case 'samples': return <SampleQueries />;
       case 'autopilot': return <AutopilotPage />;
-      case 'proposal-queue': return <ProposalQueuePage initialOriginFilter={queueInitialOrigin} onNavigateToProducer={navigateToProducer} />;
+      case 'proposal-queue': return <ProposalQueuePage initialOriginFilter={queueInitialOrigin} onNavigateToProducer={goToProducer} />;
       case 'emergent-queue': return <EmergentQueuePage />;
       case 'document-ingest': return <DocumentIngestPage />;
       case 'integrity-dashboard': return <IntegrityPage panel="dashboard" />;
@@ -598,12 +594,15 @@ export default function App() {
             icon={group.icon}
             description={group.description}
             items={group.items.map(i => ({ key: i.key, label: i.label, description: i.description }))}
-            onNavigate={k => openWindow(k as Tab)}
+            onNavigate={k => open(k)}
           />
         );
       }
     }
-  }, [explorerNeuronId, queueInitialOrigin, navigateToProducer, navigateToNeuron, openWindow, navGroups]);
+    };
+  }, [explorerNeuronId, queueInitialOrigin, navGroups]);
+
+  const renderPage = useMemo(() => makeRenderPage(openWindow), [makeRenderPage, openWindow]);
 
   const openKeysSig = Object.keys(windows).join('|');
   const pageElements = useMemo(() => {
@@ -611,11 +610,6 @@ export default function App() {
     for (const key of openKeysSig ? openKeysSig.split('|') : []) m[key] = renderPage(key);
     return m;
   }, [openKeysSig, renderPage]);
-
-  // "Best viewed on desktop" gate — before anything else renders
-  if (mobileGated) {
-    return <MobileGate onContinue={dismissMobileGate} />;
-  }
 
   // Auth gate
   if (authStatus === 'checking') {
@@ -662,6 +656,21 @@ export default function App() {
           </form>
         </div>
       </div>
+    );
+  }
+
+  // Adaptive fork (roadmap prod-mobile-shell): coarse-pointer / narrow
+  // viewports get the mobile shell — full-screen views, bottom bar, view
+  // switcher — instead of the cursor-driven windowing desktop.
+  if (isMobile) {
+    return (
+      <MobileShell
+        displayName={displayName}
+        navGroups={navGroups}
+        windowTitle={windowTitle}
+        makeRenderPage={makeRenderPage}
+        demoKeyWizard={DemoKeyWizard ? <Suspense fallback={null}><DemoKeyWizard /></Suspense> : null}
+      />
     );
   }
 

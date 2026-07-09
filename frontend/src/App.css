@@ -356,48 +356,195 @@ body {
   padding: 12px 4px;
 }
 
-/* "Best viewed on desktop" gate (see MobileGate.tsx) */
-.mobile-gate {
+/* ── Mobile shell (adaptive fork — see MobileShell.tsx) ──
+   Full-screen views over the water substrate, bottom bar for Menu / Chat /
+   view switcher. Views stay mounted while inactive (display:none) so chat
+   state survives switching, mirroring minimized desktop windows. */
+
+.mobile-shell {
   position: fixed;
   inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.mobile-view {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Leave the bottom bar visible; respect home-indicator safe area */
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
+  background: var(--bg-card);
+  z-index: 20;
+}
+.mobile-view-active { display: flex; }
+
+.mobile-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+.mobile-view-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mobile-view-close {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 4px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobile-view-body {
+  flex: 1;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Desktop pages assume roomy panes; give them breathing room and let
+     wide content (tables, charts) scroll rather than crush. */
+  padding: 8px;
+}
+
+.mobile-empty {
+  position: fixed;
+  inset: 0;
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 32px 28px;
-  background: var(--bg);
+  gap: 14px;
+  z-index: 5;
+  pointer-events: none; /* taps fall through to the water */
   text-align: center;
 }
-.mobile-gate-logo {
-  width: 72px;
-  height: auto;
-  margin-bottom: 8px;
+.mobile-empty img { width: 56px; height: 56px; opacity: 0.7; }
+.mobile-empty p { color: var(--text-dim); font-size: 0.85rem; line-height: 1.6; margin: 0; }
+
+.mobile-bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(52px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  z-index: 40;
 }
-.mobile-gate h1 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0;
-}
-.mobile-gate p {
-  font-size: 0.85rem;
-  line-height: 1.6;
+.mobile-bottombar-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
   color: var(--text-dim);
-  max-width: 340px;
-  margin: 0;
+  font-size: 0.65rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.mobile-gate-continue {
-  margin-top: 16px;
-  padding: 10px 26px;
+.mobile-bottombar-btn.active { color: var(--accent, #c87533); }
+.mobile-bottombar-chat img { width: 22px; height: 22px; border-radius: 5px; }
+
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+}
+.mobile-sheet {
+  width: 100%;
+  max-height: 72vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  padding: 12px 10px 16px;
+}
+.mobile-sheet-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 8px 10px;
+}
+.mobile-sheet-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.95rem;
+  padding: 11px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-sheet-item:active { background: var(--bg-input); }
+.mobile-sheet-subitem { padding-left: 38px; font-size: 0.9rem; }
+.mobile-sheet-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 11px 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mobile-sheet-chevron { width: 12px; color: var(--text-dim); }
+.mobile-sheet-group-icon { display: inline-flex; color: var(--text-dim); }
+.mobile-sheet-empty { color: var(--text-dim); font-size: 0.85rem; padding: 8px 10px; }
+.mobile-sheet-view-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mobile-sheet-view-row.active .mobile-sheet-item { color: var(--accent, #c87533); font-weight: 600; }
+.mobile-sheet-view-row .mobile-sheet-item { flex: 1; }
+.mobile-sheet-view-close {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--text-dim);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 5px 11px;
   cursor: pointer;
+  flex-shrink: 0;
 }
-.mobile-gate-continue:active { border-color: var(--accent); color: var(--text); }
 
 /* Demo helper: sibling of the nav pill — same card form, but the dashed
    accent border and the "?" mark it as the guide (see DemoHelper.tsx) */
@@ -549,6 +696,10 @@ body {
   transition: color 0.15s, border-color 0.15s;
 }
 .demo-llm-pill:hover { color: var(--text); border-color: var(--accent); }
+/* Mobile shell: sit above the bottom bar instead of on top of it */
+.mobile-shell .demo-llm-pill {
+  bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+}
 .demo-llm-pill--live { color: var(--accent-light); border-color: var(--accent-dim); }
 
 .demo-llm-modal {

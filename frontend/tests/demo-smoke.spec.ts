@@ -70,12 +70,31 @@ test('demo boots, replays a grounded chat answer, opens companion windows', asyn
 test.describe('phone viewport', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('shows the desktop gate with a continue path', async ({ page }) => {
+  test('mobile shell: chat view, water, menu navigation, view switcher', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.mobile-gate')).toBeVisible();
-    await expect(page.locator('canvas.ascii-wake')).toHaveCount(0);
-    await page.locator('.mobile-gate-continue').click();
+    // The adaptive fork renders the mobile shell (never the desktop windows)
+    await expect(page.locator('.mobile-shell')).toBeVisible();
+    await expect(page.locator('.app-window')).toHaveCount(0);
+    // Water substrate present; chat is the default full-screen view
     await expect(page.locator('canvas.ascii-wake')).toBeVisible();
+    await expect(page.locator('.mobile-view-active .mobile-view-title')).toBeVisible();
+
+    // Menu sheet → open a page from a group
+    await page.locator('.mobile-bottombar-btn', { hasText: 'Menu' }).click();
+    await page.locator('.mobile-sheet-group', { hasText: 'Knowledge' }).click();
+    await page.locator('.mobile-sheet-subitem', { hasText: 'Explorer' }).click();
+    await expect(page.locator('.mobile-view-active .mobile-view-title')).toHaveText('Explorer');
+
+    // View switcher lists both open views; switching back activates Chat
+    await page.locator('.mobile-bottombar-btn', { hasText: 'Views' }).click();
+    const rows = page.locator('.mobile-sheet-view-row');
+    await expect(rows).toHaveCount(2);
+    await rows.locator('.mobile-sheet-item').first().click();
+    await expect(page.locator('.mobile-view-active .mobile-view-title')).not.toHaveText('Explorer');
+
+    // Closing the active view from its header falls back to the other view
+    await page.locator('.mobile-view-active .mobile-view-close').click();
+    await expect(page.locator('.mobile-view-active .mobile-view-title')).toHaveText('Explorer');
   });
 });
 
