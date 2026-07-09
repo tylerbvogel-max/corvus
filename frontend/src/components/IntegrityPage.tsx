@@ -1368,8 +1368,26 @@ function FindingsPanel() {
 
 // ── Main Component ───────────────────────────────────────────────
 
-export default function IntegrityPage() {
-  const [panel, setPanel] = useState<Panel>('dashboard');
+// With `panel` set, renders that single panel with no tab bar — each
+// integrity panel is its own window on the desktop. `onOpenPanel` lets
+// a fixed panel navigate (e.g. Scan opens the Dashboard window after an
+// agent run, replacing the old internal tab switch). Without `panel`,
+// the original tabbed page renders unchanged.
+export default function IntegrityPage({ panel: fixedPanel, onOpenPanel }: {
+  panel?: Panel;
+  onOpenPanel?: (p: Panel) => void;
+} = {}) {
+  const [panel, setPanel] = useState<Panel>(fixedPanel ?? 'dashboard');
+
+  if (fixedPanel) {
+    return (
+      <div style={{ height: '100%', overflow: 'auto', padding: '12px 16px' }}>
+        {fixedPanel === 'dashboard' && <DashboardPanel />}
+        {fixedPanel === 'scan' && <ScanPanel onAgentRan={() => onOpenPanel?.('dashboard')} />}
+        {fixedPanel === 'findings' && <FindingsPanel />}
+      </div>
+    );
+  }
 
   const tabBtn = (key: Panel, label: string) => (
     <button

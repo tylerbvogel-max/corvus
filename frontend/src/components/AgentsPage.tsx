@@ -15,8 +15,30 @@ function friendlyRole(role: string): string {
   return ROLE_LABELS[role] ?? role.replace(/_/g, ' ');
 }
 
-function friendlyName(name: string): string {
+export function friendlyName(name: string): string {
   return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Agents whose manual run needs a target id (mirrors the backend's
+// _RUN_PROFILES — the API 400s without it).
+const REQUIRED_CONTEXT: Record<string, { key: string; hint: string }> = {
+  neuron_placer: { key: 'artifact_id', hint: 'ID of the artifact proposal to place' },
+};
+
+type RunContext =
+  | { ok: true; context: Record<string, unknown> }
+  | { ok: false; error?: string };
+
+function buildRunContext(name: string): RunContext {
+  const needed = REQUIRED_CONTEXT[name];
+  if (!needed) return { ok: true, context: {} };
+  const raw = window.prompt(`Agent "${name}" needs ${needed.key} (${needed.hint}):`);
+  if (!raw || !raw.trim()) return { ok: false };
+  const parsed = Number(raw.trim());
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return { ok: false, error: `${needed.key} must be a positive integer` };
+  }
+  return { ok: true, context: { [needed.key]: parsed } };
 }
 
 function triggerSummary(agent: AgentSummary): string {
@@ -27,7 +49,10 @@ function triggerSummary(agent: AgentSummary): string {
   return parts.join(' · ');
 }
 
-export default function AgentsPage() {
+export default function AgentsPage({ onOpenAgent }: {
+  /** When set, each card shows a pop-out button opening that agent in its own window. */
+  onOpenAgent?: (name: string) => void;
+} = {}) {
   const [agents, setAgents] = useState<AgentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -52,25 +77,13 @@ export default function AgentsPage() {
     refresh();
   }, [refresh]);
 
-  // Agents whose manual run needs a target id (mirrors the backend's
-  // _RUN_PROFILES — the API 400s without it).
-  const REQUIRED_CONTEXT: Record<string, { key: string; hint: string }> = {
-    neuron_placer: { key: 'artifact_id', hint: 'ID of the artifact proposal to place' },
-  };
-
   const onRun = async (name: string) => {
-    const needed = REQUIRED_CONTEXT[name];
-    let context: Record<string, unknown> = {};
-    if (needed) {
-      const raw = window.prompt(`Agent "${name}" needs ${needed.key} (${needed.hint}):`);
-      if (!raw || !raw.trim()) return;
-      const parsed = Number(raw.trim());
-      if (!Number.isInteger(parsed) || parsed <= 0) {
-        setRunErrors(prev => ({ ...prev, [name]: `${needed.key} must be a positive integer` }));
-        return;
-      }
-      context = { [needed.key]: parsed };
+    const rc = buildRunContext(name);
+    if (!rc.ok) {
+      if (rc.error) setRunErrors(prev => ({ ...prev, [name]: rc.error! }));
+      return;
     }
+    const context = rc.context;
     setTriggering(name);
     setRunErrors(prev => {
       const next = { ...prev };
@@ -126,6 +139,7 @@ export default function AgentsPage() {
             runResult={runResults[a.name]}
             runError={runErrors[a.name]}
             onRun={() => onRun(a.name)}
+            onPopOut={onOpenAgent ? () => onOpenAgent(a.name) : undefined}
           />
         ))}
       </div>
@@ -133,12 +147,80 @@ export default function AgentsPage() {
   );
 }
 
-function AgentCard({ agent, triggering, runResult, runError, onRun }: {
+// Renders one agent in its own window on the desktop. Fetches the agent
+// list itself and manages its own run state, so the window is fully
+// self-contained (survives the Agents list window being closed).
+export function SingleAgentPane({ name }: { name: string }) {
+  const [agent, setAgent] = useState<AgentSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [triggering, setTriggering] = useState(false);
+  const [runResult, setRunResult] = useState<RunResult | undefined>(undefined);
+  const [runError, setRunError] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setErr(null);
+    listAgents()
+      .then(rows => {
+        if (cancelled) return;
+        const a = rows.find(r => r.name === name) ?? null;
+        setAgent(a);
+        if (!a) setErr(`Agent "${name}" is not registered for this tenant.`);
+      })
+      .catch(e => { if (!cancelled) setErr(String(e)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [name]);
+
+  const onRun = async () => {
+    const rc = buildRunContext(name);
+    if (!rc.ok) {
+      if (rc.error) setRunError(rc.error);
+      return;
+    }
+    setTriggering(true);
+    setRunError(undefined);
+    try {
+      const r = await triggerAgentRun(name, rc.context);
+      setRunResult({ action_id: r.action_id, summary: r.summary || '(no summary)' });
+    } catch (e) {
+      setRunError(String(e));
+    } finally {
+      setTriggering(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: '20px 22px' }}>
+      {loading && <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Loading agent...</div>}
+      {err && (
+        <div style={{
+          color: '#e74c3c', fontSize: '0.82rem', padding: '10px 14px',
+          background: '#e74c3c11', borderRadius: 8, border: '1px solid #e74c3c33',
+        }}>{err}</div>
+      )}
+      {agent && (
+        <AgentCard
+          agent={agent}
+          triggering={triggering}
+          runResult={runResult}
+          runError={runError}
+          onRun={onRun}
+        />
+      )}
+    </div>
+  );
+}
+
+function AgentCard({ agent, triggering, runResult, runError, onRun, onPopOut }: {
   agent: AgentSummary;
   triggering: boolean;
   runResult?: RunResult;
   runError?: string;
   onRun: () => void;
+  onPopOut?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState<AgentDetail | null>(null);
@@ -185,19 +267,34 @@ function AgentCard({ agent, triggering, runResult, runError, onRun }: {
             <span>· {triggerSummary(agent)}</span>
           </div>
         </div>
-        <button
-          onClick={onRun}
-          disabled={!agent.manual_trigger || triggering}
-          style={{
-            padding: '7px 18px', borderRadius: 6, border: 'none',
-            cursor: agent.manual_trigger && !triggering ? 'pointer' : 'not-allowed',
-            fontSize: '0.8rem', fontWeight: 600,
-            background: agent.manual_trigger ? 'var(--accent)' : 'var(--border)',
-            color: '#fff', opacity: triggering ? 0.7 : 1,
-          }}
-        >
-          {triggering ? 'Running...' : 'Run now'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          <button
+            onClick={onRun}
+            disabled={!agent.manual_trigger || triggering}
+            style={{
+              padding: '7px 18px', borderRadius: 6, border: 'none',
+              cursor: agent.manual_trigger && !triggering ? 'pointer' : 'not-allowed',
+              fontSize: '0.8rem', fontWeight: 600,
+              background: agent.manual_trigger ? 'var(--accent)' : 'var(--border)',
+              color: '#fff', opacity: triggering ? 0.7 : 1,
+            }}
+          >
+            {triggering ? 'Running...' : 'Run now'}
+          </button>
+          {onPopOut && (
+            <button
+              onClick={onPopOut}
+              title="Open this agent in its own window"
+              style={{
+                padding: '7px 10px', borderRadius: 6,
+                border: '1px solid var(--border)', background: 'none',
+                color: 'var(--text-dim)', cursor: 'pointer', fontSize: '0.8rem',
+              }}
+            >
+              ⧉
+            </button>
+          )}
+        </div>
       </div>
 
       <p style={{

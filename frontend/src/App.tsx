@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import AppWindow, { MIN_W, MIN_H, type WinState } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
+import { SingleAgentPane, friendlyName } from './components/AgentsPage'
 import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
@@ -41,7 +42,7 @@ type OriginKey = 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
 // components don't know about each other.
 const ORIGIN_TO_TAB: Record<OriginKey, Tab> = {
   autopilot: 'autopilot',
-  integrity: 'integrity',
+  integrity: 'integrity-findings',
   document: 'document-ingest',
   emergent: 'emergent-queue',
   manual: 'proposal-queue',
@@ -52,13 +53,13 @@ const ORIGIN_TO_TAB: Record<OriginKey, Tab> = {
 // each show their own origin's pending count.
 const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'autopilot': 'autopilot',
-  'integrity': 'integrity',
+  'integrity-findings': 'integrity',
   'document-ingest': 'document',
   'emergent-queue': 'emergent',
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -144,7 +145,9 @@ function buildNavGroups(_tenantId: string | undefined): NavGroup[] {
         { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve autopilot proposals' },
         { key: 'emergent-queue', label: 'Emergent Queue', description: 'Unresolved patterns awaiting classification' },
         { key: 'document-ingest', label: 'Document Ingest', description: 'Upload documents for bulk knowledge extraction' },
-        { key: 'integrity', label: 'Integrity', description: 'Graph consistency audits, agents, and findings' },
+        { key: 'integrity-dashboard', label: 'Integrity Dashboard', description: 'Graph consistency health and recent audit activity' },
+        { key: 'integrity-scan', label: 'Integrity Scan', description: 'Run consistency audits across the graph' },
+        { key: 'integrity-findings', label: 'Integrity Findings', description: 'Queue of audit findings awaiting review' },
       ],
     },
     {
@@ -216,8 +219,10 @@ function loadWindows(): Record<string, WinState> {
     const saved = JSON.parse(localStorage.getItem(WINDOWS_STORE_KEY) ?? '');
     if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
       const out: Record<string, WinState> = {};
-      for (const [key, v] of Object.entries(saved as Record<string, WinState>)) {
+      for (const [rawKey, v] of Object.entries(saved as Record<string, WinState>)) {
         if (typeof v?.x !== 'number' || typeof v?.w !== 'number') continue;
+        // Migration: the tabbed Integrity page was split into three windows.
+        const key = rawKey === 'integrity' ? 'integrity-dashboard' : rawKey;
         // Clamp restored rects so a window can never come back off-screen.
         const w = Math.max(MIN_W, Math.min(v.w, window.innerWidth - 16));
         const h = Math.max(MIN_H, Math.min(v.h, window.innerHeight - 16));
@@ -327,7 +332,8 @@ export default function App() {
     });
   }, []);
 
-  const openWindow = useCallback((key: Tab) => {
+  // Accepts any window key: static Tab keys plus dynamic ones ("agent:<name>").
+  const openWindow = useCallback((key: string) => {
     setWindows(prev => {
       const top = Object.values(prev).reduce((m, v) => Math.max(m, v.z), 9);
       const existing = prev[key];
@@ -475,6 +481,7 @@ export default function App() {
 
   const windowTitle = useCallback((key: string): string => {
     if (key === 'home') return displayName;
+    if (key.startsWith('agent:')) return friendlyName(key.slice(6));
     for (const g of navGroups) {
       if (g.landingKey === key) return g.label;
       const item = g.items.find(i => i.key === key);
@@ -487,11 +494,12 @@ export default function App() {
   // 30s proposal poll re-render App without re-rendering every mounted page
   // (element identity unchanged → React bails out of those subtrees).
   const renderPage = useCallback((key: string): ReactNode => {
+    if (key.startsWith('agent:')) return <SingleAgentPane name={key.slice(6)} />;
     switch (key as Tab) {
       case 'home': return <HomePage onNavigate={k => openWindow(k as Tab)} />;
       case 'explorer': return <Explorer navigateToNeuronId={explorerNeuronId} onNavigateHandled={() => setExplorerNeuronId(null)} />;
       case 'engrams': return <EngramPage />;
-      case 'agents': return <AgentsPage />;
+      case 'agents': return <AgentsPage onOpenAgent={name => openWindow(`agent:${name}`)} />;
       case 'graph': return <CirclePacking />;
       case 'universe': return <NeuronUniverse />;
       case 'dashboard': return <Dashboard />;
@@ -505,7 +513,9 @@ export default function App() {
       case 'proposal-queue': return <ProposalQueuePage initialOriginFilter={queueInitialOrigin} onNavigateToProducer={navigateToProducer} />;
       case 'emergent-queue': return <EmergentQueuePage />;
       case 'document-ingest': return <DocumentIngestPage />;
-      case 'integrity': return <IntegrityPage />;
+      case 'integrity-dashboard': return <IntegrityPage panel="dashboard" />;
+      case 'integrity-scan': return <IntegrityPage panel="scan" onOpenPanel={p => openWindow(`integrity-${p}`)} />;
+      case 'integrity-findings': return <IntegrityPage panel="findings" />;
       case 'synaptic-learning': return <SynapticLearningPage />;
       case 'quality': return <QualityPage />;
       case 'fairness': return <FairnessPage />;
