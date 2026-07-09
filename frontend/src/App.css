@@ -2384,6 +2384,7 @@ details summary:hover { color: var(--text); }
 /* ── Home Page / Chat ── */
 
 .chat-hero {
+  position: relative; /* anchors the .ascii-wake canvas */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2392,7 +2393,17 @@ details summary:hover { color: var(--text); }
   padding: 48px 24px;
 }
 
+/* ASCII water-wake substrate (see components/AsciiWake.tsx for tuning) */
+.ascii-wake {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none; /* input is captured by .chat-hero itself */
+}
+
 .chat-hero-center {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;

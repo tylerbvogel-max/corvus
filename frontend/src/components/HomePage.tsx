@@ -10,6 +10,7 @@ import type { NeuronScoreResponse, CitationSource } from '../types';
 import { useModels } from '../hooks/useModels';
 import { marked } from 'marked';
 import NeuronTreeViz from './NeuronTreeViz';
+import AsciiWake from './AsciiWake';
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -795,7 +796,8 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   latestQueryId = undefined;
 
   const inputBar = (
-    <div className="chat-input-bar">
+    // data-wake-obstacle: masks the hero ASCII wake (no-op in chat state)
+    <div className="chat-input-bar" data-wake-obstacle>
       <div className="chat-input-controls">
         <select className="chat-model-select" value={model} onChange={e => { setModel(e.target.value); setLlmSessionId(null); }}>
           {Object.entries(groupedModels).map(([group, models]) => ([
@@ -875,16 +877,21 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   if (!hasMessages) {
     return (
       <div className="chat-hero">
+        {/* Interactive ASCII water substrate — draws only where no
+            [data-wake-obstacle] element sits (tuning notes in AsciiWake.tsx).
+            The faint logo deliberately carries no obstacle tag so water
+            passes beneath it. */}
+        <AsciiWake />
         <div className="chat-hero-center">
           <img src="/corvus-logo.png" alt="Corvus" className="chat-hero-logo" />
-          <h1 className="chat-hero-title">{getTenantConfig()?.display_name ?? 'Corvus'}</h1>
-          <p className="chat-hero-subtitle">I know our company's internal documentation — ask me anything.</p>
+          <h1 className="chat-hero-title" data-wake-obstacle>{getTenantConfig()?.display_name ?? 'Corvus'}</h1>
+          <p className="chat-hero-subtitle" data-wake-obstacle>I know our company's internal documentation — ask me anything.</p>
           {inputBar}
           {(() => {
             const prompts: SeedPrompt[] = getTenantConfig()?.seed_prompts ?? [];
             if (prompts.length === 0) return null;
             return (
-              <div className="chat-seed-prompts">
+              <div className="chat-seed-prompts" data-wake-obstacle>
                 {prompts.map((p, i) => (
                   <button
                     key={i}
@@ -905,7 +912,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
               access lands (see master-corvus gov-rbac), these can be
               re-enabled conditionally for admin viewers. */}
           {!sessionsLoading && sessions.length > 0 && (
-            <div className="chat-hero-sessions">
+            <div className="chat-hero-sessions" data-wake-obstacle>
               <h3>Recent Conversations</h3>
               {sessions.slice(0, 8).map(s => (
                 <div key={s.id} className="chat-session-item" onClick={() => loadSession(s.id)}>
