@@ -765,17 +765,6 @@ async def post_query_stream(req: QueryRequest, db: AsyncSession = Depends(get_db
     )
 
 
-def _eval_slot_label(slot: SlotResult) -> str:
-    if slot.label:
-        return slot.label
-    parts = [slot.model.title()]
-    if slot.neurons:
-        parts.append("+ Neurons")
-    if slot.token_budget is not None and slot.neurons:
-        parts.append(f"@ {slot.token_budget // 1000}K")
-    return " ".join(parts)
-
-
 def _strip_citation_keys(text: str) -> str:
     """Remove [FQ-] citation keys from text bound for an eval/refine judge.
 
@@ -796,20 +785,26 @@ def _strip_citation_keys(text: str) -> str:
 def _build_eval_prompts(
     user_message: str, slots: list[SlotResult], domain_knowledge: str = "",
 ) -> tuple[str, str, list[tuple[str, SlotResult]]]:
+    """Judge prompts for a multi-answer comparison. BLIND BY CONSTRUCTION:
+    answers are presented as bare letters — never slot labels or model names,
+    which leak producer identity and let brand/self-preference bias the judge
+    (found live 2026-07-09: "Answer A (Haiku + Neurons @ 8K)"). The returned
+    answer_map is how CALLERS resolve letters back to slots; the judge never
+    sees it.
+    """
+    assert slots, "slots must be non-empty"
     answer_map: list[tuple[str, SlotResult]] = []
     sections = [f"User's question:\n{user_message}"]
     for i, slot in enumerate(slots):
-        label = _eval_slot_label(slot)
         letter = chr(65 + i)
         answer_map.append((letter, slot))
         sections.append(
-            f"Answer {letter} ({label}):\n{_strip_citation_keys(slot.response)}")
+            f"Answer {letter}:\n{_strip_citation_keys(slot.response)}")
 
     score_template = []
-    for letter, slot in answer_map:
-        label = _eval_slot_label(slot)
+    for letter, _slot in answer_map:
         score_template.append(
-            f'  {{"answer": "{letter}", "label": "{label}", '
+            f'  {{"answer": "{letter}", '
             f'"accuracy": <1-5>, "completeness": <1-5>, "clarity": <1-5>, '
             f'"faithfulness": <1-5>, "overall": <1-5>}}'
         )
@@ -817,9 +812,31 @@ def _build_eval_prompts(
     eval_prompt = "\n\n---\n\n".join(sections)
     assert len(sections) >= 3, "eval prompt must include question + at least 2 answers"
 
-    # Build system prompt with optional domain knowledge
+    eval_system = _eval_system_prompt(domain_knowledge, score_template)
+    assert eval_system and eval_prompt, "eval prompts must be non-empty"
+
+    return eval_system, eval_prompt, answer_map
+
+
+def _eval_system_prompt(domain_knowledge: str, score_template: list[str]) -> str:
+    """Judge system prompt (optionally grounded in domain facts). The answer
+    identities must stay out of here — see _build_eval_prompts."""
+    assert isinstance(score_template, list) and score_template, \
+        "score_template must be non-empty"
+    output_contract = (
+        "You MUST respond with EXACTLY this format — a JSON block followed by your verdict:\n\n"
+        "```json\n"
+        '{"scores": [\n'
+        + ",\n".join(score_template) + "\n"
+        "],\n"
+        '"winner": "<letter or tie>",\n'
+        '"verdict": "<2-4 sentence comparison explaining your reasoning>"\n'
+        "}\n"
+        "```\n\n"
+        "No other text outside the JSON block. Use the answer labels (A, B, etc.) in your verdict."
+    )
     if domain_knowledge:
-        eval_system = (
+        return (
             "You are a domain expert evaluating AI responses against authoritative knowledge.\n\n"
             "## Domain Knowledge (Ground Truth)\n"
             "Use the following domain facts to assess accuracy and faithfulness:\n\n"
@@ -831,41 +848,19 @@ def _build_eval_prompts(
             "- Clarity: well-structured, easy to understand\n"
             "- Faithfulness: no hallucinations or claims unsupported by domain knowledge (5=fully faithful)\n"
             "- Overall: holistic quality\n\n"
-            "You MUST respond with EXACTLY this format — a JSON block followed by your verdict:\n\n"
-            "```json\n"
-            '{"scores": [\n'
-            + ",\n".join(score_template) + "\n"
-            "],\n"
-            '"winner": "<letter or tie>",\n'
-            '"verdict": "<2-4 sentence comparison explaining your reasoning>"\n'
-            "}\n"
-            "```\n\n"
-            "No other text outside the JSON block. Use the answer labels (A, B, etc.) in your verdict."
+            + output_contract
         )
-    else:
-        eval_system = (
-            "You are a blind evaluator comparing AI responses. You have NO prior context — "
-            "only the user's question and the answers provided.\n\n"
-            "Score each answer on these dimensions (1=poor, 5=excellent):\n"
-            "- Accuracy: factual correctness\n"
-            "- Completeness: covers the full question\n"
-            "- Clarity: well-structured, easy to understand\n"
-            "- Faithfulness: no hallucinations or unsupported claims (5=fully faithful)\n"
-            "- Overall: holistic quality\n\n"
-            "You MUST respond with EXACTLY this format — a JSON block followed by your verdict:\n\n"
-            "```json\n"
-            '{"scores": [\n'
-            + ",\n".join(score_template) + "\n"
-            "],\n"
-            '"winner": "<letter or tie>",\n'
-            '"verdict": "<2-4 sentence comparison explaining your reasoning>"\n'
-            "}\n"
-            "```\n\n"
-            "No other text outside the JSON block. Use the answer labels (A, B, etc.) in your verdict."
-        )
-    assert eval_system and eval_prompt, "eval prompts must be non-empty"
-
-    return eval_system, eval_prompt, answer_map
+    return (
+        "You are a blind evaluator comparing AI responses. You have NO prior context — "
+        "only the user's question and the answers provided.\n\n"
+        "Score each answer on these dimensions (1=poor, 5=excellent):\n"
+        "- Accuracy: factual correctness\n"
+        "- Completeness: covers the full question\n"
+        "- Clarity: well-structured, easy to understand\n"
+        "- Faithfulness: no hallucinations or unsupported claims (5=fully faithful)\n"
+        "- Overall: holistic quality\n\n"
+        + output_contract
+    )
 
 
 def _parse_eval_response(raw_text: str) -> tuple[list[dict], str, str | None]:
