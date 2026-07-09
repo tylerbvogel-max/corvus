@@ -1,0 +1,25 @@
+# Corpus knowledge-gap probes — questions where BOTH haiku and sonnet scored
+# faithfulness <= 2 with a context-aware rubric judge (tier-routing eval,
+# 2026-07-09, scripts/eval_tier_routing.py). The packed context lacks the
+# specific authorities these questions demand (FAR clause numbers, ITAR
+# mechanics, DCAA audit specifics), so any tier fills from parametric
+# knowledge. These are standing TEST CASES against the corpus: re-run after
+# ingesting compliance content and expect faithfulness to rise; until then
+# they exercise the ungrounded-authority guard (ungrounded_ref_list).
+name: corpus-gaps
+description: >-
+  Implicit-compliance questions the corpus cannot yet ground (both model
+  tiers invent specifics). Success = faithfulness recovers after content
+  ingest, not after model escalation — control-verified 2026-07-09 that
+  sonnet scores no better here (2.38 vs haiku 2.5).
+cases:
+  - label: far-fixed-price-clauses
+    text: "What FAR clauses apply to a fixed-price development contract with a government customer?"
+  - label: itar-uk-subcontractor
+    text: "We're shipping technical data to a UK subcontractor. What ITAR requirements apply?"
+  - label: dcaa-incurred-cost
+    text: "What does DCAA look for when auditing an incurred cost submission?"
+  - label: foreign-national-fai-access
+    text: "A foreign national subcontractor wants to observe our first article inspection process for the CH-53K composite spar. What do we need to address before allowing access?"
+  - label: propulsion-failure-decision-framework
+    text: "A late-stage propulsion system failure mode has been discovered that poses safety risks to ground personnel during test operations. What is the decision framework for continuing the program versus cancellation, and what roles are involved?"
