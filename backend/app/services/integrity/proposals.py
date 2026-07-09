@@ -79,17 +79,48 @@ async def create_integrity_proposal(
     return proposal
 
 
+def _evidence_metric_and_threshold(
+    finding: IntegrityFinding, detail: dict,
+) -> tuple[float, float]:
+    """(metric_value, threshold) for GapEvidenceOut, per finding type.
+
+    near_duplicate findings carry the cosine similarity that tripped the
+    scan; its threshold is the tenant duplicate threshold. Other finding
+    types have no single scalar trigger — fall back to the finding's
+    priority score with a zero threshold rather than inventing one.
+    """
+    from app.config import settings
+    if finding.finding_type == "near_duplicate":
+        sim = detail.get("cosine_similarity")
+        if isinstance(sim, (int, float)):
+            return float(sim), float(settings.integrity_duplicate_threshold)
+    return float(finding.priority_score or 0.0), 0.0
+
+
 def _create_proposal_record(
     finding: IntegrityFinding, resolution: str, reviewer: str, notes: str,
 ) -> AutopilotProposal:
-    """Build the AutopilotProposal object for a finding resolution."""
+    """Build the AutopilotProposal object for a finding resolution.
+
+    gap_evidence_json satisfies the FULL GapEvidenceOut schema at write time
+    (description/metric_value/threshold/neuron_ids) — previously these were
+    missing and the proposal-detail endpoint fell back to a plain dict
+    (roadmap polish item gov-polish-integrity-evidence-schema).
+    """
     detail = json.loads(finding.detail_json) if finding.detail_json else {}
+    metric_value, threshold = _evidence_metric_and_threshold(finding, detail)
+    neuron_ids = json.loads(finding.neuron_ids_json) if finding.neuron_ids_json else []
     return AutopilotProposal(
         state="proposed",
         gap_source=f"integrity_{finding.finding_type}",
         gap_description=finding.description,
         gap_evidence_json=json.dumps([{
             "signal": finding.finding_type,
+            "description": finding.description or "",
+            "metric_value": metric_value,
+            "threshold": threshold,
+            "neuron_ids": neuron_ids,
+            "query_ids": [],
             "finding_id": finding.id,
             "scan_id": finding.scan_id,
             "severity": finding.severity,

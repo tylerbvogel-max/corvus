@@ -299,3 +299,48 @@ def test_integrity_reconciler_agent_has_no_neuron_write_tool():
     for name in allow:
         for pattern in forbidden_patterns:
             assert pattern not in name, f"{name!r} matches forbidden pattern {pattern!r}"
+
+
+# ── Evidence schema completeness (polish: gov-polish-integrity-evidence-schema)
+
+def test_proposal_evidence_satisfies_gap_evidence_schema():
+    """Evidence written for integrity findings must validate as GapEvidenceOut
+    at write time — no more falling back to a plain dict in proposal detail."""
+    import json as _json
+
+    from app.models import IntegrityFinding
+    from app.schemas import GapEvidenceOut
+    from app.services.integrity.proposals import _create_proposal_record
+
+    finding = IntegrityFinding(
+        id=7, finding_type="near_duplicate", status="open", severity="medium",
+        neuron_ids_json=_json.dumps([10, 11]), description="possible dup",
+        priority_score=0.5, scan_id=3,
+        detail_json=_json.dumps({"cosine_similarity": 0.9612}),
+    )
+    proposal = _create_proposal_record(finding, "merged", "agent:dedup", "same scope")
+    evidence = _json.loads(proposal.gap_evidence_json)[0]
+    out = GapEvidenceOut(**{k: v for k, v in evidence.items()
+                            if k in GapEvidenceOut.model_fields})
+    assert out.description == "possible dup"
+    assert out.metric_value == 0.9612
+    assert out.threshold == 0.92
+    assert out.neuron_ids == [10, 11]
+
+
+def test_proposal_evidence_fallback_metric_for_other_types():
+    import json as _json
+
+    from app.models import IntegrityFinding
+    from app.services.integrity.proposals import _create_proposal_record
+
+    finding = IntegrityFinding(
+        id=8, finding_type="contradiction", status="open", severity="high",
+        neuron_ids_json=_json.dumps([1, 2]), description="conflicting guidance",
+        priority_score=0.8, scan_id=3, detail_json=None,
+    )
+    evidence = _json.loads(
+        _create_proposal_record(finding, "context_added", "agent:integrity_reconciler", "").gap_evidence_json
+    )[0]
+    assert evidence["metric_value"] == 0.8
+    assert evidence["threshold"] == 0.0
