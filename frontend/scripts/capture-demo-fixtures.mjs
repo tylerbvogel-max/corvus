@@ -81,8 +81,24 @@ for (const s of sessions.slice(0, MAX_SESSIONS)) {
 // Trim the visible session list to what we actually captured
 if (sessions.length > MAX_SESSIONS) fixtures['/chat/sessions'] = sessions.slice(0, MAX_SESSIONS);
 
-const out = { capturedAt: new Date().toISOString(), source: BASE, fixtures, demoAnswers };
+// Neuron pool for BYOK retrieval: every neuron the captured sessions
+// activated, deduped. label+summary become the grounding text; the full
+// score objects double as Neuron Graph payloads for live answers.
+const neuronPool = [];
+const seen = new Set();
+for (const key of Object.keys(fixtures)) {
+  if (!/^\/chat\/sessions\/\d+$/.test(key)) continue;
+  for (const m of fixtures[key].messages ?? []) {
+    for (const ns of m.neuron_scores ?? []) {
+      if (ns.neuron_id == null || seen.has(ns.neuron_id)) continue;
+      seen.add(ns.neuron_id);
+      neuronPool.push(ns);
+    }
+  }
+}
+
+const out = { capturedAt: new Date().toISOString(), source: BASE, fixtures, demoAnswers, neuronPool };
 await writeFile(OUT, JSON.stringify(out, null, 2));
 console.log(`\nWrote ${OUT}`);
-console.log(`  fixtures: ${Object.keys(fixtures).length} paths, demo answers: ${demoAnswers.length}`);
+console.log(`  fixtures: ${Object.keys(fixtures).length} paths, demo answers: ${demoAnswers.length}, neuron pool: ${neuronPool.length}`);
 console.log('Review the file before publishing — its contents ship in the public bundle.');

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import type { ReactNode } from 'react'
 // Imported through Vite (not public/) so the served URL carries a content
 // fingerprint — logo swaps bust the browser cache without manual refreshes
@@ -43,6 +43,12 @@ import { fetchTenantConfig } from './config'
 import type { TenantConfig } from './config'
 import { checkAccess, setAccessKey, getAccessKey } from './auth'
 import { fetchProposalStats } from './api'
+
+// BYOK setup pill for public demo builds only — the statically-false
+// condition removes the chunk from normal builds.
+const DemoKeyWizard = import.meta.env.VITE_DEMO === '1'
+  ? lazy(() => import('./components/DemoKeyWizard'))
+  : null;
 
 type OriginKey = 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
 
@@ -819,6 +825,8 @@ export default function App() {
           {pageElements[key]}
         </AppWindow>
       ))}
+
+      {DemoKeyWizard && <Suspense fallback={null}><DemoKeyWizard /></Suspense>}
 
       {/* Dock of minimized windows */}
       {Object.values(windows).some(w => w.min) && (
