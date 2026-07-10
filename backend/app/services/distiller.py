@@ -71,9 +71,16 @@ Each candidate needs verifiable evidence FROM THE LOG (an error message, an exit
 scope must be one of: Harness (how the coding harness/agent tooling works), Environment (facts about this machine), Projects (repo-specific), User (user preferences/corrections).
 node_type must be one of: lesson, tool-profile, context-scope.
 
-Respond with ONLY a JSON array, no markdown fences, no prose:
-[{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>"}]
-Return [] if the session taught nothing durable."""
+SECOND TASK — attribution: for each ALREADY-KNOWN (injected) lesson, judge from the log whether it was:
+- "load_bearing": the session visibly relied on it (followed its guidance and succeeded, or avoided its documented failure)
+- "contradicted": the log shows the lesson's claim is wrong or outdated
+- "unused": injected but nothing in the log engaged with it
+Base verdicts ONLY on observable events in the log; when in doubt, "unused".
+
+Respond with ONLY a JSON object, no markdown fences, no prose:
+{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>"}],
+ "attributions": [{"label": "<the injected lesson's label>", "verdict": "load_bearing|contradicted|unused", "evidence": "<what in the log shows this>"}]}
+Use empty arrays when there is nothing to report."""
 
 
 def find_ready_logs(
@@ -110,10 +117,12 @@ def find_ready_logs(
     return ready
 
 
-def _load_log(path: str) -> tuple[list[dict], list[str], str | None]:
-    """Parse a log into (events, injected_labels, transcript_path)."""
+def _load_log(path: str) -> tuple[list[dict], list[dict], str | None]:
+    """Parse a log into (events, injections, transcript_path).
+
+    injections: [{label, neuron_id, query_id}] — the attribution targets."""
     events: list[dict] = []
-    injected: list[str] = []
+    injections: list[dict] = []
     transcript: str | None = None
     with open(path, encoding="utf-8") as fh:
         for line in fh:
@@ -123,10 +132,16 @@ def _load_log(path: str) -> tuple[list[dict], list[str], str | None]:
                 continue
             events.append(rec)
             if rec.get("event") == "Injection":
-                injected.extend(str(x) for x in rec.get("labels", []))
+                ids = rec.get("neuron_ids", [])
+                for idx, label in enumerate(rec.get("labels", [])):
+                    injections.append({
+                        "label": str(label),
+                        "neuron_id": ids[idx] if idx < len(ids) else None,
+                        "query_id": rec.get("query_id"),
+                    })
             if rec.get("event") == "Stop" and rec.get("transcript_path"):
                 transcript = rec["transcript_path"]
-    return events, injected, transcript
+    return events, injections, transcript
 
 
 def _extract_user_messages(transcript_path: str | None) -> list[str]:
@@ -171,16 +186,32 @@ def _condense(events: list[dict], user_msgs: list[str], injected: list[str]) -> 
     return "\n".join(lines)[:MAX_PROMPT_CHARS]
 
 
-def _parse_candidates(text: str) -> list[dict]:
-    """Extract the JSON array from the model's reply (fence-tolerant)."""
-    start, end = text.find("["), text.rfind("]")
-    if start < 0 or end <= start:
-        return []
-    try:
-        parsed = json.loads(text[start:end + 1])
-    except ValueError:
-        return []
-    return [c for c in parsed if isinstance(c, dict)] if isinstance(parsed, list) else []
+def _parse_candidates(text: str) -> tuple[list[dict], list[dict]]:
+    """Extract (lessons, attributions) from the reply. Tolerates both the
+    object schema and the legacy bare-array schema (lessons only)."""
+    obj_start = text.find("{")
+    arr_start = text.find("[")
+    if obj_start >= 0 and (arr_start < 0 or obj_start < arr_start):
+        end = text.rfind("}")
+        if end > obj_start:
+            try:
+                parsed = json.loads(text[obj_start:end + 1])
+                if isinstance(parsed, dict):
+                    lessons = [c for c in parsed.get("lessons", []) if isinstance(c, dict)]
+                    attribs = [a for a in parsed.get("attributions", []) if isinstance(a, dict)]
+                    return lessons, attribs
+            except ValueError:
+                pass
+    if arr_start >= 0:
+        end = text.rfind("]")
+        if end > arr_start:
+            try:
+                parsed = json.loads(text[arr_start:end + 1])
+                if isinstance(parsed, list):
+                    return [c for c in parsed if isinstance(c, dict)], []
+            except ValueError:
+                pass
+    return [], []
 
 
 async def _validate_and_save(
@@ -222,14 +253,75 @@ async def _validate_and_save(
     return counts
 
 
+ATTRIBUTION_REWARD = 0.04
+ATTRIBUTION_PENALTY = 0.85  # multiplicative demotion for contradicted lessons
+ATTRIBUTION_FLOOR = 0.3
+ATTRIBUTION_CAP = 0.95
+
+
+async def _apply_attributions(
+    db: AsyncSession, verdicts: list[dict], injections: list[dict],
+) -> dict:
+    """Earned trust: move injected lessons' weight by observed outcome.
+
+    load_bearing → reward; contradicted → demotion; unused → no-op.
+    A SynapticLearningEvent is written when the injection recorded its
+    recall query_id, so the Evaluate pages see the reinforcement."""
+    from app.models import Neuron, SynapticLearningEvent
+    from app.services.mind_janitors import _log_action
+
+    by_label = {i["label"].casefold(): i for i in injections}
+    counts = {"rewarded": 0, "penalized": 0, "unused": 0}
+    for v in verdicts:
+        verdict = str(v.get("verdict", "unused"))
+        source = by_label.get(str(v.get("label", "")).casefold())
+        if source is None or source.get("neuron_id") is None:
+            continue
+        if verdict == "unused":
+            counts["unused"] += 1
+            continue
+        neuron = await db.get(Neuron, source["neuron_id"])
+        if neuron is None or not neuron.is_active:
+            continue
+        old = neuron.avg_utility or 0.5
+        if verdict == "load_bearing":
+            neuron.avg_utility = min(ATTRIBUTION_CAP, old + ATTRIBUTION_REWARD)
+            counts["rewarded"] += 1
+            outcome, event_type = "win", "reward"
+        elif verdict == "contradicted":
+            neuron.avg_utility = max(ATTRIBUTION_FLOOR, old * ATTRIBUTION_PENALTY)
+            counts["penalized"] += 1
+            outcome, event_type = "loss", "penalty"
+        else:
+            continue
+        if source.get("query_id"):
+            db.add(SynapticLearningEvent(
+                query_id=source["query_id"], neuron_id=neuron.id,
+                event_type=event_type, old_avg_utility=old,
+                new_avg_utility=neuron.avg_utility,
+                delta=neuron.avg_utility - old,
+                effective_delta=neuron.avg_utility - old,
+                combined_score=0.0, attribution_weight=1.0,
+                outcome=outcome, winner_mode="mind_attribution",
+            ))
+        _log_action(f"attribution.{event_type}", {
+            "neuron_id": neuron.id, "label": neuron.label,
+            "old_utility": round(old, 3),
+            "new_utility": round(neuron.avg_utility, 3),
+            "evidence": str(v.get("evidence", ""))[:200],
+        })
+    return counts
+
+
 async def distill_log(db: AsyncSession, path: str) -> dict:
     """Distill one ready episode log; writes a .distilled marker on success."""
     from datetime import datetime, timezone
     from app.services.llm_provider import llm_chat
 
     session_id = os.path.basename(path).removesuffix(".jsonl")
-    events, injected, transcript = _load_log(path)
+    events, injections, transcript = _load_log(path)
     assert len(events) > 0, f"log {path} has no parseable events"
+    injected = [i["label"] for i in injections]
     user_msgs = _extract_user_messages(transcript)
     body = _condense(events, user_msgs, injected)
 
@@ -239,17 +331,19 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     )
     reply = await llm_chat(
         system_prompt=system_prompt,
-        user_message=body, max_tokens=2000, model="opus", timeout=300,
+        user_message=body, max_tokens=2500, model="opus", timeout=300,
     )
-    candidates = _parse_candidates(reply.get("text", ""))
+    candidates, verdicts = _parse_candidates(reply.get("text", ""))
     counts = await _validate_and_save(db, candidates, injected, session_id)
+    attribution = await _apply_attributions(db, verdicts, injections)
+    await db.commit()
 
     marker = {
         "distilled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "events": len(events), "user_messages": len(user_msgs),
         "injected_known": len(injected), "candidates": len(candidates),
         "model_version": reply.get("model_version"),
-        "cost_usd": reply.get("cost_usd"), **counts,
+        "cost_usd": reply.get("cost_usd"), "attribution": attribution, **counts,
     }
     with open(path + ".distilled", "w", encoding="utf-8") as fh:
         json.dump(marker, fh, indent=2)

@@ -110,6 +110,9 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
             "node_type": neuron.node_type if neuron else None,
             "authority_level": neuron.authority_level if neuron else None,
             "score": round(s["combined"], 4),
+            # Time-awareness: agentic facts rot — consumers should render
+            # "as of <date>" rather than assert timeless truth.
+            "as_of": str(neuron.created_at.date()) if neuron and neuron.created_at else None,
         }
         if req.include_content and neuron is not None:
             hit["content"] = neuron.content

@@ -28,6 +28,8 @@ CONFIG_PATH = os.path.expanduser("~/.corvus-mind/config.json")
 INJECTABLE_TYPES = ("lesson", "tool-profile", "context-scope")
 SESSION_START_TOP_K = 5
 PROMPT_TOP_K = 3
+PRE_TOOL_TOP_K = 2
+PRE_TOOL_MIN_SCORE = 1.12  # warn rarely: only strong matches interrupt a tool call
 MIN_PROMPT_CHARS = 15
 HTTP_TIMEOUT_S = 2.5
 
@@ -42,7 +44,9 @@ def _load_excludes() -> list:
         return []
 
 
-def _recall(query: str, top_k: int, source: str = "hook") -> list:
+def _recall(query: str, top_k: int, source: str = "hook") -> tuple:
+    """Returns (lesson-type hits, query_id) — query_id links this recall's
+    persisted telemetry row so attribution can later reward/penalize it."""
     body = json.dumps({
         "query": query[:2000], "top_k": top_k, "include_content": True,
         "source": source,
@@ -54,7 +58,7 @@ def _recall(query: str, top_k: int, source: str = "hook") -> list:
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     hits = [h for h in data.get("hits", []) if h.get("node_type") in INJECTABLE_TYPES]
-    return hits
+    return hits, data.get("query_id")
 
 
 def _already_injected(session_id: str) -> set:
@@ -75,7 +79,8 @@ def _already_injected(session_id: str) -> set:
     return seen
 
 
-def _log_injection(session_id: str, cwd: str, trigger: str, hits: list) -> None:
+def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
+                   query_id=None) -> None:
     os.makedirs(EPISODE_DIR, exist_ok=True)
     record = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
@@ -83,6 +88,7 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list) -> None:
         "session_id": session_id,
         "cwd": cwd,
         "trigger": trigger,
+        "query_id": query_id,
         "neuron_ids": [h["neuron_id"] for h in hits],
         "labels": [h["label"] for h in hits],
         "scores": [h["score"] for h in hits],
@@ -99,7 +105,8 @@ def _format_context(hits: list) -> str:
     ]
     for h in hits:
         body = (h.get("content") or h.get("summary") or "").strip()
-        lines.append(f"- [{h.get('scope') or 'global'}] {h['label']}: {body}")
+        as_of = f" (as of {h['as_of']})" if h.get("as_of") else ""
+        lines.append(f"- [{h.get('scope') or 'global'}]{as_of} {h['label']}: {body}")
     return "\n".join(lines)
 
 
@@ -126,12 +133,22 @@ def main() -> int:
         project = _project_from_cwd(cwd)
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
-        hits = _recall(query, SESSION_START_TOP_K, source="hook_session_start")
+        hits, query_id = _recall(query, SESSION_START_TOP_K, source="hook_session_start")
     elif event == "UserPromptSubmit":
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
             return 0
-        hits = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt")
+        hits, query_id = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt")
+    elif event == "PreToolUse":
+        # Pre-mistake warning: only Bash (where machine gotchas live), only
+        # high-confidence lesson hits, so it interrupts rarely and earns it.
+        if payload.get("tool_name") != "Bash":
+            return 0
+        command = ((payload.get("tool_input") or {}).get("command") or "").strip()
+        if len(command) < MIN_PROMPT_CHARS:
+            return 0
+        hits, query_id = _recall(command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool")
+        hits = [h for h in hits if h["score"] >= PRE_TOOL_MIN_SCORE]
     else:
         return 0
 
@@ -139,7 +156,7 @@ def main() -> int:
     if not hits:
         return 0
 
-    _log_injection(session_id, cwd, event, hits)
+    _log_injection(session_id, cwd, event, hits, query_id)
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": event,
