@@ -10,6 +10,9 @@ export interface TenantConfig {
   display_name: string;
   description: string;
   seed_prompts?: SeedPrompt[];
+  /** True on memory tenants (corvus-mind): enables the Memory metrics
+   *  page and hides the chat/Query Lab surfaces (no human chat there). */
+  memory_surface?: boolean;
 }
 
 export interface TenantSummary {

@@ -17,6 +17,7 @@ import WakeSettingsPanel from './components/WakeSettingsPanel'
 import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
+import MindMetricsPage from './components/MindMetricsPage'
 import EvaluationPage from './components/EvaluationPage'
 import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
@@ -76,7 +77,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -138,10 +139,10 @@ const IconClock = (
   </svg>
 );
 
-function buildNavGroups(_tenantId: string | undefined): NavGroup[] {
+function buildNavGroups(_tenantId: string | undefined, memorySurface = false): NavGroup[] {
   const groups: NavGroup[] = [];
 
-  groups.push(
+  if (!memorySurface) groups.push(
     {
       label: 'Query',
       landingKey: 'query-landing',
@@ -152,6 +153,9 @@ function buildNavGroups(_tenantId: string | undefined): NavGroup[] {
         { key: 'samples', label: 'Samples', description: 'Pre-built queries for testing and demos' },
       ],
     },
+  );
+
+  groups.push(
     {
       label: 'Autopilot',
       landingKey: 'autopilot-landing',
@@ -187,6 +191,7 @@ function buildNavGroups(_tenantId: string | undefined): NavGroup[] {
       description: 'System health, quality, and compliance metrics',
       icon: IconClipboard,
       items: [
+        ...(memorySurface ? [{ key: 'mind-metrics', label: 'Memory', description: 'Memory-organ performance, growth, and cost' }] : []),
         { key: 'dashboard', label: 'Dashboard', description: 'Aggregate statistics and system overview' },
         { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics' },
         { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
@@ -524,7 +529,7 @@ export default function App() {
 
   // Build nav groups based on tenant (memoized — page-element identity
   // depends on it, so it must be referentially stable between renders)
-  const navGroups = useMemo(() => buildNavGroups(tenantConfig?.tenant_id), [tenantConfig?.tenant_id]);
+  const navGroups = useMemo(() => buildNavGroups(tenantConfig?.tenant_id, !!tenantConfig?.memory_surface), [tenantConfig?.tenant_id, tenantConfig?.memory_surface]);
   const activeGroup = navGroups.find(g => g.landingKey === focusedKey || g.items.some(i => i.key === focusedKey))?.label;
 
   const windowTitle = useCallback((key: string): string => {
@@ -584,6 +589,7 @@ export default function App() {
       case 'fairness': return <FairnessPage />;
       case 'performance': return <PerformancePage />;
       case 'pipeline-timing': return <PipelineTimingPage />;
+      case 'mind-metrics': return <MindMetricsPage />;
       case 'knowledge-governance': return <KnowledgeGovernancePage />;
       default: {
         const group = navGroups.find(g => g.landingKey === key);

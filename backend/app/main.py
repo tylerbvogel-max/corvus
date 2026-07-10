@@ -761,12 +761,14 @@ from app.routers import recall as recall_router
 from app.routers import distill as distill_router
 from app.routers import janitor as janitor_router
 from app.routers import compile as compile_router
+from app.routers import mind_metrics as mind_metrics_router
 
 app.include_router(query.router)
 app.include_router(recall_router.router)
 app.include_router(distill_router.router)
 app.include_router(janitor_router.router)
 app.include_router(compile_router.router)
+app.include_router(mind_metrics_router.router)
 app.include_router(neurons.router)
 app.include_router(admin.router)
 app.include_router(autopilot.router)
@@ -826,6 +828,7 @@ async def get_tenant():
         "display_name": tenant.display_name,
         "description": tenant.description,
         "seed_prompts": tenant.seed_prompts,
+        "memory_surface": tenant.memory_surface_enabled,
     }
 
 
