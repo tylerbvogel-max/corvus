@@ -54,7 +54,9 @@ GROUNDING_CLAUSE = (
     "specific figure, cite it only if it appears in the knowledge provided — "
     "if it does not, say so explicitly instead of supplying one from memory. "
     "If the knowledge above does not cover part of the question, state that "
-    "plainly rather than inferring an answer."
+    "plainly rather than inferring an answer. Keep each such gap "
+    "acknowledgment to a sentence or two — do not build sections cataloguing "
+    "what is not covered."
 )
 
 INTENT_VOICE_MAP = tenant.intent_voice_map
