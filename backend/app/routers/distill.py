@@ -10,9 +10,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.routers.recall import require_memory_surface
 from app.services.distiller import MAX_SESSIONS_PER_RUN, find_ready_logs, run_distillation
 
-router = APIRouter(prefix="/distill", tags=["memory"])
+router = APIRouter(prefix="/distill", tags=["memory"],
+                   dependencies=[Depends(require_memory_surface)])
 
 
 @router.get("/status")

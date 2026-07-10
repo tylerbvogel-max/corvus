@@ -10,10 +10,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.routers.recall import require_memory_surface
 from app.services.mind_janitors import _load_lessons
 from app.services.skill_compiler import _load_manifest, find_clusters, run_compile
 
-router = APIRouter(prefix="/compile", tags=["memory"])
+router = APIRouter(prefix="/compile", tags=["memory"],
+                    dependencies=[Depends(require_memory_surface)])
 
 
 @router.get("/status")

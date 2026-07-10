@@ -10,23 +10,41 @@ clients own their node-type vocabulary and pass abstraction_type
 explicitly.
 """
 
+import json
 import time
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.services.executor import prepare_context
 from app.services.lesson_store import save_lesson
+from app.tenant import tenant
 
 router = APIRouter(tags=["memory"])
+
+
+def require_memory_surface() -> None:
+    """404 the memory endpoints on knowledge tenants (aero/flow): they
+    would write harness episodes and lessons into the wrong graph."""
+    if not tenant.memory_surface_enabled:
+        raise HTTPException(
+            status_code=404,
+            detail="memory surface disabled for this tenant (tenant.yaml memory_surface)",
+        )
 
 
 class RecallRequest(BaseModel):
     query: str = Field(min_length=1, max_length=4000)
     top_k: int = Field(default=5, ge=1, le=25)
     include_content: bool = False
+    # Telemetry: who initiated this recall (hook trigger, mcp, api) and
+    # whether to persist a Query row + firing records. Persisted recalls
+    # feed the Evaluate/Performance pages, lesson invocation counts, and
+    # the decay auditor's recalled-often signal.
+    source: str = Field(default="api", max_length=40)
+    persist: bool = True
 
 
 class RememberRequest(BaseModel):
@@ -40,7 +58,42 @@ class RememberRequest(BaseModel):
     authority_level: str = Field(default="informational", max_length=30)
 
 
-@router.post("/recall")
+async def _persist_recall(db: AsyncSession, req: RecallRequest, ctx, latency_ms: float) -> int | None:
+    """Record the recall as a Query row + firings so the Evaluate pages,
+    invocation counts, and decay signals see ambient memory traffic.
+    response_text stays NULL (nothing was executed); cost is genuinely 0."""
+    from app.models import Query
+    from app.services.neuron_service import get_system_state, record_firing
+
+    state = await get_system_state(db)
+    state.total_queries += 1
+    row = Query(
+        user_message=req.query[:4000],
+        classified_intent=ctx.intent,
+        classified_departments=json.dumps(ctx.departments),
+        classified_keywords=json.dumps(ctx.keywords),
+        selected_neuron_ids=json.dumps([s["neuron_id"] for s in ctx.neuron_scores]),
+        neuron_scores_json=json.dumps(ctx.neuron_scores),
+        stage_telemetry_json=ctx.stage_telemetry,
+        run_opus=False,
+        cost_usd=0.0,
+        model_version=f"recall:{req.source[:32]}",
+        results_json=json.dumps([{"latency_ms": latency_ms, "source": req.source[:32]}]),
+    )
+    db.add(row)
+    await db.flush()
+    for idx, score in enumerate(ctx.all_scored):
+        await record_firing(
+            db, score.neuron_id, row.id, state.global_token_counter,
+            global_query_offset=state.total_queries, score=score,
+            rank=idx + 1, prompt_position=idx if idx < req.top_k else None,
+            was_included=idx < req.top_k,
+        )
+    await db.commit()
+    return row.id
+
+
+@router.post("/recall", dependencies=[Depends(require_memory_surface)])
 async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
     """Cheap structured recall: prepare pipeline only, no LLM, no execution."""
     t0 = time.monotonic()
@@ -62,15 +115,20 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
             hit["content"] = neuron.content
         hits.append(hit)
     assert len(hits) <= req.top_k, "hit count must respect top_k"
+    latency_ms = round((time.monotonic() - t0) * 1000, 1)
+    query_id = None
+    if req.persist:
+        query_id = await _persist_recall(db, req, ctx, latency_ms)
     return {
         "intent": ctx.intent,
         "scopes": ctx.departments,
-        "latency_ms": round((time.monotonic() - t0) * 1000, 1),
+        "latency_ms": latency_ms,
+        "query_id": query_id,
         "hits": hits,
     }
 
 
-@router.post("/remember")
+@router.post("/remember", dependencies=[Depends(require_memory_surface)])
 async def remember(req: RememberRequest, db: AsyncSession = Depends(get_db)):
     """Persist an explicit lesson save through the write gate.
 

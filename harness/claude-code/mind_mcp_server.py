@@ -44,6 +44,7 @@ def recall(query: str, top_k: int = 5) -> str:
     try:
         data = _post("/recall", {
             "query": query, "top_k": top_k, "include_content": True,
+            "source": "mcp",
         })
     except OSError as exc:
         return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})

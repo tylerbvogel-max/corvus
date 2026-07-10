@@ -71,6 +71,14 @@ class TenantConfig:
         return self._yaml.get("semantic_prefilter_enabled", False)
 
     @property
+    def memory_surface_enabled(self) -> bool:
+        """Gate for the harness-memory endpoints (/recall, /remember,
+        /distill, /janitor, /compile). Off by default: on a knowledge
+        tenant like corvus-aero these endpoints would write harness
+        episodes and lessons into the wrong graph."""
+        return bool(self._yaml.get("memory_surface", False))
+
+    @property
     def regulatory_department_name(self) -> str:
         return self._yaml["regulatory_department_name"]
 

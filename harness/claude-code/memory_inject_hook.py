@@ -42,9 +42,10 @@ def _load_excludes() -> list:
         return []
 
 
-def _recall(query: str, top_k: int) -> list:
+def _recall(query: str, top_k: int, source: str = "hook") -> list:
     body = json.dumps({
         "query": query[:2000], "top_k": top_k, "include_content": True,
+        "source": source,
     }).encode("utf-8")
     req = urllib.request.Request(
         f"{BACKEND}/recall", data=body,
@@ -125,12 +126,12 @@ def main() -> int:
         project = _project_from_cwd(cwd)
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
-        hits = _recall(query, SESSION_START_TOP_K)
+        hits = _recall(query, SESSION_START_TOP_K, source="hook_session_start")
     elif event == "UserPromptSubmit":
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
             return 0
-        hits = _recall(prompt, PROMPT_TOP_K)
+        hits = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt")
     else:
         return 0
 

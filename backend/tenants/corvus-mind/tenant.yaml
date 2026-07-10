@@ -10,6 +10,9 @@ system_use_banner: >-
 # Memory recall is embedding-first: remembered lessons carry no role_key,
 # so role-driven candidate selection would never surface them.
 semantic_prefilter_enabled: true
+# Enables /recall, /remember, /distill, /janitor, /compile on this tenant
+# (they 404 on knowledge tenants — see tenant.py memory_surface_enabled).
+memory_surface: true
 regulatory_department_name: "Provenance"
 region_label: "Scope"
 reseed_threshold: 10
