@@ -388,4 +388,12 @@ async def run_janitors(
         report["staleness"] = await run_staleness(db, max_pairs=max_pairs)
     if decay:
         report["decay"] = await run_decay_audit(db)
+    # Persist for the inbox surface: borderline pairs need human judgment
+    # and would otherwise vanish with the HTTP response.
+    try:
+        with open(os.path.join(os.path.dirname(ACTIONS_LOG), "janitor-report.json"),
+                  "w", encoding="utf-8") as fh:
+            json.dump(report, fh, indent=2, default=str)
+    except OSError:
+        pass
     return report

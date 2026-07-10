@@ -18,6 +18,9 @@ import Explorer from './components/Explorer'
 import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
 import MindMetricsPage from './components/MindMetricsPage'
+import MindSessionsPage from './components/MindSessionsPage'
+import MindInboxPage from './components/MindInboxPage'
+import MindSkillsPage from './components/MindSkillsPage'
 import EvaluationPage from './components/EvaluationPage'
 import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
@@ -77,7 +80,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -191,7 +194,12 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'System health, quality, and compliance metrics',
       icon: IconClipboard,
       items: [
-        ...(memorySurface ? [{ key: 'mind-metrics', label: 'Memory', description: 'Memory-organ performance, growth, and cost' }] : []),
+        ...(memorySurface ? [
+          { key: 'mind-metrics', label: 'Memory', description: 'Memory-organ performance, trust, growth, and cost' },
+          { key: 'mind-sessions', label: 'Sessions', description: 'Episode logs: the memory\'s inputs and their distillation' },
+          { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
+          { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
+        ] : []),
         { key: 'dashboard', label: 'Dashboard', description: 'Aggregate statistics and system overview' },
         { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics' },
         { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
@@ -214,6 +222,14 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
     },
   );
 
+  if (memorySurface) {
+    // Memory tenants: hide chat-era and knowledge-tenant-only surfaces.
+    const hidden = new Set(['autopilot', 'emergent-queue', 'document-ingest',
+      'engrams', 'layer-heatmap', 'agents', 'knowledge-governance', 'quality',
+      'fairness', 'evaluation', 'eval-runs']);
+    for (const g of groups) g.items = g.items.filter(i => !hidden.has(i.key));
+    return groups.filter(g => g.items.length > 0);
+  }
   return groups;
 }
 
@@ -307,6 +323,15 @@ export default function App() {
       fetchTenantConfig().then(setTenantConfig);
     }
   }, [authStatus]);
+
+  // Memory tenants land on the Memory dashboard, not the chat hero.
+  const landedRef = useRef(false);
+  useEffect(() => {
+    if (tenantConfig?.memory_surface && !landedRef.current) {
+      landedRef.current = true;
+      openWindow('mind-metrics');
+    }
+  }, [tenantConfig?.memory_surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayName = tenantConfig?.display_name ?? 'Corvus';
 
@@ -590,6 +615,9 @@ export default function App() {
       case 'performance': return <PerformancePage />;
       case 'pipeline-timing': return <PipelineTimingPage />;
       case 'mind-metrics': return <MindMetricsPage />;
+      case 'mind-sessions': return <MindSessionsPage />;
+      case 'mind-inbox': return <MindInboxPage />;
+      case 'mind-skills': return <MindSkillsPage />;
       case 'knowledge-governance': return <KnowledgeGovernancePage />;
       default: {
         const group = navGroups.find(g => g.landingKey === key);

@@ -202,6 +202,157 @@ async def injection_metrics() -> dict:
             "top_injected": [{"label": k, "count": v} for k, v in top]}
 
 
+def sessions_report() -> list[dict]:
+    """Episode-log browser data: one row per captured/backfilled session."""
+    rows: list[dict] = []
+    if not os.path.isdir(EPISODE_DIR):
+        return rows
+    for name in sorted(os.listdir(EPISODE_DIR)):
+        if not name.endswith(".jsonl") or name == "janitor-actions.jsonl":
+            continue
+        path = os.path.join(EPISODE_DIR, name)
+        stats = {"events": 0, "errors": 0, "injections": 0}
+        project = None
+        try:
+            with open(path, encoding="utf-8") as fh:
+                for line in fh:
+                    stats["events"] += 1
+                    if '"Injection"' in line:
+                        stats["injections"] += 1
+                    elif '"ok": false' in line:
+                        stats["errors"] += 1
+                    if project is None and '"project"' in line:
+                        try:
+                            project = json.loads(line).get("project")
+                        except ValueError:
+                            pass
+        except OSError:
+            continue
+        marker = None
+        try:
+            with open(path + ".distilled", encoding="utf-8") as fh:
+                m = json.load(fh)
+            marker = {"saved": m.get("saved"), "candidates": m.get("candidates"),
+                      "cost_usd": m.get("cost_usd"),
+                      "neuron_ids": m.get("neuron_ids", []),
+                      "attribution": m.get("attribution")}
+        except (OSError, ValueError):
+            pass
+        rows.append({"session": name.removesuffix(".jsonl"), "project": project,
+                     **stats, "distilled": marker,
+                     "mtime": datetime.fromtimestamp(
+                         os.path.getmtime(path), tz=timezone.utc).isoformat(timespec="seconds")})
+    rows.sort(key=lambda r: r["mtime"], reverse=True)
+    return rows[:150]
+
+
+def _janitor_trust_events() -> dict[int, list[dict]]:
+    """Per-neuron utility-changing janitor/attribution events from the log."""
+    out: dict[int, list[dict]] = {}
+    try:
+        with open(ACTIONS_LOG, encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                nid = rec.get("neuron_id") or rec.get("canonical_id")
+                new_u = rec.get("new_utility")
+                if nid is None or new_u is None:
+                    continue
+                out.setdefault(int(nid), []).append({
+                    "ts": rec.get("ts"), "u": float(new_u),
+                    "kind": rec.get("action", "janitor")})
+    except OSError:
+        pass
+    return out
+
+
+async def trust_report(db: AsyncSession) -> list[dict]:
+    """Per-lesson trust trajectory: creation baseline + every utility move."""
+    lessons = (await db.execute(
+        select(Neuron).where(Neuron.node_type.in_(LESSON_TYPES),
+                             Neuron.is_active.is_(True))
+    )).scalars().all()
+    events = (await db.execute(
+        select(SynapticLearningEvent)
+        .where(SynapticLearningEvent.neuron_id.in_([n.id for n in lessons] or [0]))
+    )).scalars().all()
+    by_neuron: dict[int, list[dict]] = {}
+    for e in events:
+        by_neuron.setdefault(e.neuron_id, []).append({
+            "ts": e.created_at.isoformat() if e.created_at else None,
+            "u": round(e.new_avg_utility, 3), "kind": f"synaptic.{e.event_type}"})
+    janitor_events = _janitor_trust_events()
+    out = []
+    for n in lessons:
+        points = [{"ts": n.created_at.isoformat() if n.created_at else None,
+                   "u": 0.5, "kind": "created"}]
+        points += by_neuron.get(n.id, []) + janitor_events.get(n.id, [])
+        points.sort(key=lambda p: p["ts"] or "")
+        points.append({"ts": None, "u": round(n.avg_utility or 0.5, 3), "kind": "now"})
+        out.append({"id": n.id, "label": n.label, "scope": n.department,
+                    "invocations": n.invocations or 0,
+                    "utility": round(n.avg_utility or 0.5, 3), "points": points})
+    out.sort(key=lambda r: -r["utility"])
+    return out
+
+
+async def inbox_report(db: AsyncSession) -> dict:
+    """Everything awaiting human judgment, in one place."""
+    from app.models import AutopilotProposal, IntegrityFinding
+    findings = (await db.execute(
+        select(IntegrityFinding).where(IntegrityFinding.status == "open")
+        .order_by(IntegrityFinding.id.desc()).limit(50)
+    )).scalars().all()
+    proposals = (await db.execute(
+        select(AutopilotProposal).where(AutopilotProposal.state == "proposed")
+        .order_by(AutopilotProposal.id.desc()).limit(50)
+    )).scalars().all()
+    borderline = []
+    try:
+        with open(os.path.join(EPISODE_DIR, "janitor-report.json"), encoding="utf-8") as fh:
+            borderline = (json.load(fh).get("consolidation") or {}).get("borderline", [])
+    except (OSError, ValueError):
+        pass
+    return {
+        "findings": [{"id": f.id, "type": f.finding_type,
+                      "description": (f.description or "")[:300],
+                      "neuron_ids": json.loads(f.neuron_ids_json or "[]")}
+                     for f in findings],
+        "proposals": [{"id": p.id, "source": p.gap_source,
+                       "description": (p.gap_description or "")[:200]}
+                      for p in proposals],
+        "borderline_pairs": borderline,
+    }
+
+
+async def skills_report(db: AsyncSession) -> list[dict]:
+    """Compiled-skill inventory with source health and rendered body."""
+    try:
+        with open(MANIFEST_PATH, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+    except (OSError, ValueError):
+        manifest = []
+    out = []
+    for entry in manifest:
+        sources = []
+        for nid in entry.get("sources", []):
+            n = await db.get(Neuron, nid)
+            sources.append({"id": nid,
+                            "label": n.label if n else "(missing)",
+                            "healthy": bool(n and n.is_active and n.superseded_by is None)})
+        body = None
+        try:
+            with open(entry.get("path", ""), encoding="utf-8") as fh:
+                body = fh.read()[:8000]
+        except OSError:
+            pass
+        out.append({**entry, "source_health": sources, "body": body,
+                    "stale": any(not s["healthy"] for s in sources)})
+    return out
+
+
 async def collect_all(db: AsyncSession) -> dict:
     """The full /metrics/mind payload."""
     report = {
