@@ -1510,8 +1510,16 @@ async def execute_query(
     if ctx is None and ctx_by_cfg:
         ctx = next(iter(ctx_by_cfg.values()))
 
-    # Create query record early (before execution)
-    query = _create_query_record(user_message, ctx, needs_neurons=needs_neurons, slot_specs=slots, primary_prompt="", classify_result=classify_result)
+    # Create query record early (before execution). primary_prompt is the
+    # ground truth later evals judge against (query.py evaluate_query) — it
+    # must be the context the primary answer actually grounded on, including
+    # a drift-gate-reused session block. Was "" from 2026-04 to 2026-07-10,
+    # silently forcing every eval onto the fresh-prep fallback.
+    query = _create_query_record(
+        user_message, ctx, needs_neurons=needs_neurons, slot_specs=slots,
+        primary_prompt=(ctx.system_prompt if ctx else ""),
+        classify_result=classify_result,
+    )
     db.add(query)
     await db.flush()
 
