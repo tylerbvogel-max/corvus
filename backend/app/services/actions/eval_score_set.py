@@ -22,13 +22,15 @@ from app.models import Action, EvalScore
 
 
 class EvalScoreRow(BaseModel):
+    # Scores are 1-5 in half steps: the unrounded mean of the counterbalanced
+    # judge passes (each pass scores integer 1-5). Migration 019.
     answer_label: str = Field(..., max_length=8)
     answer_mode: str = Field(..., max_length=80)
-    accuracy: int = Field(..., ge=1, le=5)
-    completeness: int = Field(..., ge=1, le=5)
-    clarity: int = Field(..., ge=1, le=5)
-    faithfulness: int = Field(..., ge=1, le=5)
-    overall: int = Field(..., ge=1, le=5)
+    accuracy: float = Field(..., ge=1, le=5)
+    completeness: float = Field(..., ge=1, le=5)
+    clarity: float = Field(..., ge=1, le=5)
+    faithfulness: float = Field(..., ge=1, le=5)
+    overall: float = Field(..., ge=1, le=5)
 
 
 class EvalScoreSetInput(BaseModel):

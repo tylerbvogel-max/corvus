@@ -818,6 +818,65 @@ def _build_eval_prompts(
     return eval_system, eval_prompt, answer_map
 
 
+# Anchored judge rubric. The old scale ("1=poor, 5=excellent" with one-line
+# dimension names) left every mid score undefined — a 3/5 could mean a real
+# defect, a shrug, or two passes averaging (2,4). Anchors pin what each score
+# means so dimension scores are stable across runs and diagnosable.
+# Honest gap acknowledgment must NOT be scored as unfaithfulness: the answer
+# prompt (prompt_assembler GROUNDING_CLAUSE) instructs models to flag points
+# the knowledge pack doesn't cover instead of inferring, so the judge must
+# reward that under Faithfulness/Accuracy and account for the actual missing
+# coverage under Completeness only — otherwise the two prompts fight.
+_RUBRIC_SHARED = (
+    "- Completeness — covers the full question:\n"
+    "  5=every part and sub-question addressed; 4=one minor aspect missing; "
+    "3=a notable part of the question left unaddressed; 2=answers only part of "
+    "the question; 1=misses the point of the question\n"
+    "- Clarity — structure and readability:\n"
+    "  5=well-organized and skimmable with no filler; 4=minor structural "
+    "issues; 3=understandable but disorganized or padded; 2=hard to follow; "
+    "1=confusing or incoherent\n"
+    "- Overall — holistic quality: weigh the dimensions above; an answer with "
+    "a misleading factual error or a fabricated authority scores at most 2 "
+    "here regardless of style\n"
+)
+
+_RUBRIC_GROUNDED = (
+    "Score each answer on these dimensions. Scores are integers 1 to 5 — use these anchors:\n"
+    "- Accuracy — factual correctness against the domain knowledge above:\n"
+    "  5=every checkable claim matches the domain knowledge; 4=one minor "
+    "imprecision; 3=a few wrong specifics (numbers, names, clause references); "
+    "2=a substantive error that would mislead the reader; 1=largely incorrect\n"
+    "- Faithfulness — grounding in the domain knowledge above:\n"
+    "  5=every claim traceable to the domain knowledge; 4=one minor "
+    "untraceable embellishment; 3=a few unsupported specifics; 2=substantial "
+    "content not in the domain knowledge; 1=mostly ungrounded or fabricated\n"
+    + _RUBRIC_SHARED +
+    "An answer that explicitly states the provided knowledge does not cover a "
+    "point is MORE faithful than one that fills the gap from memory: never "
+    "penalize honest gap acknowledgment under Faithfulness or Accuracy — "
+    "reflect actual missing coverage under Completeness only.\n"
+)
+
+_RUBRIC_BLIND = (
+    "Score each answer on these dimensions. Scores are integers 1 to 5 — use these anchors:\n"
+    "- Accuracy — factual correctness:\n"
+    "  5=every checkable claim is correct; 4=one minor imprecision; 3=a few "
+    "wrong specifics (numbers, names, clause references); 2=a substantive "
+    "error that would mislead the reader; 1=largely incorrect\n"
+    "- Faithfulness — no fabrication or overclaiming:\n"
+    "  5=no invented sources, standards, or specifics, and uncertainty is "
+    "acknowledged; 4=one minor overclaimed detail; 3=a few specifics stated "
+    "with unwarranted certainty; 2=fabricated or unverifiable authority "
+    "(citations, clause numbers) presented as fact; 1=largely fabricated\n"
+    + _RUBRIC_SHARED +
+    "An answer that explicitly acknowledges uncertainty or missing "
+    "information is MORE faithful than one that fills the gap with confident "
+    "invention — never penalize honest gap acknowledgment under Faithfulness "
+    "or Accuracy.\n"
+)
+
+
 def _eval_system_prompt(domain_knowledge: str, score_template: list[str]) -> str:
     """Judge system prompt (optionally grounded in domain facts). The answer
     identities must stay out of here — see _build_eval_prompts."""
@@ -830,7 +889,8 @@ def _eval_system_prompt(domain_knowledge: str, score_template: list[str]) -> str
         + ",\n".join(score_template) + "\n"
         "],\n"
         '"winner": "<letter or tie>",\n'
-        '"verdict": "<2-4 sentence comparison explaining your reasoning>"\n'
+        '"verdict": "<2-4 sentence comparison explaining your reasoning; for any '
+        'score of 3 or below, name the specific claim or omission that caused it>"\n'
         "}\n"
         "```\n\n"
         "No other text outside the JSON block. Use the answer labels (A, B, etc.) in your verdict."
@@ -842,23 +902,13 @@ def _eval_system_prompt(domain_knowledge: str, score_template: list[str]) -> str
             "Use the following domain facts to assess accuracy and faithfulness:\n\n"
             + domain_knowledge + "\n\n"
             "## Evaluation Instructions\n"
-            "Score each answer on these dimensions (1=poor, 5=excellent):\n"
-            "- Accuracy: aligns with the domain knowledge above; factually correct\n"
-            "- Completeness: covers the full question\n"
-            "- Clarity: well-structured, easy to understand\n"
-            "- Faithfulness: no hallucinations or claims unsupported by domain knowledge (5=fully faithful)\n"
-            "- Overall: holistic quality\n\n"
+            + _RUBRIC_GROUNDED + "\n"
             + output_contract
         )
     return (
         "You are a blind evaluator comparing AI responses. You have NO prior context — "
         "only the user's question and the answers provided.\n\n"
-        "Score each answer on these dimensions (1=poor, 5=excellent):\n"
-        "- Accuracy: factual correctness\n"
-        "- Completeness: covers the full question\n"
-        "- Clarity: well-structured, easy to understand\n"
-        "- Faithfulness: no hallucinations or unsupported claims (5=fully faithful)\n"
-        "- Overall: holistic quality\n\n"
+        + _RUBRIC_BLIND + "\n"
         + output_contract
     )
 
@@ -928,6 +978,11 @@ def _reconcile_eval_passes(n: int, fwd: dict, rev: dict) -> tuple[list[dict], st
     forward and reversed presentation orders, and declare a winner ONLY when
     both orderings pick the same underlying answer — otherwise tie.
 
+    Merged dimension scores are the UNROUNDED two-pass mean (half steps:
+    3.5 = the passes said 3 and 4). Rounding back to integers hid pass
+    disagreement — a (4,5) split displayed as an uncontested 5 while the
+    verdict criticized the answer (observed on query 590, 2026-07-10).
+
     Returns (score rows in original-order letters, winner, downgraded) where
     downgraded=True means the two orderings disagreed on a winner.
     """
@@ -942,8 +997,7 @@ def _reconcile_eval_passes(n: int, fwd: dict, rev: dict) -> tuple[list[dict], st
         passes = [s for s in (fwd_by_idx.get(idx), rev_by_idx.get(idx)) if s is not None]
         for dim in _EVAL_DIMS:
             vals = [_clamp(s.get(dim, 3)) for s in passes]
-            # Half-up rounding of the two-pass mean, back onto the 1-5 scale
-            row[dim] = _clamp(int(sum(vals) / len(vals) + 0.5)) if vals else 3
+            row[dim] = sum(vals) / len(vals) if vals else 3.0
         merged.append(row)
 
     w_fwd = _winner_index(fwd["winner"], n, reversed_order=False)
@@ -999,14 +1053,16 @@ async def _save_eval_scores(
         letter = ps.get("answer", "?")
         slot_match = answer_lookup.get(letter)
         mode = slot_match.mode if slot_match else letter
+        # _clamp_score (not _clamp): merged rows carry half-step means and
+        # int() truncation here would silently destroy them (3.5 -> 3).
         row_dict = {
             "answer_label": letter,
             "answer_mode": mode,
-            "accuracy": _clamp(ps.get("accuracy", 3)),
-            "completeness": _clamp(ps.get("completeness", 3)),
-            "clarity": _clamp(ps.get("clarity", 3)),
-            "faithfulness": _clamp(ps.get("faithfulness", 3)),
-            "overall": _clamp(ps.get("overall", 3)),
+            "accuracy": _clamp_score(ps.get("accuracy", 3)),
+            "completeness": _clamp_score(ps.get("completeness", 3)),
+            "clarity": _clamp_score(ps.get("clarity", 3)),
+            "faithfulness": _clamp_score(ps.get("faithfulness", 3)),
+            "overall": _clamp_score(ps.get("overall", 3)),
         }
         bus_rows.append(row_dict)
         view_rows.append(EvalScoreOut(**row_dict))
@@ -1118,6 +1174,14 @@ def _clamp(val: int | float, lo: int = 1, hi: int = 5) -> int:
         return max(lo, min(hi, int(val)))
     except (TypeError, ValueError):
         return 3
+
+
+def _clamp_score(val: int | float, lo: float = 1.0, hi: float = 5.0) -> float:
+    """Clamp a half-step-capable score without integer truncation."""
+    try:
+        return max(lo, min(hi, float(val)))
+    except (TypeError, ValueError):
+        return 3.0
 
 
 @router.get("/eval-scores", response_model=list[EvalScoreSummary])

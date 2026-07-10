@@ -343,11 +343,14 @@ class EvalScore(Base):
     eval_model: Mapped[str] = mapped_column(String(50), nullable=False)
     answer_mode: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. "haiku_neuron"
     answer_label: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g. "A"
-    accuracy: Mapped[int] = mapped_column(Integer, nullable=False)      # 1-5
-    completeness: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5
-    clarity: Mapped[int] = mapped_column(Integer, nullable=False)       # 1-5
-    faithfulness: Mapped[int] = mapped_column(Integer, nullable=False)  # 1-5 (5 = no hallucinations)
-    overall: Mapped[int] = mapped_column(Integer, nullable=False)       # 1-5
+    # 1-5 in half steps: each counterbalanced judge pass scores integer 1-5;
+    # the stored value is the unrounded mean across passes (e.g. 3.5 = one
+    # pass said 3, the other 4). Migration 019.
+    accuracy: Mapped[float] = mapped_column(Float, nullable=False)
+    completeness: Mapped[float] = mapped_column(Float, nullable=False)
+    clarity: Mapped[float] = mapped_column(Float, nullable=False)
+    faithfulness: Mapped[float] = mapped_column(Float, nullable=False)  # 5 = no hallucinations
+    overall: Mapped[float] = mapped_column(Float, nullable=False)
     verdict: Mapped[str | None] = mapped_column(Text, nullable=True)    # free-text verdict
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now()

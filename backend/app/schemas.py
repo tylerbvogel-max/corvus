@@ -174,11 +174,12 @@ class EvalRequest(BaseModel):
 class EvalScoreOut(BaseModel):
     answer_label: str
     answer_mode: str
-    accuracy: int
-    completeness: int
-    clarity: int
-    faithfulness: int
-    overall: int
+    # 1-5 in half steps (unrounded mean of counterbalanced judge passes)
+    accuracy: float
+    completeness: float
+    clarity: float
+    faithfulness: float
+    overall: float
 
 
 class SynapticLearningOut(BaseModel):
@@ -233,11 +234,12 @@ class EvalScoreSummary(BaseModel):
     eval_model: str
     answer_mode: str
     answer_label: str
-    accuracy: int
-    completeness: int
-    clarity: int
-    faithfulness: int
-    overall: int
+    # 1-5 in half steps (unrounded mean of counterbalanced judge passes)
+    accuracy: float
+    completeness: float
+    clarity: float
+    faithfulness: float
+    overall: float
     created_at: str | None
 
 

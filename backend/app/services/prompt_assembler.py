@@ -39,8 +39,23 @@ CLOSING_INSTRUCTION_MAP = MappingProxyType({
     "it_security": "Answer with: (1) Recommended control or mitigation, (2) Applicable NIST 800-171 control family (e.g., SC-7, AC-3), (3) Implementation guidance (tools, config, procedure), (4) Assessment method for audit readiness.",
     "executive": "Answer with: (1) Strategic recommendation with business rationale, (2) Key financial or risk drivers, (3) Implementation approach and timeline, (4) Success metrics or KPIs.",
     "regulatory": "Answer with: (1) Regulatory requirement(s) with specific clause numbers, (2) Applicability statement (when, to whom, under what conditions), (3) Compliance action or proof needed, (4) Audit/enforcement risk if non-compliant.",
-    "general_query": "Use the above knowledge to directly answer the user's question. Provide specific, actionable guidance with concrete examples and code where applicable. State your confidence level. If the knowledge above does not cover this question, say so rather than inferring.",
+    "general_query": "Use the above knowledge to directly answer the user's question. Provide specific, actionable guidance with concrete examples and code where applicable.",
 })
+
+# Unconditional grounding clause appended to EVERY closing instruction.
+# The structured sections above demand specific references ("(2) Referenced
+# standard with section number...") — without this escape hatch, a model whose
+# context pack lacks the reference is forced to fabricate one from memory to
+# satisfy the structure, the diagnosed driver of low faithfulness scores on
+# structured intents (2026-07-10). Previously this protection existed only for
+# general_query and low-confidence (max_relevance < 0.5) queries.
+GROUNDING_CLAUSE = (
+    " Where the structure above calls for a standard, regulation, clause, or "
+    "specific figure, cite it only if it appears in the knowledge provided — "
+    "if it does not, say so explicitly instead of supplying one from memory. "
+    "If the knowledge above does not cover part of the question, state that "
+    "plainly rather than inferring an answer."
+)
 
 INTENT_VOICE_MAP = tenant.intent_voice_map
 
@@ -297,21 +312,21 @@ def _append_citation_instruction(
 
 
 def _get_closing_instruction(intent: str, max_relevance: float) -> str:
-    """Get intent-specific closing instruction, with low-confidence calibration if needed."""
+    """Intent-specific closing instruction + the unconditional GROUNDING_CLAUSE,
+    plus an explicit confidence statement when retrieval confidence is low."""
+    assert isinstance(intent, str), "intent must be a string"
     intent_lower = intent.lower()
 
-    # Match intent prefix to find closing instruction
-    for key, instruction in CLOSING_INSTRUCTION_MAP.items():
-        if key in intent_lower:
-            # Append low-confidence note if max relevance is below threshold
-            if max_relevance < 0.5:
-                instruction += " State your confidence level. If the knowledge above does not cover this question, say so rather than inferring."
-            return instruction
-
-    # Fallback to general_query
+    # Match intent prefix, falling back to general_query
     instruction = CLOSING_INSTRUCTION_MAP["general_query"]
+    for key, candidate in CLOSING_INSTRUCTION_MAP.items():
+        if key in intent_lower:
+            instruction = candidate
+            break
+
+    instruction += GROUNDING_CLAUSE
     if max_relevance < 0.5:
-        instruction += " State your confidence level. If the knowledge above does not cover this question, say so rather than inferring."
+        instruction += " State your confidence level."
     return instruction
 
 

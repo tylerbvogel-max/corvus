@@ -82,12 +82,14 @@ def test_both_ties_stay_tie_without_downgrade_note():
     assert winner == "tie" and downgraded is False
 
 
-def test_scores_average_half_up_across_orderings():
-    # Slot 0: forward accuracy 4 (letter A), reversed accuracy 5 (letter B)
+def test_scores_average_to_half_steps_across_orderings():
+    # Slot 0: forward accuracy 4 (letter A), reversed accuracy 5 (letter B).
+    # The mean is kept UNROUNDED (half steps) so pass disagreement stays
+    # visible instead of rounding away (query 590 regression, 2026-07-10).
     fwd = _pass([_row("A", accuracy=4), _row("B", accuracy=2)], None)
     rev = _pass([_row("A", accuracy=2), _row("B", accuracy=5)], None)
     merged, winner, _ = _reconcile_eval_passes(2, fwd, rev)
-    assert merged[0]["accuracy"] == 5, "mean 4.5 rounds half-up to 5"
+    assert merged[0]["accuracy"] == 4.5, "mean of (4,5) stays 4.5 — no rounding"
     assert merged[1]["accuracy"] == 2
     assert winner is None, "no winner reported by either pass -> None (legacy shape)"
 

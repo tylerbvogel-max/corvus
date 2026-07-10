@@ -789,14 +789,35 @@ async def _self_evaluate(
     #   and uses the raw text as the verdict. This is safe but inflates mid-range scores. If the
     #   LLM returns scores outside 1-5, they are clamped by _clamp(). Markdown-wrapped JSON
     #   (with ```) is handled by the parser's code-fence extraction logic.
+    # Anchored to the same calibration as the Query Lab judge rubric
+    # (routers/query.py _RUBRIC_BLIND, single-response wording) so autopilot
+    # scores and Query Lab scores in eval_scores stay comparable.
     system_prompt = (
-        "You evaluate AI responses for quality. Score this response on these dimensions "
-        "(1=poor, 5=excellent):\n"
-        "- Accuracy: factual correctness\n"
-        "- Completeness: covers the full question\n"
-        "- Clarity: well-structured, easy to understand\n"
-        "- Faithfulness: no hallucinations (5=fully faithful)\n"
-        "- Overall: holistic quality\n\n"
+        "You evaluate AI responses for quality. Score this response on these "
+        "dimensions. Scores are integers 1 to 5 — use these anchors:\n"
+        "- Accuracy — factual correctness: 5=every checkable claim is correct; "
+        "4=one minor imprecision; 3=a few wrong specifics (numbers, names, "
+        "clause references); 2=a substantive error that would mislead the "
+        "reader; 1=largely incorrect\n"
+        "- Completeness — covers the full question: 5=every part and "
+        "sub-question addressed; 4=one minor aspect missing; 3=a notable part "
+        "of the question left unaddressed; 2=answers only part of the "
+        "question; 1=misses the point\n"
+        "- Clarity — structure and readability: 5=well-organized and "
+        "skimmable with no filler; 4=minor structural issues; "
+        "3=understandable but disorganized or padded; 2=hard to follow; "
+        "1=confusing or incoherent\n"
+        "- Faithfulness — no fabrication or overclaiming: 5=no invented "
+        "sources, standards, or specifics, and uncertainty is acknowledged; "
+        "4=one minor overclaimed detail; 3=a few specifics stated with "
+        "unwarranted certainty; 2=fabricated or unverifiable authority "
+        "(citations, clause numbers) presented as fact; 1=largely fabricated\n"
+        "- Overall — holistic quality: weigh the dimensions above; a "
+        "misleading error or fabricated authority caps this at 2\n"
+        "An answer that explicitly acknowledges uncertainty or missing "
+        "information is MORE faithful than one that fills the gap with "
+        "confident invention — never penalize honest gap acknowledgment "
+        "under Faithfulness or Accuracy.\n\n"
         "Respond with EXACTLY this JSON format:\n"
         '```json\n'
         '{"accuracy": <1-5>, "completeness": <1-5>, "clarity": <1-5>, '
