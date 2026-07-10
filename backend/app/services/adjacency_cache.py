@@ -19,7 +19,13 @@ import threading
 import numpy as np
 
 # Edge-type codes for the vectorized CSR view (must match _compute_edge_activation).
-_ETYPE_CODE = {"stellate": 1, "instantiates": 2}  # everything else (pyramidal/regulatory) -> 0
+# Code 3 = memory-semantics edges (supersedes / scoped-by / evidence-link):
+# provenance and temporal links, NEVER activation conduits — a supersedes
+# edge boosting the node it demotes would be exactly backwards.
+_ETYPE_CODE = {
+    "stellate": 1, "instantiates": 2,
+    "supersedes": 3, "scoped-by": 3, "evidence-link": 3,
+}  # everything else (pyramidal/regulatory) -> 0
 
 
 class _AdjacencyCache:

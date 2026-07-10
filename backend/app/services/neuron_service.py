@@ -648,6 +648,8 @@ def _compute_edge_activation(
 ) -> float | None:
     """Return activation for an edge, or None if the edge should be skipped."""
     floor = settings.spread_min_activation if min_activation is None else min_activation
+    if edge_type in ("supersedes", "scoped-by", "evidence-link"):
+        return None  # memory-semantics edges carry provenance, not activation
     if edge_type == "stellate":
         decay = settings.spread_stellate_decay
     elif edge_type == "instantiates":
@@ -861,6 +863,9 @@ def _spread_edge_gates(csr: dict) -> tuple:
         etype == 0, settings.spread_pyramidal_min_weight, settings.spread_min_edge_weight,
     ).astype(np.float64)
     weight_ok = csr["weight"] >= np.maximum(min_w, float(settings.spread_min_edge_weight))
+    # Memory-semantics edges (code 3: supersedes/scoped-by/evidence-link)
+    # never conduct activation — mirrors _compute_edge_activation.
+    weight_ok = weight_ok & (etype != 3)
     return decay, weight_ok
 
 

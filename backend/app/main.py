@@ -757,7 +757,16 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+from app.routers import recall as recall_router
+from app.routers import distill as distill_router
+from app.routers import janitor as janitor_router
+from app.routers import compile as compile_router
+
 app.include_router(query.router)
+app.include_router(recall_router.router)
+app.include_router(distill_router.router)
+app.include_router(janitor_router.router)
+app.include_router(compile_router.router)
 app.include_router(neurons.router)
 app.include_router(admin.router)
 app.include_router(autopilot.router)

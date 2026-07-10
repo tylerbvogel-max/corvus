@@ -1,0 +1,10 @@
+[Unit]
+Description=Corvus Mind distiller timer
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

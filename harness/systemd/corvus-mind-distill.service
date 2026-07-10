@@ -1,0 +1,6 @@
+[Unit]
+Description=Corvus Mind episode distiller (batch, Opus via Claude CLI)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s --max-time 900 -X POST http://localhost:8005/distill/run

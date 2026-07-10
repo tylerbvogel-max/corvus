@@ -1,0 +1,6 @@
+[Unit]
+Description=Corvus Mind memory janitors (consolidate / staleness / decay)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s --max-time 600 -X POST http://localhost:8005/janitor/run

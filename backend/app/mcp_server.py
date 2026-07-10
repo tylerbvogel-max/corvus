@@ -141,7 +141,7 @@ async def query_graph(
             "neurons_activated": ctx.neurons_activated,
             "departments": ctx.departments,
             "intent": ctx.intent,
-            "recall_mode": mode,
+            "recall_mode": "cheap",
             "classify_cost_usd": ctx.classify_cost_usd,
             "neuron_scores": ctx.neuron_scores[:10],  # Top 10 for brevity
         }

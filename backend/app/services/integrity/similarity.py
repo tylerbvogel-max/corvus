@@ -62,6 +62,10 @@ async def load_neuron_embeddings(
     elif scope.startswith("layer:"):
         layer_num = int(scope.split(":", 1)[1])
         stmt = stmt.where(Neuron.layer == layer_num)
+    elif scope.startswith("node_type:"):
+        types = [t.strip() for t in scope.split(":", 1)[1].split(",") if t.strip()]
+        assert len(types) > 0, "node_type scope requires at least one type"
+        stmt = stmt.where(Neuron.node_type.in_(types))
     # else: global — no additional filter
 
     stmt = stmt.limit(max_neurons)

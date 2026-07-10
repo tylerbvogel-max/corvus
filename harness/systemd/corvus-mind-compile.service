@@ -1,0 +1,6 @@
+[Unit]
+Description=Corvus Mind skill compiler (lesson clusters -> ~/.claude/skills)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s --max-time 900 -X POST http://localhost:8005/compile/run
