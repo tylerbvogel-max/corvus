@@ -326,6 +326,11 @@ export default function NeuronUniverse() {
       renderer.setSize(w, h); composer.setSize(w, h);
     }
     window.addEventListener('resize', onResize);
+    // The app's floating sub-windows resize without firing a window
+    // resize event — observe the mount element so the canvas follows
+    // the window chrome when the user drags its edges.
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(mount);
 
     // Imperative API for React control effects.
     engineRef.current = {
@@ -378,6 +383,7 @@ export default function NeuronUniverse() {
       dispose() {
         cancelAnimationFrame(raf);
         window.removeEventListener('resize', onResize);
+        resizeObserver.disconnect();
         renderer.domElement.removeEventListener('pointermove', onMove);
         renderer.domElement.removeEventListener('click', onClick);
         if (sim) sim.stop();
