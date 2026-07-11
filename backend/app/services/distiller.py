@@ -34,7 +34,16 @@ MAX_EVENTS_IN_PROMPT = 100
 MAX_USER_MESSAGES = 25
 MAX_USER_MESSAGE_CHARS = 500
 MAX_PROMPT_CHARS = 24_000
-MAX_CANDIDATES_PER_SESSION = 5
+MAX_CANDIDATES_PER_SESSION = 5   # floor; rich sessions earn more
+MAX_CANDIDATES_CEILING = 12
+
+
+def candidate_cap(event_count: int) -> int:
+    """Rich sessions earn a bigger lesson budget (floor 5, +1 per 30
+    events, ceiling 12) — a 900-event session should not be shortchanged
+    to the same 5 lessons as a 20-event one."""
+    assert event_count >= 0, "event_count must be non-negative"
+    return min(MAX_CANDIDATES_CEILING, MAX_CANDIDATES_PER_SESSION + event_count // 30)
 VALID_SCOPES = ("Harness", "Environment", "Projects", "User")
 VALID_NODE_TYPES = ("lesson", "tool-profile", "context-scope")
 
@@ -216,13 +225,14 @@ def _parse_candidates(text: str) -> tuple[list[dict], list[dict]]:
 
 async def _validate_and_save(
     db: AsyncSession, candidates: list[dict], injected: list[str], session_id: str,
+    project: str | None = None, cap_events: int = 0,
 ) -> dict:
     """Gate candidates (schema, injected-usage, dupes, instruction-shaped)
     and persist survivors through the write gate."""
     counts = {"saved": 0, "usage_skipped": 0, "duplicate": 0, "flagged": 0, "invalid": 0}
     saved_ids: list[int] = []
     injected_cf = [x.casefold() for x in injected]
-    for c in candidates[:MAX_CANDIDATES_PER_SESSION]:
+    for c in candidates[:candidate_cap(cap_events)]:
         label = str(c.get("label", "")).strip()
         lesson = str(c.get("lesson", "")).strip()
         evidence = str(c.get("evidence", "")).strip()
@@ -245,6 +255,7 @@ async def _validate_and_save(
             db, lesson=lesson, evidence=f"{evidence} [session:{session_id}]",
             label=label, scope=scope, node_type=node_type,
             source_origin="distiller", gap_source="distiller",
+            project=project if scope == "Projects" else None,
         )
         counts["saved"] += 1
         if result.get("neuron_id"):
@@ -327,14 +338,23 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
 
     # .replace, not .format — the prompt's JSON schema braces are literal
     system_prompt = DISTILL_SYSTEM_PROMPT.replace(
-        "{max_candidates}", str(MAX_CANDIDATES_PER_SESSION)
+        "{max_candidates}", str(candidate_cap(len(events)))
     )
     reply = await llm_chat(
         system_prompt=system_prompt,
         user_message=body, max_tokens=2500, model="opus", timeout=300,
     )
     candidates, verdicts = _parse_candidates(reply.get("text", ""))
-    counts = await _validate_and_save(db, candidates, injected, session_id)
+    # Dominant project of the session's events — Projects-scope lessons
+    # nest under their project node (contextual truths in their context).
+    project_counts: dict[str, int] = {}
+    for e in events:
+        p = e.get("project")
+        if p and p not in ("other", "home"):
+            project_counts[p] = project_counts.get(p, 0) + 1
+    dominant = max(project_counts, key=project_counts.get) if project_counts else None
+    counts = await _validate_and_save(db, candidates, injected, session_id,
+                                      project=dominant, cap_events=len(events))
     attribution = await _apply_attributions(db, verdicts, injections)
     await db.commit()
 

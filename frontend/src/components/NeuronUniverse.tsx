@@ -6,7 +6,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { fetchGraph3D, type Graph3DNode } from '../api';
+import { fetchGraph3D, fetchNeuron, type Graph3DNode } from '../api';
 // d3-force-3d ships no TypeScript types.
 // @ts-ignore
 import { forceSimulation, forceLink, forceManyBody, forceX, forceY, forceZ } from 'd3-force-3d';
@@ -50,6 +50,11 @@ export default function NeuronUniverse() {
   const [error, setError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<Graph3DNode | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<any>(null);
+  useEffect(() => {
+    setSelectedDetail(null);
+    if (selected) fetchNeuron(selected.id).then(setSelectedDetail).catch(() => {});
+  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [hover, setHover] = useState<{ n: Graph3DNode; sx: number; sy: number } | null>(null);
   const [colorBy, setColorBy] = useState<'region' | 'abstraction'>('region');
   const [sizeBy, setSizeBy] = useState<'centrality' | 'invocations'>('centrality');
@@ -535,6 +540,15 @@ export default function NeuronUniverse() {
             centrality {selected.centrality.toFixed(2)} · fired {selected.invocations}×
             · {(neurons.length ? '' : '')}now the centre of its universe
           </div>
+          {selectedDetail && (selectedDetail.content || selectedDetail.summary) && (
+            <div style={{
+              color: '#aeb7c8', fontSize: '0.74rem', marginTop: 8, lineHeight: 1.45,
+              maxHeight: 180, overflowY: 'auto', whiteSpace: 'pre-wrap',
+              borderTop: '1px solid #2a3446', paddingTop: 8,
+            }}>
+              {selectedDetail.content || selectedDetail.summary}
+            </div>
+          )}
         </div>
       )}
 

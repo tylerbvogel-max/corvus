@@ -45,6 +45,44 @@ async def resolve_scope_anchor(
     return role_node.id, role_node.role_key, role_node.layer
 
 
+async def get_or_create_project_node(
+    db: AsyncSession, scope: str, project: str,
+    role_id: int, role_key: str | None, role_layer: int | None,
+) -> Neuron:
+    """Per-project sub-anchor within a scope: lessons about corvus nest
+    under a `project` node named corvus, not directly under the role —
+    contextual truths live inside their context."""
+    assert project.strip(), "project must be non-empty"
+    existing = (await db.execute(
+        select(Neuron).where(Neuron.department == scope,
+                             Neuron.node_type == "project",
+                             Neuron.label == project.strip(),
+                             Neuron.is_active.is_(True)).limit(1)
+    )).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    from app.middleware.rbac import UserIdentity
+    from app.services import action_bus
+    identity = UserIdentity(user_id="lesson_store", role="admin", source="system")
+    result = await action_bus.submit(
+        db=db, kind="neuron.create", actor=identity, actor_type="system",
+        input_data={"spec": {
+            "parent_id": role_id, "layer": (role_layer or 1) + 1,
+            "node_type": "project", "abstraction_type": "structural",
+            "label": project.strip(),
+            "content": f"Project scope container for {project.strip()} lessons.",
+            "summary": f"Project: {project.strip()}",
+            "department": scope, "role_key": role_key,
+            "source_origin": "lesson_store", "source_type": "operational",
+            "authority_level": "informational",
+        }, "reason": f"project sub-anchor: {project.strip()}"},
+    )
+    assert result.state == "applied", f"project node create failed: {result.error}"
+    node = await db.get(Neuron, (result.payload or {})["neuron_id"])
+    assert node is not None, "created project node must exist"
+    return node
+
+
 def _lesson_spec(
     *, lesson: str, evidence: str, label: str, scope: str | None,
     node_type: str, abstraction_type: str | None, summary: str | None,
@@ -112,7 +150,7 @@ async def save_lesson(
     scope: str | None = None, node_type: str = "lesson",
     abstraction_type: str | None = "principle", summary: str | None = None,
     authority_level: str = "informational", source_origin: str = "remember_api",
-    gap_source: str = "remember_api",
+    gap_source: str = "remember_api", project: str | None = None,
 ) -> dict:
     """Stage a lesson save and route it through the write gate. Commits."""
     proposal = AutopilotProposal(
@@ -125,6 +163,10 @@ async def save_lesson(
     assert proposal.id is not None, "proposal must have id after flush"
 
     parent_id, role_key, anchor_layer = await resolve_scope_anchor(db, scope)
+    if project and scope and parent_id is not None:
+        project_node = await get_or_create_project_node(
+            db, scope, project, parent_id, role_key, anchor_layer)
+        parent_id, anchor_layer = project_node.id, project_node.layer
     spec = _lesson_spec(
         lesson=lesson, evidence=evidence, label=label, scope=scope,
         node_type=node_type, abstraction_type=abstraction_type,

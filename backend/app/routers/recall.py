@@ -56,6 +56,7 @@ class RememberRequest(BaseModel):
     abstraction_type: str | None = Field(default="principle", max_length=20)
     summary: str | None = Field(default=None, max_length=500)
     authority_level: str = Field(default="informational", max_length=30)
+    project: str | None = Field(default=None, max_length=100)
 
 
 async def _persist_recall(db: AsyncSession, req: RecallRequest, ctx, latency_ms: float) -> int | None:
@@ -145,6 +146,6 @@ async def remember(req: RememberRequest, db: AsyncSession = Depends(get_db)):
         db, lesson=req.lesson, evidence=req.evidence, label=req.label,
         scope=req.scope, node_type=req.node_type,
         abstraction_type=req.abstraction_type, summary=req.summary,
-        authority_level=req.authority_level,
+        authority_level=req.authority_level, project=req.project,
         source_origin="remember_api", gap_source="remember_api",
     )

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { fetchTree } from '../api'
+import { fetchTree, fetchNeuron } from '../api'
 import type { TreeNode } from '../types'
 import { DEPT_COLORS } from '../constants'
 import { escapeHtml } from '../utils'
@@ -69,6 +69,7 @@ export default function CirclePacking() {
   const svgRef = useRef<SVGSVGElement>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [detail, setDetail] = useState<any>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -231,6 +232,9 @@ export default function CirclePacking() {
                   updateBreadcrumb(match)
                 }
               }
+              else {
+                fetchNeuron(d.data.id).then(setDetail).catch(() => {})
+              }
             })
             .on('mouseover', function (_, d) {
               d3.select(this).attr('fill-opacity', 0.9)
@@ -364,6 +368,24 @@ export default function CirclePacking() {
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         {loading && <div className="loading" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}
         <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+        {detail && (
+          <div style={{
+            position: 'absolute', right: 12, bottom: 12, width: 340, maxHeight: 260,
+            overflowY: 'auto', background: 'rgba(13,19,33,0.95)', border: '1px solid #2a3446',
+            borderRadius: 10, padding: '10px 12px', zIndex: 10,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ color: '#e8edf7', fontWeight: 600, fontSize: '0.85rem' }}>{detail.label}</div>
+              <a style={{ cursor: 'pointer', color: '#8a93a6' }} onClick={() => setDetail(null)}>✕</a>
+            </div>
+            <div style={{ color: '#8a93a6', fontSize: '0.72rem', marginTop: 2 }}>
+              {detail.department} · {detail.node_type} · fired {detail.invocations ?? 0}×
+            </div>
+            <div style={{ color: '#aeb7c8', fontSize: '0.75rem', marginTop: 8, whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
+              {detail.content || detail.summary || '(no content)'}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
