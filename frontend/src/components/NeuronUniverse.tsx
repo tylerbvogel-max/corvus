@@ -253,17 +253,27 @@ export default function NeuronUniverse() {
     }));
     trail.frustumCulled = false;
     trail.raycast = () => {};
-    // Stardust: additive points riding the same buffers give the line body
-    // and feed UnrealBloom, so the wake reads as embers, not a pencil mark.
-    const dust = new THREE.Points(trailGeo, new THREE.PointsMaterial({
-      size: 3.4, vertexColors: true, transparent: true,
-      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-    }));
-    dust.frustumCulled = false;
-    dust.raycast = () => {};
-    halo.visible = trail.visible = dust.visible = assistantIdx >= 0;
+    // The wake is a PLUME, not a line: three additive stardust layers on the
+    // same buffers — glitter core, soft glow, faint outer veil — so the trail
+    // has volume and bloom without flattening the rest of the universe.
+    const dustLayers = [
+      { size: 3.4, opacity: 1.0 },
+      { size: 11, opacity: 0.38 },
+      { size: 24, opacity: 0.13 },
+    ].map(cfg => {
+      const pts = new THREE.Points(trailGeo, new THREE.PointsMaterial({
+        size: cfg.size, opacity: cfg.opacity, vertexColors: true, transparent: true,
+        blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      }));
+      pts.frustumCulled = false;
+      pts.raycast = () => {};
+      scene.add(pts);
+      return pts;
+    });
+    halo.visible = trail.visible = assistantIdx >= 0;
+    dustLayers.forEach(d => { d.visible = assistantIdx >= 0; });
     halo.raycast = () => {};
-    scene.add(halo); scene.add(trail); scene.add(dust);
+    scene.add(halo); scene.add(trail);
     const GOLD = new THREE.Color(ASSISTANT_COLOR);
     function syncAssistant(t: number) {
       if (assistantIdx < 0) return;
