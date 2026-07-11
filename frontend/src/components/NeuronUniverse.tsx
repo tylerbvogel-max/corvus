@@ -143,8 +143,8 @@ export default function NeuronUniverse() {
     // the connectome winds up into an accretion disk. Any user input
     // sheds the momentum instantly; drift resumes after 15s of stillness.
     const DRIFT_BASE = 0.35;
-    const DRIFT_MAX = 45;          // ~2s per revolution: properly disk-like
-    const DRIFT_RAMP_S = 480;      // full spin-up over ~8 quiet minutes
+    const DRIFT_MAX = 90;          // ~1s per revolution: unmissable
+    const DRIFT_RAMP_S = 300;      // full spin-up over ~5 quiet minutes
     controls.autoRotate = true;
     controls.autoRotateSpeed = DRIFT_BASE;
     let driftSince = performance.now();
@@ -152,6 +152,7 @@ export default function NeuronUniverse() {
     controls.addEventListener('start', () => {
       controls.autoRotate = false;
       controls.autoRotateSpeed = DRIFT_BASE;
+      setDiskContraction(0); // shed the disk: layout relaxes home
       if (idleTimer) clearTimeout(idleTimer);
     });
     controls.addEventListener('end', () => {
@@ -161,11 +162,24 @@ export default function NeuronUniverse() {
         controls.autoRotate = true;
       }, 15000);
     });
+    // As the spin winds up, gravity wins: centering forces strengthen with
+    // the wind-up fraction — and the axis of rotation (Y) compresses hardest,
+    // so the cloud collapses into a TIGHT DISK in the spin plane instead of
+    // fanning out. User input sheds both spin and contraction.
+    function setDiskContraction(windup: number) {
+      if (!sim) return;
+      const radial = 0.015 + 0.09 * windup;   // pull toward the core
+      const axial = 0.015 + 0.42 * windup;    // flatten along the spin axis
+      sim.force('x')?.strength(radial);
+      sim.force('z')?.strength(radial);
+      sim.force('y')?.strength(axial);
+    }
     function updateDrift() {
       if (!controls.autoRotate) return;
       const elapsed = (performance.now() - driftSince) / 1000;
-      controls.autoRotateSpeed = Math.min(
-        DRIFT_MAX, DRIFT_BASE + DRIFT_MAX * Math.pow(elapsed / DRIFT_RAMP_S, 2.4));
+      const windup = Math.min(1, Math.pow(elapsed / DRIFT_RAMP_S, 2.4));
+      controls.autoRotateSpeed = DRIFT_BASE + (DRIFT_MAX - DRIFT_BASE) * windup;
+      setDiskContraction(windup);
     }
 
     // HalfFloat target so node colours can exceed 1.0 (HDR) and bloom strongly —
