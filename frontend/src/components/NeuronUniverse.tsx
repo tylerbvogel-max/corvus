@@ -147,7 +147,9 @@ export default function NeuronUniverse() {
     const DRIFT_RAMP_S = 300;      // full spin-up over ~5 quiet minutes
     controls.autoRotate = true;
     controls.autoRotateSpeed = DRIFT_BASE;
-    let driftSince = performance.now();
+    // TEMPORARY (per Tyler, to revert): open pre-wound, as if it has been
+    // spinning for a couple of hours — full accretion disk from frame one.
+    let driftSince = performance.now() - 7_200_000;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     controls.addEventListener('start', () => {
       controls.autoRotate = false;
