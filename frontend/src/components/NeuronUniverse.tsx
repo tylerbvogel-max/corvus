@@ -241,7 +241,7 @@ export default function NeuronUniverse() {
     // The memory trail: everywhere the wanderer has been, fading like
     // recency decay — the traversal remembers itself. (Additive blending:
     // colors ramp to black = fade to invisible.)
-    const TRAIL_N = 240;
+    const TRAIL_N = 380;
     const TRAIL_MIN_STEP = 1.5;
     const trailPts: number[] = [];
     const trailGeo = new THREE.BufferGeometry();
@@ -253,9 +253,17 @@ export default function NeuronUniverse() {
     }));
     trail.frustumCulled = false;
     trail.raycast = () => {};
-    halo.visible = trail.visible = assistantIdx >= 0;
+    // Stardust: additive points riding the same buffers give the line body
+    // and feed UnrealBloom, so the wake reads as embers, not a pencil mark.
+    const dust = new THREE.Points(trailGeo, new THREE.PointsMaterial({
+      size: 3.4, vertexColors: true, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    dust.frustumCulled = false;
+    dust.raycast = () => {};
+    halo.visible = trail.visible = dust.visible = assistantIdx >= 0;
     halo.raycast = () => {};
-    scene.add(halo); scene.add(trail);
+    scene.add(halo); scene.add(trail); scene.add(dust);
     const GOLD = new THREE.Color(ASSISTANT_COLOR);
     function syncAssistant(t: number) {
       if (assistantIdx < 0) return;
@@ -282,7 +290,7 @@ export default function NeuronUniverse() {
         const colAttr = trailGeo.attributes.color as THREE.BufferAttribute;
         for (let i = 0; i < count; i++) {
           posAttr.setXYZ(i, trailPts[i * 3], trailPts[i * 3 + 1], trailPts[i * 3 + 2]);
-          const fade = Math.pow(i / Math.max(count - 1, 1), 1.6) * 0.85; // recency decay
+          const fade = Math.pow(i / Math.max(count - 1, 1), 2.2) * 2.4; // HDR head, wispy tail
           colAttr.setXYZ(i, GOLD.r * fade, GOLD.g * fade, GOLD.b * fade);
         }
         posAttr.needsUpdate = true; colAttr.needsUpdate = true;
