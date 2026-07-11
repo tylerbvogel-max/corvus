@@ -238,13 +238,25 @@ export default function NeuronUniverse() {
       new THREE.SphereGeometry(1.7, 24, 24),
       new THREE.MeshBasicMaterial({ color: ASSISTANT_COLOR, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(2.5, 0.05, 8, 72),
-      new THREE.MeshBasicMaterial({ color: ASSISTANT_COLOR, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }),
-    );
-    halo.visible = ring.visible = assistantIdx >= 0;
-    halo.raycast = () => {}; ring.raycast = () => {};
-    scene.add(halo); scene.add(ring);
+    // The memory trail: everywhere the wanderer has been, fading like
+    // recency decay — the traversal remembers itself. (Additive blending:
+    // colors ramp to black = fade to invisible.)
+    const TRAIL_N = 240;
+    const TRAIL_MIN_STEP = 1.5;
+    const trailPts: number[] = [];
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3), 3));
+    trailGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3), 3));
+    trailGeo.setDrawRange(0, 0);
+    const trail = new THREE.Line(trailGeo, new THREE.LineBasicMaterial({
+      vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    trail.frustumCulled = false;
+    trail.raycast = () => {};
+    halo.visible = trail.visible = assistantIdx >= 0;
+    halo.raycast = () => {};
+    scene.add(halo); scene.add(trail);
+    const GOLD = new THREE.Color(ASSISTANT_COLOR);
     function syncAssistant(t: number) {
       if (assistantIdx < 0) return;
       const n = nodes[assistantIdx];
@@ -258,8 +270,24 @@ export default function NeuronUniverse() {
       mesh.setMatrixAt(assistantIdx, dummy.matrix);
       mesh.instanceMatrix.needsUpdate = true;
       halo.position.set(px, py, pz); halo.scale.setScalar(s0);
-      ring.position.set(px, py, pz); ring.scale.setScalar(s0);
-      ring.rotation.set(Math.PI / 3.2, t * 0.12, 0.4);
+      // extend the memory trail when we've actually travelled
+      const L = trailPts.length;
+      const moved = L < 3 ||
+        (px - trailPts[L - 3]) ** 2 + (py - trailPts[L - 2]) ** 2 + (pz - trailPts[L - 1]) ** 2 > TRAIL_MIN_STEP ** 2;
+      if (moved) {
+        trailPts.push(px, py, pz);
+        while (trailPts.length > TRAIL_N * 3) trailPts.splice(0, 3);
+        const count = trailPts.length / 3;
+        const posAttr = trailGeo.attributes.position as THREE.BufferAttribute;
+        const colAttr = trailGeo.attributes.color as THREE.BufferAttribute;
+        for (let i = 0; i < count; i++) {
+          posAttr.setXYZ(i, trailPts[i * 3], trailPts[i * 3 + 1], trailPts[i * 3 + 2]);
+          const fade = Math.pow(i / Math.max(count - 1, 1), 1.6) * 0.85; // recency decay
+          colAttr.setXYZ(i, GOLD.r * fade, GOLD.g * fade, GOLD.b * fade);
+        }
+        posAttr.needsUpdate = true; colAttr.needsUpdate = true;
+        trailGeo.setDrawRange(0, count);
+      }
     }
 
     const dummy = new THREE.Object3D();
