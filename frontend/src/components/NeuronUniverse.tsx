@@ -275,7 +275,7 @@ export default function NeuronUniverse() {
         const raw = sizeByRef.current === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
           : 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
         // The assistant doesn't scale off graph metrics — it IS the scale.
-        radius[i] = n.node_type === 'assistant' ? 15 : isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
+        radius[i] = n.node_type === 'assistant' ? 8 : isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
       }
     }
     function recomputeColors() {
