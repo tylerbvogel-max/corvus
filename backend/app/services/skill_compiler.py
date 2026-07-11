@@ -221,7 +221,7 @@ async def _stale_entries(db: AsyncSession, manifest: list[dict],
 async def _emit_skill_node(
     db: AsyncSession, name: str, description: str, cluster: list[Neuron],
 ) -> int | None:
-    """Give the compiled skill a graph shadow: a `skill` node anchored under
+    """Give the compiled skill its dark matter: a `skill` node anchored under
     its scope's department, with evidence-link edges from every source
     lesson — so the 3D universe and Explorer show what draws into it.
     No embedding is set, so skill nodes never enter semantic recall."""

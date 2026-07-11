@@ -126,6 +126,19 @@ export default function NeuronUniverse() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.rotateSpeed = 0.6;
+    // Universe drift: slow rotation at open, paused by interaction,
+    // resumed after 15s of stillness.
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.35;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    controls.addEventListener('start', () => {
+      controls.autoRotate = false;
+      if (idleTimer) clearTimeout(idleTimer);
+    });
+    controls.addEventListener('end', () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => { controls.autoRotate = true; }, 15000);
+    });
 
     // HalfFloat target so node colours can exceed 1.0 (HDR) and bloom strongly —
     // that's what lets the Neuron-light slider actually blaze past the synapses.
@@ -169,6 +182,40 @@ export default function NeuronUniverse() {
     mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3);
     scene.add(mesh);
 
+    // Dark matter: compiled skills shape the strata without being part of
+    // the luminous medium (no embedding, no recall). Render them visually
+    // apart — larger, violet, wrapped in a slowly turning wireframe shell.
+    const isSkill = (n: Graph3DNode) => n.node_type === 'skill';
+    const skillIdx: number[] = [];
+    for (let i = 0; i < N; i++) if (isSkill(nodes[i])) skillIdx.push(i);
+    const SKILL_COLOR = '#9085e9';
+    const shellGeo = new THREE.IcosahedronGeometry(1.75, 0);
+    const shellMat = new THREE.MeshBasicMaterial({
+      color: SKILL_COLOR, wireframe: true, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const shells = new THREE.InstancedMesh(shellGeo, shellMat, Math.max(skillIdx.length, 1));
+    shells.count = skillIdx.length;
+    shells.raycast = () => {}; // decoration only — picking stays on the spheres
+    scene.add(shells);
+    const shellDummy = new THREE.Object3D();
+    function syncShells(t: number) {
+      for (let k = 0; k < skillIdx.length; k++) {
+        const i = skillIdx[k];
+        if (hidden[i]) { shellDummy.scale.setScalar(0.0001); }
+        else {
+          shellDummy.position.set(nodes[i].x, nodes[i].y, nodes[i].z);
+          shellDummy.rotation.set(0, t * 0.25, t * 0.1);
+          // scaleFor already includes the node radius; the shell geometry's
+          // 1.75 base radius provides the halo margin around the sphere.
+          shellDummy.scale.setScalar(scaleFor(i));
+        }
+        shellDummy.updateMatrix();
+        shells.setMatrixAt(k, shellDummy.matrix);
+      }
+      shells.instanceMatrix.needsUpdate = true;
+    }
+
     const dummy = new THREE.Object3D();
     const baseColor = new Float32Array(N * 3); // per-node base colour (for dim/highlight)
     const hidden = new Uint8Array(N);
@@ -181,13 +228,13 @@ export default function NeuronUniverse() {
         const n = nodes[i];
         const raw = sizeBy === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
           : 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
-        radius[i] = isConcept(n) ? raw * 1.25 : raw;
+        radius[i] = isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
       }
     }
     function recomputeColors() {
       const c = new THREE.Color();
       for (let i = 0; i < N; i++) {
-        c.set(nodeHex(nodes[i]));
+        c.set(isSkill(nodes[i]) ? SKILL_COLOR : nodeHex(nodes[i]));
         baseColor[i * 3] = c.r; baseColor[i * 3 + 1] = c.g; baseColor[i * 3 + 2] = c.b;
       }
     }
@@ -316,6 +363,7 @@ export default function NeuronUniverse() {
     function animate() {
       raf = requestAnimationFrame(animate);
       if (sim && sim.alpha() > 0.006) { sim.tick(); syncPositions(); }
+      syncShells(performance.now() / 1000);
       controls.update();
       composer.render();
     }
@@ -383,6 +431,7 @@ export default function NeuronUniverse() {
       },
       dispose() {
         cancelAnimationFrame(raf);
+        if (idleTimer) clearTimeout(idleTimer);
         window.removeEventListener('resize', onResize);
         resizeObserver.disconnect();
         renderer.domElement.removeEventListener('pointermove', onMove);
