@@ -261,9 +261,9 @@ export default function NeuronUniverse() {
       if (assistantIdx < 0) return;
       const n = nodes[assistantIdx];
       const R = 520;
-      const px = R * Math.sin(0.021 * t);
-      const py = R * 0.55 * Math.sin(0.013 * t + 2.1);
-      const pz = R * Math.cos(0.017 * t + 4.2);
+      const px = R * Math.sin(0.084 * t);
+      const py = R * 0.55 * Math.sin(0.052 * t + 2.1);
+      const pz = R * Math.cos(0.068 * t + 4.2);
       n.x = n.fx = px; n.y = n.fy = py; n.z = n.fz = pz;
       const s0 = scaleFor(assistantIdx);
       dummy.position.set(px, py, pz); dummy.scale.setScalar(s0); dummy.updateMatrix();
