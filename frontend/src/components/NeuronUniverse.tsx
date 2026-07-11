@@ -102,6 +102,13 @@ export default function NeuronUniverse() {
     return regionColor.get(n.department || 'Unassigned') || OVERFLOW_COLOR;
   }, [colorBy, regionColor]);
 
+  // Refs let the once-built engine read the CURRENT mode at call time —
+  // the dropdowns were dead because the closures captured initial values.
+  const nodeHexRef = useRef(nodeHex);
+  nodeHexRef.current = nodeHex;
+  const sizeByRef = useRef(sizeBy);
+  sizeByRef.current = sizeBy;
+
   // ── The engine: built once per dataset ──
   useEffect(() => {
     const mount = mountRef.current;
@@ -226,7 +233,7 @@ export default function NeuronUniverse() {
     function recomputeRadius() {
       for (let i = 0; i < N; i++) {
         const n = nodes[i];
-        const raw = sizeBy === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
+        const raw = sizeByRef.current === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
           : 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
         radius[i] = isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
       }
@@ -234,7 +241,7 @@ export default function NeuronUniverse() {
     function recomputeColors() {
       const c = new THREE.Color();
       for (let i = 0; i < N; i++) {
-        c.set(isSkill(nodes[i]) ? SKILL_COLOR : nodeHex(nodes[i]));
+        c.set(isSkill(nodes[i]) ? SKILL_COLOR : nodeHexRef.current(nodes[i]));
         baseColor[i * 3] = c.r; baseColor[i * 3 + 1] = c.g; baseColor[i * 3 + 2] = c.b;
       }
     }
@@ -489,7 +496,7 @@ export default function NeuronUniverse() {
         <Row label="Size by">
           <select value={sizeBy} onChange={e => setSizeBy(e.target.value as any)} style={select}>
             <option value="centrality">Centrality</option>
-            <option value="invocations">Invocations</option>
+            <option value="invocations">Recalls</option>
           </select>
         </Row>
         <Row label={`Synapses ${(synapse * 100) | 0}%`}>
