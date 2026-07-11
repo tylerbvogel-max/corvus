@@ -368,7 +368,23 @@ export default function NeuronUniverse() {
         .force('z', forceZ(0).strength(0.015))
         .velocityDecay(0.34)
         .alphaDecay(0.02)
+        .alphaTarget(0.025) // never fully sleeps: the wanderer's pull is continuous
         .alpha(0.9);
+      // The assistant exerts gravity as it traverses: nearby free nodes are
+      // drawn toward it with inverse-square falloff (softened + capped), so
+      // the medium visibly bends around the wanderer's path.
+      if (assistantIdx >= 0) {
+        sim.force('assistantGravity', (alpha: number) => {
+          const a = nodes[assistantIdx];
+          for (const n of active) {
+            if (n === a || n.fx != null) continue;
+            const dx = a.x - n.x, dy = a.y - n.y, dz = a.z - n.z;
+            const d2 = dx * dx + dy * dy + dz * dz + 900; // softening core
+            const f = Math.min(16000 / d2, 0.5) * alpha;
+            (n as any).vx += dx * f; (n as any).vy += dy * f; (n as any).vz += dz * f;
+          }
+        });
+      }
       sim.stop(); // we tick manually in RAF
       // clear any prior pins, then pin the focus at the origin
       for (const n of nodes) { n.fx = null; n.fy = null; n.fz = null; }
