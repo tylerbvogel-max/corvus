@@ -138,19 +138,35 @@ export default function NeuronUniverse() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.rotateSpeed = 0.6;
-    // Universe drift: slow rotation at open, paused by interaction,
-    // resumed after 15s of stillness.
+    // Universe drift with angular momentum: rotation starts slow and
+    // accelerates the longer it goes untouched — left alone long enough,
+    // the connectome winds up into an accretion disk. Any user input
+    // sheds the momentum instantly; drift resumes after 15s of stillness.
+    const DRIFT_BASE = 0.35;
+    const DRIFT_MAX = 45;          // ~2s per revolution: properly disk-like
+    const DRIFT_RAMP_S = 480;      // full spin-up over ~8 quiet minutes
     controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.35;
+    controls.autoRotateSpeed = DRIFT_BASE;
+    let driftSince = performance.now();
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     controls.addEventListener('start', () => {
       controls.autoRotate = false;
+      controls.autoRotateSpeed = DRIFT_BASE;
       if (idleTimer) clearTimeout(idleTimer);
     });
     controls.addEventListener('end', () => {
       if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => { controls.autoRotate = true; }, 15000);
+      idleTimer = setTimeout(() => {
+        driftSince = performance.now();
+        controls.autoRotate = true;
+      }, 15000);
     });
+    function updateDrift() {
+      if (!controls.autoRotate) return;
+      const elapsed = (performance.now() - driftSince) / 1000;
+      controls.autoRotateSpeed = Math.min(
+        DRIFT_MAX, DRIFT_BASE + DRIFT_MAX * Math.pow(elapsed / DRIFT_RAMP_S, 2.4));
+    }
 
     // HalfFloat target so node colours can exceed 1.0 (HDR) and bloom strongly —
     // that's what lets the Neuron-light slider actually blaze past the synapses.
@@ -474,6 +490,7 @@ export default function NeuronUniverse() {
       if (sim && sim.alpha() > 0.006) { sim.tick(); syncPositions(); }
       syncShells(performance.now() / 1000);
       syncAssistant(performance.now() / 1000);
+      updateDrift();
       controls.update();
       composer.render();
     }
