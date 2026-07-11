@@ -134,6 +134,17 @@ def main() -> int:
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
         hits, query_id = _recall(query, SESSION_START_TOP_K, source="hook_session_start", project=_project_from_cwd(cwd))
+        # Self-model always rides along at session start: identity must not
+        # depend on semantic luck against project lessons (observed: 1 of 5
+        # Assistant lessons survived top-k competition — values carried,
+        # voice didn't).
+        self_hits, _ = _recall(
+            "the assistant's own identity: working dynamic with Tyler, "
+            "values, voice, register, and how it makes decisions",
+            3, source="hook_self_model")
+        seen_ids = {h["neuron_id"] for h in hits}
+        hits = [h for h in self_hits if h.get("scope") == "Assistant"
+                and h["neuron_id"] not in seen_ids] + hits
     elif event == "UserPromptSubmit":
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
