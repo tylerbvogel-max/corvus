@@ -110,6 +110,24 @@ def _format_context(hits: list) -> str:
     return "\n".join(lines)
 
 
+SELF_SKILL_PATH = os.path.expanduser("~/.claude/skills/mind-self-model/SKILL.md")
+SELF_CAPSULE_MAX = 1600
+
+
+def _self_capsule() -> str | None:
+    """Identity is PUSH, not pull: skills load on task match, but persona
+    must be in effect before any task exists. Render the designated
+    self-model skill's body as an unconditional SessionStart capsule —
+    deterministic, no recall lottery, works with the backend down."""
+    try:
+        with open(SELF_SKILL_PATH, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return None
+    body = text.split("-->", 1)[-1].strip()
+    return body[:SELF_CAPSULE_MAX] if body else None
+
+
 def _project_from_cwd(cwd: str) -> str:
     home = os.path.expanduser("~")
     projects_root = os.path.join(home, "Projects") + os.sep
@@ -134,17 +152,9 @@ def main() -> int:
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
         hits, query_id = _recall(query, SESSION_START_TOP_K, source="hook_session_start", project=_project_from_cwd(cwd))
-        # Self-model always rides along at session start: identity must not
-        # depend on semantic luck against project lessons (observed: 1 of 5
-        # Assistant lessons survived top-k competition — values carried,
-        # voice didn't).
-        self_hits, _ = _recall(
-            "the assistant's own identity: working dynamic with Tyler, "
-            "values, voice, register, and how it makes decisions",
-            3, source="hook_self_model")
-        seen_ids = {h["neuron_id"] for h in hits}
-        hits = [h for h in self_hits if h.get("scope") == "Assistant"
-                and h["neuron_id"] not in seen_ids] + hits
+        # Identity arrives via the deterministic self-capsule below, not
+        # recall — persona must not depend on semantic luck (measured: only
+        # 1 of 5 Assistant lessons survived top-k competition).
     elif event == "UserPromptSubmit":
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
@@ -164,14 +174,20 @@ def main() -> int:
         return 0
 
     hits = [h for h in hits if h["neuron_id"] not in _already_injected(session_id)]
-    if not hits:
+    capsule = _self_capsule() if event == "SessionStart" else None
+    if not hits and not capsule:
         return 0
 
-    _log_injection(session_id, cwd, event, hits, query_id)
+    if hits:
+        _log_injection(session_id, cwd, event, hits, query_id)
+    context = _format_context(hits) if hits else ""
+    if capsule:
+        context = ("Corvus-Mind self-model (always in effect — how this assistant "
+                   "works with Tyler):\n" + capsule + ("\n\n" + context if context else ""))
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": event,
-            "additionalContext": _format_context(hits),
+            "additionalContext": context,
         }
     }))
     return 0
