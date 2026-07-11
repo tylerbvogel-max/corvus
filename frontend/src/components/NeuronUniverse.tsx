@@ -209,8 +209,9 @@ export default function NeuronUniverse() {
     scene.add(lines);
     const edgeColors = E.map(e =>
       e.edge_type === 'instantiates' ? new THREE.Color(CONCEPT_COLOR)
-        : e.edge_type === 'pyramidal' ? new THREE.Color('#9fb8ff')
-          : new THREE.Color('#3f5a8a'));
+        : e.edge_type === 'evidence-link' ? new THREE.Color('#9085e9') // lesson → skill provenance
+          : e.edge_type === 'pyramidal' ? new THREE.Color('#9fb8ff')
+            : new THREE.Color('#3f5a8a'));
 
     let focusId: number | null = null;
     let visibleEdge = new Uint8Array(M).fill(1);

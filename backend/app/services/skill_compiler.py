@@ -28,10 +28,11 @@ import re
 from datetime import datetime, timezone
 
 import numpy as np
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron
-from app.services.mind_janitors import _load_lessons, _log_action
+from app.services.mind_janitors import _add_memory_edge, _load_lessons, _log_action
 
 SKILLS_DIR = os.path.expanduser("~/.claude/skills")
 MANIFEST_PATH = os.path.expanduser("~/.corvus-mind/compiled-skills.json")
@@ -80,16 +81,14 @@ def _save_manifest(entries: list[dict]) -> None:
         json.dump(entries, fh, indent=2)
 
 
-def find_clusters(lessons: list[Neuron]) -> list[list[Neuron]]:
-    """Same-scope connected components at CLUSTER_SIM (iterative union-find)."""
+MAX_CLUSTER_SIZE = 8  # a skill is one task, not one scope
+_SPLIT_STEP = 0.06
+_SPLIT_CEILING = 0.85
+
+
+def _components(lessons: list[Neuron], sims, threshold: float) -> list[list[int]]:
+    """Same-scope connected components at `threshold` (iterative union-find)."""
     n = len(lessons)
-    if n < MIN_CLUSTER:
-        return []
-    matrix = np.array([json.loads(x.embedding) for x in lessons], dtype=np.float64)
-    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0
-    unit = matrix / norms
-    sims = unit @ unit.T
     parent = list(range(n))
 
     def find(i: int) -> int:
@@ -100,12 +99,47 @@ def find_clusters(lessons: list[Neuron]) -> list[list[Neuron]]:
 
     for i in range(n):
         for j in range(i + 1, n):
-            if sims[i, j] >= CLUSTER_SIM and lessons[i].department == lessons[j].department:
+            if sims[i, j] >= threshold and lessons[i].department == lessons[j].department:
                 parent[find(i)] = find(j)
-    groups: dict[int, list[Neuron]] = {}
+    groups: dict[int, list[int]] = {}
     for i in range(n):
-        groups.setdefault(find(i), []).append(lessons[i])
-    return [g for g in groups.values() if len(g) >= MIN_CLUSTER]
+        groups.setdefault(find(i), []).append(i)
+    return list(groups.values())
+
+
+def find_clusters(lessons: list[Neuron]) -> list[list[Neuron]]:
+    """Skill-sized same-scope clusters. Oversized components are split by
+    iteratively raising the similarity threshold — a 60-lesson scope blob
+    must become several focused skills, never one textbook."""
+    n = len(lessons)
+    if n < MIN_CLUSTER:
+        return []
+    matrix = np.array([json.loads(x.embedding) for x in lessons], dtype=np.float64)
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    unit = matrix / norms
+    sims = unit @ unit.T
+
+    final: list[list[Neuron]] = []
+    work = [(idx_group, CLUSTER_SIM) for idx_group in _components(lessons, sims, CLUSTER_SIM)]
+    for _guard in range(4 * n):  # bounded (JPL-2); each pop shrinks or finalizes
+        if not work:
+            break
+        group, threshold = work.pop()
+        if len(group) < MIN_CLUSTER:
+            continue
+        if len(group) <= MAX_CLUSTER_SIZE or threshold >= _SPLIT_CEILING:
+            final.append([lessons[i] for i in group])
+            continue
+        sub_lessons = [lessons[i] for i in group]
+        sub_sims = sims[np.ix_(group, group)]
+        pieces = _components(sub_lessons, sub_sims, threshold + _SPLIT_STEP)
+        if len(pieces) == 1:
+            work.append((group, threshold + _SPLIT_STEP))
+        else:
+            for piece in pieces:
+                work.append(([group[i] for i in piece], threshold + _SPLIT_STEP))
+    return final
 
 
 async def _compose(cluster: list[Neuron]) -> dict | None:
@@ -184,6 +218,56 @@ async def _stale_entries(db: AsyncSession, manifest: list[dict],
     return stale
 
 
+async def _emit_skill_node(
+    db: AsyncSession, name: str, description: str, cluster: list[Neuron],
+) -> int | None:
+    """Give the compiled skill a graph shadow: a `skill` node anchored under
+    its scope's department, with evidence-link edges from every source
+    lesson — so the 3D universe and Explorer show what draws into it.
+    No embedding is set, so skill nodes never enter semantic recall."""
+    from app.middleware.rbac import UserIdentity
+    from app.services import action_bus
+
+    scope = cluster[0].department
+    dept = (await db.execute(
+        select(Neuron).where(Neuron.department == scope,
+                             Neuron.node_type == "department",
+                             Neuron.is_active.is_(True)).limit(1)
+    )).scalar_one_or_none()
+    identity = UserIdentity(user_id="skill_compiler", role="admin", source="system")
+    result = await action_bus.submit(
+        db=db, kind="neuron.create", actor=identity, actor_type="system",
+        input_data={"spec": {
+            "parent_id": dept.id if dept else None,
+            "layer": (dept.layer + 1) if dept else 1,
+            "node_type": "skill", "abstraction_type": "artifact",
+            "label": name,
+            "content": f"{description}\n\nCompiled from: " +
+                       "; ".join(x.label for x in cluster),
+            "summary": description[:280], "department": scope,
+            "source_origin": "skill_compiler", "source_type": "operational",
+            "authority_level": "informational",
+        }, "reason": f"graph shadow for compiled skill {name}"},
+    )
+    if result.state != "applied":
+        return None
+    node_id = (result.payload or {}).get("neuron_id")
+    assert node_id is not None, "neuron.create must return a neuron_id"
+    for lesson in cluster:
+        await _add_memory_edge(db, lesson.id, node_id, "evidence-link",
+                               f"source lesson for skill {name}")
+    return node_id
+
+
+async def _retract_skill_node(db: AsyncSession, node_id: int | None) -> None:
+    """Deactivate a retracted skill's graph shadow (edges stay as history)."""
+    if node_id is None:
+        return
+    node = await db.get(Neuron, node_id)
+    if node is not None:
+        node.is_active = False
+
+
 async def run_compile(db: AsyncSession) -> dict:
     """Reverse check + compile eligible clusters (bounded Opus spend)."""
     lessons = await _load_lessons(db)
@@ -193,6 +277,7 @@ async def run_compile(db: AsyncSession) -> dict:
     stale = await _stale_entries(db, manifest, clusters)
     for entry in stale:
         _remove_skill(entry["name"])
+        await _retract_skill_node(db, entry.get("node_id"))
         manifest = [m for m in manifest if m["name"] != entry["name"]]
         _log_action("compiler.retract", {
             "skill": entry["name"], "reason": entry["reason"]})
@@ -209,16 +294,27 @@ async def run_compile(db: AsyncSession) -> dict:
         if skill is None:
             _log_action("compiler.compose_failed", {"sources": sorted(ids)})
             continue
+        # Name uniqueness: a grown cluster can re-earn an existing name —
+        # retract the old artifact (this IS the supersession) rather than
+        # silently overwriting its file beside a duplicate manifest entry.
+        clash = next((m for m in manifest if m["name"] == skill["name"]), None)
+        if clash is not None:
+            await _retract_skill_node(db, clash.get("node_id"))
+            manifest = [m for m in manifest if m["name"] != skill["name"]]
+            _log_action("compiler.retract", {
+                "skill": skill["name"], "reason": "name-superseded-by-recompile"})
         path = _write_skill(skill["name"], skill["description"],
                             skill["body_markdown"], sorted(ids))
+        node_id = await _emit_skill_node(db, skill["name"], skill["description"], cluster)
         entry = {"name": skill["name"], "sources": sorted(ids),
-                 "scope": cluster[0].department, "path": path,
+                 "scope": cluster[0].department, "path": path, "node_id": node_id,
                  "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         manifest.append(entry)
         compiled_sets.add(ids)
         emitted.append({**entry, "cost_usd": skill.get("cost_usd")})
         _log_action("compiler.emit", {
             "skill": skill["name"], "sources": sorted(ids)})
+    await db.commit()
     _save_manifest(manifest)
     return {"lessons": len(lessons), "clusters": len(clusters),
             "retracted": [e["name"] for e in stale],
