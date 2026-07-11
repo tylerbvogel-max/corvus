@@ -228,6 +228,40 @@ export default function NeuronUniverse() {
       shells.instanceMatrix.needsUpdate = true;
     }
 
+    // The Assistant: one celestial body, the mind this graph remembers for.
+    // Largest node in the universe, gold against the blue-violet medium,
+    // ringed like a planet — and never force-anchored: it wanders the volume
+    // on an incommensurate Lissajous path, always traversing, never parked.
+    const ASSISTANT_COLOR = '#f6bd16';
+    const assistantIdx = nodes.findIndex(n => n.node_type === 'assistant');
+    const halo = new THREE.Mesh(
+      new THREE.SphereGeometry(1.7, 24, 24),
+      new THREE.MeshBasicMaterial({ color: ASSISTANT_COLOR, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(2.5, 0.05, 8, 72),
+      new THREE.MeshBasicMaterial({ color: ASSISTANT_COLOR, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }),
+    );
+    halo.visible = ring.visible = assistantIdx >= 0;
+    halo.raycast = () => {}; ring.raycast = () => {};
+    scene.add(halo); scene.add(ring);
+    function syncAssistant(t: number) {
+      if (assistantIdx < 0) return;
+      const n = nodes[assistantIdx];
+      const R = 520;
+      const px = R * Math.sin(0.021 * t);
+      const py = R * 0.55 * Math.sin(0.013 * t + 2.1);
+      const pz = R * Math.cos(0.017 * t + 4.2);
+      n.x = n.fx = px; n.y = n.fy = py; n.z = n.fz = pz;
+      const s0 = scaleFor(assistantIdx);
+      dummy.position.set(px, py, pz); dummy.scale.setScalar(s0); dummy.updateMatrix();
+      mesh.setMatrixAt(assistantIdx, dummy.matrix);
+      mesh.instanceMatrix.needsUpdate = true;
+      halo.position.set(px, py, pz); halo.scale.setScalar(s0);
+      ring.position.set(px, py, pz); ring.scale.setScalar(s0);
+      ring.rotation.set(Math.PI / 3.2, t * 0.12, 0.4);
+    }
+
     const dummy = new THREE.Object3D();
     const baseColor = new Float32Array(N * 3); // per-node base colour (for dim/highlight)
     const hidden = new Uint8Array(N);
@@ -240,13 +274,13 @@ export default function NeuronUniverse() {
         const n = nodes[i];
         const raw = sizeByRef.current === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
           : 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
-        radius[i] = isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
+        radius[i] = n.node_type === 'assistant' ? raw * 3.4 : isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
       }
     }
     function recomputeColors() {
       const c = new THREE.Color();
       for (let i = 0; i < N; i++) {
-        c.set(isSkill(nodes[i]) ? SKILL_COLOR : nodeHexRef.current(nodes[i]));
+        c.set(nodes[i].node_type === 'assistant' ? ASSISTANT_COLOR : isSkill(nodes[i]) ? SKILL_COLOR : nodeHexRef.current(nodes[i]));
         baseColor[i * 3] = c.r; baseColor[i * 3 + 1] = c.g; baseColor[i * 3 + 2] = c.b;
       }
     }
@@ -376,6 +410,7 @@ export default function NeuronUniverse() {
       raf = requestAnimationFrame(animate);
       if (sim && sim.alpha() > 0.006) { sim.tick(); syncPositions(); }
       syncShells(performance.now() / 1000);
+      syncAssistant(performance.now() / 1000);
       controls.update();
       composer.render();
     }
