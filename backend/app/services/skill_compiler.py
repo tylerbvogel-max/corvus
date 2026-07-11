@@ -186,13 +186,20 @@ def _write_skill(name: str, description: str, body: str, source_ids: list[int]) 
     return path
 
 
+RETIRED_DIR = os.path.expanduser("~/.corvus-mind/retired-skills")
+
+
 def _remove_skill(name: str) -> None:
-    """Delete a compiled skill dir (mind-* only, manifest-owned)."""
+    """Retract a compiled skill (mind-* only, manifest-owned). The rendering
+    is ARCHIVED to retired-skills, never deleted — documentation is retired
+    with history, and the source lessons remain in the graph regardless."""
     assert name.startswith(SKILL_PREFIX), "refusing to remove non-compiled skill"
     skill_dir = os.path.join(SKILLS_DIR, name)
     path = os.path.join(skill_dir, "SKILL.md")
     if os.path.exists(path):
-        os.remove(path)
+        os.makedirs(RETIRED_DIR, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        os.replace(path, os.path.join(RETIRED_DIR, f"{name}-{stamp}.md"))
     if os.path.isdir(skill_dir) and not os.listdir(skill_dir):
         os.rmdir(skill_dir)
 

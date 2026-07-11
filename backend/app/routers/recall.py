@@ -45,6 +45,9 @@ class RecallRequest(BaseModel):
     # the decay auditor's recalled-often signal.
     source: str = Field(default="api", max_length=40)
     persist: bool = True
+    # Situated recall: hits anchored under this project node get a boost —
+    # contextual truths should win where their context applies.
+    project: str | None = Field(default=None, max_length=100)
 
 
 class RememberRequest(BaseModel):
@@ -57,6 +60,22 @@ class RememberRequest(BaseModel):
     summary: str | None = Field(default=None, max_length=500)
     authority_level: str = Field(default="informational", max_length=30)
     project: str | None = Field(default=None, max_length=100)
+
+
+async def _parent_projects(db: AsyncSession, ctx) -> dict:
+    """neuron_id -> project-node label for hits nested under a project."""
+    from sqlalchemy import select
+    from app.models import Neuron
+    parent_ids = {n.parent_id for n in ctx.neuron_map.values() if n.parent_id}
+    if not parent_ids:
+        return {}
+    rows = (await db.execute(
+        select(Neuron.id, Neuron.label).where(
+            Neuron.id.in_(parent_ids), Neuron.node_type == "project")
+    )).all()
+    label_by_parent = {r.id: r.label for r in rows}
+    return {nid: label_by_parent.get(n.parent_id)
+            for nid, n in ctx.neuron_map.items() if n.parent_id in label_by_parent}
 
 
 async def _persist_recall(db: AsyncSession, req: RecallRequest, ctx, latency_ms: float) -> int | None:
@@ -100,8 +119,9 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
     t0 = time.monotonic()
     ctx = await prepare_context(db, req.query, top_k=req.top_k)
     assert ctx is not None, "prepare_context must return a PreparedContext"
+    project_of = await _parent_projects(db, ctx) if req.project else {}
     hits = []
-    for s in ctx.neuron_scores[:req.top_k]:
+    for s in ctx.neuron_scores[:req.top_k * 2]:
         neuron = ctx.neuron_map.get(s["neuron_id"])
         hit = {
             "neuron_id": s["neuron_id"],
@@ -117,7 +137,13 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
         }
         if req.include_content and neuron is not None:
             hit["content"] = neuron.content
+        hit["project"] = project_of.get(s["neuron_id"])
+        if req.project and hit["project"] == req.project:
+            hit["score"] = round(hit["score"] * 1.15, 4)  # situated boost
         hits.append(hit)
+    if req.project:
+        hits.sort(key=lambda h: -h["score"])
+    hits = hits[:req.top_k]
     assert len(hits) <= req.top_k, "hit count must respect top_k"
     latency_ms = round((time.monotonic() - t0) * 1000, 1)
     query_id = None

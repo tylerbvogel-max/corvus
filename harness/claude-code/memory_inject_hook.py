@@ -44,12 +44,12 @@ def _load_excludes() -> list:
         return []
 
 
-def _recall(query: str, top_k: int, source: str = "hook") -> tuple:
+def _recall(query: str, top_k: int, source: str = "hook", project: str | None = None) -> tuple:
     """Returns (lesson-type hits, query_id) — query_id links this recall's
     persisted telemetry row so attribution can later reward/penalize it."""
     body = json.dumps({
         "query": query[:2000], "top_k": top_k, "include_content": True,
-        "source": source,
+        "source": source, "project": project,
     }).encode("utf-8")
     req = urllib.request.Request(
         f"{BACKEND}/recall", data=body,
@@ -133,12 +133,12 @@ def main() -> int:
         project = _project_from_cwd(cwd)
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
-        hits, query_id = _recall(query, SESSION_START_TOP_K, source="hook_session_start")
+        hits, query_id = _recall(query, SESSION_START_TOP_K, source="hook_session_start", project=_project_from_cwd(cwd))
     elif event == "UserPromptSubmit":
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
             return 0
-        hits, query_id = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt")
+        hits, query_id = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt", project=_project_from_cwd(cwd))
     elif event == "PreToolUse":
         # Pre-mistake warning: only Bash (where machine gotchas live), only
         # high-confidence lesson hits, so it interrupts rarely and earns it.
@@ -147,7 +147,7 @@ def main() -> int:
         command = ((payload.get("tool_input") or {}).get("command") or "").strip()
         if len(command) < MIN_PROMPT_CHARS:
             return 0
-        hits, query_id = _recall(command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool")
+        hits, query_id = _recall(command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool", project=_project_from_cwd(cwd))
         hits = [h for h in hits if h["score"] >= PRE_TOOL_MIN_SCORE]
     else:
         return 0
