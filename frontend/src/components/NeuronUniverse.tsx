@@ -275,7 +275,7 @@ export default function NeuronUniverse() {
         const raw = sizeByRef.current === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
           : 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
         // The assistant doesn't scale off graph metrics — it IS the scale.
-        radius[i] = n.node_type === 'assistant' ? 34 : isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
+        radius[i] = n.node_type === 'assistant' ? 15 : isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
       }
     }
     function recomputeColors() {
@@ -379,8 +379,8 @@ export default function NeuronUniverse() {
           for (const n of active) {
             if (n === a || n.fx != null) continue;
             const dx = a.x - n.x, dy = a.y - n.y, dz = a.z - n.z;
-            const d2 = dx * dx + dy * dy + dz * dz + 900; // softening core
-            const f = Math.min(16000 / d2, 0.5) * alpha;
+            const d2 = dx * dx + dy * dy + dz * dz + 2500; // softening core
+            const f = Math.min(3500 / d2, 0.12) * alpha; // a tide, not a singularity
             (n as any).vx += dx * f; (n as any).vy += dy * f; (n as any).vz += dz * f;
           }
         });
