@@ -111,6 +111,31 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         tier="free",
         context_window_tokens=1_048_576,
     ),
+    # ── Groq (LPU — free tier, rate-limited) ──
+    # These are priced 0.0 because THIS ACCOUNT IS ON GROQ'S FREE TIER: no card,
+    # no credits, no per-token charge — you are gated by rate limits, not billing.
+    # Verified 2026-07-12 from live response headers: x-ratelimit-limit-requests
+    # 14400/day, x-ratelimit-limit-tokens 6000/min (Groq's documented free profile).
+    #
+    # THE BINDING CONSTRAINT IS THROUGHPUT, NOT COST. 6,000 tokens/minute is small
+    # — smaller than a single large graph-context prompt. Do not route the hero
+    # query path or any big-context call here without checking TPM headroom first;
+    # it will 429, not overspend.
+    #
+    # If a card is ever added to Groq (Developer tier: 10x rate limits, ~25% off
+    # list), these zeros become a silent under-report and MUST be set to the real
+    # per-1M rates — as of 2026-07-12: scout 0.11/0.34, 70b 0.59/0.79, 8b 0.05/0.08.
+    #
+    # Meta retired its first-party Llama API on 2026-07-06; Groq is the Llama path.
+    "groq-llama-4-scout": ModelInfo(
+        display_name="groq-llama-4-scout",
+        provider="groq",
+        api_id="meta-llama/llama-4-scout-17b-16e-instruct",
+        input_price=0.0,
+        output_price=0.0,
+        tier="free",
+        context_window_tokens=131_072,  # Llama 4 Scout 17Bx16E: 128K
+    ),
     "groq-llama-70b": ModelInfo(
         display_name="groq-llama-70b",
         provider="groq",
@@ -129,15 +154,8 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         tier="free",
         context_window_tokens=131_072,
     ),
-    "groq-gemma-9b": ModelInfo(
-        display_name="groq-gemma-9b",
-        provider="groq",
-        api_id="gemma2-9b-it",
-        input_price=0.0,
-        output_price=0.0,
-        tier="free",
-        context_window_tokens=8_192,  # Gemma 2 9B: 8K
-    ),
+    # groq-gemma-9b (gemma2-9b-it) REMOVED 2026-07-12: Groq no longer serves it.
+    # Confirmed absent from GET /openai/v1/models — any call would have 404'd.
     # ── Azure OpenAI (GovCloud / enterprise deployments) ──
     "azure-gpt4o": ModelInfo(
         display_name="azure-gpt4o",
