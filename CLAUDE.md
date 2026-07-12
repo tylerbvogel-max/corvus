@@ -1,19 +1,20 @@
 # Corvus
 
-Unified, multi-tenant neuron graph for prompt preparation. Two-stage Haiku pipeline: classify intent → score neurons → assemble context → execute with enriched prompt.
+Unified, multi-tenant neuron graph for prompt preparation. Pipeline: embed-only classification (neighbor vote, no LLM — the old per-query Haiku classify was deleted 2026-07) → score neurons → assemble context → execute with enriched prompt.
 
 ## Active roadmap
 **AIP governance roadmap** — canonical source is the Master Corvus roadmap. Roadmap state (nodes + statuses + per-node context prompts): `~/Projects/master-corvus/public/roadmap-state.json`. Visual view: Master Corvus → Roadmap Flowchart at http://localhost:5175/. When the user asks to "work the next AIP roadmap item," look at nodes with `status` in `("proposed", "planned")` in the `governance` section (ids prefixed `gov-aip-`) and pick the next one whose dependencies (see `edges` array) are cleared. Each node's `prompt` field carries the kickoff context for that item, including migrated historical rationale from prior session work.
 
 ## Multi-Tenant Architecture
-- **TENANT_ID** env var selects the tenant: `corvus-aero` (aerospace) or `corvus-flow` (plumbing)
+- **TENANT_ID** env var selects the tenant: `corvus-aero` (aerospace, port 8002), `corvus-flow` (plumbing, 8003), `corvus-mind` (agentic memory, 8005 — the only tenant with `memory_surface: true`), `corvus-gtm` (go-to-market knowledge library, 8006, added 2026-07-12)
+- Database per tenant is derived from TENANT_ID (`corvus-gtm` → DB `corvus_gtm`); the DB must exist before startup (`sudo -u postgres createdb -O yggdrasil <name>`) — startup runs `Base.metadata.create_all`, it does not create databases
 - Domain config lives in `backend/tenants/{tenant_id}/` (tenant.yaml + Python modules)
 - `backend/app/tenant.py` is the singleton loader — imported as `from app.tenant import tenant`
 - All domain-specific content (prompts, patterns, seed data, concepts, regulatory trees) is in tenant dirs
 - Service code is domain-agnostic — reads from `tenant.*` properties
 
 ## LLM Provider Policy
-**All LLM calls route through the Claude CLI** (personal subscription — no API credits). Never use the `anthropic` Python SDK directly. The `_anthropic_chat` function in `backend/app/services/llm_provider.py` shells out to `claude -p --output-format json` via subprocess.
+**All Anthropic LLM calls route through the Claude CLI** (personal subscription — no API credits). Never use the `anthropic` Python SDK directly, and never import `app.services.claude_cli` (archived legacy wrapper with a stale price table; its only importer is `backend/archived/`). The single entry point is `llm_provider.llm_chat(model=...)`: Anthropic models dispatch to `_anthropic_chat`, which shells out to `claude -p --output-format json` via subprocess; Google/Groq/Azure models use their SDKs inside the same dispatch table. Groq is on the rate-limited free tier (verified 2026-07-12: no card, ~6K tokens/min cap — it 429s, it does not bill).
 
 ### Gotcha: "Claude Code cannot be launched inside another Claude Code session"
 When Corvus is developed or run from inside a Claude Code session, the CLI subprocess inherits `CLAUDECODE=1` (and `CLAUDE_CODE_*` vars), which the CLI treats as a nested-session signal and refuses to launch.
@@ -41,8 +42,8 @@ parsed as CLI options and crash the parser; argv also has size limits.
 `proc.communicate(input=user_message.encode())` with bare `-p`.
 
 ## Stack
-- Python FastAPI + PostgreSQL (async SQLAlchemy + asyncpg) + Anthropic Python SDK
-- Alembic for schema migrations
+- Python FastAPI + PostgreSQL (async SQLAlchemy + asyncpg); LLM via Claude CLI subprocess (`llm_provider.py`) plus Google/Groq/Azure SDK paths — the `anthropic` SDK is an unused dependency, not the stack
+- Schema: startup runs `Base.metadata.create_all` + idempotent column patchers; the `alembic/` tree exists but is NOT invoked at startup (and fails on fresh DBs at 017 — see memory)
 - Port: from `PORT` env var (default 8002)
 
 ## Dev Commands
@@ -52,6 +53,10 @@ source venv/bin/activate
 TENANT_ID=corvus-aero PORT=8002 uvicorn app.main:app --port 8002 --reload
 # Or for plumbing tenant:
 TENANT_ID=corvus-flow PORT=8003 uvicorn app.main:app --port 8003 --reload
+# corvus-mind runs as a systemd user service (do not start by hand):
+#   systemctl --user status corvus-mind.service   # port 8005
+# GTM knowledge library:
+TENANT_ID=corvus-gtm PORT=8006 uvicorn app.main:app --port 8006
 ```
 
 ## Docker
@@ -123,7 +128,7 @@ All code contributions to this project MUST adhere to the following NASA softwar
 5. **Testing & verification**: New features require verification evidence. API endpoints need at minimum a smoke test. LLM pipeline changes need evaluation against known-good queries.
 6. **Software classification**: This system processes operational knowledge and influences decision-making. Treat it as safety-relevant software — changes to scoring algorithms, neuron creation, or observation approval logic require heightened review.
 7. **Metrics & measurement**: Track token usage, model costs, and pipeline latency. Cost projections and actuals must remain visible in the UI.
-8. **Third-party software management**: LLM model updates (Haiku/Sonnet/Opus version changes), dependency upgrades, and Anthropic SDK updates must be evaluated for behavioral impact before adoption.
+8. **Third-party software management**: LLM model updates (Haiku/Sonnet/Opus version changes), dependency upgrades, and Claude CLI updates must be evaluated for behavioral impact before adoption.
 9. **Documentation**: Public-facing endpoints must have docstrings. Schema changes must include migration logic. LLM system prompts must document their intent and expected output format.
 10. **Safety-critical coding (Power of Ten)**: Simple control flow (no recursion/goto), bounded loops, no dynamic allocation after init, functions under 60 lines, 2+ assertions per function, smallest variable scope, mandatory static analysis, restricted pointer use, zero compiler warnings, development rigor matched to criticality.
 
