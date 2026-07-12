@@ -56,6 +56,12 @@ DECAY_FACTOR = 0.9
 DECAY_FLOOR = 0.4
 DECAY_MIN_INVOCATIONS = 20
 MAX_ACTIONS_PER_RUN = 20
+# Charter membership (W1): promote at ≈5 net load-bearing attribution
+# verdicts above the 0.5 birth weight; hysteresis so one contradiction
+# (×0.85: 0.70 → 0.595) doesn't flap membership — it takes two to fall
+# out. Guessed constants — revisit against attribution telemetry.
+CHARTER_PROMOTE_UTILITY = 0.70
+CHARTER_DEMOTE_UTILITY = 0.55
 
 _SESSION_REF = re.compile(r"\[session:([A-Za-z0-9_-]+)\]")
 
@@ -375,12 +381,48 @@ async def run_decay_audit(db: AsyncSession) -> dict:
     return {"demoted": demoted}
 
 
+async def run_charter_promotion(db: AsyncSession) -> dict:
+    """Authority follows evidence (W1): informational lessons whose utility
+    was driven up by repeated load-bearing attributions earn guidance tier —
+    charter membership; guidance lessons whose utility rots fall back.
+    Organizational tier is human-set and never touched. Bounded per run."""
+    promote = (await db.execute(
+        select(Neuron).where(
+            Neuron.is_active.is_(True), Neuron.node_type.in_(LESSON_TYPES),
+            Neuron.superseded_by.is_(None),
+            Neuron.authority_level == "informational",
+            Neuron.avg_utility >= CHARTER_PROMOTE_UTILITY,
+        ).order_by(Neuron.avg_utility.desc()).limit(MAX_ACTIONS_PER_RUN)
+    )).scalars().all()
+    demote = (await db.execute(
+        select(Neuron).where(
+            Neuron.is_active.is_(True), Neuron.node_type.in_(LESSON_TYPES),
+            Neuron.authority_level == "guidance",
+            Neuron.avg_utility < CHARTER_DEMOTE_UTILITY,
+        ).order_by(Neuron.avg_utility).limit(MAX_ACTIONS_PER_RUN)
+    )).scalars().all()
+    report: dict = {"promoted": [], "demoted": []}
+    for action, rows, new_level in (("charter.promote", promote, "guidance"),
+                                    ("charter.demote", demote, "informational")):
+        for n in rows:  # bounded by MAX_ACTIONS_PER_RUN (JPL-2)
+            n.authority_level = new_level
+            detail = {"neuron_id": n.id, "label": n.label,
+                      "utility": round(n.avg_utility or 0.5, 3)}
+            _log_action(action, detail)
+            report["promoted" if new_level == "guidance" else "demoted"].append(detail)
+    await db.commit()
+    assert len(report["promoted"]) <= MAX_ACTIONS_PER_RUN, "bounded run"
+    assert len(report["demoted"]) <= MAX_ACTIONS_PER_RUN, "bounded run"
+    return report
+
+
 async def run_janitors(
     db: AsyncSession, *, consolidation: bool = True,
-    staleness: bool = True, decay: bool = True, max_pairs: int = 40,
+    staleness: bool = True, decay: bool = True, promotion: bool = True,
+    max_pairs: int = 40,
 ) -> dict:
     """Run the selected janitor passes; returns a combined report."""
-    assert consolidation or staleness or decay, "select at least one pass"
+    assert consolidation or staleness or decay or promotion, "select at least one pass"
     report: dict = {"ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     if consolidation:
         report["consolidation"] = await run_consolidation(db)
@@ -388,6 +430,8 @@ async def run_janitors(
         report["staleness"] = await run_staleness(db, max_pairs=max_pairs)
     if decay:
         report["decay"] = await run_decay_audit(db)
+    if promotion:
+        report["charter"] = await run_charter_promotion(db)
     # Persist for the inbox surface: borderline pairs need human judgment
     # and would otherwise vanish with the HTTP response.
     try:

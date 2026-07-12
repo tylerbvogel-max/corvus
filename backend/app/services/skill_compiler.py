@@ -32,7 +32,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron
-from app.services.mind_janitors import _add_memory_edge, _load_lessons, _log_action
+from app.services.mind_janitors import (
+    LESSON_TYPES, _add_memory_edge, _load_lessons, _log_action,
+)
 
 SKILLS_DIR = os.path.expanduser("~/.claude/skills")
 MANIFEST_PATH = os.path.expanduser("~/.corvus-mind/compiled-skills.json")
@@ -64,6 +66,80 @@ Rules:
 
 Respond with ONLY a JSON object, no markdown fences:
 {"name": "...", "description": "...", "body_markdown": "..."}"""
+
+
+CHARTER_NAME = SKILL_PREFIX + "charter"
+# ~1500 tokens: the always-on budget. Guessed constant — revisit once
+# injection-size telemetry exists (label per data-driven-design rule).
+CHARTER_MAX_CHARS = 6000
+CHARTER_TIERS = ("guidance", "organizational")
+
+
+def _charter_line(n: Neuron) -> str:
+    """One-line hook: scope + label + first sentence + verification stamp."""
+    summary = (n.summary or n.content or "").strip().split("\n")[0]
+    verified = f" (verified {n.last_verified.date()})" if n.last_verified else ""
+    return f"- [{n.department or 'global'}] {n.label}: {summary[:180]}{verified}"
+
+
+async def compile_charter(db: AsyncSession) -> dict:
+    """W1 presence layer: render every guidance+ lesson as a one-line rule
+    into the designated mind-charter capsule, which the memory hook injects
+    WHOLE at SessionStart. Policy is never retrieved — it is always present.
+    (Native-memory parity: a MEMORY.md-style index, but membership is EARNED
+    via attribution-driven authority promotion and re-audited every cycle,
+    which a hand-written index cannot do.) Deterministic render, no LLM."""
+    rows = (await db.execute(
+        select(Neuron).where(
+            Neuron.is_active.is_(True),
+            Neuron.node_type.in_(LESSON_TYPES),
+            Neuron.superseded_by.is_(None),
+            Neuron.authority_level.in_(CHARTER_TIERS),
+        ).order_by(Neuron.avg_utility.desc(), Neuron.id)
+    )).scalars().all()
+    lines: list[str] = []
+    included: list[int] = []
+    size = 0
+    for n in rows:  # bounded by row count (JPL-2)
+        line = _charter_line(n)
+        if size + len(line) + 1 > CHARTER_MAX_CHARS:
+            _log_action("compiler.charter_overflow", {
+                "dropped": len(rows) - len(included)})
+            break
+        lines.append(line)
+        included.append(n.id)
+        size += len(line) + 1
+    assert len(included) == len(lines), "one neuron id per rendered line"
+    if not lines:
+        return {"included": 0, "candidates": len(rows), "path": None}
+    body = ("Standing working policies, earned through repeated verified use "
+            "and re-audited every janitor cycle. Weigh these strongly; each "
+            "line names the scope it governs.\n\n" + "\n".join(lines))
+    path = _write_skill(
+        CHARTER_NAME,
+        "Corvus-Mind charter — standing policies injected whole at "
+        "SessionStart by the memory hook; not task-triggered.",
+        body, included)
+    assert os.path.exists(path), "charter rendering must land on disk"
+    _log_action("compiler.charter", {
+        "included": len(included), "candidates": len(rows), "chars": size})
+    return {"included": len(included), "candidates": len(rows),
+            "path": path, "sources": included}
+
+
+def _reconcile_manifest(manifest: list[dict]) -> tuple[list[dict], list[str]]:
+    """Drop entries whose rendering vanished outside a compile run — the
+    manifest must never overstate what is live on disk (found 2026-07-12:
+    4 entries pointed at skills that had been retired out-of-band)."""
+    kept: list[dict] = []
+    ghosts: list[str] = []
+    for entry in manifest:
+        path = os.path.join(SKILLS_DIR, entry["name"], "SKILL.md")
+        if os.path.exists(path):
+            kept.append(entry)
+        else:
+            ghosts.append(entry["name"])
+    return kept, ghosts
 
 
 def _load_manifest() -> list[dict]:
@@ -210,6 +286,12 @@ async def _stale_entries(db: AsyncSession, manifest: list[dict],
     cluster_sets = [frozenset(x.id for x in c) for c in clusters]
     stale: list[dict] = []
     for entry in manifest:
+        # Designated capsules (self-model, charter) are compiler- or
+        # hand-owned with mutating source sets; the cluster-growth test
+        # would false-positive on them (∅ ⊂ any cluster) and retract
+        # identity. They are refreshed by their own paths, never here.
+        if entry.get("designated"):
+            continue
         sources = set(entry.get("sources", []))
         rotten = False
         for nid in sources:
@@ -279,7 +361,10 @@ async def run_compile(db: AsyncSession) -> dict:
     """Reverse check + compile eligible clusters (bounded Opus spend)."""
     lessons = await _load_lessons(db)
     clusters = find_clusters(lessons)
-    manifest = _load_manifest()
+    manifest, ghosts = _reconcile_manifest(_load_manifest())
+    for name in ghosts:
+        _log_action("compiler.manifest_reconcile", {
+            "skill": name, "reason": "rendering-missing-on-disk"})
 
     stale = await _stale_entries(db, manifest, clusters)
     for entry in stale:
@@ -321,8 +406,17 @@ async def run_compile(db: AsyncSession) -> dict:
         emitted.append({**entry, "cost_usd": skill.get("cost_usd")})
         _log_action("compiler.emit", {
             "skill": skill["name"], "sources": sorted(ids)})
+    charter = await compile_charter(db)
+    manifest = [m for m in manifest if m["name"] != CHARTER_NAME]
+    if charter.get("path"):
+        manifest.append({
+            "name": CHARTER_NAME, "sources": charter["sources"],
+            "designated": True, "path": charter["path"],
+            "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        })
     await db.commit()
     _save_manifest(manifest)
     return {"lessons": len(lessons), "clusters": len(clusters),
             "retracted": [e["name"] for e in stale],
+            "reconciled_ghosts": ghosts, "charter": charter,
             "emitted": emitted, "manifest_size": len(manifest)}
