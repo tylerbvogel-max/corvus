@@ -95,6 +95,9 @@ async def compile_charter(db: AsyncSession) -> dict:
             Neuron.node_type.in_(LESSON_TYPES),
             Neuron.superseded_by.is_(None),
             Neuron.authority_level.in_(CHARTER_TIERS),
+            # Identity is delivered by the designated self-model capsule;
+            # rendering Assistant lessons here would double-inject them.
+            Neuron.department != "Assistant",
         ).order_by(Neuron.avg_utility.desc(), Neuron.id)
     )).scalars().all()
     lines: list[str] = []
@@ -123,8 +126,9 @@ async def compile_charter(db: AsyncSession) -> dict:
     assert os.path.exists(path), "charter rendering must land on disk"
     _log_action("compiler.charter", {
         "included": len(included), "candidates": len(rows), "chars": size})
+    labels = [n.label for n in rows[:len(included)]]
     return {"included": len(included), "candidates": len(rows),
-            "path": path, "sources": included}
+            "path": path, "sources": included, "source_labels": labels}
 
 
 def _reconcile_manifest(manifest: list[dict]) -> tuple[list[dict], list[str]]:
@@ -357,6 +361,37 @@ async def _retract_skill_node(db: AsyncSession, node_id: int | None) -> None:
         node.is_active = False
 
 
+SELF_MODEL_NAME = SKILL_PREFIX + "self-model"
+
+
+async def _self_model_growth_check(db: AsyncSession, manifest: list[dict]) -> None:
+    """W7: the self-model capsule is hand-curated (identity is never
+    auto-recompiled), but its source cluster can now grow — Assistant-scope
+    lessons approved through the review queue land at organizational
+    authority outside the designated source set. Surface that drift as a
+    logged action so the inbox shows 'your self-model has approved growth
+    awaiting curation' instead of silently diverging."""
+    entry = next((m for m in manifest if m.get("name") == SELF_MODEL_NAME), None)
+    if entry is None:
+        return
+    known = set(entry.get("sources", []))
+    grown = (await db.execute(
+        select(Neuron).where(
+            Neuron.is_active.is_(True),
+            Neuron.department == "Assistant",
+            Neuron.node_type.in_(LESSON_TYPES),
+            Neuron.superseded_by.is_(None),
+            Neuron.authority_level.in_(CHARTER_TIERS),
+            Neuron.id.notin_(known) if known else Neuron.id.isnot(None),
+        )
+    )).scalars().all()
+    if grown:
+        _log_action("compiler.self_model_growth", {
+            "pending_curation": [{"neuron_id": n.id, "label": n.label}
+                                 for n in grown],
+            "designated_sources": sorted(known)})
+
+
 async def run_compile(db: AsyncSession) -> dict:
     """Reverse check + compile eligible clusters (bounded Opus spend)."""
     lessons = await _load_lessons(db)
@@ -411,9 +446,11 @@ async def run_compile(db: AsyncSession) -> dict:
     if charter.get("path"):
         manifest.append({
             "name": CHARTER_NAME, "sources": charter["sources"],
+            "source_labels": charter["source_labels"],
             "designated": True, "path": charter["path"],
             "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         })
+    await _self_model_growth_check(db, manifest)
     await db.commit()
     _save_manifest(manifest)
     return {"lessons": len(lessons), "clusters": len(clusters),

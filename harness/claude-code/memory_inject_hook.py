@@ -120,6 +120,32 @@ SELF_SKILL_PATH = os.path.expanduser("~/.claude/skills/mind-self-model/SKILL.md"
 SELF_CAPSULE_MAX = 1600
 CHARTER_SKILL_PATH = os.path.expanduser("~/.claude/skills/mind-charter/SKILL.md")
 CHARTER_CAPSULE_MAX = 6500  # compiler caps the render at 6000; headroom only
+MANIFEST_PATH = os.path.expanduser("~/.corvus-mind/compiled-skills.json")
+
+
+def _capsule_hits(skill_name: str, exclude: set) -> list:
+    """Pseudo-hits for a capsule's source neurons (from the compiler
+    manifest), so file-delivered content enters the attribution ledger
+    exactly like recall hits. Before this (fixed 2026-07-12), the
+    self-model and charter were invisible to attribution: the policies
+    doing the heaviest lifting could never earn or lose trust from use,
+    and the W6 parity gate would have undercounted charter coverage."""
+    try:
+        with open(MANIFEST_PATH, encoding="utf-8") as fh:
+            manifest = json.load(fh)
+    except (OSError, ValueError):
+        return []
+    entry = next((m for m in manifest if m.get("name") == skill_name), None)
+    if not entry:
+        return []
+    labels = entry.get("source_labels", [])
+    return [
+        {"neuron_id": nid,
+         "label": labels[i] if i < len(labels) else f"{skill_name}#{nid}",
+         "score": None}
+        for i, nid in enumerate(entry.get("sources", []))
+        if nid not in exclude
+    ]
 
 
 def _read_capsule(path: str, cap: int) -> str | None:
@@ -195,7 +221,8 @@ def main() -> int:
     else:
         return 0
 
-    hits = [h for h in hits if h["neuron_id"] not in _already_injected(session_id)]
+    seen = _already_injected(session_id)
+    hits = [h for h in hits if h["neuron_id"] not in seen]
     capsule = _self_capsule() if event == "SessionStart" else None
     charter = _charter_capsule() if event == "SessionStart" else None
     if not hits and not capsule and not charter:
@@ -203,6 +230,14 @@ def main() -> int:
 
     if hits:
         _log_injection(session_id, cwd, event, hits, query_id)
+    # Capsule attribution (W7 fix): log the capsules' source neurons so
+    # the distiller can render load_bearing/contradicted verdicts on
+    # them. `seen` guards resume/compact re-fires within a session.
+    for name, delivered in (("mind-self-model", capsule), ("mind-charter", charter)):
+        if delivered:
+            cap_hits = _capsule_hits(name, seen)
+            if cap_hits:
+                _log_injection(session_id, cwd, f"capsule:{name}", cap_hits, None)
     context = _format_context(hits) if hits else ""
     if charter:
         context = ("Corvus-Mind charter (standing policies earned through "
