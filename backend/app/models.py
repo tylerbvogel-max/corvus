@@ -882,6 +882,27 @@ class IntegrityFinding(Base):
     scan: Mapped["IntegrityScan"] = relationship("IntegrityScan", back_populates="findings")
 
 
+class MemoryChangeEvent(Base):
+    """Temporal change log for memory rows (kill-temporal-kg parity).
+
+    Supersede/demote/promote paths append (old_value, new_value,
+    changed_at, reason) per mutated field instead of overwriting
+    silently — recall can answer "what did we believe on date D" by
+    reverting events newer than D, and a superseded row keeps its
+    validity window (created_at .. changed_at of the supersession).
+    """
+    __tablename__ = "memory_change_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    neuron_id: Mapped[int] = mapped_column(Integer, ForeignKey("neurons.id"), nullable=False, index=True)
+    field: Mapped[str] = mapped_column(String(50), nullable=False)
+    old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    actor: Mapped[str] = mapped_column(String(50), nullable=False, server_default="mind_janitor")
+    changed_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
 class Action(Base):
     """Universal write primitive — every state mutation passes through one of these.
 

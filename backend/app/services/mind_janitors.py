@@ -38,7 +38,7 @@ from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import IntegrityFinding, Neuron, SynapticLearningEvent
+from app.models import IntegrityFinding, MemoryChangeEvent, Neuron, SynapticLearningEvent
 
 EPISODE_DIR = os.path.expanduser(
     os.environ.get("CORVUS_MIND_EPISODE_DIR", "~/.corvus-mind/episodes")
@@ -113,6 +113,25 @@ async def _add_memory_edge(
         reason=context[:200],
     )
     assert result.state == "applied", f"edge.link failed: {result.error}"
+
+
+def _log_change(
+    db: AsyncSession, neuron_id: int, field: str,
+    old_value, new_value, reason: str,
+) -> None:
+    """Append a temporal change event (kill-temporal-kg parity).
+
+    Every janitor mutation of a memory row records (old, new,
+    changed_at, reason) so 'what did we believe on date D' stays
+    answerable — supersedes/demotions are logged, never silent."""
+    assert field in ("superseded_by", "is_active", "avg_utility",
+                     "authority_level"), f"unlogged memory field: {field}"
+    db.add(MemoryChangeEvent(
+        neuron_id=neuron_id, field=field,
+        old_value=None if old_value is None else str(old_value),
+        new_value=None if new_value is None else str(new_value),
+        reason=reason[:300], actor="mind_janitor",
+    ))
 
 
 def _log_action(action: str, detail: dict) -> None:
@@ -199,6 +218,9 @@ async def _fuse_pair(db: AsyncSession, canonical: Neuron, dup: Neuron) -> dict:
         db, dup.id, canonical.id, "evidence-link",
         f"consolidation: '{dup.label}' absorbed into '{canonical.label}'",
     )
+    reason = f"consolidation: absorbed into '{canonical.label}'"
+    _log_change(db, dup.id, "is_active", dup.is_active, False, reason)
+    _log_change(db, dup.id, "superseded_by", dup.superseded_by, canonical.id, reason)
     dup.is_active = False
     dup.superseded_by = canonical.id
     if confirmation:
@@ -360,6 +382,10 @@ async def _resolve_contradiction(
         _log_action("staleness.scoped", detail)
         return detail
     newer, older = (a, b) if (a.created_at or datetime.min) >= (b.created_at or datetime.min) else (b, a)
+    reason = f"staleness: superseded by '{newer.label}' (evidence recency)"
+    _log_change(db, older.id, "superseded_by", older.superseded_by, newer.id, reason)
+    _log_change(db, older.id, "avg_utility", older.avg_utility,
+                round((older.avg_utility or 0.5) * STALE_DEMOTION, 3), reason)
     older.superseded_by = newer.id
     older.avg_utility = (older.avg_utility or 0.5) * STALE_DEMOTION
     await _add_memory_edge(
@@ -427,6 +453,8 @@ async def run_decay_audit(db: AsyncSession) -> dict:
     for n in rows:
         old = n.avg_utility or 0.5
         n.avg_utility = max(DECAY_FLOOR, old * DECAY_FACTOR)
+        _log_change(db, n.id, "avg_utility", old, round(n.avg_utility, 3),
+                    "decay: recalled but never reinforced (warm zombie)")
         detail = {"neuron_id": n.id, "label": n.label,
                   "old_utility": round(old, 3), "new_utility": round(n.avg_utility, 3),
                   "invocations": n.invocations}
@@ -460,6 +488,9 @@ async def run_charter_promotion(db: AsyncSession) -> dict:
     for action, rows, new_level in (("charter.promote", promote, "guidance"),
                                     ("charter.demote", demote, "informational")):
         for n in rows:  # bounded by MAX_ACTIONS_PER_RUN (JPL-2)
+            _log_change(db, n.id, "authority_level", n.authority_level, new_level,
+                        f"charter: utility {round(n.avg_utility or 0.5, 3)} "
+                        f"crossed the {new_level} bar")
             n.authority_level = new_level
             detail = {"neuron_id": n.id, "label": n.label,
                       "utility": round(n.avg_utility or 0.5, 3)}
