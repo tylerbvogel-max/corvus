@@ -41,6 +41,7 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
   const [leftWidth, setLeftWidth] = useState(380);
   const [checkpointing, setCheckpointing] = useState(false);
   const [checkpointMsg, setCheckpointMsg] = useState('');
+  const [expandAll, setExpandAll] = useState(false);
   const [concepts, setConcepts] = useState<ConceptNeuron[]>([]);
   const [conceptsOpen, setConceptsOpen] = useState(false);
   const dragging = useRef(false);
@@ -72,9 +73,11 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
     };
   }, []);
 
-  // Initial load: first 2 layers only + concept neurons
+  // Initial load: full tree — every layer, however deep. The old
+  // 2-layer cap was a premature optimization that read as "these
+  // neurons are one-liners" when the depth simply wasn't fetched.
   useEffect(() => {
-    fetchTree(undefined, 2)
+    fetchTree()
       .then(data => { setTree(data); setDepartments(collectDepartments(data)); })
       .catch(e => setError(e.message));
     fetchConceptNeurons().then(setConcepts).catch(() => {});
@@ -96,10 +99,10 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
     }
   }, [navigateToNeuronId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Department filter change: reload with depth limit
+  // Department filter change: reload (full depth)
   useEffect(() => {
     const dept = deptFilter || undefined;
-    fetchTree(dept, 2)
+    fetchTree(dept)
       .then(setTree)
       .catch(e => setError(e.message));
   }, [deptFilter]);
@@ -151,6 +154,13 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
           />
           <button
             className="btn btn-sm"
+            onClick={() => setExpandAll(v => !v)}
+            title="Expand every branch to its deepest layer"
+          >
+            {expandAll ? 'Collapse' : 'Expand all'}
+          </button>
+          <button
+            className="btn btn-sm"
             onClick={handleCheckpoint}
             disabled={checkpointing}
           >
@@ -164,6 +174,7 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
           selectedId={selectedId}
           onSelect={setSelectedId}
           onChildrenLoaded={handleChildrenLoaded}
+          forceOpen={expandAll}
           conceptGroup={concepts.length > 0 && (!deptFilter || deptFilter === '') ? {
             concepts,
             open: conceptsOpen,

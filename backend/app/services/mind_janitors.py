@@ -57,11 +57,15 @@ DECAY_FLOOR = 0.4
 DECAY_MIN_INVOCATIONS = 20
 MAX_ACTIONS_PER_RUN = 20
 # Charter membership (W1): promote at ≈5 net load-bearing attribution
-# verdicts above the 0.5 birth weight; hysteresis so one contradiction
-# (×0.85: 0.70 → 0.595) doesn't flap membership — it takes two to fall
-# out. Guessed constants — revisit against attribution telemetry.
+# verdicts above the 0.5 birth weight. Demote ONLY strictly below birth
+# weight — i.e. net-negative evidence (contradictions outweighing
+# confirmations). INCIDENT 2026-07-12: the demote bar was 0.55, and the
+# first full run evicted all 13 hand-seeded charter natives sitting at
+# birth 0.5 — absence of history was treated as evidence of decline.
+# A lesson with no attribution record has earned neither seat nor
+# eviction; only observed contradiction may remove standing.
 CHARTER_PROMOTE_UTILITY = 0.70
-CHARTER_DEMOTE_UTILITY = 0.55
+CHARTER_DEMOTE_UTILITY = 0.5  # strictly-below comparison: 0.5 birth weight is safe
 
 _SESSION_REF = re.compile(r"\[session:([A-Za-z0-9_-]+)\]")
 
@@ -70,11 +74,28 @@ async def _add_memory_edge(
     db: AsyncSession, source_id: int, target_id: int,
     edge_type: str, context: str,
 ) -> None:
-    """Create a memory-semantics edge through the Action Bus (audited)."""
+    """Create a memory-semantics edge through the Action Bus (audited).
+
+    Idempotent: asserting a relationship that already exists is a no-op,
+    not an error. Janitor passes re-derive the same resolution when both
+    parties survive (e.g. a contradiction pair re-detected next run) —
+    found 2026-07-12 crashing every staleness pass on neuron_edges_pkey,
+    which killed the whole janitor run before decay/promotion could run."""
     assert edge_type in ("supersedes", "scoped-by", "evidence-link"), \
         f"not a memory edge type: {edge_type}"
+    from sqlalchemy import select as sa_select
     from app.middleware.rbac import UserIdentity
+    from app.models import NeuronEdge
     from app.services import action_bus
+
+    existing = (await db.execute(
+        sa_select(NeuronEdge).where(
+            NeuronEdge.source_id == source_id,
+            NeuronEdge.target_id == target_id,
+        ).limit(1)
+    )).scalar_one_or_none()
+    if existing is not None:
+        return  # relationship already asserted — re-assertion is a no-op
 
     identity = UserIdentity(user_id="mind_janitor", role="admin", source="system")
     result = await action_bus.submit(
@@ -356,6 +377,40 @@ async def _resolve_contradiction(
     return detail
 
 
+def _sessions_distilled_since(prior_ran_at: str | None) -> int:
+    """Distilled-session count since the previous janitor run — the
+    decay clock. Decay must ride EVIDENCE time, not wall time: the 6h
+    timer keeps firing through a month of absence, and un-gated decay
+    would walk warm zombies to the floor while nobody was around to
+    reinforce anything (user decision 2026-07-12: sessions are the
+    cadence, never the calendar)."""
+    if not prior_ran_at:
+        return 1  # first run ever: proceed
+    try:
+        cutoff = datetime.fromisoformat(prior_ran_at).timestamp()
+    except ValueError:
+        return 1
+    count = 0
+    try:
+        for name in os.listdir(EPISODE_DIR):  # bounded by dir size (JPL-2)
+            if name.endswith(".distilled") and \
+                    os.path.getmtime(os.path.join(EPISODE_DIR, name)) > cutoff:
+                count += 1
+    except OSError:
+        return 1
+    return count
+
+
+def _prior_ran_at() -> str | None:
+    """ran_at of the previous janitor run, from the persisted report."""
+    try:
+        with open(os.path.join(os.path.dirname(ACTIONS_LOG),
+                               "janitor-report.json"), encoding="utf-8") as fh:
+            return json.load(fh).get("ran_at")
+    except (OSError, ValueError):
+        return None
+
+
 async def run_decay_audit(db: AsyncSession) -> dict:
     """Demote warm zombies: recalled often, never reinforced."""
     reinforced = select(SynapticLearningEvent.neuron_id).distinct().scalar_subquery()
@@ -429,7 +484,13 @@ async def run_janitors(
     if staleness:
         report["staleness"] = await run_staleness(db, max_pairs=max_pairs)
     if decay:
-        report["decay"] = await run_decay_audit(db)
+        fresh = _sessions_distilled_since(_prior_ran_at())
+        if fresh > 0:
+            report["decay"] = await run_decay_audit(db)
+        else:
+            report["decay"] = {"demoted": [], "skipped":
+                               "no sessions distilled since last run — "
+                               "evidence time is frozen, so decay is too"}
     if promotion:
         report["charter"] = await run_charter_promotion(db)
     # Persist for the inbox surface: borderline pairs need human judgment

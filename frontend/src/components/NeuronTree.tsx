@@ -16,6 +16,8 @@ interface Props {
   onSelect: (id: number) => void;
   onChildrenLoaded?: (parentId: number, children: TreeNode[]) => void;
   conceptGroup?: ConceptGroupProps;
+  /** Force every branch open to its deepest loaded layer. */
+  forceOpen?: boolean;
 }
 
 function matchesSearch(node: TreeNode, term: string): boolean {
@@ -39,6 +41,7 @@ function TreeNodeRow({
   onSelect,
   onExpand,
   depth,
+  forceOpen,
 }: {
   node: TreeNode;
   search: string;
@@ -46,6 +49,7 @@ function TreeNodeRow({
   onSelect: (id: number) => void;
   onExpand: (id: number) => Promise<void>;
   depth: number;
+  forceOpen?: boolean;
 }) {
   const children = node.children ?? [];
   const childCount = node.child_count ?? children.length;
@@ -55,9 +59,10 @@ function TreeNodeRow({
   const [open, setOpen] = useState(depth < 1);
   const [loading, setLoading] = useState(false);
 
-  // Auto-expand when a search matches a descendant
+  // Auto-expand when a search matches a descendant, or when the
+  // Explorer's expand-all mode is on (full tree is already fetched).
   const shouldAutoExpand = !!(search && searchMatch && hasChildren && childrenLoaded);
-  const effectiveOpen = open || shouldAutoExpand;
+  const effectiveOpen = open || shouldAutoExpand || (!!forceOpen && childrenLoaded);
 
   if (search && !searchMatch) return null;
 
@@ -95,6 +100,7 @@ function TreeNodeRow({
               onSelect={onSelect}
               onExpand={onExpand}
               depth={depth + 1}
+              forceOpen={forceOpen}
             />
           ))}
         </div>
@@ -103,7 +109,7 @@ function TreeNodeRow({
   );
 }
 
-export default function NeuronTree({ nodes, search, selectedId, onSelect, onChildrenLoaded, conceptGroup }: Props) {
+export default function NeuronTree({ nodes, search, selectedId, onSelect, onChildrenLoaded, conceptGroup, forceOpen }: Props) {
   const handleExpand = useCallback(async (parentId: number) => {
     if (!onChildrenLoaded) return;
     try {
@@ -174,6 +180,7 @@ export default function NeuronTree({ nodes, search, selectedId, onSelect, onChil
           onSelect={onSelect}
           onExpand={handleExpand}
           depth={0}
+          forceOpen={forceOpen}
         />
       ))}
     </div>
