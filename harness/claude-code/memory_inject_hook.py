@@ -117,7 +117,7 @@ def _format_context(hits: list) -> str:
 
 
 SELF_SKILL_PATH = os.path.expanduser("~/.claude/skills/mind-self-model/SKILL.md")
-SELF_CAPSULE_MAX = 1600
+SELF_CAPSULE_MAX = 4000  # raised 2026-07-12: W7 curated growth added three countersigned sections
 CHARTER_SKILL_PATH = os.path.expanduser("~/.claude/skills/mind-charter/SKILL.md")
 CHARTER_CAPSULE_MAX = 6500  # compiler caps the render at 6000; headroom only
 MANIFEST_PATH = os.path.expanduser("~/.corvus-mind/compiled-skills.json")
