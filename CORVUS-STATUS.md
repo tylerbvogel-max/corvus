@@ -1,6 +1,14 @@
 # Corvus — Project Status & Session Handoff
 
-Last updated: 2026-04-24
+Last updated: 2026-07-12
+
+## Kill-list execution (2026-07-12)
+
+Competitive kill list (§8 of the master-corvus roadmap) — verdicts recorded on the `kill-*` nodes in `roadmap-state.json`:
+
+- **kill-temporal-kg — [PARITY], done.** `memory_change_log` table now records (old_value, new_value, changed_at, reason) for every janitor mutation of a memory row (consolidation fuse, staleness supersede, decay demotion, charter promotion). Query surface: `GET /janitor/history/{id}` (change log + superseded predecessors with validity windows) and `GET /janitor/as-of/{id}?at=` (point-in-time belief-state reconstruction). Verified live on corvus-mind (port 8005) with a planted duplicate pair; matches Zep Graphiti's valid_from/valid_to semantics — superseded facts invalidated with history, never deleted. Commit `0342c7a`; migration `020_memory_change_log` (mind DB got the table via create_all — it has no alembic stamp).
+- **kill-locomo-bench — in progress.** LoCoMo eval harness at `eval/locomo/run_locomo.py`: session-by-session Opus distill through the production write gate into a throwaway `corvus-locomo` tenant (fresh DB, create_all), recall-only answering through the standard prepare pipeline, LLM-judge scoring, three conditions (memory / spread-disabled ablation / full-context baseline). Numbers land here when runs finish.
+- **kill-latency, kill-memory-ui, kill-managed-cloud, kill-connectors** — closed 2026-07-12, dispositions on the roadmap nodes.
 
 ## Recent milestone: two-phase document-ingest pipeline verified (2026-04-24)
 

@@ -1,0 +1,86 @@
+# Corvus Mind — Agentic Memory Scaffold
+# Scopes (regions) are the silo tags for institutional memory:
+#   Harness / Environment / Projects / User (+ Provenance, force-seeded as the
+#   regulatory-analog department from tenant.yaml).
+# These structural nodes are scaffold only — episodes and lessons arrive via
+# the write path (hooks -> distiller -> gate), never from this file.
+
+departments:
+
+  - label: Harness
+    roles:
+      - label: Harness Operator
+        role_key: harness_operator
+        tasks:
+          - label: Operate coding-harness sessions
+            summary: How Claude Code (and future harnesses) is extended and observed on this machine
+            content: |
+              The harness is never forked. Corvus Mind mounts through supported extension
+              surfaces only: MCP servers (recall/remember tools), hooks (SessionStart,
+              UserPromptSubmit for injection; PostToolUse, Stop for episode capture), and
+              the skills directory (compiled playbooks). Roughly 50 lines of hook glue are
+              the only harness-specific code; everything else is portable.
+            systems:
+              - label: Episode capture pipeline
+                summary: Deterministic hook-based event logging feeding the distiller
+                content: |
+                  PostToolUse and Stop hooks append one JSON line per event to
+                  ~/.corvus-mind/episodes/{session_id}.jsonl: timestamp, event type, cwd,
+                  project, tool name, redacted argument summary, ok/error. No LLM in the
+                  capture path; secrets are scrubbed and excluded projects are skipped at
+                  capture, where the data is born. The Stop event marks a log ready for
+                  asynchronous distillation.
+                decisions:
+                  - label: Determine whether a session's episode log is ready for distillation
+                    outputs:
+                      - label: Distillation-ready episode log
+                        content: |
+                          A session log is ready when its Stop event is present. The distiller
+                          (Opus via Claude CLI, batch-triggered from the autopilot heartbeat)
+                          reads the episode log plus the transcript and emits candidate lessons
+                          with evidence links, entering the graph at informational authority.
+
+  - label: Environment
+    roles:
+      - label: Machine Context
+        role_key: machine_context
+        tasks:
+          - label: Know this machine
+            summary: Verified facts about the host environment that agents repeatedly need
+            content: |
+              Host is a Chromebook running ChromeOS with Linux (Crostini). Known verified
+              facts as of 2026-07-10: no lsof (use fuser for port checks); no jq (parse
+              JSON with python3, system Python 3.11.2 at /usr/bin/python3); Node via nvm
+              (v20 default, v22 available); services run as systemd user units. Facts of
+              this kind rot — prefer "last verified on <date>" over absolute claims, and
+              expect supersession as the machine changes.
+
+  - label: Projects
+    roles:
+      - label: Project Context
+        role_key: project_context
+        tasks:
+          - label: Track per-project working knowledge
+            summary: Per-repo lessons, dev commands, gotchas, and decisions, scoped to their project
+            content: |
+              Every project-derived lesson is scoped to its repository and must not leak
+              into other projects unless deliberately promoted to a cross-project lesson.
+              Typical content: dev/run commands that actually work, migration landmines,
+              port assignments, remote/push policies, and past failures with their
+              verified workarounds. The scope boundary is also a policy wall: projects on
+              the exclusion list are never captured at all.
+
+  - label: User
+    roles:
+      - label: User Preferences
+        role_key: user_preferences
+        tasks:
+          - label: Apply user corrections and preferences
+            summary: Standing corrections from the user, with why they exist and how to apply them
+            content: |
+              User corrections are the highest-authority memories (organizational tier):
+              they encode how the user wants agents to work, learned from explicit
+              feedback. Each carries the correction, the why behind it, and how to apply
+              it. When a preference conflicts with an efficiency heuristic, the preference
+              wins. Preferences are re-confirmed by continued acceptance and superseded
+              when the user changes direction.
