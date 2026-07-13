@@ -43,7 +43,9 @@ ANSWER_MODEL = "sonnet"
 JUDGE_MODEL = "sonnet"
 RECALL_TOP_K = 10
 MAX_FACTS_PER_SESSION = 25
-LLM_CONCURRENCY = 4
+# 4 concurrent CLI subprocesses OOM-killed the answer phase on the 6.5GB
+# Chromebook (dmesg 2026-07-12); 2 is the safe default here
+LLM_CONCURRENCY = int(os.environ.get("LOCOMO_CONCURRENCY", "2"))
 
 CATEGORY_NAMES = {1: "multi-hop", 2: "temporal", 3: "open-domain",
                   4: "single-hop", 5: "adversarial"}
@@ -81,6 +83,23 @@ Decide whether the RESPONSE is factually consistent with the GOLD answer for the
 Special case — unanswerable questions: if GOLD is "No information available", the response is CORRECT only if it states the information is unavailable/unknown (any phrasing), and WRONG if it asserts a substantive answer.
 
 Respond with ONLY a JSON object: {"correct": true} or {"correct": false}"""
+
+
+async def llm_retry(**kwargs) -> dict:
+    """llm_chat with backoff — a rate-limited CLI call must not kill a
+    multi-hour phase. Returns {"text": ""} after final failure."""
+    from app.services.llm_provider import llm_chat
+    delay = 30
+    for attempt in range(5):  # bounded (JPL-2)
+        try:
+            return await llm_chat(**kwargs)
+        except (AssertionError, RuntimeError, ValueError, OSError) as exc:
+            if attempt == 4:
+                print(f"[llm] giving up after 5 tries: {str(exc)[:120]}", flush=True)
+                return {"text": ""}
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 600)
+    return {"text": ""}
 
 
 def load_conversation(conv_idx: int) -> dict:
@@ -147,7 +166,7 @@ async def ingest(conv_idx: int, conv: dict) -> None:
         body = (f"Session date/time: {date_time}\n"
                 f"Speakers: {speakers[0]} and {speakers[1]}\n\n"
                 + render_session(turns))
-        reply = await llm_chat(
+        reply = await llm_retry(
             system_prompt=DISTILL_PROMPT.replace("{max_facts}", str(MAX_FACTS_PER_SESSION)),
             user_message=body, max_tokens=4000, model=DISTILL_MODEL, timeout=600,
         )
@@ -217,7 +236,7 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
             async with async_session() as db:
                 hits = await recall_hits(db, qa["question"])
             mem = "\n".join(hits) if hits else "(no memories retrieved)"
-            reply = await llm_chat(
+            reply = await llm_retry(
                 system_prompt=ANSWER_PROMPT,
                 user_message=f"MEMORIES:\n{mem}\n\nQUESTION: {qa['question']}",
                 max_tokens=200, model=ANSWER_MODEL, timeout=240,
@@ -245,7 +264,7 @@ async def answer_baseline(conv_idx: int, conv: dict,
 
     async def one(qa: dict) -> dict:
         async with sem:
-            reply = await llm_chat(
+            reply = await llm_retry(
                 system_prompt=ANSWER_PROMPT.replace("MEMORIES retrieved for the question",
                                                     "full CONVERSATION transcript")
                                            .replace("these memories", "this transcript"),
@@ -280,7 +299,7 @@ async def judge(results: list[dict]) -> dict:
 
     async def one(r: dict) -> None:
         async with sem:
-            reply = await llm_chat(
+            reply = await llm_retry(
                 system_prompt=JUDGE_PROMPT,
                 user_message=(f"QUESTION: {r['question']}\nGOLD: {r['gold']}\n"
                               f"RESPONSE: {r['pred']}"),
