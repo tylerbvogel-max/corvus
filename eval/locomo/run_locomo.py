@@ -89,17 +89,23 @@ async def llm_retry(**kwargs) -> dict:
     """llm_chat with backoff — a rate-limited CLI call must not kill a
     multi-hour phase. Returns {"text": ""} after final failure."""
     from app.services.llm_provider import llm_chat
+    # A usage-limit window lasts hours: 5 quick tries "succeeded" at
+    # returning empty answers that were judged wrong and banked (conv-1
+    # and conv-2 baselines, 2026-07-12/13). Ride the window out instead —
+    # up to ~8h of 10-min waits — and CRASH if still down, so no phase
+    # ever scores garbage silently.
     delay = 30
-    for attempt in range(5):  # bounded (JPL-2)
+    for attempt in range(52):  # bounded: ~8h worst case (JPL-2)
         try:
             return await llm_chat(**kwargs)
         except (AssertionError, RuntimeError, ValueError, OSError) as exc:
-            if attempt == 4:
-                print(f"[llm] giving up after 5 tries: {str(exc)[:120]}", flush=True)
-                return {"text": ""}
+            if attempt == 51:
+                raise RuntimeError(
+                    f"LLM unavailable after ~8h of retries: {str(exc)[:200]}"
+                ) from exc
             await asyncio.sleep(delay)
             delay = min(delay * 2, 600)
-    return {"text": ""}
+    raise RuntimeError("unreachable")
 
 
 def load_conversation(conv_idx: int) -> dict:
