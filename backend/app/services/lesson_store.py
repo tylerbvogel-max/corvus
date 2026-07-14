@@ -9,12 +9,15 @@ are reclaimed by consolidation decay if never reinforced.
 
 import asyncio
 import json
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AutopilotProposal, Neuron, ProposalItem
 from app.services.write_gate import route_proposal
+
+logger = logging.getLogger(__name__)
 
 
 async def resolve_scope_anchor(
@@ -202,6 +205,14 @@ async def save_lesson(
         neuron_id = item.created_neuron_id
         if neuron_id is not None:
             await _embed_created(db, neuron_id)
+            # Genesis wiring: new lessons join the spread graph at birth
+            # (liberal kNN edges; decay prunes what never conducts). A
+            # wiring failure must never fail the save itself.
+            try:
+                from app.services.seeding_service import wire_neuron_knn_edges
+                await wire_neuron_knn_edges(db, neuron_id)
+            except Exception:
+                logger.exception("genesis wiring failed for neuron %s", neuron_id)
     await db.commit()
     return {
         "route": decision.route,

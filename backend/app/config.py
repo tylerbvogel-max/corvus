@@ -127,6 +127,15 @@ class Settings(BaseSettings):
     # instead of the fixed spread_max_hops. Per-slot spread_hops overrides
     # always win over both.
     spread_hops_auto: bool = True
+    # Genesis exuberance: while the corpus is young, loosen the spread gates
+    # so a sparse graph can still propagate (synaptic overproduction; decay
+    # janitors prune later). Spread thresholds multiply by
+    # ln(N_active) / ln(genesis_mature_corpus), clamped to
+    # [genesis_floor, 1.0] — liberal at genesis, converging to the
+    # configured values as the corpus matures. No cliff, no cron.
+    genesis_mode: bool = True
+    genesis_mature_corpus: int = 2000  # guessed constant — revisit with data
+    genesis_floor: float = 0.5  # never loosen a gate below 50% of configured
     # Warm BERT + semantic/adjacency caches in lifespan so the first query
     # after a restart doesn't pay the 17-39s lazy-load chain. Set false for
     # fast dev-reload cycles.

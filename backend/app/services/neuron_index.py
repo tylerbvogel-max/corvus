@@ -35,6 +35,7 @@ class _NeuronIndex:
         self._qids: dict[int, set[int]] = {}        # id -> distinct query_ids
         self._last: dict[int, int] = {}             # id -> max offset
         self._dept_qids: dict[str, set[int]] = {}   # department -> distinct query_ids
+        self._active_count = 0                      # active neurons at build (genesis scale input)
 
     @property
     def is_loaded(self) -> bool:
@@ -56,6 +57,7 @@ class _NeuronIndex:
                 if dept:
                     dept_qids.setdefault(dept, set()).add(qid)
             self._meta, self._offsets, self._qids = meta, offsets, qids
+            self._active_count = sum(1 for m in meta.values() if m.get("is_active"))
             self._last, self._dept_qids = last, dept_qids
             self._built_at = datetime.datetime.utcnow()
             self._loaded = True
@@ -65,6 +67,7 @@ class _NeuronIndex:
             self._loaded = False
             self._meta, self._offsets, self._qids = {}, {}, {}
             self._last, self._dept_qids = {}, {}
+            self._active_count = 0
 
     def on_firing(self, neuron_id: int, query_id: int, offset: int) -> None:
         """Incremental update on a recorded firing — mirrors record_firing exactly."""
@@ -193,3 +196,9 @@ def index_is_loaded() -> bool:
 
 def get_index() -> _NeuronIndex:
     return _index
+
+
+def active_count() -> int:
+    """Active-neuron count at last index build; 0 when the index is unloaded
+    (callers must treat 0 as 'unknown' and fall back to strict thresholds)."""
+    return _index._active_count if _index.is_loaded else 0

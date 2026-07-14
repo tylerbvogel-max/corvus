@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -640,25 +641,45 @@ def _score_candidates_vectorized(
     )
 
 
+def genesis_scale() -> float:
+    """Spread-gate multiplier from corpus size: liberal young, strict mature.
+
+    ln(N)/ln(mature) clamped to [genesis_floor, 1.0]. Unknown corpus size
+    (index unloaded) means no loosening — fail strict, never loose."""
+    if not settings.genesis_mode:
+        return 1.0
+    from app.services.neuron_index import active_count
+    n = active_count()
+    if n < 2:
+        return 1.0
+    assert settings.genesis_mature_corpus >= 2, "mature corpus must be >= 2"
+    scale = math.log(n) / math.log(settings.genesis_mature_corpus)
+    return min(1.0, max(settings.genesis_floor, scale))
+
+
 def _compute_edge_activation(
     source_activation: float,
     edge_weight: float,
     edge_type: str,
     min_activation: float | None = None,
 ) -> float | None:
-    """Return activation for an edge, or None if the edge should be skipped."""
-    floor = settings.spread_min_activation if min_activation is None else min_activation
+    """Return activation for an edge, or None if the edge should be skipped.
+
+    The settings-default gates scale by genesis_scale(); an explicit
+    min_activation (per-slot override) is honored unscaled."""
+    g = genesis_scale()
+    floor = settings.spread_min_activation * g if min_activation is None else min_activation
     if edge_type in ("supersedes", "scoped-by", "evidence-link"):
         return None  # memory-semantics edges carry provenance, not activation
     if edge_type == "stellate":
         decay = settings.spread_stellate_decay
     elif edge_type == "instantiates":
         decay = settings.spread_instantiate_decay
-        if edge_weight < settings.spread_instantiate_min_weight:
+        if edge_weight < settings.spread_instantiate_min_weight * g:
             return None
     else:
         decay = settings.spread_decay
-        if edge_weight < settings.spread_pyramidal_min_weight:
+        if edge_weight < settings.spread_pyramidal_min_weight * g:
             return None
     activation = source_activation * edge_weight * decay
     if activation < floor:
@@ -697,7 +718,8 @@ def _fetch_frontier_neighbors_cached(
 ) -> dict[int, list[tuple[int, float, str]]]:
     """Fetch neighbors for frontier from in-memory adjacency cache."""
     from app.services.adjacency_cache import get_cached_neighbors
-    return get_cached_neighbors(frontier_ids, settings.spread_min_edge_weight)
+    return get_cached_neighbors(
+        frontier_ids, settings.spread_min_edge_weight * genesis_scale())
 
 
 def _build_promoted_scores(
@@ -853,16 +875,19 @@ def _spread_neighbors_python(
 
 
 def _spread_edge_gates(csr: dict) -> tuple:
-    """Static per-edge decay array + weight-OK mask (mirrors _compute_edge_activation)."""
+    """Static per-edge decay array + weight-OK mask (mirrors _compute_edge_activation).
+
+    Weight gates scale by genesis_scale(), matching the reference path."""
     etype = csr["etype"]
+    g = genesis_scale()
     decay = np.where(
         etype == 1, settings.spread_stellate_decay,
         np.where(etype == 2, settings.spread_instantiate_decay, settings.spread_decay),
     ).astype(np.float64)
     min_w = np.where(
         etype == 0, settings.spread_pyramidal_min_weight, settings.spread_min_edge_weight,
-    ).astype(np.float64)
-    weight_ok = csr["weight"] >= np.maximum(min_w, float(settings.spread_min_edge_weight))
+    ).astype(np.float64) * g
+    weight_ok = csr["weight"] >= np.maximum(min_w, float(settings.spread_min_edge_weight) * g)
     # Memory-semantics edges (code 3: supersedes/scoped-by/evidence-link)
     # never conduct activation — mirrors _compute_edge_activation.
     weight_ok = weight_ok & (etype != 3)
@@ -913,7 +938,8 @@ def _spread_neighbors_vectorized(
     n = int(id_list.size)
     decay, weight_ok = _spread_edge_gates(csr)
     min_act = float(
-        settings.spread_min_activation if min_activation is None else min_activation
+        settings.spread_min_activation * genesis_scale()
+        if min_activation is None else min_activation
     )
     topk_mask, visited, frontier_idx, frontier_act = _spread_seed_frontier(
         scored, top_k_count, csr["id2idx"], n,

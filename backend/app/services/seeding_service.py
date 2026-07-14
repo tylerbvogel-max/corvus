@@ -115,6 +115,41 @@ async def bootstrap_knn_edges(
     }
 
 
+async def wire_neuron_knn_edges(
+    db: AsyncSession, neuron_id: int, k: int = 8, min_similarity: float = 0.30,
+) -> int:
+    """Genesis wiring: connect ONE new neuron to its top-k embedding
+    neighbors at creation so it joins spread activation at birth instead
+    of waiting for a manual bootstrap pass. Liberal by design (synaptic
+    exuberance); decay janitors prune what never conducts. Returns the
+    number of edges written."""
+    assert k >= 1, f"k must be >= 1, got {k}"
+    assert 0.0 < min_similarity < 1.0, f"min_similarity out of range: {min_similarity}"
+    ids, matrix = await _load_embedded_neurons(db)
+    if neuron_id not in ids or len(ids) < 2:
+        return 0
+    i = ids.index(neuron_id)
+    sims = matrix @ matrix[i]
+    sims[i] = -1.0
+    top = np.argsort(-sims)[: min(k, len(ids) - 1)]
+    edges = {}
+    for j in top:
+        sim = float(sims[int(j)])
+        if sim < min_similarity:
+            break  # sims sorted descending — nothing further qualifies
+        key = (min(neuron_id, ids[int(j)]), max(neuron_id, ids[int(j)]))
+        edges[key] = {
+            "weight": min(_KNN_WEIGHT_CAP, _KNN_WEIGHT_BASE + _KNN_WEIGHT_SCALE * sim),
+            "context": "genesis_wire",
+        }
+    if edges:
+        from app.services.bootstrap_service import write_planned_edges
+        await write_planned_edges(db, edges)
+        from app.services.adjacency_cache import invalidate_adjacency_cache
+        invalidate_adjacency_cache()
+    return len(edges)
+
+
 async def bootstrap_cooccurrence_edges(
     db: AsyncSession,
     window: int = 3,
