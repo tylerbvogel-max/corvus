@@ -457,7 +457,7 @@ export default function NeuronUniverse() {
     function syncFires(t: number) {
       if (M > 0 && t >= nextFireAt && fires.length < FIRE_MAX) {
         spawnFire(t);
-        nextFireAt = t + 0.13 + Math.random() * 0.47; // ~3 ignitions/sec
+        nextFireAt = t + 0.065 + Math.random() * 0.235; // ~6 ignitions/sec
       }
       let w = 0;
       for (const fr of fires) {
