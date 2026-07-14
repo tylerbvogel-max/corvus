@@ -118,6 +118,15 @@ class Settings(BaseSettings):
     diversity_floor_min: int = 2
     # Spreading activation via NeuronEdge graph
     spread_enabled: bool = True
+    # Modulatory scale on the spread boost before it is added to `combined`.
+    # Spread activation is source_score * edge_weight * decay, and it was being
+    # added RAW — so once edge weights carried real dynamic range (up to 0.80),
+    # a well-connected neighbor could gain ~0.6, rivaling the entire relevance
+    # stimulus (0.70) and outranking the direct semantic match. Graph proximity
+    # is evidence, not an answer: it should nudge ranking, never rewrite it.
+    # Default 1.0 preserves legacy behavior for knowledge tenants; the memory
+    # tenant sets this well below 1 (see deploy/corvus-mind.service).
+    weight_spread_boost: float = 1.0
     spread_max_neurons: int = 10
     spread_min_edge_weight: float = 0.15
     spread_decay: float = 0.5
@@ -133,6 +142,11 @@ class Settings(BaseSettings):
     # ln(N_active) / ln(genesis_mature_corpus), clamped to
     # [genesis_floor, 1.0] — liberal at genesis, converging to the
     # configured values as the corpus matures. No cliff, no cron.
+    # Dedup is destructive (deactivate + supersede) and not trivially
+    # reversible, so the consolidation janitor PROPOSES merges and the human
+    # countersigns. Set false to restore silent auto-fusing (not recommended:
+    # memory integrity outranks janitor throughput).
+    mind_dedup_requires_approval: bool = True
     genesis_mode: bool = True
     genesis_mature_corpus: int = 2000  # guessed constant — revisit with data
     genesis_floor: float = 0.5  # never loosen a gate below 50% of configured

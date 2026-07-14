@@ -21,6 +21,11 @@ Environment=WEIGHT_RECENCY=0.06
 Environment=WEIGHT_BURST=0.03
 Environment=WEIGHT_PRECISION=0.03
 Environment=WEIGHT_NOVELTY=0.02
+# Spread is modulatory here too: graph proximity nudges ranking, it does not
+# rewrite it. With real edge-weight dynamic range (0.12-0.80), the raw additive
+# boost reached ~0.6 and outranked direct semantic matches — measured 2026-07-14,
+# the CrewAI lesson fell out of the top 3 on its own query.
+Environment=WEIGHT_SPREAD_BOOST=0.20
 WorkingDirectory=/home/tylerbvogel/Projects/corvus/backend
 ExecStart=/home/tylerbvogel/Projects/corvus/backend/venv/bin/uvicorn app.main:app --port 8005
 Restart=on-failure
@@ -28,6 +33,3 @@ RestartSec=10
 
 [Install]
 WantedBy=default.target
-
-# Install: cp deploy/corvus-mind.service ~/.config/systemd/user/ \
-#   && systemctl --user daemon-reload && systemctl --user restart corvus-mind

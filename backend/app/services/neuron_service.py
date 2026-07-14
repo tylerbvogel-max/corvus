@@ -726,13 +726,22 @@ def _build_promoted_scores(
     promotions: list[tuple[int, float]],
     score_by_id: dict[int, NeuronScoreBreakdown],
 ) -> list[NeuronScoreBreakdown]:
-    """Apply boosts to existing scores or create new entries for unscored neighbors."""
+    """Apply boosts to existing scores or create new entries for unscored neighbors.
+
+    The raw activation is scaled by weight_spread_boost so graph proximity acts
+    as a modulatory signal rather than a competing stimulus. A neuron reached
+    ONLY by spread (no relevance of its own) still enters on the scaled boost —
+    that is the mechanism by which the graph surfaces knowledge the query never
+    literally mentioned — but it can no longer outrank a direct semantic match.
+    """
+    scale = settings.weight_spread_boost
     promoted: list[NeuronScoreBreakdown] = []
     for nid, activation in promotions:
+        boost = activation * scale
         if nid in score_by_id:
             existing = score_by_id[nid]
-            existing.spread_boost = round(activation, 4)
-            existing.combined = round(existing.combined + activation, 4)
+            existing.spread_boost = round(boost, 4)
+            existing.combined = round(existing.combined + boost, 4)
             promoted.append(existing)
         else:
             promoted.append(NeuronScoreBreakdown(
@@ -743,8 +752,8 @@ def _build_promoted_scores(
                 novelty=0.0,
                 recency=0.0,
                 relevance=0.0,
-                combined=round(activation, 4),
-                spread_boost=round(activation, 4),
+                combined=round(boost, 4),
+                spread_boost=round(boost, 4),
             ))
     return promoted
 

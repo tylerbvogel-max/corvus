@@ -38,7 +38,10 @@ from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import IntegrityFinding, MemoryChangeEvent, Neuron, SynapticLearningEvent
+from app.models import (
+    AutopilotProposal, IntegrityFinding, MemoryChangeEvent, Neuron,
+    ProposalItem, SynapticLearningEvent,
+)
 
 EPISODE_DIR = os.path.expanduser(
     os.environ.get("CORVUS_MIND_EPISODE_DIR", "~/.corvus-mind/episodes")
@@ -209,6 +212,53 @@ def _similar_pairs(lessons: list[Neuron]) -> list[tuple[int, int, float]]:
     return pairs
 
 
+async def _resolve_pair(
+    db: AsyncSession, canonical: Neuron, dup: Neuron, sim: float, verdict: str,
+) -> dict:
+    """Route a confirmed duplicate: propose for sign-off, or fuse outright
+    if the tenant has explicitly opted out of the approval gate."""
+    if settings.mind_dedup_requires_approval:
+        return await _queue_fuse_proposal(db, canonical, dup, sim, verdict)
+    return await _fuse_pair(db, canonical, dup)
+
+
+async def _queue_fuse_proposal(
+    db: AsyncSession, canonical: Neuron, dup: Neuron, sim: float, verdict: str,
+) -> dict:
+    """Stage a dedup merge for HUMAN SIGN-OFF instead of absorbing it silently.
+
+    Fusing destroys a lesson (deactivate + supersede) and is not trivially
+    reversible, so the graph proposes and the human countersigns. The proposal
+    carries both labels, the similarity, and which side the judge called
+    canonical, so the reviewer can decide without re-deriving any of it.
+    """
+    assert canonical.id != dup.id, "cannot fuse a lesson with itself"
+    proposal = AutopilotProposal(
+        state="proposed",
+        gap_source="consolidation_dedup",
+        gap_description=(
+            f"dedup @ sim {sim:.3f} ({verdict}): absorb '{dup.label[:60]}' "
+            f"into '{canonical.label[:60]}'"
+        ),
+    )
+    db.add(proposal)
+    await db.flush()
+    db.add(ProposalItem(
+        proposal_id=proposal.id, action="update", target_neuron_id=dup.id,
+        field="is_active", old_value="true", new_value="false",
+        reason=(f"Near-duplicate of #{canonical.id} '{canonical.label}' "
+                f"(similarity {sim:.3f}, verdict {verdict}). Approving "
+                f"deactivates #{dup.id} and supersedes it into #{canonical.id}."),
+    ))
+    detail = {
+        "proposal_id": proposal.id, "canonical_id": canonical.id,
+        "canonical_label": canonical.label, "duplicate_id": dup.id,
+        "duplicate_label": dup.label, "sim": round(sim, 3), "verdict": verdict,
+    }
+    _log_action("consolidation.proposed", detail)
+    return detail
+
+
 async def _fuse_pair(db: AsyncSession, canonical: Neuron, dup: Neuron) -> dict:
     """Absorb dup into canonical: provenance edge, demote+deactivate dup,
     boost canonical unless the dup was an injected usage."""
@@ -304,7 +354,7 @@ async def run_consolidation(db: AsyncSession) -> dict:
             borderline.append({**entry, "verdict": "cross-scope"})
         elif sim >= FUSE_SIM:
             canonical, dup = (a, b) if (a.invocations or 0) >= (b.invocations or 0) else (b, a)
-            fused.append(await _fuse_pair(db, canonical, dup))
+            fused.append(await _resolve_pair(db, canonical, dup, sim, "near-verbatim"))
             absorbed_ids.add(dup.id)
         elif len(to_judge) < MAX_JUDGED_PAIRS:
             to_judge.append((a, b, sim))
@@ -317,7 +367,7 @@ async def run_consolidation(db: AsyncSession) -> dict:
                      "sim": round(sim, 3), "verdict": verdict}
             if verdict == "duplicate" and a.id not in absorbed_ids and b.id not in absorbed_ids:
                 canonical, dup = (a, b) if (a.invocations or 0) >= (b.invocations or 0) else (b, a)
-                fused.append(await _fuse_pair(db, canonical, dup))
+                fused.append(await _resolve_pair(db, canonical, dup, sim, verdict))
                 absorbed_ids.add(dup.id)
             else:
                 borderline.append(entry)

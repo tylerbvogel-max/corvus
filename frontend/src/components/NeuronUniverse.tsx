@@ -29,6 +29,12 @@ type SimNode = Graph3DNode & {
 };
 
 const BG = 0x080a0e;
+// Repulsion slider works in hundreds of charge units: displayed 3-15,
+// applied as value * REPULSION_SCALE (300-1500 charge, default 600).
+const REPULSION_SCALE = 100;
+const REPULSION_DEFAULT = 6;
+const REPULSION_MIN = 3;
+const REPULSION_MAX = 15;
 const REGION_COLORS = [
   '#5b8ff9', '#61ddaa', '#f6bd16', '#e8684a', '#9270ca', '#78d3f8',
   '#f08bb4', '#ff9d4d', '#7dc9a1', '#c77dff', '#4dd0e1', '#ffd166',
@@ -62,7 +68,12 @@ export default function NeuronUniverse() {
   const [synapse, setSynapse] = useState(0.5); // 0..1 synapse visibility (density)
   const [nodeLight, setNodeLight] = useState(1.25); // neuron brightness
   const [synapseLight, setSynapseLight] = useState(0.5); // synapse brightness
-  const [repulsion, setRepulsion] = useState(34); // charge magnitude (layout spread)
+  // Repulsion is expressed in hundreds of charge units: the slider carries 3-15
+  // and the force gets value * REPULSION_SCALE (300-1500, default 600). The old
+  // 8-300 range was far too weak to separate a graph this dense — nodes piled
+  // into an unreadable ball once real edges existed.
+  const [repulsion, setRepulsion] = useState(REPULSION_DEFAULT);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   // ── Data load (hardened: coerce NaN-prone numeric fields) ──
   useEffect(() => {
@@ -138,49 +149,22 @@ export default function NeuronUniverse() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.rotateSpeed = 0.6;
-    // Universe drift with angular momentum: rotation starts slow and
-    // accelerates the longer it goes untouched — left alone long enough,
-    // the connectome winds up into an accretion disk. Any user input
-    // sheds the momentum instantly; drift resumes after 15s of stillness.
+    // Gentle universe drift at a constant speed. Any user input stops it;
+    // drift resumes after 15s of stillness.
     const DRIFT_BASE = 0.35;
-    const DRIFT_MAX = 90;          // ~1s per revolution: unmissable
-    const DRIFT_RAMP_S = 300;      // full spin-up over ~5 quiet minutes
     controls.autoRotate = true;
     controls.autoRotateSpeed = DRIFT_BASE;
-    let driftSince = performance.now();
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
     controls.addEventListener('start', () => {
       controls.autoRotate = false;
-      controls.autoRotateSpeed = DRIFT_BASE;
-      setDiskContraction(0); // shed the disk: layout relaxes home
       if (idleTimer) clearTimeout(idleTimer);
     });
     controls.addEventListener('end', () => {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        driftSince = performance.now();
         controls.autoRotate = true;
       }, 15000);
     });
-    // As the spin winds up, gravity wins: centering forces strengthen with
-    // the wind-up fraction — and the axis of rotation (Y) compresses hardest,
-    // so the cloud collapses into a TIGHT DISK in the spin plane instead of
-    // fanning out. User input sheds both spin and contraction.
-    function setDiskContraction(windup: number) {
-      if (!sim) return;
-      const radial = 0.015 + 0.09 * windup;   // pull toward the core
-      const axial = 0.015 + 0.42 * windup;    // flatten along the spin axis
-      sim.force('x')?.strength(radial);
-      sim.force('z')?.strength(radial);
-      sim.force('y')?.strength(axial);
-    }
-    function updateDrift() {
-      if (!controls.autoRotate) return;
-      const elapsed = (performance.now() - driftSince) / 1000;
-      const windup = Math.min(1, Math.pow(elapsed / DRIFT_RAMP_S, 2.4));
-      controls.autoRotateSpeed = DRIFT_BASE + (DRIFT_MAX - DRIFT_BASE) * windup;
-      setDiskContraction(windup);
-    }
 
     // HalfFloat target so node colours can exceed 1.0 (HDR) and bloom strongly —
     // that's what lets the Neuron-light slider actually blaze past the synapses.
@@ -343,7 +327,8 @@ export default function NeuronUniverse() {
     const hidden = new Uint8Array(N);
     const radius = new Float32Array(N);
     let nodeLight = 1.25; // neuron brightness multiplier (slider-controlled)
-    let repulsionVal = 34; // charge magnitude (slider-controlled); higher = more spread
+    // Charge magnitude actually applied to the force (slider value * scale).
+    let repulsionVal = REPULSION_DEFAULT * REPULSION_SCALE;
 
     function recomputeRadius() {
       for (let i = 0; i < N; i++) {
@@ -504,7 +489,6 @@ export default function NeuronUniverse() {
       if (sim && sim.alpha() > 0.006) { sim.tick(); syncPositions(); }
       syncShells(performance.now() / 1000);
       syncAssistant(performance.now() / 1000);
-      updateDrift();
       controls.update();
       composer.render();
     }
@@ -532,7 +516,7 @@ export default function NeuronUniverse() {
         setNodeLight(v: number) { nodeLight = v; refreshInstances(); },
         setSynapseLight(v: number) { lineMat.opacity = 0.02 + v * 0.88; },
         setRepulsion(v: number) {
-          repulsionVal = v;
+          repulsionVal = v * REPULSION_SCALE;
           // Re-settle the CURRENT view (full or ego) with the new charge; keep camera.
           const active = focusId != null ? nodes.filter(n => !hidden[n._i]) : nodes;
           const activeLinks = focusId != null
@@ -617,10 +601,20 @@ export default function NeuronUniverse() {
 
       {/* Control panel */}
       <div style={panel}>
-        <div style={{ fontWeight: 700, color: '#e8edf7', fontSize: '0.95rem' }}>Neuron Universe</div>
-        <div style={{ color: '#8a93a6', fontSize: '0.72rem', marginBottom: 10 }}>
-          {neurons.length.toLocaleString()} neurons · {synapseCount.toLocaleString()} synapses
+        <div
+          onClick={() => setPanelOpen(o => !o)}
+          style={{ cursor: 'pointer', userSelect: 'none' }}
+          title={panelOpen ? 'Collapse controls' : 'Expand controls'}
+        >
+          <div style={{ fontWeight: 700, color: '#e8edf7', fontSize: '0.95rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Neuron Universe
+            <span style={{ color: '#8a93a6', fontSize: '0.7rem' }}>{panelOpen ? '▾' : '▸'}</span>
+          </div>
+          <div style={{ color: '#8a93a6', fontSize: '0.72rem', marginBottom: panelOpen ? 10 : 0 }}>
+            {neurons.length.toLocaleString()} neurons · {synapseCount.toLocaleString()} synapses
+          </div>
         </div>
+        {panelOpen && (<>
         <Row label="Color by">
           <select value={colorBy} onChange={e => setColorBy(e.target.value as any)} style={select}>
             <option value="region">Region</option>
@@ -645,8 +639,8 @@ export default function NeuronUniverse() {
           <input type="range" min={0} max={1} step={0.02} value={synapseLight}
             onChange={e => setSynapseLight(+e.target.value)} style={{ width: 150 }} />
         </Row>
-        <Row label={`Repulsion ${repulsion | 0}`}>
-          <input type="range" min={8} max={140} step={2} value={repulsion}
+        <Row label={`Repulsion ${repulsion} (${repulsion * REPULSION_SCALE})`}>
+          <input type="range" min={REPULSION_MIN} max={REPULSION_MAX} step={0.5} value={repulsion}
             onChange={e => setRepulsion(+e.target.value)} style={{ width: 150 }} />
         </Row>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#c7d0e0', fontSize: '0.78rem', marginTop: 8, cursor: 'pointer' }}>
@@ -655,6 +649,7 @@ export default function NeuronUniverse() {
         {selected && (
           <button onClick={() => setSelected(null)} style={backBtn}>← Back to full universe</button>
         )}
+        </>)}
       </div>
 
       {/* Focused-neuron info */}

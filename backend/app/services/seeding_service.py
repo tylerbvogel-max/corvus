@@ -26,14 +26,45 @@ from app.models import AutopilotProposal, ProposalItem
 
 logger = logging.getLogger(__name__)
 
-# Bootstrap edge weights: strong enough to carry spread activation
-# (>= spread_pyramidal_min_weight 0.20), capped below organic ceiling.
-_KNN_WEIGHT_BASE = 0.20
-_KNN_WEIGHT_SCALE = 0.30
-_KNN_WEIGHT_CAP = 0.45
+# Bootstrap edge weight transfer function.
+#
+# The old mapping (0.20 + 0.30*sim, capped 0.45) crushed a similarity range of
+# 0.25-1.00 into a weight range of 0.275-0.450, and every pair above sim 0.83
+# hit the cap — so a near-duplicate and a vague acquaintance conducted the same
+# activation. The graph carried no signal; it was a hairball that made every
+# edge equally believable. Measured on corvus-mind 2026-07-13 (1637 pairs):
+# p10 sim 0.34, p50 0.49, p90 0.69, p99 0.83.
+#
+# We now rescale the OPERATING range [_KNN_SIM_LO, _KNN_SIM_HI] across a wide
+# weight band with a superlinear gamma, so weak links fall toward the spread
+# floor while strong links dominate propagation. Absolute (not percentile-
+# ranked) so a single birth-wired neuron gets weights consistent with a full
+# bootstrap batch — percentile rank would drift between batch sizes.
+_KNN_SIM_LO = 0.25
+_KNN_SIM_HI = 0.85
+_KNN_WEIGHT_FLOOR = 0.12
+_KNN_WEIGHT_SPAN = 0.68   # ceiling 0.80, below the organic/reinforced ceiling
+_KNN_WEIGHT_GAMMA = 1.5   # superlinear: weak similarity decays away fast
+# Pairs at or above this similarity are near-identical restatements, not
+# neighbors — surfaced as dedup proposals for human sign-off, never auto-merged.
+_KNN_DUPLICATE_SIM = 0.90
 _COOCCURRENCE_WEIGHT = 0.30
 _MAX_CLUSTERS_PER_DISCOVERY = 20
 _MAX_LABEL_SAMPLE = 10
+
+
+def knn_edge_weight(similarity: float) -> float:
+    """Map embedding similarity to edge weight with real dynamic range.
+
+    Rescales the operating band to [floor, floor+span] through a superlinear
+    gamma so that strong semantic neighbors dominate spreading activation and
+    weak ones decay toward the spread floor instead of conducting equally.
+    """
+    t = (similarity - _KNN_SIM_LO) / (_KNN_SIM_HI - _KNN_SIM_LO)
+    t = max(0.0, min(1.0, t))
+    weight = _KNN_WEIGHT_FLOOR + _KNN_WEIGHT_SPAN * (t ** _KNN_WEIGHT_GAMMA)
+    assert 0.0 < weight <= 1.0, f"knn weight out of range: {weight}"
+    return weight
 
 
 async def _load_embedded_neurons(db: AsyncSession) -> tuple[list[int], np.ndarray]:
@@ -94,10 +125,7 @@ async def bootstrap_knn_edges(
     pairs = _knn_pairs(ids, matrix, k, min_similarity)
 
     edges_to_create = {
-        pair: {
-            "weight": min(_KNN_WEIGHT_CAP, _KNN_WEIGHT_BASE + _KNN_WEIGHT_SCALE * sim),
-            "context": "knn_bootstrap",
-        }
+        pair: {"weight": knn_edge_weight(sim), "context": "knn_bootstrap"}
         for pair, sim in pairs.items()
     }
     if not dry_run and edges_to_create:
@@ -138,10 +166,7 @@ async def wire_neuron_knn_edges(
         if sim < min_similarity:
             break  # sims sorted descending — nothing further qualifies
         key = (min(neuron_id, ids[int(j)]), max(neuron_id, ids[int(j)]))
-        edges[key] = {
-            "weight": min(_KNN_WEIGHT_CAP, _KNN_WEIGHT_BASE + _KNN_WEIGHT_SCALE * sim),
-            "context": "genesis_wire",
-        }
+        edges[key] = {"weight": knn_edge_weight(sim), "context": "genesis_wire"}
     if edges:
         from app.services.bootstrap_service import write_planned_edges
         await write_planned_edges(db, edges)
