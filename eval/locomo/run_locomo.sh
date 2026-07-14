@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# LoCoMo runner. Exists so the benchmark exercises the SAME scoring config the
+# memory tenant actually runs — deploy/memory-tenant.env is the single source of
+# truth, shared with deploy/corvus-mind.service. Invoking run_locomo.py directly
+# silently falls back to Corvus stock defaults (50/50 relevance-vs-usage, raw
+# additive spread), i.e. it would benchmark a system nobody runs.
+#
+# Usage: ./run_locomo.sh --conv 0 --phase all [--max-questions N]
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+set -a
+# shellcheck disable=SC1091
+source "$REPO/deploy/memory-tenant.env"
+set +a
+
+export TENANT_ID=corvus-locomo          # throwaway tenant; harness hard-asserts this
+export PYTHONPATH="$REPO/backend"
+: "${LOCOMO_CONCURRENCY:=2}"            # >2 concurrent CLI subprocesses OOM this box
+export LOCOMO_CONCURRENCY
+
+# The Claude CLI refuses to launch inside a Claude Code session; strip the
+# markers so the subprocess starts clean (same fix as llm_provider).
+unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SSE_PORT 2>/dev/null || true
+
+cd "$REPO/backend"
+exec "$REPO/backend/venv/bin/python" "$REPO/eval/locomo/run_locomo.py" "$@"

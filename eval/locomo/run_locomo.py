@@ -38,9 +38,17 @@ from collections import defaultdict
 
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locomo10.json")
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
-DISTILL_MODEL = "opus"      # backend-maintenance-class work (quality-first rule)
-ANSWER_MODEL = "sonnet"
-JUDGE_MODEL = "sonnet"
+# Model tiers are env-overridable so a run can be made cheap. Note what is
+# safe to lower and what is not:
+#   DISTILL/ANSWER are the SYSTEM UNDER TEST — lowering them lowers absolute
+#   scores, so a cheap run is not comparable to a prior expensive one. It IS
+#   still valid for the internally-controlled contrasts (memory vs nospread vs
+#   baseline within one run), because those share the same models and ingest.
+#   JUDGE is the MEASURING INSTRUMENT — keep it fixed across runs or the
+#   scores themselves become incomparable. Do not cheapen the judge.
+DISTILL_MODEL = os.environ.get("LOCOMO_DISTILL_MODEL", "opus")
+ANSWER_MODEL = os.environ.get("LOCOMO_ANSWER_MODEL", "sonnet")
+JUDGE_MODEL = os.environ.get("LOCOMO_JUDGE_MODEL", "sonnet")
 RECALL_TOP_K = 10
 MAX_FACTS_PER_SESSION = 25
 # 4 concurrent CLI subprocesses OOM-killed the answer phase on the 6.5GB

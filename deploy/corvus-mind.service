@@ -5,27 +5,11 @@ Description=Corvus Mind — agentic memory tenant (port 8005)
 Type=simple
 Environment=TENANT_ID=corvus-mind
 Environment=PORT=8005
-# Memory-tenant scoring balance. Corvus defaults split the vote 50/50
-# between relevance (stimulus) and usage signals (modulatory) — defensible
-# for an org knowledge graph, wrong for a memory. Measured 2026-07-13: the
-# query "how does CrewAI configure custom memory" ranked the CrewAI lesson
-# 6th (0.869), behind "project-corvus-mind" (0.980) and an MCP-server lesson
-# (0.954) that never mention CrewAI — they simply fired more often. Recall
-# must return what ANSWERS the question; popularity is a tiebreaker, not a
-# co-equal vote. Modulatory now sums to 0.22 against a 0.70 stimulus, and
-# impact (earned trust from attribution) is the strongest modulator because
-# it is the only evidence-based one — burst/recency are mere popularity.
-Environment=WEIGHT_RELEVANCE=0.70
-Environment=WEIGHT_IMPACT=0.08
-Environment=WEIGHT_RECENCY=0.06
-Environment=WEIGHT_BURST=0.03
-Environment=WEIGHT_PRECISION=0.03
-Environment=WEIGHT_NOVELTY=0.02
-# Spread is modulatory here too: graph proximity nudges ranking, it does not
-# rewrite it. With real edge-weight dynamic range (0.12-0.80), the raw additive
-# boost reached ~0.6 and outranked direct semantic matches — measured 2026-07-14,
-# the CrewAI lesson fell out of the top 3 on its own query.
-Environment=WEIGHT_SPREAD_BOOST=0.20
+# Memory-tenant scoring balance (relevance-dominant stimulus, modulatory usage
+# signals, modulatory spread). Rationale + measurements live in the env file —
+# it is the SINGLE SOURCE OF TRUTH, shared with the LoCoMo eval tenant so the
+# benchmark exercises the config we actually run.
+EnvironmentFile=/home/tylerbvogel/Projects/corvus/deploy/memory-tenant.env
 WorkingDirectory=/home/tylerbvogel/Projects/corvus/backend
 ExecStart=/home/tylerbvogel/Projects/corvus/backend/venv/bin/uvicorn app.main:app --port 8005
 Restart=on-failure
@@ -33,3 +17,6 @@ RestartSec=10
 
 [Install]
 WantedBy=default.target
+
+# Install: cp deploy/corvus-mind.service ~/.config/systemd/user/ \
+#   && systemctl --user daemon-reload && systemctl --user restart corvus-mind
