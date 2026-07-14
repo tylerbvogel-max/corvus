@@ -50,7 +50,14 @@ DISTILL_MODEL = os.environ.get("LOCOMO_DISTILL_MODEL", "opus")
 ANSWER_MODEL = os.environ.get("LOCOMO_ANSWER_MODEL", "sonnet")
 JUDGE_MODEL = os.environ.get("LOCOMO_JUDGE_MODEL", "sonnet")
 RECALL_TOP_K = 10
-MAX_FACTS_PER_SESSION = 25
+# Iteration-2 finding (node mind-single-hop-recall): the cap was never the
+# binding constraint — Opus self-limits to ~10 facts/session regardless of
+# permission ("up to 45" changed nothing, 2026-07-14). Density now comes from
+# chunked distillation: one call per DISTILL_CHUNK_TURNS turns with a
+# turn-proportional MINIMUM, so "feels complete" can't stop extraction early.
+MAX_FACTS_PER_SESSION = 45  # per-chunk ceiling, retained as a safety bound
+DISTILL_CHUNK_TURNS = 12
+MIN_FACTS_PER_TURN = 0.5  # floor: at least one fact per two turns
 # 4 concurrent CLI subprocesses OOM-killed the answer phase on the 6.5GB
 # Chromebook (dmesg 2026-07-12); 2 is the safe default here
 LLM_CONCURRENCY = int(os.environ.get("LOCOMO_CONCURRENCY", "2"))
@@ -64,11 +71,12 @@ DISTILL_PROMPT = """You are the memory distiller for a long-term conversational 
 
 INPUT: the transcript of ONE session of an ongoing conversation between two people, with the session's date and time.
 
-TASK: extract up to {max_facts} atomic memory facts worth remembering about the speakers for FUTURE sessions.
+TASK: extract atomic memory facts about the speakers for FUTURE sessions. This transcript excerpt has {n_turns} turns: extract AT LEAST {min_facts} facts (up to {max_facts}). Future questions probe nearly every turn — an omitted detail is an unanswerable question later.
 
 Rules:
 - One fact per entry; keep facts atomic (one event/preference/relationship each).
 - ALWAYS name the speaker the fact is about ("Caroline adopted a dog named Rex").
+- Prefer completeness over selectivity: extract EVERY concrete detail a future question might probe — book/movie/game titles VERBATIM, names of pets/places/foods, stated feelings and realizations after events, opinions, what objects or symbols mean to a speaker, plans and their reasons. A fact that refers to a thing must include the thing's name ("recommended the book 'Becoming Nicole'", never just "recommended a book").
 - Resolve relative dates to ABSOLUTE dates using the session date ("last Tuesday" -> the actual date). Include the date in the fact text whenever an event's timing is stated or derivable. If an event is only known to happen before this session, say "as of <session date>".
 - Include facts from shared photos (lines marked [shared photo: ...]).
 - Record concrete details (names, places, numbers, foods, activities) — future questions are detailed.
@@ -82,7 +90,8 @@ ANSWER_PROMPT = """You answer questions from a personal long-term memory system.
 You are given MEMORIES retrieved for the question. Answer using ONLY these memories.
 - Be concise: a short phrase or sentence, no preamble.
 - For date questions, give the specific date (e.g. "7 May 2023").
-- If the memories do not contain the answer, reply exactly: No information available."""
+- If a memory partially or indirectly answers the question, give the best-supported answer from it rather than refusing.
+- Reply exactly "No information available" only when nothing in the memories relates to the question."""
 
 JUDGE_PROMPT = """You are grading a question-answering system against a gold answer.
 
@@ -177,17 +186,28 @@ async def ingest(conv_idx: int, conv: dict) -> None:
                 conv["conversation"].get("speaker_b"))
     total_saved = 0
     for num, date_time, turns in iter_sessions(conv):
-        body = (f"Session date/time: {date_time}\n"
-                f"Speakers: {speakers[0]} and {speakers[1]}\n\n"
-                + render_session(turns))
-        reply = await llm_retry(
-            system_prompt=DISTILL_PROMPT.replace("{max_facts}", str(MAX_FACTS_PER_SESSION)),
-            user_message=body, max_tokens=4000, model=DISTILL_MODEL, timeout=600,
-        )
-        facts = parse_json_block(reply.get("text", ""), "[", "]") or []
+        # chunked distillation: per-session single calls plateau at ~10 facts
+        # no matter the cap; smaller windows + a proportional floor force the
+        # per-turn detail LoCoMo probes (titles, feelings, symbolism)
+        facts = []
+        for start in range(0, len(turns), DISTILL_CHUNK_TURNS):
+            chunk = turns[start:start + DISTILL_CHUNK_TURNS]
+            body = (f"Session date/time: {date_time}\n"
+                    f"Speakers: {speakers[0]} and {speakers[1]}\n\n"
+                    + render_session(chunk))
+            prompt = (DISTILL_PROMPT
+                      .replace("{max_facts}", str(MAX_FACTS_PER_SESSION))
+                      .replace("{n_turns}", str(len(chunk)))
+                      .replace("{min_facts}",
+                               str(max(3, int(len(chunk) * MIN_FACTS_PER_TURN)))))
+            reply = await llm_retry(
+                system_prompt=prompt,
+                user_message=body, max_tokens=4000, model=DISTILL_MODEL, timeout=600,
+            )
+            facts.extend(parse_json_block(reply.get("text", ""), "[", "]") or [])
         saved = 0
         async with async_session() as db:
-            for f in facts[:MAX_FACTS_PER_SESSION]:
+            for f in facts:
                 label = str(f.get("label", "")).strip()[:200]
                 fact = str(f.get("fact", "")).strip()
                 if not label or not fact:
