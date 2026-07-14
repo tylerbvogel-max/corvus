@@ -148,6 +148,20 @@ async def label_exists(db: AsyncSession, label: str) -> bool:
     return row is not None
 
 
+async def _embed_and_wire(db: AsyncSession, neuron_id: int) -> None:
+    """Make a freshly-created lesson recallable: embed it, then wire it to
+    its nearest neighbors so it joins spread activation at birth rather than
+    waiting for a manual bootstrap pass. Wiring is best-effort — a graph
+    failure must never fail the save (the lesson is still findable by
+    embedding search without edges)."""
+    await _embed_created(db, neuron_id)
+    try:
+        from app.services.seeding_service import wire_neuron_knn_edges
+        await wire_neuron_knn_edges(db, neuron_id)
+    except Exception:
+        logger.exception("genesis wiring failed for neuron %s", neuron_id)
+
+
 async def save_lesson(
     db: AsyncSession, *, lesson: str, evidence: str, label: str,
     scope: str | None = None, node_type: str = "lesson",
@@ -204,15 +218,7 @@ async def save_lesson(
         await db.refresh(item)
         neuron_id = item.created_neuron_id
         if neuron_id is not None:
-            await _embed_created(db, neuron_id)
-            # Genesis wiring: new lessons join the spread graph at birth
-            # (liberal kNN edges; decay prunes what never conducts). A
-            # wiring failure must never fail the save itself.
-            try:
-                from app.services.seeding_service import wire_neuron_knn_edges
-                await wire_neuron_knn_edges(db, neuron_id)
-            except Exception:
-                logger.exception("genesis wiring failed for neuron %s", neuron_id)
+            await _embed_and_wire(db, neuron_id)
     await db.commit()
     return {
         "route": decision.route,

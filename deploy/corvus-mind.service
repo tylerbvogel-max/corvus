@@ -1,0 +1,33 @@
+[Unit]
+Description=Corvus Mind — agentic memory tenant (port 8005)
+
+[Service]
+Type=simple
+Environment=TENANT_ID=corvus-mind
+Environment=PORT=8005
+# Memory-tenant scoring balance. Corvus defaults split the vote 50/50
+# between relevance (stimulus) and usage signals (modulatory) — defensible
+# for an org knowledge graph, wrong for a memory. Measured 2026-07-13: the
+# query "how does CrewAI configure custom memory" ranked the CrewAI lesson
+# 6th (0.869), behind "project-corvus-mind" (0.980) and an MCP-server lesson
+# (0.954) that never mention CrewAI — they simply fired more often. Recall
+# must return what ANSWERS the question; popularity is a tiebreaker, not a
+# co-equal vote. Modulatory now sums to 0.22 against a 0.70 stimulus, and
+# impact (earned trust from attribution) is the strongest modulator because
+# it is the only evidence-based one — burst/recency are mere popularity.
+Environment=WEIGHT_RELEVANCE=0.70
+Environment=WEIGHT_IMPACT=0.08
+Environment=WEIGHT_RECENCY=0.06
+Environment=WEIGHT_BURST=0.03
+Environment=WEIGHT_PRECISION=0.03
+Environment=WEIGHT_NOVELTY=0.02
+WorkingDirectory=/home/tylerbvogel/Projects/corvus/backend
+ExecStart=/home/tylerbvogel/Projects/corvus/backend/venv/bin/uvicorn app.main:app --port 8005
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+
+# Install: cp deploy/corvus-mind.service ~/.config/systemd/user/ \
+#   && systemctl --user daemon-reload && systemctl --user restart corvus-mind
