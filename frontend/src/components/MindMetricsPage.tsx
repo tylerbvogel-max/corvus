@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MindStyle, StatTile, UtilityBadge, Spark, Bars } from './mindUi';
 
-/** Memory Organ dashboard — performance, trust, and growth for the
+/** Pallium dashboard — performance, trust, and growth for the
  *  corvus-mind tenant. Data: GET /metrics/mind + /metrics/mind/trust. */
 
 export default function MindMetricsPage() {
@@ -15,8 +15,8 @@ export default function MindMetricsPage() {
   };
   useEffect(load, []);
 
-  if (error) return <div className="error-msg">Memory metrics unavailable: {error}</div>;
-  if (!m) return <div className="detail-empty">Loading memory metrics…</div>;
+  if (error) return <div className="error-msg">Pallium metrics unavailable: {error}</div>;
+  if (!m) return <div className="detail-empty">Loading Pallium metrics…</div>;
 
   const { recall, lessons, growth, injections, distiller, janitors, compiler } = m;
   const spend = (distiller.cost_usd ?? 0).toFixed(2);
@@ -28,7 +28,7 @@ export default function MindMetricsPage() {
     <div className="mm-root">
       <MindStyle />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2>Memory Organ</h2>
+        <h2>Pallium</h2>
         <span className="mm-sub">{m.generated_at} · <a onClick={load} style={{ cursor: 'pointer' }}>refresh</a></span>
       </div>
 
@@ -42,8 +42,9 @@ export default function MindMetricsPage() {
       </div>
 
       <div className="mm-grid">
-        <div className="mm-card">
+        <div className="mm-card mm-wide">
           <h3>Trust — utility trajectories</h3>
+          <div className="mm-tablewrap">
           <table className="mm-table"><thead>
             <tr><th>lesson</th><th>scope</th><th>trajectory</th><th style={{ textAlign: 'right' }}>recalls</th><th>trust</th></tr>
           </thead><tbody>
@@ -57,6 +58,7 @@ export default function MindMetricsPage() {
               </tr>
             ))}
           </tbody></table>
+          </div>
           {trust.length > 14 && <div className="mm-sub" style={{ marginTop: 6 }}>+{trust.length - 14} more lessons</div>}
         </div>
 

@@ -153,6 +153,12 @@ async def save_lesson(
     gap_source: str = "remember_api", project: str | None = None,
 ) -> dict:
     """Stage a lesson save and route it through the write gate. Commits."""
+    # Scopes are region tags; casefold to the canonical spelling so
+    # "assistant" and "Assistant" never split the corpus-by-scope counts.
+    if scope:
+        canonical = {s.casefold(): s for s in
+                     ("Projects", "User", "Harness", "Environment", "Assistant")}
+        scope = canonical.get(scope.strip().casefold(), scope.strip())
     proposal = AutopilotProposal(
         state="proposed",
         gap_source=gap_source,

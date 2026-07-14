@@ -1,4 +1,4 @@
-/** Shared visual kit for the memory-organ pages.
+/** Shared visual kit for the Pallium pages.
  *  Palette: validated dark-mode steps (dataviz reference instance) —
  *  series blue #3987e5, aqua #199e70, violet #9085e9; status good
  *  #0ca30c / warning #fab219 / serious #ec835a; ink #fff / #c3c2b7. */
@@ -13,7 +13,9 @@ export const MIND_CSS = `
 .mm-root h2 { font-weight: 600; letter-spacing: -0.01em; margin: 0; }
 .mm-sub { color: var(--mm-ink3); font-size: 0.78rem; }
 .mm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 0.9rem; margin-top: 1rem; }
-.mm-card { background: var(--mm-card); border: 1px solid var(--mm-border); border-radius: 10px; padding: 0.9rem 1rem; }
+.mm-card { background: var(--mm-card); border: 1px solid var(--mm-border); border-radius: 10px; padding: 0.9rem 1rem; min-width: 0; overflow: hidden; }
+.mm-wide { grid-column: 1 / -1; }
+.mm-tablewrap { overflow-x: auto; }
 .mm-card h3 { margin: 0 0 0.6rem; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--mm-ink2); }
 .mm-card h4 { margin: 0.8rem 0 0.3rem; font-size: 0.72rem; font-weight: 600; color: var(--mm-ink3); text-transform: uppercase; letter-spacing: 0.06em; }
 .mm-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.9rem; margin-top: 1rem; }

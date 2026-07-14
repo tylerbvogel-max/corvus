@@ -195,7 +195,7 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       icon: IconClipboard,
       items: [
         ...(memorySurface ? [
-          { key: 'mind-metrics', label: 'Memory', description: 'Memory-organ performance, trust, growth, and cost' },
+          { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost' },
           { key: 'mind-sessions', label: 'Sessions', description: 'Episode logs: the memory\'s inputs and their distillation' },
           { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
           { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
