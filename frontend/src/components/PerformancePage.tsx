@@ -1,649 +1,378 @@
-import { useState } from 'react';
-import { fetchPerformance } from '../api';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import {
+  fetchStats, fetchCostReport, fetchSpreadLog, fetchScoringHealth,
+  fetchStageTelemetry, type StageStat, type StageTelemetryReport,
+  type SpreadLogResponse, type ScoringHealthResponse,
+} from '../api';
+import type { NeuronStats, CostReport } from '../types';
 
-interface TokenPair { input: number; output: number }
-interface CostSummary {
-  total_queries: number; total_cost: number; avg_cost: number; min_cost: number; max_cost: number;
-  classify_tokens: TokenPair; execute_tokens: TokenPair; eval_tokens: TokenPair;
-  total_input_tokens: number; total_output_tokens: number;
-}
-interface CostModeling {
-  avg_tokens: { classify_input: number; classify_output: number; execute_input: number; execute_output: number };
-  per_query_cost: { haiku_neuron: number; sonnet_raw: number; opus_raw: number };
-  savings_vs_opus: number; savings_vs_sonnet: number;
-  projected_monthly_100k: { haiku_neuron: number; sonnet_raw: number; opus_raw: number };
-  annual_savings_vs_opus_100k: number; annual_savings_vs_sonnet_100k: number;
-}
-interface QualityMode {
-  mode: string; n: number; accuracy: number; completeness: number; clarity: number; faithfulness: number; overall: number;
-}
-interface ScoreDist { score: number; count: number }
-interface Reliability { distribution: ScoreDist[]; total_evaluated: number; score_4_plus: number; reliability_pct: number }
-interface TrendPeriod { queries: number; overall: number; accuracy: number; completeness: number }
-interface NeuronStats {
-  active_neurons: number; distinct_fired: number; never_fired: number;
-  utilization: Record<string, number>; layer_distribution: Record<string, number>; department_distribution: Record<string, number>;
-}
-interface RefinementImpact { neurons_created: number; neurons_updated: number; graph_growth: Record<string, number> }
-interface AutopilotRow { status: string; runs: number; avg_score: number; created: number; updated: number; cost: number }
-interface Investment { query_pipeline: number; autopilot: number; total: number }
-interface NeuronQualityCorr { bucket: string; queries: number; avg_score: number }
-interface QueryTimelinePoint { id: number; cost: number; neurons: number; score: number | null; created_at: string | null }
+/**
+ * Performance — the unified operations dashboard (absorbs the old Dashboard
+ * and Pipeline Timing pages). Top to bottom: volume/cost/token/spread tiles,
+ * the Corvus-overhead hero line, scoring-health drift monitor, then the
+ * per-stage latency suite (budget, estimate-vs-actual, distribution &
+ * stability, drift over time). Read-only; no LLM calls.
+ */
 
-interface GroupStats { label: string; n: number; mean: number; std?: number }
-interface BinomialResult { p: number; significant: boolean; claim: string }
-interface StatTest {
-  id: string; title: string; description: string;
-  group_a?: GroupStats; group_b?: GroupStats;
-  welch_t?: number; welch_p?: number; welch_p_adj?: number;
-  mann_whitney_u?: number; mann_whitney_p?: number; mann_whitney_p_adj?: number;
-  cohens_d?: number; effect_size?: string;
-  mean_diff?: number; ci_95?: [number, number];
-  n_needed_80pct_power?: number; adequately_powered?: boolean;
-  significant_welch?: boolean; significant_mw?: boolean;
-  significant_welch_fdr?: boolean; significant_mw_fdr?: boolean;
-  one_sided?: boolean; warning?: string | null;
-  // reliability-specific
-  n_total?: number; n_good?: number; observed_rate?: number;
-  wilson_ci_95?: [number, number];
-  binomial_75?: BinomialResult & { p_adj?: number; significant_fdr?: boolean };
-  binomial_70?: BinomialResult & { p_adj?: number; significant_fdr?: boolean };
-}
+const C = {
+  accent: 'var(--accent, #c87533)', blue: 'var(--blue, #4a9eff)',
+  green: 'var(--green, #22c55e)', red: 'var(--red, #e8684a)',
+  text: 'var(--text, #e8edf7)', dim: 'var(--text-dim, #8a93a6)',
+  border: 'var(--border, #2a3446)', card: 'var(--bg-card, #14161c)',
+  input: 'var(--bg-input, #0e0f13)',
+};
 
-interface FdrCorrection { method: string; total_tests: number; alpha: number; description: string }
-interface CostBucket {
-  key: string; label: string; total_cost: number;
-  source_table: string; description: string;
+function fmtMs(v: number): string {
+  if (v >= 10000) return (v / 1000).toFixed(1) + 's';
+  if (v >= 1000) return (v / 1000).toFixed(2) + 's';
+  if (v >= 100) return v.toFixed(0) + 'ms';
+  if (v >= 1) return v.toFixed(1) + 'ms';
+  return v.toFixed(2) + 'ms';
 }
-interface CostByActivity {
-  buckets: CostBucket[];
-  total_tracked: number;
-  gap_note: string;
-}
+const log1p = (v: number) => Math.log10(Math.max(0, v) + 1);
 
-interface PerfData {
-  stat_tests: StatTest[];
-  fdr_correction: FdrCorrection | null;
-  cost_summary: CostSummary; cost_modeling: CostModeling; quality_by_mode: QualityMode[];
-  cost_by_activity?: CostByActivity;
-  quality_ratio: number | null; reliability: Reliability;
-  quality_trend: Record<string, TrendPeriod>; neuron_stats: NeuronStats;
-  refinement_impact: RefinementImpact; autopilot: AutopilotRow[]; investment: Investment;
-  neuron_quality_correlation: NeuronQualityCorr[]; query_timeline: QueryTimelinePoint[];
-}
-
-const fmt = (n: number, d = 2) => n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-const fmtK = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : `${n}`;
-const pct = (n: number) => `${n.toFixed(1)}%`;
-
-function ModeLabel({ mode }: { mode: string }) {
-  const colors: Record<string, string> = {
-    opus_neuron: '#a78bfa', sonnet_neuron: '#60a5fa', haiku_neuron: '#22c55e',
-    opus_raw: '#f472b6', sonnet_raw: '#fb923c', haiku_raw: '#94a3b8',
-  };
-  return <span style={{ color: colors[mode] || 'var(--text)', fontWeight: 600 }}>{mode.replace('_', ' + ')}</span>;
-}
-
-function Bar({ value, max, color }: { value: number; max: number; color: string }) {
-  const w = max > 0 ? Math.max(2, (value / max) * 100) : 0;
-  return <div style={{ background: color, height: 18, width: `${w}%`, borderRadius: 3, minWidth: 2 }} />;
-}
+type Tip = { x: number; y: number; lines: string[] } | null;
 
 export default function PerformancePage() {
-  const [data, setData] = useState<PerfData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastRun, setLastRun] = useState<string | null>(null);
+  const [stats, setStats] = useState<NeuronStats | null>(null);
+  const [cost, setCost] = useState<CostReport | null>(null);
+  const [spreadLog, setSpreadLog] = useState<SpreadLogResponse | null>(null);
+  const [health, setHealth] = useState<ScoringHealthResponse | null>(null);
+  const [data, setData] = useState<StageTelemetryReport | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [logScale, setLogScale] = useState(true);
+  const [trendStage, setTrendStage] = useState('classify');
+  const [tip, setTip] = useState<Tip>(null);
 
-  const runAnalysis = async () => {
+  useEffect(() => {
     setLoading(true);
-    setError(null);
-    try {
-      const d = await fetchPerformance();
-      setData(d);
-      setLastRun(new Date().toLocaleTimeString());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to fetch');
-    } finally {
-      setLoading(false);
-    }
-  };
+    Promise.all([fetchStats(), fetchCostReport(), fetchStageTelemetry()])
+      .then(([s, c, t]) => {
+        setStats(s); setCost(c);
+        if (t.error) setErr(t.error); else setData(t);
+      })
+      .catch(e => setErr(e instanceof Error ? e.message : 'Failed to load'))
+      .finally(() => setLoading(false));
+    // Secondary panels load independently — never block the page on them.
+    fetchSpreadLog().then(setSpreadLog).catch(() => {});
+    fetchScoringHealth().then(setHealth).catch(() => {});
+  }, []);
+
+  const stages = data?.stages ?? [];
+  const dominant = useMemo(() => [...stages].sort((a, b) => b.share_pct - a.share_pct)[0], [stages]);
+  const byBudget = useMemo(() => [...stages].sort((a, b) => b.p50 - a.p50), [stages]);
+  const withEst = useMemo(() => stages.filter(s => s.estimate_ms != null && s.ratio_p50_vs_estimate != null), [stages]);
+  const trendPts = useMemo(
+    () => (data?.trend ?? []).filter(t => t.stage === trendStage).sort((a, b) => a.bucket.localeCompare(b.bucket)),
+    [data, trendStage],
+  );
+
+  if (loading) return <div style={{ padding: 32, color: C.dim }}>Loading performance data…</div>;
+  if (err && !data) return <div style={{ padding: 32, color: C.red }}>{err}</div>;
+
+  const m = data?.meta;
+  const smallN = (m?.queries_with_telemetry ?? 0) < 30;
+  const maxBudget = Math.max(...byBudget.map(s => s.p50), 1);
 
   return (
-    <div className="perf-page">
-      <div className="perf-header">
-        <div>
-          <h2>Performance Analysis</h2>
-          <p className="perf-subtitle">
-            Pure SQL analytics — no LLM invocation. Computed from query logs, eval scores, and refinement history.
-          </p>
-        </div>
-        <div className="perf-run-area">
-          <button className="perf-run-btn" onClick={runAnalysis} disabled={loading}>
-            {loading ? 'Computing...' : 'Run Analysis'}
-          </button>
-          {lastRun && <span className="perf-last-run">Last run: {lastRun}</span>}
-        </div>
-      </div>
+    <div style={{ padding: '24px 28px', maxWidth: 1080, position: 'relative' }} onMouseLeave={() => setTip(null)}>
+      <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: '0 0 4px' }}>Performance</h2>
+      <p style={{ color: C.dim, fontSize: 13, margin: '0 0 14px', maxWidth: 720 }}>
+        Volume, cost, scoring health, spread activation, and per-stage pipeline latency — everything
+        measured from live query telemetry.
+      </p>
 
-      {error && <div className="perf-error">{error}</div>}
-
-      {!data && !loading && (
-        <div className="perf-empty">Click "Run Analysis" to compute performance metrics from the database.</div>
+      {/* Volume / cost / token tiles */}
+      {stats && cost && (
+        <div style={tiles}>
+          <Tile value={cost.total_queries.toLocaleString()} label="Queries" />
+          <Tile value={`$${cost.total_cost_usd.toFixed(4)}`} label="Total cost" />
+          <Tile value={`$${cost.avg_cost_per_query.toFixed(6)}`} label="Avg / query" />
+          <Tile value={cost.total_input_tokens.toLocaleString()} label="Input tokens" />
+          <Tile value={cost.total_output_tokens.toLocaleString()} label="Output tokens" />
+          <Tile value={stats.total_neurons.toLocaleString()} label="Neurons" />
+          <Tile value={stats.total_firings.toLocaleString()} label="Firings" />
+          {spreadLog && <>
+            <Tile value={spreadLog.queries_with_spread.toLocaleString()} label="Queries with spread" />
+            <Tile value={`${Math.round(spreadLog.spread_rate * 100)}%`} label="Spread rate" />
+            <Tile value={spreadLog.top_corridors.length} label="Cross-dept corridors" />
+          </>}
+        </div>
       )}
 
-      {data && <>
-        {/* Hero metrics */}
-        <div className="perf-hero">
-          <div className="perf-hero-card" style={{ borderTopColor: '#22c55e' }}>
-            <span className="perf-hero-value" style={{ color: '#22c55e' }}>{pct(data.cost_modeling.savings_vs_opus)}</span>
-            <span className="perf-hero-label">Cost savings vs Opus</span>
-          </div>
-          <div className="perf-hero-card" style={{ borderTopColor: '#38bdf8' }}>
-            <span className="perf-hero-value" style={{ color: '#38bdf8' }}>{data.quality_ratio ?? '—'}%</span>
-            <span className="perf-hero-label">Quality vs Opus Raw</span>
-          </div>
-          <div className="perf-hero-card" style={{ borderTopColor: '#facc15' }}>
-            <span className="perf-hero-value" style={{ color: '#facc15' }}>{data.reliability.reliability_pct}%</span>
-            <span className="perf-hero-label">Reliability (score 4+)</span>
-          </div>
-          <div className="perf-hero-card" style={{ borderTopColor: '#a78bfa' }}>
-            <span className="perf-hero-value" style={{ color: '#a78bfa' }}>{data.cost_summary.total_queries}</span>
-            <span className="perf-hero-label">Total queries</span>
+      {/* Hero: what Corvus costs per query, and where that time goes */}
+      {m && dominant && cost && (
+        <div style={{ ...card, borderColor: C.accent, margin: '14px 0 20px' }}>
+          <div style={heroKicker}>Corvus overhead per query</div>
+          <div style={{ color: C.text, fontSize: 15, lineHeight: 1.5 }}>
+            The pipeline adds a median <strong>{fmtMs(m.pipeline_total_p50_ms)}</strong> and{' '}
+            <strong>${cost.avg_cost_per_query.toFixed(6)}</strong> per query
+            ({m.queries_with_telemetry.toLocaleString()} queries measured).{' '}
+            <strong>{dominant.label}</strong> is <strong>{dominant.share_pct}%</strong> of that latency
+            {dominant.ratio_p50_vs_estimate != null && <> — <strong>{dominant.ratio_p50_vs_estimate}×</strong> its documented estimate</>};
+            {' '}everything else combines to {Math.round(100 - dominant.share_pct)}%.
           </div>
         </div>
+      )}
+      {smallN && m && (
+        <div style={{ ...caution, marginBottom: 18 }}>
+          Small sample (n={m.queries_with_telemetry}) — treat these as directional, not precise. Percentile tails especially are noisy.
+        </div>
+      )}
 
-        {/* Statistical Significance */}
-        {data.stat_tests.length > 0 && (
-          <section className="perf-section">
-            <h3>Statistical Significance</h3>
-            <p className="perf-section-desc">
-              Hypothesis tests validating whether observed differences are statistically real or could be noise.
-              Tests use &alpha;=0.05. Mann-Whitney U is preferred for ordinal (1&ndash;5) scale data.
-              {data.fdr_correction && <> All p-values are corrected for multiple comparisons using <strong>{data.fdr_correction.method}</strong> FDR
-              ({data.fdr_correction.total_tests} tests). Significance badges reflect adjusted p-values.</>}
-            </p>
-
-            <div className="stat-tests">
-              {data.stat_tests.map(t => {
-                const isSigRaw = t.significant_mw ?? t.significant_welch ?? (t.binomial_70?.significant);
-                const isSigFdr = t.significant_mw_fdr ?? t.significant_welch_fdr ?? (t.binomial_70?.significant_fdr);
-                const isSig = isSigFdr ?? isSigRaw;
-                return (
-                  <div key={t.id} className={`stat-test-card ${isSig ? 'stat-sig' : 'stat-ns'}`}>
-                    <div className="stat-test-header">
-                      <strong>{t.title}</strong>
-                      <span className={`stat-badge ${isSig ? 'stat-badge-sig' : 'stat-badge-ns'}`}>
-                        {isSig ? 'Significant (FDR)' : 'Not Significant (FDR)'}
-                      </span>
-                    </div>
-                    <p className="stat-test-desc">{t.description}</p>
-
-                    {t.warning && <p className="stat-test-warn">{t.warning}</p>}
-
-                    {/* Group comparison tests */}
-                    {t.group_a && t.group_b && (
-                      <div className="stat-test-groups">
-                        <div className="stat-test-group">
-                          <span className="stat-group-label">{t.group_a.label}</span>
-                          <span>n={t.group_a.n}, mean={t.group_a.mean}{t.group_a.std !== undefined ? `, std=${t.group_a.std}` : ''}</span>
-                        </div>
-                        <div className="stat-test-group">
-                          <span className="stat-group-label">{t.group_b.label}</span>
-                          <span>n={t.group_b.n}, mean={t.group_b.mean}{t.group_b.std !== undefined ? `, std=${t.group_b.std}` : ''}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="stat-test-results">
-                      {t.mann_whitney_p !== undefined && (
-                        <div className="stat-result-row">
-                          <span className="stat-result-label">Mann-Whitney U{t.one_sided ? ' (one-sided)' : ''}</span>
-                          <span>U={t.mann_whitney_u}</span>
-                          <span className={t.significant_mw ? 'stat-p-sig' : 'stat-p-ns'}>
-                            p={t.mann_whitney_p < 0.000001 ? '<0.000001' : t.mann_whitney_p.toFixed(6)}
-                          </span>
-                          {t.mann_whitney_p_adj !== undefined && (
-                            <span className={t.significant_mw_fdr ? 'stat-p-sig' : 'stat-p-ns'}>
-                              p<sub>adj</sub>={t.mann_whitney_p_adj.toFixed(6)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {t.welch_p !== undefined && (
-                        <div className="stat-result-row">
-                          <span className="stat-result-label">Welch's t-test</span>
-                          <span>t={t.welch_t}</span>
-                          <span className={t.significant_welch ? 'stat-p-sig' : 'stat-p-ns'}>
-                            p={t.welch_p.toFixed(6)}
-                          </span>
-                          {t.welch_p_adj !== undefined && (
-                            <span className={t.significant_welch_fdr ? 'stat-p-sig' : 'stat-p-ns'}>
-                              p<sub>adj</sub>={t.welch_p_adj.toFixed(6)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {t.cohens_d !== undefined && (
-                        <div className="stat-result-row">
-                          <span className="stat-result-label">Effect size</span>
-                          <span>Cohen's d={t.cohens_d}</span>
-                          <span className="stat-effect">{t.effect_size}</span>
-                        </div>
-                      )}
-                      {t.ci_95 && (
-                        <div className="stat-result-row">
-                          <span className="stat-result-label">Mean diff</span>
-                          <span>{t.mean_diff}</span>
-                          <span>95% CI: [{t.ci_95[0]}, {t.ci_95[1]}]</span>
-                        </div>
-                      )}
-                      {t.n_needed_80pct_power !== undefined && (
-                        <div className="stat-result-row">
-                          <span className="stat-result-label">Power (80%)</span>
-                          <span>Need n={t.n_needed_80pct_power}/group</span>
-                          <span className={t.adequately_powered ? 'stat-p-sig' : 'stat-p-ns'}>
-                            {t.adequately_powered ? 'Adequately powered' : 'Underpowered'}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Reliability-specific */}
-                      {t.observed_rate !== undefined && (
-                        <>
-                          <div className="stat-result-row">
-                            <span className="stat-result-label">Observed</span>
-                            <span>{t.n_good}/{t.n_total} = {t.observed_rate}%</span>
-                            <span>Wilson 95% CI: [{t.wilson_ci_95?.[0]}%, {t.wilson_ci_95?.[1]}%]</span>
-                          </div>
-                          {t.binomial_75 && (
-                            <div className="stat-result-row">
-                              <span className="stat-result-label">H0: rate &le; 75%</span>
-                              <span className={t.binomial_75.significant ? 'stat-p-sig' : 'stat-p-ns'}>
-                                p={t.binomial_75.p.toFixed(6)}
-                              </span>
-                              <span>{t.binomial_75.claim}</span>
-                            </div>
-                          )}
-                          {t.binomial_70 && (
-                            <div className="stat-result-row">
-                              <span className="stat-result-label">H0: rate &le; 70%</span>
-                              <span className={t.binomial_70.significant ? 'stat-p-sig' : 'stat-p-ns'}>
-                                p={t.binomial_70.p.toFixed(6)}
-                              </span>
-                              <span>{t.binomial_70.claim}</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* Cost by Activity — v1 attribution breakdown */}
-        {data.cost_by_activity && (
-          <section className="perf-section">
-            <h3>Cost by activity</h3>
-            <p className="perf-section-desc">
-              Where Corvus spends LLM budget across tracked activities.
-              Sum of {data.cost_by_activity.buckets.length} buckets: ${fmt(data.cost_by_activity.total_tracked, 2)}.
-            </p>
-            <div className="perf-cost-grid">
-              {data.cost_by_activity.buckets.map(b => {
-                const total = data.cost_by_activity!.total_tracked || 1;
-                const share = (b.total_cost / total) * 100;
-                return (
-                  <div key={b.key} className="perf-cost-card" title={`${b.description}\nSource: ${b.source_table}`}>
-                    <div className="perf-cost-mode">{b.label}</div>
-                    <div className="perf-cost-amount" style={{ color: b.key === 'autopilot' ? '#a78bfa' : '#22c55e' }}>${fmt(b.total_cost, 2)}</div>
-                    <div className="perf-cost-label">{share.toFixed(1)}% of tracked spend</div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="perf-section-desc" style={{ marginTop: 10, fontStyle: 'italic', opacity: 0.8 }}>
-              {data.cost_by_activity.gap_note}
-            </p>
-          </section>
-        )}
-
-        {/* Cost Modeling */}
-        <section className="perf-section">
-          <h3>Cost Modeling</h3>
-          <p className="perf-section-desc">Per-query cost comparison: Haiku + Neurons vs raw alternatives.</p>
-          <div className="perf-cost-grid">
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Haiku + Neurons</div>
-              <div className="perf-cost-amount" style={{ color: '#22c55e' }}>${fmt(data.cost_modeling.per_query_cost.haiku_neuron, 4)}</div>
-              <div className="perf-cost-label">per query</div>
-            </div>
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Sonnet Raw</div>
-              <div className="perf-cost-amount" style={{ color: '#fb923c' }}>${fmt(data.cost_modeling.per_query_cost.sonnet_raw, 4)}</div>
-              <div className="perf-cost-label">per query</div>
-            </div>
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Opus Raw</div>
-              <div className="perf-cost-amount" style={{ color: '#f472b6' }}>${fmt(data.cost_modeling.per_query_cost.opus_raw, 4)}</div>
-              <div className="perf-cost-label">per query</div>
-            </div>
-          </div>
-
-          <h4>Projected at 100,000 queries/month</h4>
-          <table className="perf-table">
-            <thead><tr><th>Approach</th><th>Monthly</th><th>Annual</th><th>Annual Savings</th></tr></thead>
-            <tbody>
-              <tr>
-                <td><ModeLabel mode="haiku_neuron" /></td>
-                <td>${fmt(data.cost_modeling.projected_monthly_100k.haiku_neuron)}</td>
-                <td>${fmt(data.cost_modeling.projected_monthly_100k.haiku_neuron * 12)}</td>
-                <td>—</td>
-              </tr>
-              <tr>
-                <td><ModeLabel mode="sonnet_raw" /></td>
-                <td>${fmt(data.cost_modeling.projected_monthly_100k.sonnet_raw)}</td>
-                <td>${fmt(data.cost_modeling.projected_monthly_100k.sonnet_raw * 12)}</td>
-                <td style={{ color: '#22c55e' }}>${fmt(data.cost_modeling.annual_savings_vs_sonnet_100k)}</td>
-              </tr>
-              <tr>
-                <td><ModeLabel mode="opus_raw" /></td>
-                <td>${fmt(data.cost_modeling.projected_monthly_100k.opus_raw)}</td>
-                <td>${fmt(data.cost_modeling.projected_monthly_100k.opus_raw * 12)}</td>
-                <td style={{ color: '#22c55e' }}>${fmt(data.cost_modeling.annual_savings_vs_opus_100k)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        {/* Quality by Mode */}
-        <section className="perf-section">
-          <h3>Quality by Answer Mode</h3>
-          <p className="perf-section-desc">Blind evaluation scores across all tested configurations.</p>
-          <table className="perf-table">
-            <thead><tr><th>Mode</th><th>N</th><th>Accuracy</th><th>Complete</th><th>Clarity</th><th>Faith</th><th>Overall</th></tr></thead>
-            <tbody>
-              {data.quality_by_mode.map(q => (
-                <tr key={q.mode}>
-                  <td><ModeLabel mode={q.mode} /></td>
-                  <td>{q.n}</td>
-                  <td>{q.accuracy}</td>
-                  <td>{q.completeness}</td>
-                  <td>{q.clarity}</td>
-                  <td>{q.faithfulness}</td>
-                  <td style={{ fontWeight: 700 }}>{q.overall}</td>
-                </tr>
+      {/* Scoring health */}
+      {health && health.status === 'ok' && (
+        <Section
+          title="Scoring health"
+          subtitle={`Recent scoring signals vs baseline — drift means the graph is answering differently than it used to. ${health.queries_analyzed} queries analyzed (baseline ${health.baseline_window}, recent ${health.recent_window}).`}
+        >
+          {health.drift_alerts.length > 0 ? (
+            <div style={{ ...alertBox, borderColor: C.red, background: 'rgba(232,104,74,0.08)' }}>
+              <strong style={{ color: C.red, fontSize: 13 }}>Drift detected</strong>
+              {health.drift_alerts.map(a => (
+                <div key={a.signal} style={{ color: C.dim, fontSize: 12, marginTop: 4 }}>{a.message}</div>
               ))}
-            </tbody>
-          </table>
-        </section>
-
-        {/* Reliability */}
-        <section className="perf-section">
-          <h3>Reliability Distribution</h3>
-          <p className="perf-section-desc">
-            Score distribution for Haiku + Neurons ({data.reliability.total_evaluated} evaluations).
-            {' '}<strong>{data.reliability.reliability_pct}%</strong> score 4 or above.
-          </p>
-          <div className="perf-dist">
-            {data.reliability.distribution.map(d => {
-              const maxCount = Math.max(...data.reliability.distribution.map(x => x.count));
-              const colors: Record<number, string> = { 1: '#ef4444', 2: '#fb923c', 3: '#facc15', 4: '#22c55e', 5: '#38bdf8' };
-              return (
-                <div key={d.score} className="perf-dist-row">
-                  <span className="perf-dist-label">Score {d.score}</span>
-                  <div className="perf-dist-bar-wrap">
-                    <Bar value={d.count} max={maxCount} color={colors[d.score] || '#94a3b8'} />
-                  </div>
-                  <span className="perf-dist-count">{d.count} ({pct(d.count / data.reliability.total_evaluated * 100)})</span>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Quality Trend */}
-        <section className="perf-section">
-          <h3>Quality Trend</h3>
-          <p className="perf-section-desc">Haiku + Neuron quality improvement as the graph grows.</p>
-          {data.quality_trend.early && data.quality_trend.late && (
-            <table className="perf-table">
-              <thead><tr><th>Period</th><th>Queries</th><th>Overall</th><th>Accuracy</th><th>Completeness</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td>Early (1st half)</td>
-                  <td>{data.quality_trend.early.queries}</td>
-                  <td>{data.quality_trend.early.overall}</td>
-                  <td>{data.quality_trend.early.accuracy}</td>
-                  <td>{data.quality_trend.early.completeness}</td>
-                </tr>
-                <tr>
-                  <td>Late (2nd half)</td>
-                  <td>{data.quality_trend.late.queries}</td>
-                  <td style={{ color: data.quality_trend.late.overall > data.quality_trend.early.overall ? '#22c55e' : '#ef4444', fontWeight: 700 }}>
-                    {data.quality_trend.late.overall}
-                  </td>
-                  <td>{data.quality_trend.late.accuracy}</td>
-                  <td>{data.quality_trend.late.completeness}</td>
-                </tr>
-                <tr>
-                  <td style={{ fontStyle: 'italic', color: 'var(--text-dim)' }}>Change</td>
-                  <td />
-                  <td style={{ color: '#22c55e' }}>
-                    +{pct((data.quality_trend.late.overall - data.quality_trend.early.overall) / data.quality_trend.early.overall * 100)}
-                  </td>
-                  <td />
-                  <td />
-                </tr>
-              </tbody>
-            </table>
+            </div>
+          ) : health.can_detect_drift && (
+            <div style={{ ...alertBox, borderColor: 'rgba(34,197,94,0.35)', background: 'rgba(34,197,94,0.07)', color: C.green, fontSize: 12 }}>
+              All signals within normal range — no drift detected.
+            </div>
           )}
-        </section>
-
-        {/* Neuron Count vs Quality */}
-        <section className="perf-section">
-          <h3>Neuron Count vs Quality</h3>
-          <p className="perf-section-desc">Does selecting more neurons improve answer quality?</p>
-          <table className="perf-table">
-            <thead><tr><th>Neurons Selected</th><th>Queries</th><th>Avg Overall</th></tr></thead>
-            <tbody>
-              {data.neuron_quality_correlation.map(c => (
-                <tr key={c.bucket}>
-                  <td>{c.bucket}</td>
-                  <td>{c.queries}</td>
-                  <td style={{ fontWeight: 700 }}>{c.avg_score}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        {/* Investment */}
-        <section className="perf-section">
-          <h3>Total Investment</h3>
-          <div className="perf-cost-grid">
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Query Pipeline</div>
-              <div className="perf-cost-amount">${fmt(data.investment.query_pipeline)}</div>
-              <div className="perf-cost-label">{data.cost_summary.total_queries} queries</div>
-            </div>
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Autopilot</div>
-              <div className="perf-cost-amount">${fmt(data.investment.autopilot)}</div>
-              <div className="perf-cost-label">{data.autopilot.reduce((s, a) => s + a.runs, 0)} runs</div>
-            </div>
-            <div className="perf-cost-card" style={{ borderColor: 'var(--accent)' }}>
-              <div className="perf-cost-mode">Total Spend</div>
-              <div className="perf-cost-amount" style={{ color: 'var(--accent)' }}>${fmt(data.investment.total)}</div>
-              <div className="perf-cost-label">{data.neuron_stats.active_neurons} neurons built</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Token Usage */}
-        <section className="perf-section">
-          <h3>Token Usage</h3>
-          <table className="perf-table">
-            <thead><tr><th>Stage</th><th>Input Tokens</th><th>Output Tokens</th><th>Total</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>Classification (Stage 1)</td>
-                <td>{fmtK(data.cost_summary.classify_tokens.input)}</td>
-                <td>{fmtK(data.cost_summary.classify_tokens.output)}</td>
-                <td>{fmtK(data.cost_summary.classify_tokens.input + data.cost_summary.classify_tokens.output)}</td>
-              </tr>
-              <tr>
-                <td>Execution (Stage 2)</td>
-                <td>{fmtK(data.cost_summary.execute_tokens.input)}</td>
-                <td>{fmtK(data.cost_summary.execute_tokens.output)}</td>
-                <td>{fmtK(data.cost_summary.execute_tokens.input + data.cost_summary.execute_tokens.output)}</td>
-              </tr>
-              <tr>
-                <td>Evaluation</td>
-                <td>{fmtK(data.cost_summary.eval_tokens.input)}</td>
-                <td>{fmtK(data.cost_summary.eval_tokens.output)}</td>
-                <td>{fmtK(data.cost_summary.eval_tokens.input + data.cost_summary.eval_tokens.output)}</td>
-              </tr>
-              <tr style={{ fontWeight: 700 }}>
-                <td>Total</td>
-                <td>{fmtK(data.cost_summary.total_input_tokens)}</td>
-                <td>{fmtK(data.cost_summary.total_output_tokens)}</td>
-                <td>{fmtK(data.cost_summary.total_input_tokens + data.cost_summary.total_output_tokens)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
-        {/* Neuron Graph Stats */}
-        <section className="perf-section">
-          <h3>Neuron Graph</h3>
-          <div className="perf-neuron-grid">
-            <div>
-              <h4>Utilization</h4>
-              <table className="perf-table perf-table-compact">
-                <tbody>
-                  <tr><td>Active neurons</td><td>{data.neuron_stats.active_neurons.toLocaleString()}</td></tr>
-                  <tr><td>Distinct fired</td><td>{data.neuron_stats.distinct_fired}</td></tr>
-                  <tr><td>Never fired</td><td>{data.neuron_stats.never_fired} ({pct(data.neuron_stats.never_fired / data.neuron_stats.active_neurons * 100)})</td></tr>
-                  {Object.entries(data.neuron_stats.utilization).map(([k, v]) => (
-                    <tr key={k}><td>{k.replace(/_/g, ' ')}</td><td>{v}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <h4>Layer Distribution</h4>
-              <table className="perf-table perf-table-compact">
-                <tbody>
-                  {Object.entries(data.neuron_stats.layer_distribution).map(([k, v]) => (
-                    <tr key={k}><td>{k}</td><td>{v}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div>
-              <h4>Department Distribution</h4>
-              <table className="perf-table perf-table-compact">
-                <tbody>
-                  {Object.entries(data.neuron_stats.department_distribution).map(([k, v]) => (
-                    <tr key={k}><td>{k}</td><td>{v}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        {/* Refinement Impact */}
-        <section className="perf-section">
-          <h3>Refinement Impact</h3>
-          <div className="perf-cost-grid">
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Neurons Created</div>
-              <div className="perf-cost-amount" style={{ color: '#22c55e' }}>{data.refinement_impact.neurons_created.toLocaleString()}</div>
-              <div className="perf-cost-label">via refinement</div>
-            </div>
-            <div className="perf-cost-card">
-              <div className="perf-cost-mode">Neurons Updated</div>
-              <div className="perf-cost-amount" style={{ color: '#38bdf8' }}>{data.refinement_impact.neurons_updated}</div>
-              <div className="perf-cost-label">via refinement</div>
-            </div>
-          </div>
-          <h4>Graph Growth by Query Phase</h4>
-          <div className="perf-growth-bars">
-            {Object.entries(data.refinement_impact.graph_growth).map(([phase, count]) => {
-              const maxG = Math.max(...Object.values(data.refinement_impact.graph_growth));
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginTop: 12 }}>
+            {Object.entries(health.signals).map(([sig, d]) => {
+              const recentW = Math.max(5, Math.min(100, d.recent_query_means.mean * 100));
+              const baseW = Math.max(5, Math.min(100, d.baseline_query_means.mean * 100));
               return (
-                <div key={phase} className="perf-dist-row">
-                  <span className="perf-dist-label" style={{ width: 80 }}>{phase.replace(/_/g, ' ')}</span>
-                  <div className="perf-dist-bar-wrap">
-                    <Bar value={count} max={maxG} color="#60a5fa" />
+                <div key={sig} style={{ background: C.input, borderRadius: 8, padding: '10px 12px', border: `1px solid ${d.drifted ? C.red : 'transparent'}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: C.text, textTransform: 'capitalize' }}>{sig}</span>
+                    {d.drifted && <span style={{ fontSize: 10, color: C.red, fontWeight: 700 }}>DRIFT</span>}
                   </div>
-                  <span className="perf-dist-count">{count}</span>
+                  <div style={{ fontSize: 11, color: C.dim, marginBottom: 4 }}>
+                    baseline <strong style={{ color: C.blue }}>{d.baseline_query_means.mean.toFixed(3)}</strong>
+                    {' / '}recent <strong style={{ color: d.drifted ? C.red : C.green }}>{d.recent_query_means.mean.toFixed(3)}</strong>
+                  </div>
+                  <div style={{ position: 'relative', height: 12, background: 'rgba(0,0,0,0.35)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', height: '100%', width: `${baseW}%`, background: 'rgba(74,158,255,0.25)', borderRadius: 4 }} />
+                    <div style={{ position: 'absolute', height: '100%', width: `${recentW}%`, background: d.drifted ? 'rgba(232,104,74,0.55)' : 'rgba(34,197,94,0.45)', borderRadius: 4 }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>
+                    z={d.z_score.toFixed(1)} · σ={d.baseline_query_means.stddev.toFixed(3)}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </section>
+        </Section>
+      )}
+      {health && health.status === 'insufficient_data' && (
+        <Section title="Scoring health" subtitle={`Insufficient data for drift detection (${health.queries_available} queries, need 5+).`}>{null}</Section>
+      )}
 
-        {/* Autopilot */}
-        {data.autopilot.length > 0 && (
-          <section className="perf-section">
-            <h3>Autopilot Runs</h3>
-            <table className="perf-table">
-              <thead><tr><th>Status</th><th>Runs</th><th>Avg Score</th><th>Created</th><th>Updated</th><th>Cost</th></tr></thead>
+      {/* Latency budget */}
+      {m && byBudget.length > 0 && <>
+        <Section
+          title="Latency budget (median per stage)"
+          subtitle={`One hue = magnitude. Log scale by default because the top stage dwarfs the rest. ${m.queries_with_telemetry} queries · ${m.total_samples} stage samples${m.date_range[0] ? ` · ${m.date_range[0].slice(0, 10)} → ${(m.date_range[1] || '').slice(0, 10)}` : ''}.`}
+          right={<Toggle on={logScale} setOn={setLogScale} label="log scale" />}
+        >
+          <div style={{ display: 'grid', gap: 9 }}>
+            {byBudget.map(s => {
+              const frac = logScale ? log1p(s.p50) / log1p(maxBudget) : s.p50 / maxBudget;
+              return (
+                <div key={s.stage} style={barRow}>
+                  <span style={barLabel}>{s.label}</span>
+                  <div style={{ position: 'relative', height: 20 }}
+                    onMouseMove={e => setTip({ x: e.clientX, y: e.clientY, lines: [s.label, `p50 ${fmtMs(s.p50)} · p95 ${fmtMs(s.p95)}`, `max ${fmtMs(s.max)} · n=${s.n}`] })}>
+                    <div style={{ position: 'absolute', inset: 0, background: C.input, borderRadius: 4 }} />
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.max(frac * 100, 0.6)}%`, background: C.accent, borderRadius: 4, minWidth: 3 }} />
+                    <span style={{ position: 'absolute', left: 8, top: 2, fontSize: 11, color: '#0d0d0d', fontWeight: 700, textShadow: '0 0 2px rgba(255,255,255,.4)' }}>
+                      {fmtMs(s.p50)} · {s.share_pct}%
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* Estimate vs actual */}
+        <Section
+          title="Estimate vs. actual (measured p50 ÷ documented estimate)"
+          subtitle="1× = matches the design assumption. Right/red = slower than documented; left/green = faster. Bars are log-scaled around 1×."
+        >
+          <RatioBars items={withEst} onTip={setTip} />
+        </Section>
+
+        {/* Distribution & stability */}
+        <Section title="Distribution & stability" subtitle="Percentiles per stage, plus coefficient of variation (stddev ÷ mean) — high CoV = unstable, a tuning target.">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 640 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'right' }}>
+                  <th style={{ ...th, textAlign: 'left' }}>Stage</th>
+                  <th style={th}>n</th><th style={th}>mean</th><th style={th}>p50</th><th style={th}>p90</th>
+                  <th style={th}>p95</th><th style={th}>p99</th><th style={th}>max</th><th style={th}>CoV</th>
+                </tr>
+              </thead>
               <tbody>
-                {data.autopilot.map(a => (
-                  <tr key={a.status}>
-                    <td style={{ color: a.status === 'completed' ? '#22c55e' : '#fb923c' }}>{a.status}</td>
-                    <td>{a.runs}</td>
-                    <td>{a.avg_score}</td>
-                    <td>{a.created}</td>
-                    <td>{a.updated}</td>
-                    <td>${fmt(a.cost)}</td>
+                {stages.map(s => (
+                  <tr key={s.stage} style={{ borderTop: `1px solid ${C.border}` }}>
+                    <td style={{ ...tdc, textAlign: 'left', color: C.text }}>{s.label}</td>
+                    <td style={tdc}>{s.n}</td>
+                    <td style={tdc}>{fmtMs(s.mean)}</td>
+                    <td style={{ ...tdc, color: C.text }}>{fmtMs(s.p50)}</td>
+                    <td style={tdc}>{fmtMs(s.p90)}</td>
+                    <td style={tdc}>{fmtMs(s.p95)}</td>
+                    <td style={tdc}>{fmtMs(s.p99)}</td>
+                    <td style={tdc}>{fmtMs(s.max)}</td>
+                    <td style={{ ...tdc, color: s.cov >= 1 ? C.red : s.cov >= 0.5 ? C.accent : C.dim, fontWeight: s.cov >= 1 ? 700 : 400 }}>{s.cov.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </section>
-        )}
-
-        {/* Query Timeline */}
-        <section className="perf-section">
-          <h3>Query Timeline</h3>
-          <p className="perf-section-desc">Per-query cost and quality score over time.</p>
-          <div className="perf-timeline">
-            <div className="perf-timeline-header">
-              <span style={{ width: 40 }}>QID</span>
-              <span style={{ width: 70 }}>Cost</span>
-              <span style={{ width: 60 }}>Neurons</span>
-              <span style={{ flex: 1 }}>Score</span>
-            </div>
-            <div className="perf-timeline-body">
-              {data.query_timeline.map(q => (
-                <div key={q.id} className="perf-timeline-row">
-                  <span style={{ width: 40, color: 'var(--text-dim)' }}>#{q.id}</span>
-                  <span style={{ width: 70 }}>${fmt(q.cost, 4)}</span>
-                  <span style={{ width: 60 }}>{q.neurons}</span>
-                  <span style={{ flex: 1 }}>
-                    {q.score !== null ? (
-                      <span className="perf-score-pip" style={{
-                        background: q.score >= 4 ? '#22c55e' : q.score >= 3 ? '#facc15' : '#ef4444',
-                        width: `${q.score / 5 * 100}%`,
-                      }}>{q.score}</span>
-                    ) : (
-                      <span style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>—</span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
-        </section>
+        </Section>
+
+        {/* Drift over time */}
+        <Section
+          title="Drift over time"
+          subtitle="Per-day median (p50) and tail (p95) for one stage. Watch for a stage creeping up over time."
+          right={
+            <select value={trendStage} onChange={e => setTrendStage(e.target.value)} style={select}>
+              {stages.map(s => <option key={s.stage} value={s.stage}>{s.label}</option>)}
+            </select>
+          }
+        >
+          <DriftChart points={trendPts} onTip={setTip} />
+        </Section>
       </>}
+
+      {tip && (
+        <div style={{ position: 'fixed', left: tip.x + 14, top: tip.y + 14, zIndex: 50, pointerEvents: 'none', background: 'rgba(12,14,20,0.95)', border: `1px solid ${C.border}`, borderRadius: 7, padding: '7px 10px', fontSize: 12 }}>
+          {tip.lines.map((l, i) => <div key={i} style={{ color: i === 0 ? C.text : C.dim, fontWeight: i === 0 ? 700 : 400 }}>{l}</div>)}
+        </div>
+      )}
     </div>
   );
 }
+
+function Tile({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px' }}>
+      <div style={{ color: C.text, fontFamily: 'var(--font-mono, monospace)', fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{value}</div>
+      <div style={{ color: C.dim, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 3 }}>{label}</div>
+    </div>
+  );
+}
+
+function RatioBars({ items, onTip }: { items: StageStat[]; onTip: (t: Tip) => void }) {
+  const ratios = items.map(s => s.ratio_p50_vs_estimate!);
+  const maxLog = Math.max(...ratios.map(r => Math.abs(Math.log10(r))), 0.3);
+  return (
+    <div style={{ display: 'grid', gap: 9 }}>
+      {items.map(s => {
+        const r = s.ratio_p50_vs_estimate!;
+        const l = Math.log10(r);
+        const half = (Math.abs(l) / maxLog) * 50; // % of half-width
+        const slower = r >= 1;
+        return (
+          <div key={s.stage} style={barRow}>
+            <span style={barLabel}>{s.label}</span>
+            <div style={{ position: 'relative', height: 20 }}
+              onMouseMove={e => onTip({ x: e.clientX, y: e.clientY, lines: [s.label, `measured p50 ${fmtMs(s.p50)}`, `documented ${fmtMs(s.estimate_ms!)} → ${r}×`] })}>
+              <div style={{ position: 'absolute', inset: 0, background: C.input, borderRadius: 4 }} />
+              <div style={{ position: 'absolute', left: '50%', top: -2, bottom: -2, width: 1, background: C.border }} />
+              <div style={{ position: 'absolute', top: 0, bottom: 0, borderRadius: 4, background: slower ? C.red : C.green,
+                left: slower ? '50%' : `${50 - half}%`, width: `${Math.max(half, 0.6)}%` }} />
+              <span style={{ position: 'absolute', top: 2, fontSize: 11, fontWeight: 700, color: C.text,
+                left: slower ? `calc(50% + ${half}% + 6px)` : undefined, right: slower ? undefined : `calc(50% + ${half}% + 6px)` }}>
+                {slower ? '▲' : '▼'} ×{r}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontSize: 11, color: C.dim }}>
+        <span><span style={{ color: C.green }}>▼</span> faster than documented</span>
+        <span><span style={{ color: C.red }}>▲</span> slower than documented</span>
+      </div>
+    </div>
+  );
+}
+
+function DriftChart({ points, onTip }: { points: { bucket: string; p50: number; p95: number; n: number }[]; onTip: (t: Tip) => void }) {
+  const W = 1000, H = 240, padL = 56, padR = 16, padT = 12, padB = 30;
+  if (points.length === 0) return <div style={{ color: C.dim, fontSize: 12, padding: 12 }}>No dated samples for this stage.</div>;
+  const maxY = Math.max(...points.flatMap(p => [p.p50, p.p95]), 1) * 1.1;
+  const n = points.length;
+  const xAt = (i: number) => padL + (n === 1 ? (W - padL - padR) / 2 : (i / (n - 1)) * (W - padL - padR));
+  const yAt = (v: number) => padT + (1 - v / maxY) * (H - padT - padB);
+  const path = (key: 'p50' | 'p95') => points.map((p, i) => `${i === 0 ? 'M' : 'L'}${xAt(i).toFixed(1)},${yAt(p[key]).toFixed(1)}`).join(' ');
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => f * maxY);
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.dim, marginBottom: 6 }}>
+        <span><span style={{ display: 'inline-block', width: 14, height: 2, background: C.blue, verticalAlign: 'middle' }} /> p50 (median)</span>
+        <span><span style={{ display: 'inline-block', width: 14, height: 2, background: C.accent, verticalAlign: 'middle' }} /> p95 (tail)</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto' }}
+        onMouseMove={e => {
+          const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+          const px = ((e.clientX - rect.left) / rect.width) * W;
+          const i = Math.max(0, Math.min(n - 1, Math.round(((px - padL) / (W - padL - padR)) * (n - 1))));
+          const p = points[i];
+          if (p) onTip({ x: e.clientX, y: e.clientY, lines: [p.bucket, `p50 ${fmtMs(p.p50)} · p95 ${fmtMs(p.p95)}`, `n=${p.n}`] });
+        }}>
+        {ticks.map((t, i) => (
+          <g key={i}>
+            <line x1={padL} x2={W - padR} y1={yAt(t)} y2={yAt(t)} stroke={C.border} strokeWidth={0.5} />
+            <text x={padL - 6} y={yAt(t) + 3} textAnchor="end" fontSize={10} fill={C.dim}>{fmtMs(t)}</text>
+          </g>
+        ))}
+        <path d={path('p95')} fill="none" stroke={C.accent} strokeWidth={2} strokeLinejoin="round" />
+        <path d={path('p50')} fill="none" stroke={C.blue} strokeWidth={2} strokeLinejoin="round" />
+        {points.map((p, i) => <circle key={'a' + i} cx={xAt(i)} cy={yAt(p.p95)} r={2.5} fill={C.accent} />)}
+        {points.map((p, i) => <circle key={'b' + i} cx={xAt(i)} cy={yAt(p.p50)} r={2.5} fill={C.blue} />)}
+        {points.map((p, i) => (n <= 12 || i % Math.ceil(n / 8) === 0) && (
+          <text key={'x' + i} x={xAt(i)} y={H - 10} textAnchor="middle" fontSize={9} fill={C.dim}>{p.bucket.slice(5)}</text>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function Section({ title, subtitle, right, children }: { title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ ...card, marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>{title}</div>
+          {subtitle && <div style={{ color: C.dim, fontSize: 12, marginTop: 2, maxWidth: 760 }}>{subtitle}</div>}
+        </div>
+        {right}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Toggle({ on, setOn, label }: { on: boolean; setOn: (v: boolean) => void; label: string }) {
+  return (
+    <label style={{ display: 'flex', gap: 6, alignItems: 'center', color: C.dim, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+      <input type="checkbox" checked={on} onChange={e => setOn(e.target.checked)} /> {label}
+    </label>
+  );
+}
+
+const card: CSSProperties = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '16px 18px' };
+const caution: CSSProperties = { background: 'rgba(200,117,51,0.1)', border: `1px solid ${C.accent}`, borderRadius: 8, padding: '8px 12px', color: C.text, fontSize: 12 };
+const alertBox: CSSProperties = { border: '1px solid', borderRadius: 8, padding: '8px 12px' };
+const heroKicker: CSSProperties = { color: C.accent, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 };
+const tiles: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 };
+const barRow: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 12, alignItems: 'center' };
+const barLabel: CSSProperties = { color: C.dim, fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const th: CSSProperties = { padding: '6px 10px', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4 };
+const tdc: CSSProperties = { padding: '6px 10px', textAlign: 'right', color: C.dim, fontFamily: 'var(--font-mono, monospace)', whiteSpace: 'nowrap' };
+const select: CSSProperties = { background: C.input, color: C.text, border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 12 };
