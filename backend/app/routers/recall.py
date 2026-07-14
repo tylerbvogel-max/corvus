@@ -78,10 +78,18 @@ async def _parent_projects(db: AsyncSession, ctx) -> dict:
             for nid, n in ctx.neuron_map.items() if n.parent_id in label_by_parent}
 
 
-async def _persist_recall(db: AsyncSession, req: RecallRequest, ctx, latency_ms: float) -> int | None:
+async def _persist_recall(
+    db: AsyncSession, req: RecallRequest, ctx, latency_ms: float,
+    returned_ids: list[int],
+) -> int | None:
     """Record the recall as a Query row + firings so the Evaluate pages,
     invocation counts, and decay signals see ambient memory traffic.
-    response_text stays NULL (nothing was executed); cost is genuinely 0."""
+    response_text stays NULL (nothing was executed); cost is genuinely 0.
+
+    was_included tracks what was ACTUALLY RETURNED (returned_ids), not what
+    ranked in the top_k. Filtered-out scaffolding must not keep earning
+    inclusion credit for slots it never occupied — that credit is what fed
+    its burst/recency and let it outrank real lessons in the first place."""
     from app.models import Query
     from app.services.neuron_service import get_system_state, record_firing
 
@@ -92,7 +100,7 @@ async def _persist_recall(db: AsyncSession, req: RecallRequest, ctx, latency_ms:
         classified_intent=ctx.intent,
         classified_departments=json.dumps(ctx.departments),
         classified_keywords=json.dumps(ctx.keywords),
-        selected_neuron_ids=json.dumps([s["neuron_id"] for s in ctx.neuron_scores]),
+        selected_neuron_ids=json.dumps(returned_ids),
         neuron_scores_json=json.dumps(ctx.neuron_scores),
         stage_telemetry_json=ctx.stage_telemetry,
         run_opus=False,
@@ -102,27 +110,51 @@ async def _persist_recall(db: AsyncSession, req: RecallRequest, ctx, latency_ms:
     )
     db.add(row)
     await db.flush()
+    position_of = {nid: i for i, nid in enumerate(returned_ids)}
     for idx, score in enumerate(ctx.all_scored):
+        pos = position_of.get(score.neuron_id)
         await record_firing(
             db, score.neuron_id, row.id, state.global_token_counter,
             global_query_offset=state.total_queries, score=score,
-            rank=idx + 1, prompt_position=idx if idx < req.top_k else None,
-            was_included=idx < req.top_k,
+            rank=idx + 1, prompt_position=pos,
+            was_included=pos is not None,
         )
     await db.commit()
     return row.id
+
+
+# Navigational scaffolding — org-chart anchors whose entire content is
+# "Department: Harness" / "Role: Project Context in Projects". They carry no
+# knowledge, but they sit at the top of every parent chain, so they match
+# generic queries, fire constantly, and accrue burst/recency that content-
+# bearing lessons with no firing history cannot outrank. Measured 2026-07-13
+# on corvus-mind: role "Project Context" had 381 firings and project "corvus"
+# 366, while the lessons that actually answered the query had 0 — and the
+# scaffolding took 4 of the top 5 slots. They stay in the graph (spread
+# traverses them as hubs); they just never consume a recall result slot.
+_SCAFFOLDING_NODE_TYPES = frozenset({"role", "department", "project"})
+# Over-fetch multiple so dropped scaffolding is backfilled by real knowledge
+# rather than shrinking the result set.
+_SCAFFOLDING_HEADROOM = 3
+_MAX_FETCH_K = 40
 
 
 @router.post("/recall", dependencies=[Depends(require_memory_surface)])
 async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
     """Cheap structured recall: prepare pipeline only, no LLM, no execution."""
     t0 = time.monotonic()
-    ctx = await prepare_context(db, req.query, top_k=req.top_k)
+    # prepare_context truncates neuron_scores to top_k, so scaffolding must be
+    # over-fetched THEN filtered — filtering a top_k-truncated list just returns
+    # fewer hits with nothing to backfill from.
+    fetch_k = min(_MAX_FETCH_K, req.top_k * _SCAFFOLDING_HEADROOM)
+    ctx = await prepare_context(db, req.query, top_k=fetch_k)
     assert ctx is not None, "prepare_context must return a PreparedContext"
     project_of = await _parent_projects(db, ctx) if req.project else {}
     hits = []
-    for s in ctx.neuron_scores[:req.top_k * 2]:
+    for s in ctx.neuron_scores:
         neuron = ctx.neuron_map.get(s["neuron_id"])
+        if neuron is not None and neuron.node_type in _SCAFFOLDING_NODE_TYPES:
+            continue
         hit = {
             "neuron_id": s["neuron_id"],
             "label": s["label"],
@@ -148,7 +180,8 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
     latency_ms = round((time.monotonic() - t0) * 1000, 1)
     query_id = None
     if req.persist:
-        query_id = await _persist_recall(db, req, ctx, latency_ms)
+        query_id = await _persist_recall(
+            db, req, ctx, latency_ms, [h["neuron_id"] for h in hits])
     return {
         "intent": ctx.intent,
         "scopes": ctx.departments,
