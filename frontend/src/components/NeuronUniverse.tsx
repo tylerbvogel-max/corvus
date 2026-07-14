@@ -30,9 +30,9 @@ type SimNode = Graph3DNode & {
 
 const BG = 0x080a0e;
 // Repulsion slider works in hundreds of charge units: displayed 3-15,
-// applied as value * REPULSION_SCALE (300-1500 charge, default 600).
+// applied as value * REPULSION_SCALE (300-1500 charge, default 1000).
 const REPULSION_SCALE = 100;
-const REPULSION_DEFAULT = 6;
+const REPULSION_DEFAULT = 10;
 const REPULSION_MIN = 3;
 const REPULSION_MAX = 15;
 const REGION_COLORS = [
@@ -69,10 +69,14 @@ export default function NeuronUniverse() {
   const [nodeLight, setNodeLight] = useState(1.25); // neuron brightness
   const [synapseLight, setSynapseLight] = useState(0.5); // synapse brightness
   // Repulsion is expressed in hundreds of charge units: the slider carries 3-15
-  // and the force gets value * REPULSION_SCALE (300-1500, default 600). The old
+  // and the force gets value * REPULSION_SCALE (300-1500, default 1000). The old
   // 8-300 range was far too weak to separate a graph this dense — nodes piled
   // into an unreadable ball once real edges existed.
   const [repulsion, setRepulsion] = useState(REPULSION_DEFAULT);
+  // Master switch for all ambient motion: camera drift, skill heartbeats,
+  // the Assistant wanderer, shell rotation, synapse firing, and the sim's
+  // background simmer. Off = a fully still universe.
+  const [motion, setMotion] = useState(true);
   const [panelOpen, setPanelOpen] = useState(true);
 
   // ── Data load (hardened: coerce NaN-prone numeric fields) ──
@@ -162,7 +166,7 @@ export default function NeuronUniverse() {
     controls.addEventListener('end', () => {
       if (idleTimer) clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        controls.autoRotate = true;
+        if (motionOn) controls.autoRotate = true;
       }, 15000);
     });
 
@@ -224,6 +228,18 @@ export default function NeuronUniverse() {
     shells.count = skillIdx.length;
     shells.raycast = () => {}; // decoration only — picking stays on the spheres
     scene.add(shells);
+    // Heartbeat: each skill beats on its own randomized rhythm. A beat flares
+    // the wireframe shell and (via the skillBeat sim force) briefly shoves
+    // nearby neurons outward — dark matter announcing itself.
+    const skillBeat = skillIdx.map(() => ({ next: 2 + Math.random() * 8, last: -10 }));
+    function beatPulse(k: number, t: number) {
+      return Math.exp(-2.5 * Math.max(t - skillBeat[k].last, 0));
+    }
+    function updateBeats(t: number) {
+      for (const b of skillBeat) {
+        if (t >= b.next) { b.last = t; b.next = t + 3 + Math.random() * 9; }
+      }
+    }
     const shellDummy = new THREE.Object3D();
     function syncShells(t: number) {
       for (let k = 0; k < skillIdx.length; k++) {
@@ -234,7 +250,7 @@ export default function NeuronUniverse() {
           shellDummy.rotation.set(0, t * 0.25, t * 0.1);
           // scaleFor already includes the node radius; the shell geometry's
           // 1.75 base radius provides the halo margin around the sphere.
-          shellDummy.scale.setScalar(scaleFor(i));
+          shellDummy.scale.setScalar(scaleFor(i) * (1 + 0.6 * beatPulse(k, t)));
         }
         shellDummy.updateMatrix();
         shells.setMatrixAt(k, shellDummy.matrix);
@@ -329,6 +345,11 @@ export default function NeuronUniverse() {
     let nodeLight = 1.25; // neuron brightness multiplier (slider-controlled)
     // Charge magnitude actually applied to the force (slider value * scale).
     let repulsionVal = REPULSION_DEFAULT * REPULSION_SCALE;
+    // Ambient-motion master switch + the animation clock it gates. Everything
+    // time-driven (drift, beats, wanderer, shells, firing) reads animT, which
+    // only advances while motion is on — pausing freezes the whole universe.
+    let motionOn = true;
+    let animT = 0;
 
     function recomputeRadius() {
       for (let i = 0; i < N; i++) {
@@ -370,6 +391,64 @@ export default function NeuronUniverse() {
 
     let focusId: number | null = null;
     let visibleEdge = new Uint8Array(M).fill(1);
+
+    // Synapse firing: very sparse — every so often a point of light traverses
+    // one of the existing (visible) lines from source to target, then dies.
+    const FIRE_MAX = 20;
+    const firePos = new Float32Array(FIRE_MAX * 3);
+    const fireCol = new Float32Array(FIRE_MAX * 3);
+    const fireGeo = new THREE.BufferGeometry();
+    fireGeo.setAttribute('position', new THREE.BufferAttribute(firePos, 3));
+    fireGeo.setAttribute('color', new THREE.BufferAttribute(fireCol, 3));
+    fireGeo.setDrawRange(0, 0);
+    const firePts = new THREE.Points(fireGeo, new THREE.PointsMaterial({
+      size: 6, vertexColors: true, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+    }));
+    firePts.frustumCulled = false;
+    firePts.raycast = () => {};
+    scene.add(firePts);
+    const fires: { e: number; t0: number; dur: number }[] = [];
+    let nextFireAt = 0;
+    function spawnFire(t: number) {
+      // A few random draws to land on a currently-visible edge; give up quietly
+      // if the view is filtered down to almost nothing.
+      for (let tries = 0; tries < 8; tries++) {
+        const e = (Math.random() * M) | 0;
+        const s = byId.get(E[e].source), tt = byId.get(E[e].target);
+        if (!s || !tt || !visibleEdge[e] || hidden[s._i] || hidden[tt._i]) continue;
+        fires.push({ e, t0: t, dur: 0.7 + Math.random() * 0.9 });
+        return;
+      }
+    }
+    function syncFires(t: number) {
+      if (M > 0 && t >= nextFireAt && fires.length < FIRE_MAX) {
+        spawnFire(t);
+        nextFireAt = t + 0.4 + Math.random() * 1.4;
+      }
+      let w = 0;
+      for (const fr of fires) {
+        const p = (t - fr.t0) / fr.dur;
+        const s = byId.get(E[fr.e].source), tt = byId.get(E[fr.e].target);
+        if (p >= 1 || !s || !tt || !visibleEdge[fr.e] || hidden[s._i] || hidden[tt._i]) continue;
+        fires[w] = fr;
+        const o = w * 3;
+        firePos[o] = s.x + (tt.x - s.x) * p;
+        firePos[o + 1] = s.y + (tt.y - s.y) * p;
+        firePos[o + 2] = s.z + (tt.z - s.z) * p;
+        // White-hot core over the edge colour; sin envelope = soft ignite/decay.
+        const glow = Math.sin(Math.PI * p) * 2.6;
+        const c = edgeColors[fr.e];
+        fireCol[o] = (c.r + 0.7) * glow;
+        fireCol[o + 1] = (c.g + 0.7) * glow;
+        fireCol[o + 2] = (c.b + 0.7) * glow;
+        w++;
+      }
+      fires.length = w;
+      fireGeo.setDrawRange(0, w);
+      (fireGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+      (fireGeo.attributes.color as THREE.BufferAttribute).needsUpdate = true;
+    }
 
     function refreshInstances() {
       const highlightId = focusId;
@@ -429,7 +508,9 @@ export default function NeuronUniverse() {
         .force('z', forceZ(0).strength(0.015))
         .velocityDecay(0.34)
         .alphaDecay(0.02)
-        .alphaTarget(0.025) // never fully sleeps: the wanderer's pull is continuous
+        // Never fully sleeps while motion is on (the wanderer's pull is
+        // continuous); with motion off it settles and goes still.
+        .alphaTarget(motionOn ? 0.025 : 0)
         .alpha(0.9);
       // The assistant exerts gravity as it traverses: nearby free nodes are
       // drawn toward it with inverse-square falloff (softened + capped), so
@@ -443,6 +524,27 @@ export default function NeuronUniverse() {
             const d2 = dx * dx + dy * dy + dz * dz + 2500; // softening core
             const f = Math.min(3500 / d2, 0.12) * alpha; // a tide, not a singularity
             (n as any).vx += dx * f; (n as any).vy += dy * f; (n as any).vz += dz * f;
+          }
+        });
+      }
+      // Skill heartbeat: a beating skill briefly boosts repulsion around
+      // itself — inverse-square shove (softened + capped) scaled by the
+      // beat envelope and the current repulsion setting.
+      if (skillIdx.length) {
+        sim.force('skillBeat', (alpha: number) => {
+          if (!motionOn) return;
+          for (let k = 0; k < skillIdx.length; k++) {
+            const p = beatPulse(k, animT);
+            if (p < 0.04) continue;
+            const s = nodes[skillIdx[k]];
+            if (hidden[s._i]) continue;
+            for (const n of active) {
+              if (n === s || n.fx != null) continue;
+              const dx = n.x - s.x, dy = n.y - s.y, dz = n.z - s.z;
+              const d2 = dx * dx + dy * dy + dz * dz + 900; // softening core
+              const f = Math.min((repulsionVal * 6 * p) / d2, 0.35) * alpha;
+              (n as any).vx += dx * f; (n as any).vy += dy * f; (n as any).vz += dz * f;
+            }
           }
         });
       }
@@ -484,11 +586,20 @@ export default function NeuronUniverse() {
     renderer.domElement.addEventListener('click', onClick);
 
     let raf = 0;
+    let lastFrame: number | null = null;
     function animate() {
       raf = requestAnimationFrame(animate);
+      const now = performance.now() / 1000;
+      const dt = lastFrame == null ? 0 : Math.min(now - lastFrame, 0.1);
+      lastFrame = now;
+      if (motionOn) {
+        animT += dt;
+        updateBeats(animT);
+        syncFires(animT);
+      }
       if (sim && sim.alpha() > 0.006) { sim.tick(); syncPositions(); }
-      syncShells(performance.now() / 1000);
-      syncAssistant(performance.now() / 1000);
+      syncShells(animT);
+      syncAssistant(animT);
       controls.update();
       composer.render();
     }
@@ -512,6 +623,15 @@ export default function NeuronUniverse() {
         setColorMode() { recomputeColors(); refreshInstances(); },
         setSizeMode() { recomputeRadius(); refreshInstances(); },
         setBloom(on: boolean) { bloomPass.enabled = on; bloomPass.strength = on ? 0.9 : 0; },
+        setMotion(on: boolean) {
+          motionOn = on;
+          controls.autoRotate = on;
+          if (!on && idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+          if (sim) {
+            sim.alphaTarget(on ? 0.025 : 0);
+            if (on) sim.alpha(Math.max(sim.alpha(), 0.3)); // wake a slept layout
+          }
+        },
         setSynapse(v: number) { for (let e = 0; e < M; e++) visibleEdge[e] = E[e].weight >= (1 - v) * 0.6 ? 1 : 0; syncPositions(); },
         setNodeLight(v: number) { nodeLight = v; refreshInstances(); },
         setSynapseLight(v: number) { lineMat.opacity = 0.02 + v * 0.88; },
@@ -566,6 +686,7 @@ export default function NeuronUniverse() {
         composer.dispose?.();
         renderer.dispose();
         sphere.dispose(); nodeMat.dispose(); lineGeo.dispose(); lineMat.dispose();
+        fireGeo.dispose(); (firePts.material as THREE.Material).dispose();
         if (renderer.domElement.parentElement === mount) mount.removeChild(renderer.domElement);
         engineRef.current = null;
       },
@@ -578,6 +699,7 @@ export default function NeuronUniverse() {
   useEffect(() => { engineRef.current?.api.setColorMode(); }, [colorBy, nodeHex]);
   useEffect(() => { engineRef.current?.api.setSizeMode(); }, [sizeBy]);
   useEffect(() => { engineRef.current?.api.setBloom(bloom); }, [bloom]);
+  useEffect(() => { engineRef.current?.api.setMotion(motion); }, [motion]);
   useEffect(() => { engineRef.current?.api.setSynapse(synapse); }, [synapse]);
   useEffect(() => { engineRef.current?.api.setNodeLight(nodeLight); }, [nodeLight]);
   useEffect(() => { engineRef.current?.api.setSynapseLight(synapseLight); }, [synapseLight]);
@@ -644,7 +766,10 @@ export default function NeuronUniverse() {
             onChange={e => setRepulsion(+e.target.value)} style={{ width: 150 }} />
         </Row>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#c7d0e0', fontSize: '0.78rem', marginTop: 8, cursor: 'pointer' }}>
-          <input type="checkbox" checked={bloom} onChange={e => setBloom(e.target.checked)} /> Bloom (glow)
+          <input type="checkbox" checked={bloom} onChange={e => setBloom(e.target.checked)} /> Bloom
+        </label>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#c7d0e0', fontSize: '0.78rem', marginTop: 6, cursor: 'pointer' }}>
+          <input type="checkbox" checked={motion} onChange={e => setMotion(e.target.checked)} /> Motion enabled
         </label>
         {selected && (
           <button onClick={() => setSelected(null)} style={backBtn}>← Back to full universe</button>
