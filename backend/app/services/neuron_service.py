@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models import Neuron, NeuronFiring, NeuronScoreOverride, SystemState
 from app.services.scoring_engine import (
-    compute_score, calc_relevance, calc_hybrid_relevance, NeuronScoreBreakdown,
+    compute_score, calc_relevance, calc_rrf, NeuronScoreBreakdown,
     ColdstartInputs, apply_score_overrides,
     calc_burst_batch, calc_impact_batch, calc_precision_batch,
     calc_novelty_batch, calc_recency_batch, calc_coldstart_term_batch,
@@ -381,6 +381,7 @@ async def score_candidates(
     classified_role_keys: list[str] | None = None,
     query_embedding: list[float] | None = None,
     precomputed_similarities: dict[int, float] | None = None,
+    extra_lanes: list[dict[int, float]] | None = None,
 ) -> list[NeuronScoreBreakdown]:
     """Score all candidate neurons using 6 biomimetic signals.
 
@@ -424,15 +425,25 @@ async def score_candidates(
             for region in {c.department for c in candidates if c.department}
         }
 
-    # Hybrid RRF: fuse keyword + semantic scores when both are available
+    # Hybrid RRF: fuse the embedding lane with the lexical lane(s). When the
+    # tsvector/entity retrieval lanes are supplied (mind-hybrid-recall) they
+    # replace the legacy in-Python substring lane; otherwise behavior is the
+    # original keyword+semantic two-lane fusion.
     hybrid_map: dict[int, float] | None = None
-    if settings.hybrid_relevance_enabled and semantic_map and keywords:
-        keyword_scores: dict[int, float] = {}
-        for neuron in candidates:
-            content = getattr(neuron, 'content', None) or ''
-            neuron_text = f"{neuron.label} {neuron.summary or ''} {content}"
-            keyword_scores[neuron.id] = calc_relevance(keywords, neuron_text)
-        hybrid_map = calc_hybrid_relevance(keyword_scores, semantic_map, k=settings.rrf_k)
+    if settings.hybrid_relevance_enabled and semantic_map and (keywords or extra_lanes):
+        lanes: list[dict[int, float]] = [semantic_map]
+        if extra_lanes:
+            lanes.extend(extra_lanes)
+        # The tsvector lane supersedes the substring lane; entity-lane-only
+        # configurations keep it.
+        if keywords and not settings.keyword_lane_enabled:
+            keyword_scores: dict[int, float] = {}
+            for neuron in candidates:
+                content = getattr(neuron, 'content', None) or ''
+                neuron_text = f"{neuron.label} {neuron.summary or ''} {content}"
+                keyword_scores[neuron.id] = calc_relevance(keywords, neuron_text)
+            lanes.append(keyword_scores)
+        hybrid_map = calc_rrf(lanes, k=settings.rrf_k)
 
     scores = _score_candidates_vectorized(
         candidates, total_queries, keywords,

@@ -123,6 +123,26 @@ async def _migrate_neuron_and_query_columns(engine):
                     "ALTER TABLE neurons ADD COLUMN authority_level VARCHAR(30)"
                 ))
                 print("Migrated: added neurons.authority_level")
+            if not await _column_exists(conn, "neurons", "entities"):
+                await conn.execute(text(
+                    "ALTER TABLE neurons ADD COLUMN entities JSONB"
+                ))
+                print("Migrated: added neurons.entities")
+            if not await _index_exists(conn, "ix_neurons_entities"):
+                await conn.execute(text(
+                    "CREATE INDEX ix_neurons_entities ON neurons "
+                    "USING GIN (entities jsonb_path_ops)"
+                ))
+                print("Migrated: added ix_neurons_entities GIN index")
+            if not await _index_exists(conn, "ix_neurons_content_tsv"):
+                # Expression must match recall_lanes.TSV_EXPR or the planner
+                # won't use it for the keyword lane.
+                await conn.execute(text(
+                    "CREATE INDEX ix_neurons_content_tsv ON neurons USING GIN "
+                    "(to_tsvector('english', coalesce(label, '') || ' ' || "
+                    "coalesce(content, '') || ' ' || coalesce(summary, '')))"
+                ))
+                print("Migrated: added ix_neurons_content_tsv full-text index")
             if not await _column_exists(conn, "neurons", "abstraction_type"):
                 await conn.execute(text(
                     "ALTER TABLE neurons ADD COLUMN abstraction_type VARCHAR(20)"

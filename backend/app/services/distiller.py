@@ -94,7 +94,7 @@ SECOND TASK — attribution: for each ALREADY-KNOWN (injected) lesson, judge fro
 Base verdicts ONLY on observable events in the log; when in doubt, "unused".
 
 Respond with ONLY a JSON object, no markdown fences, no prose:
-{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>"}],
+{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"]}],
  "attributions": [{"label": "<the injected lesson's label>", "verdict": "load_bearing|contradicted|unused", "evidence": "<what in the log shows this>"}]}
 Use empty arrays when there is nothing to report."""
 
@@ -258,9 +258,11 @@ async def _validate_and_save(
         if await label_exists(db, label):
             counts["duplicate"] += 1
             continue
+        raw_entities = c.get("entities")
         result = await save_lesson(
             db, lesson=lesson, evidence=f"{evidence} [session:{session_id}]",
             label=label, scope=scope, node_type=node_type,
+            entities=raw_entities if isinstance(raw_entities, list) else None,
             authority_level=_SCOPE_AUTHORITY.get(scope, _DEFAULT_AUTHORITY),
             source_origin="distiller", gap_source="distiller",
             project=project if scope == "Projects" else None,

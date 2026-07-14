@@ -91,12 +91,16 @@ def _lesson_spec(
     node_type: str, abstraction_type: str | None, summary: str | None,
     authority_level: str, source_origin: str,
     parent_id: int | None, role_key: str | None, anchor_layer: int | None,
+    entities: list[str] | None = None,
 ) -> dict:
     """Neuron spec for a lesson; evidence rides content + citation."""
+    from app.services.recall_lanes import normalize_entities
     assert lesson.strip(), "lesson must be non-empty"
     assert evidence.strip(), "evidence must be non-empty"
     content = f"{lesson.strip()}\n\nEvidence: {evidence.strip()}"
+    norm_entities = normalize_entities(entities)
     return {
+        **({"entities": norm_entities} if norm_entities else {}),
         # layer = tree depth (anchor + 1); unanchored saves sit at 3
         "layer": (anchor_layer + 1) if anchor_layer is not None else 3,
         "parent_id": parent_id,
@@ -168,6 +172,7 @@ async def save_lesson(
     abstraction_type: str | None = "principle", summary: str | None = None,
     authority_level: str = "informational", source_origin: str = "remember_api",
     gap_source: str = "remember_api", project: str | None = None,
+    entities: list[str] | None = None,
 ) -> dict:
     """Stage a lesson save and route it through the write gate. Commits."""
     # Scopes are region tags; casefold to the canonical spelling so
@@ -195,7 +200,7 @@ async def save_lesson(
         node_type=node_type, abstraction_type=abstraction_type,
         summary=summary, authority_level=authority_level,
         source_origin=source_origin, parent_id=parent_id, role_key=role_key,
-        anchor_layer=anchor_layer,
+        anchor_layer=anchor_layer, entities=entities,
     )
     item = ProposalItem(
         proposal_id=proposal.id, action="create",

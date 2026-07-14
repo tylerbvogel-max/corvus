@@ -54,6 +54,7 @@ def _build_neuron_from_spec(
         citation=spec.get("citation"),
         source_url=spec.get("source_url"),
         authority_level=spec.get("authority_level"),
+        entities=spec.get("entities"),
         proposal_item_id=item_id,
     )
 

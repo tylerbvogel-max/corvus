@@ -110,6 +110,11 @@ class Neuron(Base):
     # Per-neuron ACL override: "open" | "restricted". NULL inherits the
     # region policy's acl.visibility default (which defaults to open).
     visibility: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Named things this neuron is about (proper nouns, quoted titles,
+    # compound names) — lowercased string array, extracted at write time by
+    # the distiller's existing LLM call. Feeds the entity recall lane
+    # (mind-hybrid-recall); NULL = not yet extracted.
+    entities: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     # Generic region vocabulary for the engine (silos = labeled regions).
     region = synonym("department")

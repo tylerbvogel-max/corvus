@@ -208,6 +208,13 @@ class Settings(BaseSettings):
     # Hybrid search: fuse keyword + semantic relevance via Reciprocal Rank Fusion
     hybrid_relevance_enabled: bool = True
     rrf_k: int = 60
+    # Hybrid-recall retrieval lanes (mind-hybrid-recall, 2026-07-14): tsvector
+    # keyword lane + write-time-entity lane fused with the embedding lane by
+    # RRF. Default OFF until the LoCoMo A/B settles the decision — with both
+    # off, recall behavior is byte-identical to embed-only + substring RRF.
+    keyword_lane_enabled: bool = False
+    entity_lane_enabled: bool = False
+    recall_lane_top_n: int = 50
     # Impact analysis blast radius (graph traversal)
     impact_max_hops: int = 3
     impact_min_edge_weight: float = 0.15

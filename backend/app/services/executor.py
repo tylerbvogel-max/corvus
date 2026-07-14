@@ -133,6 +133,28 @@ async def _neighbor_vote_classify(
     return regions, role_keys, neuron_hits[0][1]
 
 
+async def _run_hybrid_lanes(
+    db: AsyncSession, user_message: str | None,
+) -> list[dict[int, float]]:
+    """Hybrid-recall lanes (LLM-free, indexed SQL): keyword tsvector + entity
+    match retrieve their own candidates so a named-thing memory can enter
+    the pool even when it loses the cosine race. Fused by RRF downstream."""
+    if not user_message or not (
+            settings.keyword_lane_enabled or settings.entity_lane_enabled):
+        return []
+    from app.services.recall_lanes import (
+        entity_lane, extract_query_entities, keyword_lane,
+    )
+    lanes: list[dict[int, float]] = []
+    if settings.keyword_lane_enabled:
+        lanes.append(
+            await keyword_lane(db, user_message, settings.recall_lane_top_n))
+    if settings.entity_lane_enabled:
+        lanes.append(await entity_lane(
+            db, extract_query_entities(user_message), settings.recall_lane_top_n))
+    return [lane for lane in lanes if lane]
+
+
 async def _select_and_score_candidates(
     db: AsyncSession,
     query_embedding,
@@ -142,6 +164,7 @@ async def _select_and_score_candidates(
     role_keys: list[str],
     total_queries: int,
     requester=None,
+    user_message: str | None = None,
 ) -> tuple[list[NeuronScoreBreakdown], list[NeuronScoreBreakdown]]:
     """Score neuron and engram candidates.  Returns (scored_neurons, scored_engrams).
 
@@ -158,19 +181,26 @@ async def _select_and_score_candidates(
         from app.services.semantic_prefilter import semantic_prefilter
         semantic_results = await semantic_prefilter(db, query_embedding, top_n_override=effective_pool)
 
-    if semantic_results:
+    extra_lanes = await _run_hybrid_lanes(db, user_message)
+
+    if semantic_results or extra_lanes:
         # Partition into neurons and engrams
+        semantic_results = semantic_results or []
         neuron_sims = {eid: sim for eid, etype, sim in semantic_results if etype == "neuron"}
         engram_sims = {eid: sim for eid, etype, sim in semantic_results if etype == "engram"}
 
-        # Score neurons
+        # Score neurons: union of embedding-lane and lexical/entity-lane hits
         sem_ids = list(neuron_sims.keys())
-        candidates = await _load_candidates_by_ids(db, sem_ids, keywords, requester) if sem_ids else []
+        lane_only_ids = [nid for lane in extra_lanes for nid in lane
+                         if nid not in neuron_sims]
+        all_ids = sem_ids + list(dict.fromkeys(lane_only_ids))
+        candidates = await _load_candidates_by_ids(db, all_ids, keywords, requester) if all_ids else []
         scored = await score_candidates(
             db, candidates, total_queries, keywords,
             departments, role_keys,
             query_embedding=query_embedding,
             precomputed_similarities=neuron_sims,
+            extra_lanes=extra_lanes or None,
         )
 
         # Score engrams if any matched

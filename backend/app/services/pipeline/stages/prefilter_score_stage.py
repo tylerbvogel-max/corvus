@@ -29,6 +29,7 @@ class PrefilterScoreStage:
             state.role_keys,
             state.total_queries,
             requester=state.requester,
+            user_message=state.user_message,
         )
         state.scored = scored
         state.scored_engrams = scored_engrams

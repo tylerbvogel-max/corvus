@@ -16,6 +16,14 @@ source "$REPO/deploy/memory-tenant.env"
 set +a
 
 export TENANT_ID=corvus-locomo          # throwaway tenant; harness hard-asserts this
+
+# Production gates duplicate merges on human sign-off. A benchmark has no human
+# to countersign, so leaving the gate on would let duplicate facts pile up and
+# crowd the recall slots — measuring a graph state that never exists in
+# production (where the merges DO get approved) and diverging from the prior
+# run's conditions. Auto-fuse in the throwaway tenant models the approved
+# steady state. Never set this on a real memory tenant.
+export MIND_DEDUP_REQUIRES_APPROVAL=false
 export PYTHONPATH="$REPO/backend"
 : "${LOCOMO_CONCURRENCY:=2}"            # >2 concurrent CLI subprocesses OOM this box
 export LOCOMO_CONCURRENCY

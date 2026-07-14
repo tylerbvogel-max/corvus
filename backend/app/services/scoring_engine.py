@@ -299,43 +299,48 @@ def calc_relevance(keywords: list[str], neuron_text: str) -> float:
     return result
 
 
+def calc_rrf(lanes: list[dict[int, float]], k: int = 60) -> dict[int, float]:
+    """Fuse N ranked lanes via Reciprocal Rank Fusion, normalized to [0, 1].
+
+    Canonical RRF: score = sum over lanes CONTAINING the item of
+    1/(k + rank_in_lane); absence contributes zero. (An earlier variant
+    granted absent items the lane's worst rank — with short retrieval lanes
+    that hands every candidate a large constant credit, compressing the
+    fused distribution until relevance stops discriminating.)
+    """
+    assert k > 0, f"RRF k must be positive, got {k}"
+    lanes = [lane for lane in lanes if lane]
+    all_ids = set().union(*lanes) if lanes else set()
+    if not all_ids:
+        return {}
+
+    # Rank each lane (1-based, sorted descending by score)
+    ranked_lanes = [
+        {nid: rank for rank, (nid, _) in enumerate(
+            sorted(lane.items(), key=lambda x: x[1], reverse=True), start=1
+        )}
+        for lane in lanes
+    ]
+
+    raw: dict[int, float] = {}
+    for nid in all_ids:
+        raw[nid] = sum(
+            1.0 / (k + ranked[nid])
+            for ranked in ranked_lanes if nid in ranked
+        )
+
+    max_score = max(raw.values()) if raw else 1.0
+    assert max_score > 0, "max RRF score must be positive"
+    return {nid: score / max_score for nid, score in raw.items()}
+
+
 def calc_hybrid_relevance(
     keyword_scores: dict[int, float],
     semantic_scores: dict[int, float],
     k: int = 60,
 ) -> dict[int, float]:
-    """Fuse keyword and semantic relevance via Reciprocal Rank Fusion (RRF).
-
-    RRF score = 1/(k + keyword_rank) + 1/(k + semantic_rank), normalized to [0, 1].
-    Neurons appearing in only one list receive half-weight from that list alone.
-    """
-    assert k > 0, f"RRF k must be positive, got {k}"
-    all_ids = set(keyword_scores) | set(semantic_scores)
-    if not all_ids:
-        return {}
-
-    # Rank each list (1-based, sorted descending by score)
-    kw_ranked = {nid: rank for rank, (nid, _) in enumerate(
-        sorted(keyword_scores.items(), key=lambda x: x[1], reverse=True), start=1
-    )}
-    sem_ranked = {nid: rank for rank, (nid, _) in enumerate(
-        sorted(semantic_scores.items(), key=lambda x: x[1], reverse=True), start=1
-    )}
-
-    # Default rank for missing entries: len + 1 (worst rank)
-    default_kw_rank = len(kw_ranked) + 1
-    default_sem_rank = len(sem_ranked) + 1
-
-    raw: dict[int, float] = {}
-    for nid in all_ids:
-        kw_rank = kw_ranked.get(nid, default_kw_rank)
-        sem_rank = sem_ranked.get(nid, default_sem_rank)
-        raw[nid] = 1.0 / (k + kw_rank) + 1.0 / (k + sem_rank)
-
-    # Normalize to [0, 1]
-    max_score = max(raw.values()) if raw else 1.0
-    assert max_score > 0, "max RRF score must be positive"
-    return {nid: score / max_score for nid, score in raw.items()}
+    """Fuse keyword and semantic relevance via Reciprocal Rank Fusion (RRF)."""
+    return calc_rrf([keyword_scores, semantic_scores], k=k)
 
 
 def _resolve_relevance(
