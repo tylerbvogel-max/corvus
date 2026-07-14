@@ -371,9 +371,14 @@ export default function NeuronUniverse() {
     recomputeColors();
 
     // Synapses: additive line segments; positions synced each tick.
+    // Each edge is a quadratic bézier — bowed slightly perpendicular to the
+    // chord along a stable per-edge direction — sampled into CURVE_SEGS
+    // straight segments (smooth enough under bloom, cheap enough per tick).
+    const CURVE_SEGS = 6;
+    const CURVE_BOW = 0.14; // midpoint lift as a fraction of edge length
     const M = E.length;
-    const linePos = new Float32Array(M * 2 * 3);
-    const lineCol = new Float32Array(M * 2 * 3);
+    const linePos = new Float32Array(M * CURVE_SEGS * 2 * 3);
+    const lineCol = new Float32Array(M * CURVE_SEGS * 2 * 3);
     const lineGeo = new THREE.BufferGeometry();
     lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
     lineGeo.setAttribute('color', new THREE.BufferAttribute(lineCol, 3));
@@ -388,13 +393,41 @@ export default function NeuronUniverse() {
         : e.edge_type === 'evidence-link' ? new THREE.Color('#9085e9') // lesson → skill provenance
           : e.edge_type === 'pyramidal' ? new THREE.Color('#9fb8ff')
             : new THREE.Color('#3f5a8a'));
+    // Colours are constant per edge — fill the vertex buffer once, not per tick.
+    for (let e = 0; e < M; e++) {
+      const c = edgeColors[e];
+      for (let v = 0; v < CURVE_SEGS * 2; v++) {
+        const o = (e * CURVE_SEGS * 2 + v) * 3;
+        lineCol[o] = c.r; lineCol[o + 1] = c.g; lineCol[o + 2] = c.b;
+      }
+    }
+    // Stable per-edge bow direction (random unit vector; its component
+    // perpendicular to the live chord decides which way the curve bends).
+    const bowVec = new Float32Array(M * 3);
+    for (let e = 0; e < M; e++) {
+      const v = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+      bowVec[e * 3] = v.x; bowVec[e * 3 + 1] = v.y; bowVec[e * 3 + 2] = v.z;
+    }
+    const _dir = new THREE.Vector3(), _bow = new THREE.Vector3(), _ctrl = new THREE.Vector3();
+    // Quadratic-bézier control point for edge e between live endpoints s→t.
+    function edgeControl(e: number, s: SimNode, t: SimNode, out: THREE.Vector3) {
+      _dir.set(t.x - s.x, t.y - s.y, t.z - s.z);
+      const len2 = _dir.lengthSq() || 1;
+      _bow.set(bowVec[e * 3], bowVec[e * 3 + 1], bowVec[e * 3 + 2]);
+      _bow.addScaledVector(_dir, -_bow.dot(_dir) / len2); // perpendicular component
+      if (_bow.lengthSq() < 1e-6) _bow.set(-_dir.y, _dir.x, 0); // bow ∥ chord fallback
+      if (_bow.lengthSq() < 1e-6) _bow.set(0, -_dir.z, _dir.y); // chord along z fallback
+      _bow.normalize();
+      out.set((s.x + t.x) / 2, (s.y + t.y) / 2, (s.z + t.z) / 2)
+        .addScaledVector(_bow, Math.sqrt(len2) * CURVE_BOW);
+    }
 
     let focusId: number | null = null;
     let visibleEdge = new Uint8Array(M).fill(1);
 
     // Synapse firing: very sparse — every so often a point of light traverses
     // one of the existing (visible) lines from source to target, then dies.
-    const FIRE_MAX = 20;
+    const FIRE_MAX = 32;
     const firePos = new Float32Array(FIRE_MAX * 3);
     const fireCol = new Float32Array(FIRE_MAX * 3);
     const fireGeo = new THREE.BufferGeometry();
@@ -424,7 +457,7 @@ export default function NeuronUniverse() {
     function syncFires(t: number) {
       if (M > 0 && t >= nextFireAt && fires.length < FIRE_MAX) {
         spawnFire(t);
-        nextFireAt = t + 0.4 + Math.random() * 1.4;
+        nextFireAt = t + 0.13 + Math.random() * 0.47; // ~3 ignitions/sec
       }
       let w = 0;
       for (const fr of fires) {
@@ -433,9 +466,12 @@ export default function NeuronUniverse() {
         if (p >= 1 || !s || !tt || !visibleEdge[fr.e] || hidden[s._i] || hidden[tt._i]) continue;
         fires[w] = fr;
         const o = w * 3;
-        firePos[o] = s.x + (tt.x - s.x) * p;
-        firePos[o + 1] = s.y + (tt.y - s.y) * p;
-        firePos[o + 2] = s.z + (tt.z - s.z) * p;
+        // ride the same bézier the synapse line is drawn with
+        edgeControl(fr.e, s, tt, _ctrl);
+        const a = (1 - p) * (1 - p), b = 2 * (1 - p) * p, cc = p * p;
+        firePos[o] = a * s.x + b * _ctrl.x + cc * tt.x;
+        firePos[o + 1] = a * s.y + b * _ctrl.y + cc * tt.y;
+        firePos[o + 2] = a * s.z + b * _ctrl.z + cc * tt.z;
         // White-hot core over the edge colour; sin envelope = soft ignite/decay.
         const glow = Math.sin(Math.PI * p) * 2.6;
         const c = edgeColors[fr.e];
@@ -477,21 +513,29 @@ export default function NeuronUniverse() {
         mesh.setMatrixAt(i, dummy.matrix);
       }
       mesh.instanceMatrix.needsUpdate = true;
-      // synapse endpoints
+      // synapse curves: sample the bézier into CURVE_SEGS chained segments
       for (let e = 0; e < M; e++) {
         const s = byId.get(E[e].source), t = byId.get(E[e].target);
-        const o = e * 6;
+        const base = e * CURVE_SEGS * 6;
         if (!s || !t || !visibleEdge[e] || hidden[s._i] || hidden[t._i]) {
-          linePos[o] = linePos[o + 3] = 0; linePos[o + 1] = linePos[o + 4] = 0; linePos[o + 2] = linePos[o + 5] = 0;
+          linePos.fill(0, base, base + CURVE_SEGS * 6);
         } else {
-          linePos[o] = s.x; linePos[o + 1] = s.y; linePos[o + 2] = s.z;
-          linePos[o + 3] = t.x; linePos[o + 4] = t.y; linePos[o + 5] = t.z;
-          const c = edgeColors[e];
-          lineCol[o] = lineCol[o + 3] = c.r; lineCol[o + 1] = lineCol[o + 4] = c.g; lineCol[o + 2] = lineCol[o + 5] = c.b;
+          edgeControl(e, s, t, _ctrl);
+          let px = s.x, py = s.y, pz = s.z;
+          for (let k = 1; k <= CURVE_SEGS; k++) {
+            const p = k / CURVE_SEGS;
+            const a = (1 - p) * (1 - p), b = 2 * (1 - p) * p, cc = p * p;
+            const qx = a * s.x + b * _ctrl.x + cc * t.x;
+            const qy = a * s.y + b * _ctrl.y + cc * t.y;
+            const qz = a * s.z + b * _ctrl.z + cc * t.z;
+            const o = base + (k - 1) * 6;
+            linePos[o] = px; linePos[o + 1] = py; linePos[o + 2] = pz;
+            linePos[o + 3] = qx; linePos[o + 4] = qy; linePos[o + 5] = qz;
+            px = qx; py = qy; pz = qz;
+          }
         }
       }
       lineGeo.attributes.position.needsUpdate = true;
-      lineGeo.attributes.color.needsUpdate = true;
     }
 
     // ── d3-force-3d simulation (owned directly) ──
