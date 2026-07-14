@@ -374,7 +374,7 @@ export default function NeuronUniverse() {
     // Each edge is a quadratic bézier — bowed slightly perpendicular to the
     // chord along a stable per-edge direction — sampled into CURVE_SEGS
     // straight segments (smooth enough under bloom, cheap enough per tick).
-    const CURVE_SEGS = 6;
+    const CURVE_SEGS = 4;
     const CURVE_BOW = 0.14; // midpoint lift as a fraction of edge length
     const M = E.length;
     const linePos = new Float32Array(M * CURVE_SEGS * 2 * 3);
