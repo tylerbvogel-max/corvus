@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [cost, setCost] = useState<CostReport | null>(null);
   const [spreadLog, setSpreadLog] = useState<SpreadLogResponse | null>(null);
   const [health, setHealth] = useState<ScoringHealthResponse | null>(null);
+  const segmentation = health?.segmentation;
   const [healthCheck, setHealthCheck] = useState<HealthCheckResponse | null>(null);
   const [error, setError] = useState('');
   const [bubbleLogX, setBubbleLogX] = useState(true);
@@ -278,6 +279,19 @@ export default function Dashboard() {
               );
             })}
           </div>
+
+          {segmentation && segmentation.reference_neurons > 0 && (
+            <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 10 }}>
+              Library segmented out: {segmentation.reference_neurons} reference-class
+              neurons (document-ingested) are excluded from the headline signals and drift
+              alerts above — their growth is curated, not organic.
+              {segmentation.library && (
+                <> Reference hits appeared in {segmentation.library.queries_with_reference_hits} of
+                the analyzed queries (recent novelty
+                μ {segmentation.library.signals.novelty.recent_query_means.mean.toFixed(3)}).</>
+              )}
+            </div>
+          )}
         </div>
       )}
 

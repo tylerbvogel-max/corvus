@@ -8,11 +8,14 @@ Run with the corvus backend venv python (for the `mcp` package):
     ~/Projects/corvus/backend/venv/bin/python \
         ~/Projects/corvus/harness/claude-code/mind_mcp_server.py
 
-Per the anticipated-use rule the surface is exactly two tools:
-recall(query) and remember(lesson, evidence, label, scope).
+Per the anticipated-use rule the surface is minimal: recall(query),
+remember(lesson, evidence, label, scope), and forget_document(canonical_id)
+— the third added deliberately for mind-reference-class (document-scoped
+revocation must be reachable from inside a session).
 """
 
 import json
+import urllib.parse
 import urllib.request
 
 from mcp.server.fastmcp import FastMCP
@@ -69,6 +72,25 @@ def remember(lesson: str, evidence: str, label: str, scope: str = "Projects") ->
             "scope": scope, "node_type": "lesson",
             "abstraction_type": "principle",
         })
+    except OSError as exc:
+        return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})
+    return json.dumps(data, ensure_ascii=False)
+
+
+@mcp.tool()
+def forget_document(canonical_id: str) -> str:
+    """Revoke an ingested reference document ('forget the book').
+
+    Deactivates every reference memory derived from the named document in
+    one operation — recall stops surfacing them immediately. Provenance
+    stays auditable (nothing is deleted), and any reference facts a human
+    already promoted to lesson tier are retained and reported. Use
+    recall or the reference document list to find the canonical_id.
+    """
+    try:
+        data = _post(
+            f"/admin/reference/documents/{urllib.parse.quote(canonical_id)}/revoke",
+            {})
     except OSError as exc:
         return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})
     return json.dumps(data, ensure_ascii=False)

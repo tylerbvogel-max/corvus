@@ -180,6 +180,20 @@ body {
   z-index: 0;
 }
 
+.desktop-neuron-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  background: transparent;
+}
+.desktop-neuron-layer canvas {
+  background: transparent !important;
+  opacity: 0.76;
+  mix-blend-mode: screen;
+}
+.desktop-neuron-layer .neuron-control-row input[type='range'] { width: 100%; }
+
 .desktop-brand {
   position: absolute;
   inset: 0;
@@ -545,35 +559,6 @@ body {
   cursor: pointer;
   flex-shrink: 0;
 }
-
-/* Demo helper: sibling of the nav pill — same card form, but the dashed
-   accent border and the "?" mark it as the guide (see DemoHelper.tsx) */
-.helper-pill {
-  position: fixed;
-  z-index: 907;
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: var(--bg-card);
-  border: 1.5px dashed var(--accent);
-  color: var(--accent);
-  font-size: 22px;
-  font-weight: 800;
-  font-family: ui-monospace, monospace;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
-  transition: transform 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-.helper-pill:hover {
-  transform: scale(1.12);
-  border-style: solid;
-  color: var(--accent-light);
-}
-.helper-pill:active { cursor: grabbing; }
 
 /* Walkthrough spotlight + tip card */
 .tour-ring {
@@ -1028,6 +1013,14 @@ body {
 .sidebar-settings-btn:hover {
   color: var(--text);
   background: var(--bg-input);
+}
+.sidebar-walkthrough-btn {
+  color: var(--accent);
+  font: 800 15px ui-monospace, monospace;
+}
+.sidebar-graph-btn.active {
+  color: var(--accent);
+  background: var(--accent-glow, rgba(56, 189, 248, 0.08));
 }
 
 /* Group landing pages */

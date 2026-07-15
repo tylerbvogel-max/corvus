@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /* Demo helper — a floating "?" pill (deliberate sibling of the nav
    logo pill: same card form, but dashed accent border so it reads as
@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** App.tsx listens for this and opens (or focuses) the window in detail. */
 export const OPEN_WINDOW_EVENT = 'corvus-open-window';
+export const START_TOUR_EVENT = 'corvus-start-tour';
 
 interface TourStep {
   title: string;
@@ -44,7 +45,7 @@ const STEPS: TourStep[] = [
   },
   {
     title: 'The navigation menu',
-    body: 'CHAT opens the main conversation. The groups below it (Query, Autopilot, Knowledge, Evaluate, History) expand into that area\'s pages — each one opens as its own window. Numbers on items are pending proposals awaiting review.',
+    body: 'CHAT opens the main conversation. Knowledge, Agency Lab, and Evaluate expand into their pages — each one opens as its own window. Numbers on items are pending proposals awaiting review.',
     find: q('.sidebar-nav'),
     open: { label: 'Expand the navigation', run: expandNav },
   },
@@ -110,58 +111,19 @@ const STEPS: TourStep[] = [
   },
   {
     title: 'That\'s the tour',
-    body: 'Good next taps: Knowledge → 3D Universe for the full graph in space, Autopilot for the self-improvement pipeline, Evaluate → Dashboard for system health. This helper stays put — drag it wherever, revisit anytime.',
+    body: 'Good next taps: Knowledge → 3D Universe for the full graph in space, Agency Lab → Venture Graph for persistent work, and Evaluate → Pallium for system health. Reopen this walkthrough from the ? beside Settings.',
   },
 ];
 
-const POS_KEY = 'corvus-helper-pos';
-
 export default function DemoHelper() {
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    try {
-      const p = JSON.parse(localStorage.getItem(POS_KEY) ?? '');
-      if (typeof p?.x === 'number' && typeof p?.y === 'number') return p;
-    } catch { /* default below */ }
-    return { x: 18, y: window.innerHeight - 70 };
-  });
-  const posRef = useRef(pos);
-  posRef.current = pos;
-  const movedRef = useRef(false);
   const [step, setStep] = useState<number | null>(null); // null = tour closed
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
-  const clamp = useCallback((p: { x: number; y: number }) => {
-    const x = Math.max(8, Math.min(p.x, window.innerWidth - 60));
-    const y = Math.max(8, Math.min(p.y, window.innerHeight - 60));
-    return x === p.x && y === p.y ? p : { x, y };
-  }, []);
-
-  useEffect(() => { localStorage.setItem(POS_KEY, JSON.stringify(pos)); }, [pos]);
   useEffect(() => {
-    const onResize = () => setPos(p => clamp(p));
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [clamp]);
-
-  const startDrag = (e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    const sx = e.clientX, sy = e.clientY;
-    const origin = posRef.current;
-    movedRef.current = false;
-    const onMove = (ev: PointerEvent) => {
-      const dx = ev.clientX - sx, dy = ev.clientY - sy;
-      if (!movedRef.current && Math.hypot(dx, dy) < 4) return;
-      movedRef.current = true;
-      ev.preventDefault();
-      setPos(clamp({ x: origin.x + dx, y: origin.y + dy }));
-    };
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  };
+    const start = () => setStep(0);
+    window.addEventListener(START_TOUR_EVENT, start);
+    return () => window.removeEventListener(START_TOUR_EVENT, start);
+  }, []);
 
   // Advance to the next/previous step, silently skipping optional steps
   // whose target isn't on screen.
@@ -212,18 +174,6 @@ export default function DemoHelper() {
 
   return (
     <>
-      <button
-        className="helper-pill"
-        style={{ left: pos.x, top: pos.y }}
-        data-wake-obstacle
-        data-wake-pad="0"
-        onPointerDown={startDrag}
-        onClick={() => { if (!movedRef.current) setStep(s => (s === null ? 0 : null)); }}
-        title="Walkthrough — what everything does (drag to move)"
-      >
-        ?
-      </button>
-
       {current && (
         <div className="tour-layer">
           {targetRect ? (

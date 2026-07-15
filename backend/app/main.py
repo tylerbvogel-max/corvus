@@ -778,6 +778,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 from app.routers import recall as recall_router
+from app.routers import capabilities as capabilities_router
+from app.routers import agency_lab as agency_lab_router
 from app.routers import distill as distill_router
 from app.routers import janitor as janitor_router
 from app.routers import compile as compile_router
@@ -785,6 +787,8 @@ from app.routers import mind_metrics as mind_metrics_router
 
 app.include_router(query.router)
 app.include_router(recall_router.router)
+app.include_router(capabilities_router.router)
+app.include_router(agency_lab_router.router)
 app.include_router(distill_router.router)
 app.include_router(janitor_router.router)
 app.include_router(compile_router.router)
@@ -804,6 +808,8 @@ app.include_router(engrams.router)
 app.include_router(compliance_suite_router)
 from app.routers import document_ingest
 app.include_router(document_ingest.router)
+from app.routers import reference as reference_router
+app.include_router(reference_router.router)
 from app.routers import integrity
 app.include_router(integrity.router)
 from app.routers import seeding

@@ -1,0 +1,7 @@
+{
+  "id": "claude-code",
+  "skill_target": "claude",
+  "skill_directory": "~/.claude/skills",
+  "semantic_capabilities": ["shell", "filesystem", "web", "ask_user", "subagents", "hooks", "mcp"],
+  "lifecycle_events": ["session_start", "prompt_submit", "pre_tool", "post_tool", "stop"]
+}

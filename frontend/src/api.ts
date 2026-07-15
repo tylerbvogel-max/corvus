@@ -662,6 +662,16 @@ export interface ScoringHealthResponse {
   signals: Record<string, SignalHealth>;
   drift_alerts: DriftAlert[];
   per_query_timeline: Record<string, number | string | null>[];
+  // mind-reference-class: headline signals cover the experiential
+  // population only; Library (document-ingested) is reported separately.
+  segmentation?: {
+    reference_neurons: number;
+    library: {
+      queries_with_reference_hits: number;
+      signals: Record<string, SignalHealth>;
+      note: string;
+    } | null;
+  };
 }
 
 export function fetchScoringHealth(): Promise<ScoringHealthResponse> {
@@ -2174,4 +2184,79 @@ export function listIntegrityRuns(
   const params = new URLSearchParams({ limit: String(limit) });
   if (kindFilter) params.set('kind_filter', kindFilter);
   return json<IntegrityRun[]>(`/admin/integrity/runs?${params.toString()}`);
+}
+
+// ── Agency Lab: harness-neutral incentive economy ──
+
+export interface AgencyWorker {
+  id: number; key: string; display_name: string; role: string; model: string;
+  harness: string; status: string; agency_capital: number; peak_capital: number;
+  drawdown: number; scores: Record<string, number>;
+  wager: { conservative_p: number; full_kelly: number; allocated_fraction: number; capital_at_risk: number };
+}
+
+export interface AgencyDashboard {
+  active_policy_id: number;
+  policy: Record<string, Record<string, unknown>>;
+  summary: { workers: number; events: number; experiments: number; settled_points: number;
+    escrow_points: number; self_disclosures: number; integrity_breaches: number };
+  workers: AgencyWorker[];
+  event_counts: Record<string, number>;
+  diagnostics: Array<{ severity: string; code: string; message: string }>;
+  experiments: Array<{ id: number; name: string; status: string; mode: string;
+    primary_metric: string; sample_target: number; dimensions: Record<string, unknown> }>;
+}
+
+export interface AgencyPolicy {
+  id: number; name: string; version: number; status: string; mode: string;
+  description: string | null; config: Record<string, Record<string, unknown>>; created_at: string;
+}
+
+export function fetchAgencyDashboard(): Promise<AgencyDashboard> {
+  return json('/agency-lab/dashboard');
+}
+
+export function fetchAgencyPolicies(): Promise<AgencyPolicy[]> {
+  return json('/agency-lab/policies');
+}
+
+export function createAgencyPolicy(body: {
+  name: string; description?: string; mode: string; config: Record<string, Record<string, unknown>>;
+}): Promise<{ id: number; version: number; status: string }> {
+  return json('/agency-lab/policies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+export function createAgencyWorker(body: Record<string, unknown>): Promise<{ id: number; key: string; agency_capital: number }> {
+  return json('/agency-lab/workers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+export function createAgencyExperiment(body: Record<string, unknown>): Promise<{ id: number; status: string }> {
+  return json('/agency-lab/experiments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+export interface AgencyVenture { id: number; key: string; title: string; status: string; current_revision: number; created_at: string }
+export interface AgencyWorkOrder { id: string; plan_node_id: string; status: string; worker_profile_id: number;
+  task_class: string; risk_tier: number; contract_digest: string; completion: Record<string, unknown> | null;
+  audit: Record<string, unknown> }
+export function fetchAgencyVentures(): Promise<AgencyVenture[]> { return json('/agency-lab/ventures'); }
+export interface VentureTopology {
+  venture: { id: number; key: string; title: string; status: string; revision: number };
+  revision: { digest: string; created_at: string; change_reason: string };
+  graph: { mission: string; constraints: string[]; kill_criteria: string[];
+    nodes: Array<{ id: string; title: string; outcome: string; acceptance: string[]; risk_tier: number; task_class: string }>;
+    edges: Array<{ from: string; to: string; type?: string }> };
+  work_orders: Array<{ id: string; plan_node_id: string; status: string; task_class: string; risk_tier: number;
+    worker: { id: number; key: string; display_name: string; model: string; harness: string } | null;
+    contract_digest: string; completion: Record<string, unknown> | null; audit: Record<string, unknown>;
+    created_at: string; completed_at: string | null }>;
+}
+export function fetchVentureTopology(key: string): Promise<VentureTopology> {
+  return json(`/agency-lab/ventures/${encodeURIComponent(key)}/topology`);
+}
+export function fetchAgencyWorkOrders(): Promise<AgencyWorkOrder[]> { return json('/agency-lab/work-orders'); }
+export function createAgencyVenture(body: Record<string, unknown>): Promise<{ id: number; key: string; revision: number; digest: string }> {
+  return json('/agency-lab/ventures', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+export function createAgencyWorkOrder(body: Record<string, unknown>): Promise<{ id: string; status: string; contract: Record<string, unknown> }> {
+  return json('/agency-lab/work-orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 }

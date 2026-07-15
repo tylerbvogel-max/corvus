@@ -11,6 +11,8 @@ export default defineConfig({
     proxy: {
       '/neurons': apiTarget,
       '/metrics': apiTarget,
+      '/agency-lab': apiTarget,
+      '/capabilities': apiTarget,
       '/recall': apiTarget,
       '/janitor': apiTarget,
       '/distill': apiTarget,

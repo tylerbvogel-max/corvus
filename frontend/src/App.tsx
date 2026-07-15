@@ -8,19 +8,19 @@ import corvusLogo128 from './assets/corvus-logo-128.png'
 import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
 import ChatHistoryWindow from './components/ChatHistoryWindow'
-import DemoHelper, { OPEN_WINDOW_EVENT } from './components/DemoHelper'
+import DemoHelper, { OPEN_WINDOW_EVENT, START_TOUR_EVENT } from './components/DemoHelper'
 import MobileShell, { useIsMobile } from './components/MobileShell'
 import NeuronGraphWindow from './components/NeuronGraphWindow'
 import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
 import { SingleAgentPane, friendlyName } from './components/AgentsPage'
 import WakeSettingsPanel from './components/WakeSettingsPanel'
 import Explorer from './components/Explorer'
-import Dashboard from './components/Dashboard'
 import QueryLab from './components/QueryLab'
 import MindMetricsPage from './components/MindMetricsPage'
 import MindSessionsPage from './components/MindSessionsPage'
 import MindInboxPage from './components/MindInboxPage'
 import MindSkillsPage from './components/MindSkillsPage'
+import AgencyLabPage from './components/AgencyLabPage'
 import EvaluationPage from './components/EvaluationPage'
 import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
@@ -30,7 +30,6 @@ import SampleQueries from './components/SampleQueries'
 import QualityPage from './components/QualityPage'
 import FairnessPage from './components/FairnessPage'
 import PerformancePage from './components/PerformancePage'
-import PipelineTimingPage from './components/PipelineTimingPage'
 import EmergentQueuePage from './components/EmergentQueuePage'
 import SynapticLearningPage from './components/SynapticLearningPage'
 import LayerHeatmap from './components/LayerHeatmap'
@@ -80,7 +79,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'dashboard' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'pipeline-timing' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'agency-missions' | 'agency-venture-graph' | 'agency-economy' | 'agency-workforce' | 'agency-experiments' | 'agency-outcomes';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -136,12 +135,6 @@ const IconClipboard = (
   </svg>
 );
 
-const IconClock = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
 function buildNavGroups(_tenantId: string | undefined, memorySurface = false): NavGroup[] {
   const groups: NavGroup[] = [];
 
@@ -160,32 +153,32 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
 
   groups.push(
     {
-      label: 'Autopilot',
-      landingKey: 'autopilot-landing',
-      description: 'Automated gap detection and staged improvements',
-      icon: IconCompass,
-      items: [
-        { key: 'autopilot', label: 'Autopilot', description: 'Automated gap detection and improvement cycles' },
-        { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve autopilot proposals' },
-        { key: 'emergent-queue', label: 'Emergent Queue', description: 'Unresolved patterns awaiting classification' },
-        { key: 'document-ingest', label: 'Document Ingest', description: 'Upload documents for bulk knowledge extraction' },
-        { key: 'integrity-dashboard', label: 'Integrity Dashboard', description: 'Graph consistency health and recent audit activity' },
-        { key: 'integrity-scan', label: 'Integrity Scan', description: 'Run consistency audits across the graph' },
-        { key: 'integrity-findings', label: 'Integrity Findings', description: 'Queue of audit findings awaiting review' },
-      ],
-    },
-    {
       label: 'Knowledge',
       landingKey: 'knowledge-landing',
       description: 'Browse and visualize the neuron graph',
       icon: IconNetwork,
       items: [
+        { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve proposed graph changes' },
         { key: 'explorer', label: 'Explorer', description: 'Browse and edit individual neurons' },
         { key: 'engrams', label: 'Engrams', description: 'Source documents linked to the graph' },
-        { key: 'graph', label: 'Graph', description: 'Circle-packing visualization of the hierarchy' },
-        { key: 'universe', label: '3D Universe', description: 'Three-dimensional neuron network view' },
+        { key: 'refinements', label: 'Refinements', description: 'History of neuron updates and changes' },
+        { key: 'synaptic-learning', label: 'Synaptic Learning', description: 'Learned patterns from query feedback' },
         { key: 'layer-heatmap', label: 'Layer Heatmap', description: 'Activity heatmap across graph layers' },
         { key: 'agents', label: 'Agents', description: 'Autonomous maintenance agents that curate the graph' },
+      ],
+    },
+    {
+      label: 'Agency Lab',
+      landingKey: 'agency-economy',
+      description: 'Design, fund, and evaluate persistent agent workforces',
+      icon: IconCompass,
+      items: [
+        { key: 'agency-missions', label: 'Missions', description: 'North-star venture registry and disposable agent work orders' },
+        { key: 'agency-venture-graph', label: 'Venture Graph', description: 'Live topology of north-star nodes, dependencies, workers, audits, and work orders' },
+        { key: 'agency-economy', label: 'Economy', description: 'Versioned reward contracts, audits, escrow, and capital policy' },
+        { key: 'agency-workforce', label: 'Workforce', description: 'Worker profiles, bank rolls, calibration, drawdown, and Kelly allocation' },
+        { key: 'agency-experiments', label: 'Experiments', description: 'Blocked causal tests across models, harnesses, tasks, and risk tiers' },
+        { key: 'agency-outcomes', label: 'Outcomes', description: 'Behavioral economy statistics, system outcomes, and failure diagnostics' },
       ],
     },
     {
@@ -194,43 +187,34 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'System health, quality, and compliance metrics',
       icon: IconClipboard,
       items: [
-        ...(memorySurface ? [
-          { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost' },
-          { key: 'mind-sessions', label: 'Sessions', description: 'Episode logs: the memory\'s inputs and their distillation' },
-          { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
-          { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
-        ] : []),
-        { key: 'dashboard', label: 'Dashboard', description: 'Aggregate statistics and system overview' },
+        { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost' },
+        { key: 'mind-sessions', label: 'Sessions', description: "Episode logs: the memory's inputs and their distillation" },
+        { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
+        { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
         { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics' },
         { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
-        { key: 'performance', label: 'Performance', description: 'Pipeline latency and throughput metrics' },
-        { key: 'pipeline-timing', label: 'Pipeline Timing', description: 'Per-stage latency stats, estimate-vs-actual, and drift over time' },
+        { key: 'performance', label: 'Performance', description: 'Volume, cost, scoring health, spread activation, and per-stage pipeline latency' },
         { key: 'fairness', label: 'Fairness', description: 'Bias detection across departments and roles' },
         { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history' },
         { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query' },
-      ],
-    },
-    {
-      label: 'History',
-      landingKey: 'history-landing',
-      description: 'How the graph has evolved over time',
-      icon: IconClock,
-      items: [
-        { key: 'refinements', label: 'Refinements', description: 'History of neuron updates and changes' },
-        { key: 'synaptic-learning', label: 'Synaptic Learning', description: 'Learned patterns from query feedback' },
       ],
     },
   );
 
   if (memorySurface) {
     // Memory tenants: hide chat-era and knowledge-tenant-only surfaces.
+    // Performance + Pipeline Timing stay visible: recall queries carry full
+    // stage telemetry, so per-step speed is real data on memory tenants too.
     const hidden = new Set(['autopilot', 'emergent-queue', 'document-ingest',
       'engrams', 'layer-heatmap', 'agents', 'knowledge-governance', 'quality',
-      'fairness', 'evaluation', 'eval-runs']);
+      'fairness', 'evaluation', 'eval-runs',
+      'integrity-dashboard', 'integrity-scan', 'integrity-findings']);
     for (const g of groups) g.items = g.items.filter(i => !hidden.has(i.key));
     return groups.filter(g => g.items.length > 0);
   }
-  return groups;
+  const agencyKeys = new Set(['agency-missions', 'agency-venture-graph', 'agency-economy', 'agency-workforce', 'agency-experiments', 'agency-outcomes']);
+  for (const g of groups) g.items = g.items.filter(i => !agencyKeys.has(i.key));
+  return groups.filter(g => g.items.length > 0);
 }
 
 function getInitialTheme(): Theme {
@@ -303,6 +287,10 @@ export default function App() {
   const isMobile = useIsMobile();
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [desktopGraphVisible, setDesktopGraphVisible] = useState(() => localStorage.getItem('corvus-desktop-graph-visible') !== '0');
+  const [navHeight, setNavHeight] = useState(52);
+  const [navWidth, setNavWidth] = useState(148);
+  const [graphControlsHeight, setGraphControlsHeight] = useState(0);
   const [tenantConfig, setTenantConfig] = useState<TenantConfig | null>(null);
   const [authStatus, setAuthStatus] = useState<'checking' | 'open' | 'valid' | 'needs_key'>('checking');
   const [keyInput, setKeyInput] = useState('');
@@ -340,6 +328,7 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('corvus-theme', theme);
   }, [theme]);
+  useEffect(() => { localStorage.setItem('corvus-desktop-graph-visible', desktopGraphVisible ? '1' : '0'); }, [desktopGraphVisible]);
 
   // Poll proposal stats so each producer nav item can show its pending count.
   // 30s cadence: fast enough to feel live after an approval, slow enough not
@@ -496,9 +485,10 @@ export default function App() {
     const w = el?.offsetWidth ?? 220;
     const h = el?.offsetHeight ?? 52;
     const x = Math.max(8, Math.min(p.x, window.innerWidth - w - 8));
-    const y = Math.max(8, Math.min(p.y, window.innerHeight - h - 8));
+    const clusterHeight = desktopGraphVisible ? h + 8 + graphControlsHeight : h;
+    const y = Math.max(8, Math.min(p.y, window.innerHeight - clusterHeight - 8));
     return x === p.x && y === p.y ? p : { x, y };
-  }, []);
+  }, [desktopGraphVisible, graphControlsHeight]);
 
   const startNavDrag = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -524,6 +514,28 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('corvus-nav-pos', JSON.stringify(navPos));
   }, [navPos]);
+
+  useEffect(() => {
+    if (!navRef.current) return;
+    const report = () => {
+      setNavHeight(navRef.current?.offsetHeight || 52);
+      setNavWidth(navRef.current?.offsetWidth || 148);
+    };
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(navRef.current);
+    return () => observer.disconnect();
+  }, [authStatus, isMobile]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setNavHeight(navRef.current?.offsetHeight || 52);
+      setNavWidth(navRef.current?.offsetWidth || 148);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [collapsed, expandedGroups, authStatus]);
+
+  useEffect(() => { setNavPos(p => clampNavPos(p)); }, [navHeight, graphControlsHeight, desktopGraphVisible, clampNavPos]);
 
   useEffect(() => {
     localStorage.setItem('corvus-nav-collapsed', collapsed ? '1' : '0');
@@ -595,7 +607,6 @@ export default function App() {
       case 'agents': return <AgentsPage onOpenAgent={name => open(`agent:${name}`)} />;
       case 'graph': return <CirclePacking />;
       case 'universe': return <NeuronUniverse />;
-      case 'dashboard': return <Dashboard />;
       case 'layer-heatmap': return <LayerHeatmap />;
       case 'query': return <QueryLab onNavigateToNeuron={goToNeuron} />;
       case 'evaluation': return <EvaluationPage />;
@@ -613,11 +624,16 @@ export default function App() {
       case 'quality': return <QualityPage />;
       case 'fairness': return <FairnessPage />;
       case 'performance': return <PerformancePage />;
-      case 'pipeline-timing': return <PipelineTimingPage />;
       case 'mind-metrics': return <MindMetricsPage />;
       case 'mind-sessions': return <MindSessionsPage />;
       case 'mind-inbox': return <MindInboxPage />;
       case 'mind-skills': return <MindSkillsPage />;
+      case 'agency-economy': return <AgencyLabPage view="economy" />;
+      case 'agency-missions': return <AgencyLabPage view="missions" />;
+      case 'agency-venture-graph': return <AgencyLabPage view="venture-graph" />;
+      case 'agency-workforce': return <AgencyLabPage view="workforce" />;
+      case 'agency-experiments': return <AgencyLabPage view="experiments" />;
+      case 'agency-outcomes': return <AgencyLabPage view="outcomes" />;
       case 'knowledge-governance': return <KnowledgeGovernancePage />;
       default: {
         const group = navGroups.find(g => g.landingKey === key);
@@ -721,6 +737,14 @@ export default function App() {
           <span>{displayName}</span>
         </div>
       </div>
+      {desktopGraphVisible && <div className="desktop-neuron-layer" data-testid="desktop-neuron-layer">
+        <NeuronUniverse transparent
+          controlPosition={{ left: navPos.x, top: navPos.y + navHeight + 8, width: navWidth }}
+          onControlPointerDown={startNavDrag}
+          controlDragMoved={() => navDragMovedRef.current}
+          onControlHeightChange={setGraphControlsHeight}
+        />
+      </div>}
       <aside
         ref={navRef}
         className={`sidebar${collapsed ? ' sidebar-pill' : ''}`}
@@ -757,20 +781,24 @@ export default function App() {
         </div>
           <nav className="sidebar-nav">
             {/* Chat: a direct top-level link (no sub-items) to the primary
-                chat page, peer to the expandable groups below. */}
-            <div className={`sidebar-group${focusedKey === 'home' ? ' sidebar-group-active' : ''}`}>
-              <button
-                className="sidebar-group-header"
-                onClick={() => { setQueueInitialOrigin(undefined); setTab('home'); }}
-              >
-                <span className="sidebar-chevron">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                  </svg>
-                </span>
-                <span>Chat</span>
-              </button>
-            </div>
+                chat page, peer to the expandable groups below.
+                Hidden on memorySurface tenants (corvus-mind) since all
+                interaction happens via Claude Code CLI, not direct chat. */}
+            {!tenantConfig?.memory_surface && (
+              <div className={`sidebar-group${focusedKey === 'home' ? ' sidebar-group-active' : ''}`}>
+                <button
+                  className="sidebar-group-header"
+                  onClick={() => { setQueueInitialOrigin(undefined); setTab('home'); }}
+                >
+                  <span className="sidebar-chevron">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                    </svg>
+                  </span>
+                  <span>Chat</span>
+                </button>
+              </div>
+            )}
             {navGroups.map(group => (
               <div key={group.label} className={`sidebar-group${activeGroup === group.label ? ' sidebar-group-active' : ''}`}>
                 <button
@@ -842,6 +870,26 @@ export default function App() {
           </nav>
         {/* Settings — pinned to the bottom of the expanded panel */}
         <div className="sidebar-settings-area">
+          <button
+            className={`sidebar-settings-btn sidebar-graph-btn${desktopGraphVisible ? ' active' : ''}`}
+            onClick={() => setDesktopGraphVisible(v => !v)}
+            title={desktopGraphVisible ? 'Hide neuron graph' : 'Show neuron graph'}
+            aria-label={desktopGraphVisible ? 'Hide neuron graph' : 'Show neuron graph'}
+            aria-pressed={desktopGraphVisible}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <circle cx="5" cy="12" r="2.2" /><circle cx="12" cy="5" r="2.2" /><circle cx="19" cy="10" r="2.2" /><circle cx="14" cy="19" r="2.2" />
+              <path d="M6.6 10.4l3.8-3.8M14 5.8l3.2 2.8M17.6 11.8l-2.3 5M6.9 13.1l5.2 4.5M7.1 12l9.7-1.6" />
+            </svg>
+          </button>
+          <button
+            className="sidebar-settings-btn sidebar-walkthrough-btn"
+            onClick={() => window.dispatchEvent(new Event(START_TOUR_EVENT))}
+            title="Walkthrough"
+            aria-label="Start walkthrough"
+          >
+            <span aria-hidden="true">?</span>
+          </button>
           <button
             className="sidebar-settings-btn"
             onClick={() => setThemeMenuOpen(o => !o)}
@@ -938,5 +986,3 @@ export default function App() {
     </div>
   )
 }
-
-

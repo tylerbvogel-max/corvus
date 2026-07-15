@@ -41,13 +41,18 @@ const REGION_COLORS = [
 ];
 const OVERFLOW_COLOR = '#6b7280';
 const CONCEPT_COLOR = '#c77dff';
-const ABSTRACTION_COLORS: Record<string, string> = {
-  structural: '#94a3b8', concept: '#c77dff', principle: '#f6bd16',
-  process: '#61ddaa', procedure: '#5b8ff9', artifact: '#e8684a',
-};
+interface NeuronUniverseProps {
+  transparent?: boolean;
+  controlPosition?: { left: number; top: number; width?: number };
+  onControlPointerDown?: React.PointerEventHandler<HTMLDivElement>;
+  controlDragMoved?: () => boolean;
+  onControlHeightChange?: (height: number) => void;
+}
 
-export default function NeuronUniverse() {
+export default function NeuronUniverse({ transparent = false, controlPosition,
+  onControlPointerDown, controlDragMoved, onControlHeightChange }: NeuronUniverseProps) {
   const mountRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<any>(null);
 
   const [neurons, setNeurons] = useState<Graph3DNode[]>([]);
@@ -62,8 +67,6 @@ export default function NeuronUniverse() {
     if (selected) fetchNeuron(selected.id).then(setSelectedDetail).catch(() => {});
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [hover, setHover] = useState<{ n: Graph3DNode; sx: number; sy: number } | null>(null);
-  const [colorBy, setColorBy] = useState<'region' | 'abstraction'>('region');
-  const [sizeBy, setSizeBy] = useState<'centrality' | 'invocations'>('centrality');
   const [bloom, setBloom] = useState(true);
   const [synapse, setSynapse] = useState(0.5); // 0..1 synapse visibility (density)
   const [nodeLight, setNodeLight] = useState(1.25); // neuron brightness
@@ -78,6 +81,15 @@ export default function NeuronUniverse() {
   // background simmer. Off = a fully still universe.
   const [motion, setMotion] = useState(true);
   const [panelOpen, setPanelOpen] = useState(true);
+
+  useEffect(() => {
+    if (!panelRef.current || !onControlHeightChange) return;
+    const report = () => onControlHeightChange(panelRef.current?.offsetHeight || 0);
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(panelRef.current);
+    return () => observer.disconnect();
+  }, [onControlHeightChange]);
 
   // ── Data load (hardened: coerce NaN-prone numeric fields) ──
   useEffect(() => {
@@ -118,16 +130,13 @@ export default function NeuronUniverse() {
 
   const nodeHex = useMemo(() => (n: Graph3DNode): string => {
     if (isConcept(n)) return CONCEPT_COLOR;
-    if (colorBy === 'abstraction') return ABSTRACTION_COLORS[n.abstraction_type || 'structural'] || OVERFLOW_COLOR;
     return regionColor.get(n.department || 'Unassigned') || OVERFLOW_COLOR;
-  }, [colorBy, regionColor]);
+  }, [regionColor]);
 
   // Refs let the once-built engine read the CURRENT mode at call time —
   // the dropdowns were dead because the closures captured initial values.
   const nodeHexRef = useRef(nodeHex);
   nodeHexRef.current = nodeHex;
-  const sizeByRef = useRef(sizeBy);
-  sizeByRef.current = sizeBy;
 
   // ── The engine: built once per dataset ──
   useEffect(() => {
@@ -144,7 +153,8 @@ export default function NeuronUniverse() {
     const camera = new THREE.PerspectiveCamera(58, width / height, 1, 8000);
     camera.position.set(0, 0, 1100);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: transparent, powerPreference: 'high-performance' });
+    if (transparent) renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     mount.appendChild(renderer.domElement);
@@ -354,8 +364,7 @@ export default function NeuronUniverse() {
     function recomputeRadius() {
       for (let i = 0; i < N; i++) {
         const n = nodes[i];
-        const raw = sizeByRef.current === 'centrality' ? 2.4 + Math.sqrt(n.centrality) * 9
-          : 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
+        const raw = 2.4 + Math.sqrt(Math.min(n.invocations, 100) / 100) * 9;
         // The assistant doesn't scale off graph metrics — it IS the scale.
         radius[i] = n.node_type === 'assistant' ? 8 : isSkill(n) ? raw * 1.9 : isConcept(n) ? raw * 1.25 : raw;
       }
@@ -737,11 +746,10 @@ export default function NeuronUniverse() {
     };
 
     return () => { engineRef.current?.dispose(); };
-  }, [neurons, edges]);
+  }, [neurons, edges, transparent]);
 
   // ── Control effects → engine ──
-  useEffect(() => { engineRef.current?.api.setColorMode(); }, [colorBy, nodeHex]);
-  useEffect(() => { engineRef.current?.api.setSizeMode(); }, [sizeBy]);
+  useEffect(() => { engineRef.current?.api.setColorMode(); }, [nodeHex]);
   useEffect(() => { engineRef.current?.api.setBloom(bloom); }, [bloom]);
   useEffect(() => { engineRef.current?.api.setMotion(motion); }, [motion]);
   useEffect(() => { engineRef.current?.api.setSynapse(synapse); }, [synapse]);
@@ -755,7 +763,8 @@ export default function NeuronUniverse() {
 
   const synapseCount = edges.length;
   return (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#080a0e' }}>
+    <div className={transparent ? 'neuron-universe neuron-universe--transparent' : 'neuron-universe'}
+      style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: transparent ? 'transparent' : '#080a0e' }}>
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
 
       {loading && (
@@ -766,11 +775,16 @@ export default function NeuronUniverse() {
       {error && <div style={{ ...overlayCenter, color: '#e66767' }}>{error}</div>}
 
       {/* Control panel */}
-      <div style={panel}>
+      <div ref={panelRef} data-testid={transparent ? 'desktop-neuron-controls' : undefined}
+        data-wake-obstacle={transparent ? true : undefined}
+        style={transparent ? { ...desktopPanel, ...controlPosition } : panel}>
         <div
-          onClick={() => setPanelOpen(o => !o)}
-          style={{ cursor: 'pointer', userSelect: 'none' }}
-          title={panelOpen ? 'Collapse controls' : 'Expand controls'}
+          onPointerDown={transparent ? onControlPointerDown : undefined}
+          onClick={() => { if (!controlDragMoved?.()) setPanelOpen(o => !o); }}
+          style={{ cursor: transparent ? 'grab' : 'pointer', userSelect: 'none', touchAction: 'none' }}
+          title={transparent
+            ? `Drag with navigation · click to ${panelOpen ? 'collapse' : 'expand'} controls`
+            : (panelOpen ? 'Collapse controls' : 'Expand controls')}
         >
           <div style={{ fontWeight: 700, color: '#e8edf7', fontSize: '0.95rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             Neuron Universe
@@ -781,33 +795,21 @@ export default function NeuronUniverse() {
           </div>
         </div>
         {panelOpen && (<>
-        <Row label="Color by">
-          <select value={colorBy} onChange={e => setColorBy(e.target.value as any)} style={select}>
-            <option value="region">Region</option>
-            <option value="abstraction">Abstraction</option>
-          </select>
-        </Row>
-        <Row label="Size by">
-          <select value={sizeBy} onChange={e => setSizeBy(e.target.value as any)} style={select}>
-            <option value="centrality">Centrality</option>
-            <option value="invocations">Recalls</option>
-          </select>
-        </Row>
         <Row label={`Synapses ${(synapse * 100) | 0}%`}>
           <input type="range" min={0} max={1} step={0.02} value={synapse}
-            onChange={e => setSynapse(+e.target.value)} style={{ width: 150 }} />
+            onChange={e => setSynapse(+e.target.value)} />
         </Row>
         <Row label={`Neuron light ${(nodeLight * 100) | 0}%`}>
           <input type="range" min={0.2} max={2.5} step={0.05} value={nodeLight}
-            onChange={e => setNodeLight(+e.target.value)} style={{ width: 150 }} />
+            onChange={e => setNodeLight(+e.target.value)} />
         </Row>
         <Row label={`Synapse light ${(synapseLight * 100) | 0}%`}>
           <input type="range" min={0} max={1} step={0.02} value={synapseLight}
-            onChange={e => setSynapseLight(+e.target.value)} style={{ width: 150 }} />
+            onChange={e => setSynapseLight(+e.target.value)} />
         </Row>
         <Row label={`Repulsion ${repulsion} (${repulsion * REPULSION_SCALE})`}>
           <input type="range" min={REPULSION_MIN} max={REPULSION_MAX} step={0.5} value={repulsion}
-            onChange={e => setRepulsion(+e.target.value)} style={{ width: 150 }} />
+            onChange={e => setRepulsion(+e.target.value)} />
         </Row>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#c7d0e0', fontSize: '0.78rem', marginTop: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={bloom} onChange={e => setBloom(e.target.checked)} /> Bloom
@@ -823,7 +825,7 @@ export default function NeuronUniverse() {
 
       {/* Focused-neuron info */}
       {selected && (
-        <div style={focusCard}>
+        <div style={transparent ? desktopFocusCard : focusCard}>
           <div style={{ color: '#e8edf7', fontWeight: 600 }}>{selected.label || `Neuron #${selected.id}`}</div>
           <div style={{ color: '#8a93a6', fontSize: '0.74rem', marginTop: 3 }}>
             {selected.department || 'Unassigned'}
@@ -858,23 +860,21 @@ export default function NeuronUniverse() {
       )}
 
       {/* Region legend */}
-      {colorBy === 'region' && (
-        <div style={legend}>
+      <div style={legend}>
           {Array.from(regionCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([r, c]) => (
             <span key={r} style={legendChip}>
               <span style={{ width: 9, height: 9, borderRadius: '50%', background: regionColor.get(r) || OVERFLOW_COLOR, display: 'inline-block' }} />
               {r} <span style={{ color: '#6f7a8f' }}>{c}</span>
             </span>
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '6px 0', gap: 10 }}>
+    <div className="neuron-control-row" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', margin: '8px 0', gap: 3 }}>
       <span style={{ color: '#9aa4b6', fontSize: '0.74rem' }}>{label}</span>
       {children}
     </div>
@@ -887,10 +887,7 @@ const panel: React.CSSProperties = {
   background: 'rgba(14,18,26,0.82)', border: '1px solid #232c3c', borderRadius: 12,
   padding: '14px 16px', backdropFilter: 'blur(8px)',
 };
-const select: React.CSSProperties = {
-  background: '#141a24', color: '#e8edf7', border: '1px solid #2a3446',
-  borderRadius: 6, padding: '3px 8px', fontSize: '0.76rem',
-};
+const desktopPanel: React.CSSProperties = { ...panel, left: 18, right: 'auto', top: 78 };
 const backBtn: React.CSSProperties = {
   marginTop: 12, width: '100%', background: '#1e3a5f', color: '#cfe0ff',
   border: '1px solid #2f5a8f', borderRadius: 6, padding: '7px 0', cursor: 'pointer', fontSize: '0.78rem',
@@ -900,6 +897,7 @@ const focusCard: React.CSSProperties = {
   background: 'rgba(14,18,26,0.86)', border: '1px solid #2f5a8f', borderRadius: 12, padding: '14px 16px',
   backdropFilter: 'blur(8px)',
 };
+const desktopFocusCard: React.CSSProperties = { ...focusCard, top: 150 };
 const legend: React.CSSProperties = {
   position: 'absolute', bottom: 14, left: 16, right: 16, zIndex: 20,
   display: 'flex', flexWrap: 'wrap', gap: 8,
