@@ -937,7 +937,8 @@ class MindPairVerdict(Base):
     verdict: Mapped[str] = mapped_column(String(30), nullable=False)
     # judge-provided context, e.g. {"misfiled": "A", "correct_scope": "Environment"}
     detail: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    # haiku-judge | fast-path (embedding+lexical near-verbatim, no LLM)
+    # "<model>-judge" (e.g. sonnet-judge) | fast-path (embedding+lexical
+    # near-verbatim, no LLM)
     source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="haiku-judge")
     judged_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
 

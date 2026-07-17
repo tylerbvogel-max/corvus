@@ -26,6 +26,11 @@ _CLAUDE_CLI_PATH = os.environ.get(
     os.path.expanduser("~/.config/nvm/versions/node/v20.20.0/bin/claude"),
 )
 
+# Codex CLI path — OpenAI personal subscription (same posture as the Claude
+# CLI: no API credits). Shared with codex_usage.py's CODEX_PATH convention.
+_CODEX_CLI_PATH = os.path.expanduser(
+    os.environ.get("CODEX_PATH", "~/.local/bin/codex"))
+
 # Per-request reasoning effort (low|medium|high), set by the API layer and
 # inherited by concurrent slot tasks. None -> fall back to settings.default_effort.
 # Whitelisted before use (it becomes a CLI arg) — never interpolate raw input.
@@ -184,10 +189,71 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
         tier="frontier",
         context_window_tokens=200_000,
     ),
+    # ── OpenAI via Codex CLI (personal subscription, no API credits) ──
+    # Same posture as the anthropic provider: the CLI bills against the
+    # user's OpenAI subscription, prices below are API-equivalent list
+    # rates (verified 2026-07-17 vs the July 2026 GA announcement) so the
+    # ledger reports "what would a customer pay". Slugs + effort levels +
+    # 272k context read from ~/.codex/models_cache.json on this machine.
+    "codex-sol": ModelInfo(
+        display_name="codex-sol",
+        provider="openai_codex",
+        api_id="gpt-5.6-sol",
+        input_price=5.00,
+        output_price=30.00,
+        tier="frontier",
+        context_window_tokens=272_000,
+    ),
+    "codex-terra": ModelInfo(
+        display_name="codex-terra",
+        provider="openai_codex",
+        api_id="gpt-5.6-terra",
+        input_price=2.50,
+        output_price=15.00,
+        tier="frontier",
+        context_window_tokens=272_000,
+    ),
+    "codex-luna": ModelInfo(
+        display_name="codex-luna",
+        provider="openai_codex",
+        api_id="gpt-5.6-luna",
+        input_price=1.00,
+        output_price=6.00,
+        tier="frontier",
+        context_window_tokens=272_000,
+    ),
 })
 
 # No default — user must always select a model explicitly
 DEFAULT_MODEL: str | None = None
+
+# ── Cross-provider fallback (Anthropic-subscription-lapse insurance) ──
+# The Claude subscription can lapse while the OpenAI subscription persists
+# (decision 2026-07-17). Each Anthropic tier maps to the same-grade Codex
+# tier — matched on the provider's own positioning AND API-equivalent price,
+# not vibes: opus $5/$25 ↔ sol $5/$30 (frontier), sonnet $3/$15 ↔ terra
+# $2.50/$15 (balanced), haiku $1/$5 ↔ luna $1/$6 (fast). Effort levels map
+# 1:1 (both speak low/medium/high). A chain is consulted ONLY when the
+# primary provider is unavailable or fails with a lapse-shaped error —
+# normal operation never routes around Anthropic.
+FALLBACK_CHAINS: MappingProxyType[str, tuple[str, ...]] = MappingProxyType({
+    "opus": ("codex-sol",),
+    "sonnet": ("codex-terra",),
+    "haiku": ("codex-luna",),
+})
+
+# Error signatures that mean "the provider is lapsed/locked, not the request
+# is bad" — these justify falling through the chain and cooling the provider
+# down. Anything else re-raises: a parse bug must fail loudly, not silently
+# hop providers.
+_LAPSE_ERROR_MARKERS = (
+    "credit balance", "usage limit", "rate limit", "quota",
+    "unauthorized", "authentication", "not logged in", "login",
+    "expired", "billing", "subscription", "payment",
+)
+_PROVIDER_COOLDOWN_SECONDS = 30 * 60
+# provider -> monotonic deadline; while in the future, skip straight to fallbacks
+_provider_down_until: dict[str, float] = {}
 
 
 # ── Provider availability ──
@@ -197,6 +263,7 @@ def _provider_available(provider: str) -> bool:
     assert isinstance(provider, str), "provider must be a string"
     key_map = MappingProxyType({
         "anthropic": "cli" if os.path.exists(_CLAUDE_CLI_PATH) else "",
+        "openai_codex": "cli" if os.path.exists(_CODEX_CLI_PATH) else "",
         "google": settings.google_api_key,
         "groq": settings.groq_api_key,
         "azure_openai": settings.azure_openai_api_key,
@@ -335,6 +402,103 @@ async def _anthropic_chat(
         # The CLI's returned id is authoritative (resume may fork a session).
         result["session_id"] = payload.get("session_id") or session.get("session_id")
     return result
+
+
+def _build_codex_args(model_info: ModelInfo, effort: str) -> list[str]:
+    """Build the codex CLI argv. Pure — unit-testable without a subprocess.
+
+    Mirrors the anthropic isolation posture: read-only sandbox (Corvus calls
+    are pure completions, never agentic shell work), --ephemeral (no session
+    persistence), --skip-git-repo-check (cwd is /tmp). Corvus effort levels
+    map 1:1 onto codex reasoning efforts (both speak low|medium|high).
+    The prompt goes over STDIN ('-' positional), never argv."""
+    args = [
+        _CODEX_CLI_PATH, "exec", "--json",
+        "-m", model_info.api_id,
+        "-s", "read-only",
+        "--skip-git-repo-check",
+        "--ephemeral",
+    ]
+    if effort in _VALID_EFFORT:
+        args.extend(["-c", f"model_reasoning_effort={effort}"])
+    args.append("-")
+    return args
+
+
+def _parse_codex_events(stdout: str) -> tuple[str, dict]:
+    """(final agent text, usage dict) from codex exec --json JSONL events."""
+    text = ""
+    usage: dict = {}
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if event.get("type") == "item.completed":
+            item = event.get("item") or {}
+            if item.get("type") == "agent_message":
+                text = item.get("text") or text
+        elif event.get("type") == "turn.completed":
+            usage = event.get("usage") or {}
+    return text, usage
+
+
+async def _codex_chat(
+    system_prompt: str, user_message: str, max_tokens: int, model_info: ModelInfo,
+) -> dict:
+    """Call an OpenAI model via the local Codex CLI (subscription, no credits).
+
+    Isolation mirrors _anthropic_chat: cwd=/tmp keeps the subprocess out of
+    any repo's agentic context; CLAUDE*/CODEX* env stripped so neither CLI's
+    nested-session detection can fire. codex exec has no --system-prompt
+    flag, so the system prompt is framed into the stdin payload — Corvus
+    system prompts are task protocols (judge/classify envelopes), and the
+    framing survives them. NOTE: the codex base agent context costs ~13k
+    input tokens per call (measured 2026-07-17, mostly cache-served) — this
+    provider is the lapse fallback, not a cost-optimized primary."""
+    assert len(user_message.strip()) > 0, "user_message must be non-empty"
+
+    effort = effort_var.get() or settings.default_effort
+    args = _build_codex_args(model_info, effort)
+    payload_in = (
+        f"SYSTEM INSTRUCTIONS (follow these for this task):\n{system_prompt}\n\n"
+        f"USER MESSAGE:\n{user_message}"
+    ) if system_prompt else user_message
+
+    child_env = {
+        k: v for k, v in os.environ.items()
+        if not k.startswith(("CLAUDECODE", "CLAUDE_CODE_", "CODEX_"))
+    }
+    proc = await asyncio.create_subprocess_exec(
+        *args, stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        env=child_env, cwd="/tmp",
+    )
+    stdout, stderr = await proc.communicate(input=payload_in.encode())
+    assert proc.returncode == 0, (
+        f"codex CLI failed (exit {proc.returncode}): "
+        f"{stderr.decode(errors='replace')[:500]}"
+    )
+    text, usage = _parse_codex_events(stdout.decode())
+    input_tokens = int(usage.get("input_tokens", 0) or 0)
+    cached = int(usage.get("cached_input_tokens", 0) or 0)
+    output_tokens = int(usage.get("output_tokens", 0) or 0)
+    assert input_tokens >= 0 and output_tokens >= 0, "token counts must be non-negative"
+    # API-equivalent estimate; OpenAI cached input bills at 0.1x list.
+    cost = (
+        (input_tokens - cached) * model_info.input_price
+        + cached * model_info.input_price * 0.10
+        + output_tokens * model_info.output_price
+    ) / 1_000_000
+    return {
+        "text": text,
+        "input_tokens": input_tokens,
+        "cache_creation_tokens": 0,
+        "cache_read_tokens": cached,
+        "output_tokens": output_tokens,
+        "cost_usd": max(cost, 0.0),
+        "model_version": model_info.api_id,
+    }
 
 
 # Effort → Gemini 2.5 thinking-budget tokens (monotone; 128 is the 2.5 Pro
@@ -544,10 +708,53 @@ def _resolve_alias(model: str) -> str:
 
 _PROVIDER_DISPATCH = MappingProxyType({
     "anthropic": _anthropic_chat,
+    "openai_codex": _codex_chat,
     "google": _google_chat,
     "groq": _groq_chat,
     "azure_openai": _azure_openai_chat,
 })
+
+
+def _is_lapse_error(exc: BaseException) -> bool:
+    """Provider-lapsed (auth/quota/billing) vs request-bug. Only the former
+    justifies walking the fallback chain."""
+    text = str(exc).casefold()
+    return any(marker in text for marker in _LAPSE_ERROR_MARKERS)
+
+
+def _provider_in_cooldown(provider: str) -> bool:
+    import time
+    return _provider_down_until.get(provider, 0.0) > time.monotonic()
+
+
+def _mark_provider_down(provider: str, why: str) -> None:
+    import time
+    _provider_down_until[provider] = time.monotonic() + _PROVIDER_COOLDOWN_SECONDS
+    logger.warning("provider %s marked down for %ds: %s",
+                   provider, _PROVIDER_COOLDOWN_SECONDS, why[:200])
+
+
+def _fallback_candidates(resolved: str) -> list[str]:
+    """[primary, *same-grade fallbacks] — see FALLBACK_CHAINS crosswalk."""
+    return [resolved, *FALLBACK_CHAINS.get(resolved, ())]
+
+
+async def _call_provider(
+    model_info: ModelInfo, system_prompt: str, user_message: str,
+    max_tokens: int, timeout: int, session: dict | None,
+) -> dict:
+    """Dispatch one call to one provider's handler."""
+    handler = _PROVIDER_DISPATCH.get(model_info.provider)
+    assert handler is not None, f"No handler for provider: {model_info.provider}"
+    # Azure OpenAI handler accepts timeout; others ignore it for now.
+    # Session persistence is a Claude-CLI capability only — other providers
+    # run stateless and return no session_id (callers fall back to packing
+    # history into the message).
+    if model_info.provider == "anthropic":
+        return await handler(system_prompt, user_message, max_tokens, model_info, session)
+    if model_info.provider == "azure_openai":
+        return await handler(system_prompt, user_message, max_tokens, model_info, timeout)
+    return await handler(system_prompt, user_message, max_tokens, model_info)
 
 
 async def llm_chat(
@@ -557,55 +764,89 @@ async def llm_chat(
     model: str | None = None,
     timeout: int = 180,
     session: dict | None = None,
+    workload: str = "corvus_internal",
+    harness: str = "corvus_backend",
+    effort: str | None = None,
 ) -> dict:
     """Call an LLM and return {"text", "input_tokens", "output_tokens", "cost_usd", "model_version"}.
 
     `model` must be a MODEL_REGISTRY key (e.g. "haiku", "gemini-flash", "azure-gpt4o").
     Model aliases from LLM_MODEL_ALIASES are resolved before lookup.
     No default model — caller must specify explicitly.
+
+    `effort` (low|medium|high) overrides the ambient effort_var/default for
+    this call only — the per-workload quality dial (e.g. the janitor's
+    sonnet@low pair judge).
+
+    Fallback: if the model's provider is unavailable, cooling down after a
+    lapse-shaped failure, or fails THIS call with a lapse-shaped error
+    (auth/quota/billing), the same-grade FALLBACK_CHAINS entry is tried —
+    e.g. sonnet -> codex-terra on the OpenAI subscription. Request-shaped
+    errors re-raise immediately; they never hop providers.
     """
     assert model is not None, "model must be specified — no default model selection"
     assert (system_prompt and system_prompt.strip()) or (user_message and user_message.strip()), \
         "llm_chat requires a non-empty system_prompt or user_message"
+    assert effort is None or effort in _VALID_EFFORT, f"invalid effort: {effort!r}"
 
     resolved = _resolve_alias(model)
-    model_info = MODEL_REGISTRY.get(resolved)
-    if not model_info:
+    if resolved not in MODEL_REGISTRY:
         raise ValueError(
             f"Unknown model: {resolved!r}"
             f"{' (aliased from ' + model + ')' if resolved != model else ''}. "
             f"Available: {list(MODEL_REGISTRY.keys())}"
         )
 
-    if not _provider_available(model_info.provider):
-        raise ValueError(
-            f"Provider {model_info.provider!r} not configured. "
-            f"Set the API key in .env to use model {resolved!r}."
-        )
-
-    handler = _PROVIDER_DISPATCH.get(model_info.provider)
-    assert handler is not None, f"No handler for provider: {model_info.provider}"
-
-    # Azure OpenAI handler accepts timeout; others ignore it for now.
-    # Session persistence is a Claude-CLI capability only — other providers
-    # run stateless and return no session_id (callers fall back to packing
-    # history into the message).
-    if model_info.provider == "anthropic":
-        result = await handler(
-            system_prompt, user_message, max_tokens, model_info, session,
-        )
-    elif model_info.provider == "azure_openai":
-        result = await handler(
-            system_prompt, user_message, max_tokens, model_info, timeout,
-        )
-    else:
-        result = await handler(system_prompt, user_message, max_tokens, model_info)
+    effort_token = effort_var.set(effort) if effort is not None else None
+    try:
+        result, served_by = await _chat_with_fallback(
+            resolved, system_prompt, user_message, max_tokens, timeout, session)
+    finally:
+        if effort_token is not None:
+            effort_var.reset(effort_token)
 
     assert "text" in result and "input_tokens" in result and "output_tokens" in result, \
         "llm_chat result missing required keys"
     assert result["input_tokens"] >= 0, f"input_tokens must be non-negative, got {result['input_tokens']}"
     assert result["output_tokens"] >= 0, f"output_tokens must be non-negative, got {result['output_tokens']}"
+    from app.services.model_usage_ledger import record_model_usage
+    record_model_usage(provider=MODEL_REGISTRY[served_by].provider, model=served_by,
+                       harness=harness, workload=workload, result=result)
     return result
+
+
+async def _chat_with_fallback(
+    resolved: str, system_prompt: str, user_message: str,
+    max_tokens: int, timeout: int, session: dict | None,
+) -> tuple[dict, str]:
+    """Walk [primary, *fallbacks]; return (result, served-by model key)."""
+    last_error: Exception | None = None
+    candidates = _fallback_candidates(resolved)
+    for name in candidates:
+        info = MODEL_REGISTRY[name]
+        if not _provider_available(info.provider):
+            last_error = last_error or ValueError(
+                f"Provider {info.provider!r} not configured for model {name!r}.")
+            continue
+        if _provider_in_cooldown(info.provider):
+            continue
+        try:
+            result = await _call_provider(
+                info, system_prompt, user_message, max_tokens, timeout,
+                session if info.provider == "anthropic" else None)
+        except Exception as exc:  # lapse-shaped -> next candidate; else raise
+            if name != candidates[-1] and _is_lapse_error(exc):
+                _mark_provider_down(info.provider, str(exc))
+                last_error = exc
+                continue
+            raise
+        if name != resolved:
+            logger.warning("llm fallback: %s -> %s (primary provider down)",
+                           resolved, name)
+            result["fallback_from"] = resolved
+        return result, name
+    raise last_error or ValueError(
+        f"No available provider for {resolved!r} or its fallbacks.")
 
 
 # ── Cost estimation ──
