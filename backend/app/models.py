@@ -1,7 +1,7 @@
 import datetime
 from types import MappingProxyType
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, synonym
 
@@ -906,6 +906,40 @@ class MemoryChangeEvent(Base):
     reason: Mapped[str | None] = mapped_column(String(300), nullable=True)
     actor: Mapped[str] = mapped_column(String(50), nullable=False, server_default="mind_janitor")
     changed_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now(), index=True)
+
+
+class MindPairVerdict(Base):
+    """Persistent dedup-judge verdict for one lesson pair (graph lint).
+
+    The consolidation janitor's pair judgments used to evaporate with the
+    HTTP response, so the same borderline pairs were recomputed and
+    re-dropped every run. A persisted verdict makes MAX_JUDGED_PAIRS a
+    rate limit instead of a ceiling: judged pairs never re-queue unless
+    either side's content changed (detected via content hashes).
+
+    Pair identity is normalized: neuron_a_id < neuron_b_id always.
+    """
+    __tablename__ = "mind_pair_verdicts"
+    __table_args__ = (
+        UniqueConstraint("neuron_a_id", "neuron_b_id", name="uq_mind_pair_verdict"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    neuron_a_id: Mapped[int] = mapped_column(Integer, ForeignKey("neurons.id"), nullable=False, index=True)
+    neuron_b_id: Mapped[int] = mapped_column(Integer, ForeignKey("neurons.id"), nullable=False, index=True)
+    # sha256[:16] of each side's label+content at judge time — a mismatch
+    # against the live row means the verdict is stale and must re-queue.
+    content_hash_a: Mapped[str] = mapped_column(String(16), nullable=False)
+    content_hash_b: Mapped[str] = mapped_column(String(16), nullable=False)
+    sim: Mapped[float] = mapped_column(Float, nullable=False)
+    # same-scope: duplicate | complementary | contradictory | unrelated
+    # cross-scope: duplicate-mis-scoped | genuinely-scoped | contradictory | unrelated
+    verdict: Mapped[str] = mapped_column(String(30), nullable=False)
+    # judge-provided context, e.g. {"misfiled": "A", "correct_scope": "Environment"}
+    detail: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # haiku-judge | fast-path (embedding+lexical near-verbatim, no LLM)
+    source: Mapped[str] = mapped_column(String(20), nullable=False, server_default="haiku-judge")
+    judged_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class Action(Base):

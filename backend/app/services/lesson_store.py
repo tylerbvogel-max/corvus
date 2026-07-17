@@ -152,6 +152,34 @@ async def label_exists(db: AsyncSession, label: str) -> bool:
     return row is not None
 
 
+async def _nearest_active_lesson(db: AsyncSession, spec: dict) -> dict | None:
+    """Cosine-nearest active lesson to the candidate spec, if it clears
+    the near-verbatim bar (FUSE_SIM). Same eligibility as the janitor's
+    dedup census (reference class excluded). One local embed per save."""
+    import numpy as np
+    from app.services.embedding_service import embed_text
+    from app.services.mind_janitors import FUSE_SIM, _load_lessons
+
+    text = f"{spec['label']}. {spec.get('summary') or ''} {spec.get('content') or ''}"
+    loop = asyncio.get_running_loop()
+    vec = np.array(await loop.run_in_executor(None, embed_text, text[:2000]),
+                   dtype=np.float64)
+    norm = np.linalg.norm(vec)
+    if norm == 0:
+        return None
+    vec /= norm
+    best: dict | None = None
+    for n in await _load_lessons(db):
+        emb = np.array(json.loads(n.embedding), dtype=np.float64)
+        denom = np.linalg.norm(emb)
+        if denom == 0:
+            continue
+        sim = float(vec @ (emb / denom))
+        if sim >= FUSE_SIM and (best is None or sim > best["sim"]):
+            best = {"id": n.id, "label": n.label, "sim": sim}
+    return best
+
+
 async def _embed_and_wire(db: AsyncSession, neuron_id: int) -> None:
     """Make a freshly-created lesson recallable: embed it, then wire it to
     its nearest neighbors so it joins spread activation at birth rather than
@@ -213,6 +241,29 @@ async def save_lesson(
     # object hasn't loaded the relationship, and async lazy-load raises
     # MissingGreenlet — load it explicitly before routing.
     await db.refresh(proposal, ["items"])
+
+    # WRITE-TIME NEAR-DUP GATE (graph lint): label_exists above only stops
+    # exact-label restatements — paraphrases walked straight in and the
+    # janitor was the only backstop. Embed the candidate BEFORE routing;
+    # a near-verbatim cosine hit against an active lesson forces the
+    # human-review queue instead of a silent insert.
+    near = await _nearest_active_lesson(db, spec)
+    if near is not None:
+        proposal.gap_description = (
+            f"NEAR-DUPLICATE @ sim {near['sim']:.3f} of #{near['id']} "
+            f"'{near['label'][:60]}' — {proposal.gap_description}"
+        )[:2000]
+        await db.commit()
+        logger.info("near-dup gate queued lesson %r (sim %.3f vs #%s)",
+                    label[:60], near["sim"], near["id"])
+        return {
+            "route": "queue",
+            "reason": (f"near-duplicate of #{near['id']} "
+                       f"'{near['label'][:60]}' (sim {near['sim']:.3f}) — "
+                       "queued for human review instead of silent insert"),
+            "proposal_id": proposal.id,
+            "neuron_id": None,
+        }
 
     decision = await route_proposal(
         db, proposal, guardrails_passed=None, confidence=None, region=scope,

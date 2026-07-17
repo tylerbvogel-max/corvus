@@ -49,6 +49,7 @@ async def janitor_run(
     consolidation: bool = Query(default=True),
     staleness: bool = Query(default=True),
     decay: bool = Query(default=True),
+    lint: bool = Query(default=True),
     max_pairs: int = Query(default=40, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
@@ -56,9 +57,19 @@ async def janitor_run(
     assert max_pairs >= 1, "max_pairs must be positive"
     report = await run_janitors(
         db, consolidation=consolidation, staleness=staleness,
-        decay=decay, max_pairs=max_pairs,
+        decay=decay, lint=lint, max_pairs=max_pairs,
     )
     assert isinstance(report, dict), "janitor report must be a dict"
+    return json.loads(json.dumps(report, default=str))
+
+
+@router.get("/corpus-health")
+async def corpus_health_report(db: AsyncSession = Depends(get_db)):
+    """Deterministic corpus-quality metrics (graph lint item 0): duplicate
+    mass, scope consistency, injection-slot waste. No LLM; persists the
+    latest snapshot + trend history beside janitor-report.json."""
+    from app.services.mind_lint import corpus_health
+    report = await corpus_health(db)
     return json.loads(json.dumps(report, default=str))
 
 

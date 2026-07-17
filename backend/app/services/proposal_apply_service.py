@@ -67,7 +67,10 @@ async def _submit_link_child(
             "source_id": spec["source_id"],
             "target_id": spec["target_id"],
             "weight": spec.get("initial_weight", 0.15),
-            "co_fire_count": 1,
+            # Memory-semantics edges (graph-lint fusion provenance) pass
+            # the promotion count in their spec so they land durable, not
+            # in the reapable weak tier; topology links keep the default.
+            "co_fire_count": spec.get("co_fire_count", 1),
             "edge_type": spec.get("edge_type", "pyramidal"),
             "source": spec.get("source", "integrity_completion"),
             "context": spec.get("context", ""),
