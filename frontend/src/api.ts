@@ -1667,6 +1667,71 @@ export interface DocumentEvidence {
   job_id: string;
 }
 
+// Server-rendered review projection for reconsolidate items
+// (backend services/reconsolidation/render.py). Field shapes are owned
+// by the backend; the card renders what it is given.
+export interface RenderedFusionMember {
+  neuron_id: number;
+  label: string | null;
+  summary: string | null;
+  content: string | null;
+  node_type: string | null;
+  scope: string | null;
+  authority_level: string | null;
+  invocations: number;
+  avg_utility: number;
+  is_active: boolean;
+  facet_evidence_count: number;
+  content_hash: string;
+  status: 'fresh' | 'content-drifted' | 'state-drifted' | 'superseded' | 'missing';
+  status_notes: string[];
+  outcome: 'retain' | 'retire' | 'unchanged';
+}
+
+export interface RenderedFieldReceipt {
+  field: string;
+  before: { neuron_id: number; value: string | number | null }[];
+  after: string | number | null;
+  rule: string;
+  why: string;
+  rejected?: Record<string, number>;
+  flags?: string[];
+}
+
+export interface RenderedFusionPlan {
+  kind: 'reconsolidate';
+  error?: string;
+  render_version?: number;
+  plan_hash?: string;
+  member_state_hash?: string;
+  disposition?: 'retain-canonical' | 'synthesize-new' | 'abstain';
+  coverage_delta?: boolean;
+  canonical_neuron_id?: number | null;
+  proposed_node_type?: string | null;
+  freshness?: {
+    verdict: 'fresh' | 'stale';
+    violations: string[];
+    dead_targets: { neuron_id: number; superseded_by: number | null; note: string }[];
+  };
+  members?: RenderedFusionMember[];
+  fields?: RenderedFieldReceipt[];
+  facets?: { kind: string; text: string; evidence_member_ids: number[]; resolution: string | null }[];
+  rewiring?: {
+    internal_conducting_deleted: number;
+    member_peer_retired: number;
+    synthesis_peer_created: number;
+    provenance_links_created: number;
+    why: string;
+    peers: { peer_id: number; union_cofire_queries: number; recomputed_weight: number; edge_type: string; weight_provenance: string }[];
+    inactive_peers_dropped: number[];
+  } | null;
+  validators?: {
+    preflight_passed: boolean;
+    preflight_violations: string[];
+    postconditions_asserted_at_apply: string[];
+  };
+}
+
 export interface ProposalItem {
   id: number;
   action: string;
@@ -1678,6 +1743,7 @@ export interface ProposalItem {
   reason: string | null;
   created_neuron_id: number | null;
   refinement_id: number | null;
+  rendered_plan: RenderedFusionPlan | null;
 }
 
 export interface ProposalDetail {

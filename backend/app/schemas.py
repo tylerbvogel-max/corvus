@@ -556,6 +556,11 @@ class ProposalItemOut(BaseModel):
     reason: str | None = None
     created_neuron_id: int | None = None
     refinement_id: int | None = None
+    # Server-rendered review projection for reconsolidate items (see
+    # services/reconsolidation/render.py): per-member freshness cards,
+    # field-inheritance receipts, rewiring summary, validator status.
+    # None for every other action and on list endpoints.
+    rendered_plan: dict | None = None
 
 
 class ProposalOut(BaseModel):

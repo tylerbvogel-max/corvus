@@ -282,6 +282,42 @@ def _classify_origin_tuple(run_id: int | None, src: str | None) -> str:
     return "manual"
 
 
+async def _attach_rendered_plans(
+    db: AsyncSession, p: AutopilotProposal, detail: ProposalDetailOut,
+) -> ProposalDetailOut:
+    """Decorate reconsolidate items with the server-rendered review
+    projection (mind-fusionplan-preview-ui). Read-only: loads live members
+    and renders; an unreadable spec becomes an error object on the item
+    rather than failing the whole detail response."""
+    from app.services.reconsolidation.apply import parse_reconsolidation_spec
+    from app.services.reconsolidation.render import render_fusion_plan
+
+    out_by_id = {i.id: i for i in detail.items}
+    for item in (p.items or []):
+        if item.action != "reconsolidate" or not item.neuron_spec_json:
+            continue
+        target = out_by_id.get(item.id)
+        if target is None:
+            continue
+        try:
+            plan, plan_hash, member_hash = parse_reconsolidation_spec(
+                item.neuron_spec_json)
+        except Exception as exc:  # unreadable plan is itself a review fact
+            target.rendered_plan = {
+                "kind": "reconsolidate",
+                "error": f"unreadable fusion plan: {exc}",
+            }
+            continue
+        live = {}
+        for mid in plan.member_ids:
+            n = await db.get(Neuron, mid)
+            if n is not None:
+                live[mid] = n
+        target.rendered_plan = render_fusion_plan(
+            plan, plan_hash, member_hash, live)
+    return detail
+
+
 # NOTE: declared before /{proposal_id} — FastAPI matches routes in order and
 # "dedup-clusters" must not be swallowed as a proposal_id.
 @router.get("/dedup-clusters")
@@ -307,7 +343,7 @@ async def get_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
     p = await db.get(AutopilotProposal, proposal_id)
     if not p:
         raise HTTPException(404, "Proposal not found")
-    return _proposal_detail(p)
+    return await _attach_rendered_plans(db, p, _proposal_detail(p))
 
 
 @router.get("/whoami")
@@ -363,7 +399,7 @@ async def review_proposal(
             await _revert_integrity_findings(db, p.id)
         await db.commit()
         await db.refresh(p)
-        return _proposal_detail(p)
+        return await _attach_rendered_plans(db, p, _proposal_detail(p))
 
     try:
         has_edge_changes = await approve_and_apply(db, p, identity, req.notes)
@@ -379,7 +415,7 @@ async def review_proposal(
     await db.commit()
     await _post_apply_refresh(db, p, has_edge_changes)
     await db.refresh(p)
-    return _proposal_detail(p)
+    return await _attach_rendered_plans(db, p, _proposal_detail(p))
 
 
 async def _post_apply_refresh(
@@ -457,7 +493,7 @@ async def apply_proposal(
     await _post_apply_refresh(db, p, has_edge_changes)
 
     await db.refresh(p)
-    return _proposal_detail(p)
+    return await _attach_rendered_plans(db, p, _proposal_detail(p))
 
 
 # ── Integrity finding sync ───────────────────────────────────────────

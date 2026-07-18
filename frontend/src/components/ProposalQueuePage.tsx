@@ -14,6 +14,9 @@ import {
   type GapEvidence,
   type DocumentEvidence,
   type Whoami,
+  type RenderedFusionPlan,
+  type RenderedFusionMember,
+  type RenderedFieldReceipt,
 } from '../api';
 import { getReviewerName, setReviewerName } from '../auth';
 import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
@@ -677,7 +680,7 @@ export default function ProposalQueuePage({
 
             <Section title={`Proposed Changes (${selected.items.length})`}>
               {selected.items.map(item => (
-                <ItemCard key={item.id} item={item} onOpenDiff={() => setDiffItem(item)} />
+                <ItemCard key={item.id} item={item} proposalState={selected.state} onOpenDiff={() => setDiffItem(item)} />
               ))}
             </Section>
 
@@ -1118,7 +1121,262 @@ function Metric({ label, value, accent = 'var(--text)' }: { label: string; value
   );
 }
 
-function ItemCard({ item, onOpenDiff }: { item: ProposalItem; onOpenDiff: () => void }) {
+// ── Server-rendered FusionPlan review card (mind-fusionplan-preview-ui) ──
+// Presentation only: every value here was computed server-side by
+// services/reconsolidation/render.py from the hashed plan + live graph.
+
+const MEMBER_STATUS_META: Record<RenderedFusionMember['status'], { color: string; label: string }> = {
+  'fresh': { color: '#4caf50', label: '✓ fresh' },
+  'content-drifted': { color: '#e8a838', label: '⚠ content drifted' },
+  'state-drifted': { color: '#e8a838', label: '⚠ state drifted' },
+  'superseded': { color: '#e74c3c', label: '☠ superseded' },
+  'missing': { color: '#e74c3c', label: '☠ missing' },
+};
+
+function RenderedFusionCard({ rp, proposalState }: { rp: RenderedFusionPlan; proposalState?: string }) {
+  const [showPostconditions, setShowPostconditions] = useState(false);
+  const stale = rp.freshness?.verdict === 'stale';
+  const reviewable = proposalState === 'proposed';
+  const disposition = rp.disposition ?? 'synthesize-new';
+  const dispositionColor = disposition === 'abstain' ? '#e74c3c'
+    : disposition === 'retain-canonical' ? '#e8a838' : '#4caf50';
+  const afterTitle = disposition === 'retain-canonical'
+    ? `Retain neuron #${rp.canonical_neuron_id}`
+    : disposition === 'abstain' ? 'No mutation (abstain)' : 'Create new synthesis';
+
+  const fieldsByName = new Map((rp.fields ?? []).map(f => [f.field, f]));
+  const identity = {
+    label: fieldsByName.get('label')?.after,
+    summary: fieldsByName.get('summary')?.after,
+    content: fieldsByName.get('content')?.after,
+    scope: fieldsByName.get('scope')?.after,
+  };
+  const statReceipts = (rp.fields ?? []).filter(f => !['label', 'summary', 'content', 'scope'].includes(f.field));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Disposition + hash receipts */}
+      <div style={{
+        display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+        padding: '9px 11px', borderRadius: 7,
+        background: `${dispositionColor}18`, border: `1px solid ${dispositionColor}66`,
+      }}>
+        <span style={{ color: dispositionColor, fontWeight: 800, letterSpacing: '0.04em' }}>
+          {disposition.toUpperCase()}
+        </span>
+        <span>{afterTitle}</span>
+        {rp.coverage_delta && <span style={{ color: 'var(--text-dim)' }}>coverage delta</span>}
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {rp.plan_hash && <code style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }} title={rp.plan_hash}>plan {rp.plan_hash.slice(0, 12)}</code>}
+          {rp.member_state_hash && <code style={{ color: 'var(--text-dim)', fontSize: '0.7rem' }} title={rp.member_state_hash}>members {rp.member_state_hash.slice(0, 12)}</code>}
+        </span>
+      </div>
+
+      {/* Freshness verdict — a stale plan on a reviewable proposal is DEAD */}
+      {stale && reviewable ? (
+        <div style={{ padding: 11, borderRadius: 7, background: '#e74c3c1c', border: '2px solid #e74c3c' }}>
+          <div style={{ color: '#e74c3c', fontWeight: 800, letterSpacing: '0.04em' }}>
+            ☠ DEAD PLAN — member state drifted since review
+          </div>
+          <div style={{ marginTop: 5 }}>
+            The graph this plan pinned no longer exists. Reviewing it now will <strong>terminally supersede</strong> it (nothing applies); the janitor will re-propose from live state if the duplication still holds.
+          </div>
+          {(rp.freshness?.dead_targets ?? []).map(dt => (
+            <div key={dt.neuron_id} style={{ marginTop: 6, padding: 6, borderRadius: 5, background: 'var(--bg-card)' }}>
+              <strong>#{dt.neuron_id}</strong> {dt.note} — the fact this plan wanted to fuse now lives in <strong>#{dt.superseded_by}</strong>.
+            </div>
+          ))}
+          {(rp.freshness?.violations ?? []).map((v, i) => (
+            <div key={i} style={{ marginTop: 4, color: 'var(--text-dim)', fontSize: '0.75rem' }}>· {v}</div>
+          ))}
+        </div>
+      ) : stale ? (
+        <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-card)', border: '1px dashed var(--border)', color: 'var(--text-dim)', fontSize: '0.75rem' }}>
+          Members have drifted since this proposal settled ({proposalState}) — expected for historical rows; receipts below show the state the reviewer signed.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4caf50', fontSize: '0.78rem', fontWeight: 600 }}>
+          ✓ members pinned fresh — live graph matches the reviewed state hash
+        </div>
+      )}
+
+      {/* Before / After */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
+        <div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Before: {(rp.members ?? []).length} members</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(rp.members ?? []).map(m => {
+              const meta = MEMBER_STATUS_META[m.status] ?? MEMBER_STATUS_META['fresh'];
+              return (
+                <div key={m.neuron_id} style={{
+                  padding: 8, borderRadius: 6, background: 'var(--bg-card)',
+                  border: `1px solid ${m.status === 'fresh' ? 'var(--border)' : meta.color + '88'}`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+                    <strong>#{m.neuron_id} {m.label || 'Unlabeled member'}</strong>
+                    <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <span style={{ color: meta.color, fontSize: '0.68rem', fontWeight: 700 }}>{meta.label}</span>
+                      <span style={{ color: m.outcome === 'retain' ? '#4caf50' : '#e8a838', fontSize: '0.68rem', fontWeight: 700 }}>
+                        {m.outcome.toUpperCase()}
+                      </span>
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', marginTop: 2 }}>
+                    {m.scope || 'unscoped'} · {m.node_type || 'memory'} · {m.authority_level || 'informational'} · {m.invocations} invocations · utility {m.avg_utility.toFixed(3)} · cited by {m.facet_evidence_count} facet{m.facet_evidence_count === 1 ? '' : 's'}
+                  </div>
+                  {m.status_notes.length > 0 && (
+                    <div style={{ marginTop: 4, color: meta.color, fontSize: '0.7rem' }}>
+                      {m.status_notes.map((n, i) => <div key={i}>· {n}</div>)}
+                    </div>
+                  )}
+                  {m.summary && <div style={{ marginTop: 5 }}>{m.summary}</div>}
+                  {m.content && <div style={{ marginTop: 5, color: 'var(--text-dim)', whiteSpace: 'pre-wrap' }}>{m.content}</div>}
+                  <code style={{ display: 'block', marginTop: 5, color: 'var(--text-dim)', fontSize: '0.65rem' }}>state {m.content_hash}</code>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>After: {afterTitle}</div>
+          <div style={{ padding: 10, borderRadius: 6, background: `${dispositionColor}0f`, border: `1px solid ${dispositionColor}55` }}>
+            {disposition === 'abstain' ? (
+              <div>Conflicting or genuinely scoped truths stay separate. Approval cannot mutate this component.</div>
+            ) : (
+              <>
+                <div style={{ fontSize: '0.68rem', color: dispositionColor, fontWeight: 700, textTransform: 'uppercase' }}>
+                  {String(identity.scope || 'unscoped')} · {rp.proposed_node_type || 'lesson'}
+                </div>
+                <h4 style={{ margin: '5px 0' }}>{String(identity.label ?? '')}</h4>
+                {identity.summary != null && <div style={{ fontWeight: 600 }}>{String(identity.summary)}</div>}
+                {identity.content != null && <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{String(identity.content)}</div>}
+                {disposition === 'retain-canonical' && (
+                  <div style={{ marginTop: 8, color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                    Identity and ID of #{rp.canonical_neuron_id} survive; statistics rebuild from all members.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {!!rp.facets?.length && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {rp.facets.map((facet, i) => (
+                <div key={`${facet.kind}-${i}`} style={{ padding: 6, borderRadius: 5, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <strong style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>{facet.kind}</strong>{' '}{facet.text}
+                  <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}> · evidence #{facet.evidence_member_ids.join(', #')}</span>
+                  {facet.resolution && <div style={{ marginTop: 3, color: '#4caf50' }}>Resolution: {facet.resolution}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Field-inheritance receipts: value + WHICH rule fired */}
+      {statReceipts.length > 0 && (
+        <div style={{ padding: 10, borderRadius: 7, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Inheritance receipts — one rule per signal, never max/mean</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {statReceipts.map(f => <ReceiptRow key={f.field} receipt={f} />)}
+          </div>
+        </div>
+      )}
+
+      {/* Rewiring summary */}
+      {rp.rewiring && (
+        <div style={{ padding: 10, borderRadius: 7, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Rewiring</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 7 }}>
+            <Metric label="Internal conducting deleted" value={rp.rewiring.internal_conducting_deleted} accent="#e74c3c" />
+            <Metric label="Member↔peer retired" value={rp.rewiring.member_peer_retired} accent="#e8a838" />
+            <Metric label="Synthesis↔peer created" value={rp.rewiring.synthesis_peer_created} accent="#4caf50" />
+            <Metric label="Provenance links kept" value={rp.rewiring.provenance_links_created} />
+          </div>
+          <div style={{ marginTop: 7, color: 'var(--text-dim)', fontSize: '0.72rem' }}>{rp.rewiring.why}</div>
+          {rp.rewiring.peers.length > 0 && (
+            <div style={{ marginTop: 7, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 4, maxHeight: 220, overflow: 'auto' }}>
+              {rp.rewiring.peers.map(peer => (
+                <div key={peer.peer_id} style={{ padding: 5, borderRadius: 4, background: 'var(--bg-input)' }}>
+                  <strong>#{peer.peer_id}</strong> · weight {peer.recomputed_weight.toFixed(3)} · {peer.edge_type}
+                  <div style={{ color: 'var(--text-dim)', fontSize: '0.68rem', marginTop: 2 }}>{peer.weight_provenance}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ marginTop: 7, color: rp.rewiring.inactive_peers_dropped.length ? '#e8a838' : 'var(--text-dim)', fontSize: '0.75rem' }}>
+            Dropped inactive/superseded peers: {rp.rewiring.inactive_peers_dropped.length ? `#${rp.rewiring.inactive_peers_dropped.join(', #')}` : 'none'}
+          </div>
+        </div>
+      )}
+
+      {/* Validator status */}
+      {rp.validators && (
+        <div style={{
+          padding: 10, borderRadius: 7, background: 'var(--bg-card)',
+          border: `1px solid ${rp.validators.preflight_passed ? 'var(--border)' : '#e74c3c88'}`,
+        }}>
+          <div style={{ fontWeight: 700, color: rp.validators.preflight_passed ? '#4caf50' : '#e74c3c' }}>
+            {rp.validators.preflight_passed
+              ? '✓ Preflight clean — plan is appliable against the live graph'
+              : `✗ Preflight: ${rp.validators.preflight_violations.length} violation(s) — approval would fail closed`}
+          </div>
+          {!rp.validators.preflight_passed && (
+            <div style={{ marginTop: 5 }}>
+              {rp.validators.preflight_violations.map((v, i) => (
+                <div key={i} style={{ color: '#e74c3c', fontSize: '0.75rem', marginTop: 2 }}>· {v}</div>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowPostconditions(s => !s)}
+            style={{
+              marginTop: 7, fontSize: '0.7rem', padding: '2px 8px',
+              background: 'transparent', border: '1px dashed var(--border)',
+              color: 'var(--text-dim)', borderRadius: 4, cursor: 'pointer',
+            }}
+          >
+            {showPostconditions ? 'Hide' : 'Show'} postconditions asserted inside the apply transaction ({rp.validators.postconditions_asserted_at_apply.length})
+          </button>
+          {showPostconditions && (
+            <div style={{ marginTop: 5, color: 'var(--text-dim)', fontSize: '0.73rem' }}>
+              {rp.validators.postconditions_asserted_at_apply.map((p, i) => (
+                <div key={i} style={{ marginTop: 2 }}>· {p} </div>
+              ))}
+              <div style={{ marginTop: 4, fontStyle: 'italic' }}>Any violation rolls back the whole transaction, approval included.</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReceiptRow({ receipt }: { receipt: RenderedFieldReceipt }) {
+  return (
+    <div style={{ padding: 7, borderRadius: 5, background: 'var(--bg-input)' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem', textTransform: 'uppercase', minWidth: 110 }}>{receipt.field}</span>
+        <strong style={{ color: '#4caf50' }}>{String(receipt.after ?? '—')}</strong>
+        <code style={{ fontSize: '0.66rem', padding: '1px 6px', borderRadius: 8, background: 'var(--bg-card)', color: 'var(--text-dim)' }}>{receipt.rule}</code>
+        {receipt.rejected && Object.entries(receipt.rejected).map(([k, v]) => (
+          <span key={k} style={{ color: '#e74c3c', fontSize: '0.7rem' }} title="Tempting but rejected alternative — receipt, never an apply input">
+            ✗ {k.replace('member_', '')} {v}
+          </span>
+        ))}
+      </div>
+      <div style={{ marginTop: 3, color: 'var(--text-dim)', fontSize: '0.72rem' }}>{receipt.why}</div>
+      {!!receipt.flags?.length && (
+        <div style={{ marginTop: 4, padding: 6, borderRadius: 4, background: '#e8a83814', border: '1px solid #e8a83855', fontSize: '0.72rem' }}>
+          <strong style={{ color: '#e8a838' }}>Provenance gaps (reported, never laundered)</strong>
+          {receipt.flags.map((g, i) => <div key={i} style={{ marginTop: 2 }}>· {g}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ItemCard({ item, proposalState, onOpenDiff }: { item: ProposalItem; proposalState?: string; onOpenDiff: () => void }) {
   let spec: Record<string, any> | null = null;
   try { spec = item.neuron_spec_json ? JSON.parse(item.neuron_spec_json) : null; }
   catch { spec = null; }
@@ -1128,9 +1386,26 @@ function ItemCard({ item, onOpenDiff }: { item: ProposalItem; onOpenDiff: () => 
   const newLen = item.new_value?.length ?? 0;
   const truncated = oldLen > 400 || newLen > 400;
 
+  // Server-rendered review projection is authoritative when present; the
+  // client-side FusionPlanPreview parse stays as the fallback for legacy
+  // responses (and for a projection the server could not render).
+  if (item.action === 'reconsolidate' && item.rendered_plan && !item.rendered_plan.error) {
+    return (
+      <div style={{ padding: 10, borderRadius: 7, marginBottom: 6, background: 'var(--bg-input)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+        <RenderedFusionCard rp={item.rendered_plan} proposalState={proposalState} />
+        {item.reason && <div style={{ marginTop: 8, color: 'var(--text-dim)', fontStyle: 'italic' }}>{item.reason}</div>}
+      </div>
+    );
+  }
+
   if (item.action === 'reconsolidate' && spec?.fusion_plan) {
     return (
       <div style={{ padding: 10, borderRadius: 7, marginBottom: 6, background: 'var(--bg-input)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+        {item.rendered_plan?.error && (
+          <div style={{ marginBottom: 8, padding: 7, borderRadius: 5, background: '#e74c3c14', border: '1px solid #e74c3c55', color: '#e74c3c' }}>
+            ⚠ {item.rendered_plan.error} — showing client-side preview.
+          </div>
+        )}
         <FusionPlanPreview plan={spec.fusion_plan as FusionPlanPreviewData} planHash={spec.plan_hash as string | undefined} />
         {item.reason && <div style={{ marginTop: 8, color: 'var(--text-dim)', fontStyle: 'italic' }}>{item.reason}</div>}
       </div>
