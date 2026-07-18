@@ -38,7 +38,7 @@ for c in $(seq "$first" "$last"); do
     args=(--conv "$c" --phase "$ph")
     [ "$ph" != all ] && [ "$ph" != ingest ] && args+=(--no-reset)
     ../eval/locomo/run_locomo.sh "${args[@]}" 2>&1 \
-      | grep -E "\[ingest\] done|\[db\]|\[memory\]|\[nospread\]|\[baseline\]|giving up|Traceback|Error"
+      | grep -E "\[ingest\] done|\[db\]|\[memory|\[nospread|\[embed-only|\[baseline|PROVIDER|Drift|giving up|Traceback|Error"
   done
 done
 echo SWEEP-DONE

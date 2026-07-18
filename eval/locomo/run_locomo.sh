@@ -33,5 +33,10 @@ export LOCOMO_CONCURRENCY
 # markers so the subprocess starts clean (same fix as llm_provider).
 unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SSE_PORT 2>/dev/null || true
 
+# Provider integrity (gate 2): no codex fallback may serve a benchmark call.
+# run_locomo.py also sets this before importing app code; exported here as
+# defense in depth.
+export CODEX_PATH=/nonexistent/locomo-certificate-fallback-disabled
+
 cd "$REPO/backend"
 exec "$REPO/backend/venv/bin/python" "$REPO/eval/locomo/run_locomo.py" "$@"

@@ -813,6 +813,11 @@ async def llm_chat(
         "llm_chat result missing required keys"
     assert result["input_tokens"] >= 0, f"input_tokens must be non-negative, got {result['input_tokens']}"
     assert result["output_tokens"] >= 0, f"output_tokens must be non-negative, got {result['output_tokens']}"
+    # Attribution receipt: which registry entry actually served the call.
+    # Callers with provider-integrity requirements (eval certificates) need
+    # this in-band, not just in the usage ledger.
+    result["served_by"] = served_by
+    result["provider"] = MODEL_REGISTRY[served_by].provider
     from app.services.model_usage_ledger import record_model_usage
     record_model_usage(provider=MODEL_REGISTRY[served_by].provider, model=served_by,
                        harness=harness, workload=workload, result=result)

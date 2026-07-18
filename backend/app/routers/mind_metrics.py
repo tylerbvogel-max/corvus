@@ -69,6 +69,15 @@ async def mind_codex_subscription():
     return report
 
 
+@router.get("/mind/locomo-run")
+async def mind_locomo_run():
+    """LoCoMo certificate phase status, derived from run logs on disk."""
+    from app.services.locomo_run_status import run_status
+    report = run_status()
+    assert isinstance(report, dict), "locomo run status must be a dict"
+    return report
+
+
 @router.get("/mind/skills")
 async def mind_skills(db: AsyncSession = Depends(get_db)):
     """Compiled skills with source health and rendered bodies."""

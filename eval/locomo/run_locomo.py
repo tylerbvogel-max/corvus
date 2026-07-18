@@ -11,7 +11,16 @@ Honest conditions (roadmap node, updated 2026-07-17):
      the ingested tenant; the answering model sees ONLY recalled memories.
   3. SCORE with an LLM judge (Mem0-style correct/wrong), three-way:
      (a) vs Mem0/Zep published numbers, (b) vs full-context baseline,
-     (c) vs spread-disabled ablation (kill-graph-retrieval verdict).
+     (c) vs single-variable ablations.
+
+Arms (gate 1, 2026-07-18): `memory` IS the shipped production configuration
+(hybrid semantic+keyword+entity lanes, spread on, strict refusal); `nospread`
+flips only spread; `embed-only` flips only the hybrid lanes; `baseline` is
+the full-transcript ceiling; `all` = all four. Provider integrity (gate 2):
+every LLM call is receipted (provider/model version/effort) to
+llm-receipts.jsonl in the artifact dir, the codex fallback chain is disabled
+for the whole process, and any drift aborts the phase. Dataset (gate 3) is
+SHA-256-pinned; load fails closed on mismatch.
 
 Deviation from prod distiller (documented): the production distiller prompt
 extracts machine/tool lessons from coding-agent episode logs; LoCoMo is
@@ -40,14 +49,29 @@ subprocess — never the SDK).
 
 import argparse
 import asyncio
+import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 
+# GATE 2 (provider integrity): the cross-provider fallback chain must never
+# serve a certificate call — a silent Claude->Codex hop invalidates
+# attribution. llm_provider probes CODEX_PATH at import time, so pointing it
+# at nothing BEFORE any app import removes the fallback provider entirely:
+# an Anthropic lapse then surfaces as an error that llm_retry rides out,
+# exactly the pre-fallback behavior the sweep gate was built around.
+os.environ["CODEX_PATH"] = "/nonexistent/locomo-certificate-fallback-disabled"
+
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locomo10.json")
+# GATE 3: pinned by the fixed-corpus confirmation work. Fail closed on
+# mismatch — never score an unverified dataset. (CC BY-NC 4.0; gitignored,
+# never committed to the public MIT repo.)
+DATASET_SHA256 = "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
+RESULT_SCHEMA_VERSION = 2
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
 EVAL_ARTIFACT_ROOT = os.path.expanduser("~/.corvus-mind/evals/locomo")
 LIFECYCLE_MODES = ("raw", "consolidation", "full-lifecycle")
@@ -81,6 +105,31 @@ LLM_CONCURRENCY = int(os.environ.get("LOCOMO_CONCURRENCY", "2"))
 CATEGORY_NAMES = {1: "multi-hop", 2: "temporal", 3: "open-domain",
                   4: "single-hop", 5: "adversarial"}
 
+# GATE 1: single-variable ablations around the SHIPPED production
+# configuration (hybrid semantic+keyword+entity retrieval, spread on,
+# strict refusal). Each non-memory arm flips exactly one thing:
+#   nospread    — spread off, hybrid lanes unchanged
+#   embed-only  — hybrid lanes off (semantic-only retrieval), spread unchanged
+ARM_CONFIG = {
+    "memory":     {"spread_enabled": True,
+                   "keyword_lane_enabled": True, "entity_lane_enabled": True},
+    "nospread":   {"spread_enabled": False,
+                   "keyword_lane_enabled": True, "entity_lane_enabled": True},
+    "embed-only": {"spread_enabled": True,
+                   "keyword_lane_enabled": False, "entity_lane_enabled": False},
+}
+
+# GATE 2: one fixed provider/model per workload for the whole certificate.
+# Receipts are written per call; any fallback, provider change, or mid-run
+# model-version change aborts instead of banking an unattributable answer.
+EXPECTED_PROVIDER = "anthropic"
+RECEIPTS_PATH: str | None = None      # set once the artifact dir exists
+_MODEL_VERSION_SEEN: dict[str, str] = {}   # workload -> first model_version
+
+
+class ProviderDrift(Exception):
+    """Raised when a certificate call was not served by the pinned model."""
+
 # Intent: turn one dialogue session into atomic, dated, speaker-attributed
 # memory facts. Expected output: bare JSON array of fact objects.
 DISTILL_PROMPT = """You are the memory distiller for a long-term conversational memory system.
@@ -113,11 +162,12 @@ You are given MEMORIES retrieved for the question. Answer using ONLY these memor
 _ANSWER_RULES_SOFT = """- If a memory partially or indirectly answers the question, give the best-supported answer from it rather than refusing.
 - Reply exactly "No information available" only when nothing in the memories relates to the question."""
 
-# Original strict refusal wording (sweep-1), restored via --strict-prompt
-# (node mind-hybrid-recall: retrieval precision pays for refusal discipline).
+# Strict refusal wording — the SHIPPED policy (node mind-hybrid-recall:
+# retrieval precision pays for refusal discipline). Certificate default;
+# --soft-prompt restores the iteration-1 wording as an explicit ablation.
 _ANSWER_RULES_STRICT = """- If the memories do not contain the answer, reply exactly: No information available."""
 
-ANSWER_PROMPT = _ANSWER_PROMPT_BASE + _ANSWER_RULES_SOFT
+ANSWER_PROMPT = _ANSWER_PROMPT_BASE + _ANSWER_RULES_STRICT
 
 JUDGE_PROMPT = """You are grading a question-answering system against a gold answer.
 
@@ -128,9 +178,52 @@ Special case — unanswerable questions: if GOLD is "No information available", 
 Respond with ONLY a JSON object: {"correct": true} or {"correct": false}"""
 
 
-async def llm_retry(**kwargs) -> dict:
+def effective_effort() -> str:
+    """The effort the CLI call actually runs at (ambient var or settings)."""
+    from app.config import settings
+    from app.services.llm_provider import effort_var
+    return effort_var.get() or settings.default_effort
+
+
+def verify_and_record_receipt(workload: str, requested_model: str,
+                              result: dict) -> None:
+    """Provider-integrity gate: receipt every call, abort on any drift.
+
+    Drift = a fallback served the call, a non-Anthropic provider served it,
+    or the model version changed mid-run within a workload. Raising here
+    (ProviderDrift is NOT in llm_retry's retry set) kills the phase before
+    the answer can be banked."""
+    receipt = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "workload": workload,
+        "requested_model": requested_model,
+        "served_by": result.get("served_by"),
+        "provider": result.get("provider"),
+        "model_version": result.get("model_version"),
+        "effort": effective_effort(),
+        "fallback_from": result.get("fallback_from"),
+        "input_tokens": result.get("input_tokens"),
+        "output_tokens": result.get("output_tokens"),
+        "cost_usd": result.get("cost_usd"),
+    }
+    if RECEIPTS_PATH:
+        with open(RECEIPTS_PATH, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(receipt) + "\n")
+    if receipt["fallback_from"]:
+        raise ProviderDrift(f"fallback served a certificate call: {receipt}")
+    if receipt["provider"] != EXPECTED_PROVIDER:
+        raise ProviderDrift(f"non-{EXPECTED_PROVIDER} provider: {receipt}")
+    version = receipt["model_version"] or ""
+    first = _MODEL_VERSION_SEEN.setdefault(workload, version)
+    if version != first:
+        raise ProviderDrift(
+            f"model version changed mid-run for {workload!r}: "
+            f"{first!r} -> {version!r}")
+
+
+async def llm_retry(*, workload: str, **kwargs) -> dict:
     """llm_chat with backoff — a rate-limited CLI call must not kill a
-    multi-hour phase. Returns {"text": ""} after final failure."""
+    multi-hour phase. Crashes (never returns garbage) after final failure."""
     from app.services.llm_provider import llm_chat
     # A usage-limit window lasts hours: 5 quick tries "succeeded" at
     # returning empty answers that were judged wrong and banked (conv-1
@@ -140,7 +233,7 @@ async def llm_retry(**kwargs) -> dict:
     delay = 30
     for attempt in range(52):  # bounded: ~8h worst case (JPL-2)
         try:
-            return await llm_chat(**kwargs)
+            result = await llm_chat(**kwargs)
         except (AssertionError, RuntimeError, ValueError, OSError) as exc:
             if attempt == 51:
                 raise RuntimeError(
@@ -148,12 +241,22 @@ async def llm_retry(**kwargs) -> dict:
                 ) from exc
             await asyncio.sleep(delay)
             delay = min(delay * 2, 600)
+        else:
+            # outside the try: a drift abort must never be retried into
+            verify_and_record_receipt(workload, kwargs.get("model", ""), result)
+            return result
     raise RuntimeError("unreachable")
 
 
 def load_dataset() -> list[dict]:
-    with open(DATA_PATH, encoding="utf-8") as fh:
-        return json.load(fh)
+    """GATE 3: fail closed on any dataset drift from the pinned corpus."""
+    with open(DATA_PATH, "rb") as fh:
+        raw = fh.read()
+    digest = hashlib.sha256(raw).hexdigest()
+    assert digest == DATASET_SHA256, (
+        f"locomo10.json SHA-256 mismatch: got {digest}, expected "
+        f"{DATASET_SHA256} — refusing to run on an unverified dataset")
+    return json.loads(raw.decode("utf-8"))
 
 
 def load_conversation(conv_idx: int) -> dict:
@@ -228,12 +331,42 @@ def create_eval_artifact_dir(conv_idx: int, mode: str,
 def configure_isolated_runtime(artifact_dir: str) -> None:
     """Set paths before importing janitor/compiler modules."""
     episode_dir = os.path.join(artifact_dir, "episodes")
+    skills_dir = os.path.join(artifact_dir, "skills")
     os.environ["CORVUS_MIND_EPISODE_DIR"] = episode_dir
-    from app.services import mind_janitors, skill_compiler
+    from app.services import mind_janitors, skill_compiler, skill_projection
     mind_janitors.EPISODE_DIR = episode_dir
     mind_janitors.ACTIONS_LOG = os.path.join(episode_dir, "janitor-actions.jsonl")
-    skill_compiler.SKILLS_DIR = os.path.join(artifact_dir, "skills")
+    skill_compiler.SKILLS_DIR = skills_dir
     skill_compiler.MANIFEST_PATH = os.path.join(artifact_dir, "compiled-skills.json")
+
+    # The multi-harness projection layer writes to ~/.corvus-mind/capabilities
+    # and EVERY harness profile's live skill directory, ignoring
+    # skill_compiler.SKILLS_DIR entirely — the 2026-07-18 preflight caught it
+    # projecting a LoCoMo-persona skill into ~/.claude/skills et al. Replace
+    # both projection entry points so compiled eval skills exist ONLY inside
+    # the artifact dir (compiler execution is measured for lifecycle safety;
+    # scoring is recall-only, so these files are never an answer channel).
+    def _isolated_project_skill(name: str, rendered_markdown: str) -> dict:
+        target = os.path.join(skills_dir, name, "SKILL.md")
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "w", encoding="utf-8") as fh:
+            fh.write(rendered_markdown)
+        return {"canonical": target, "claude-code": target}
+
+    def _isolated_remove_projected_skill(name: str) -> list:
+        target = os.path.join(skills_dir, name, "SKILL.md")
+        removed = []
+        if os.path.exists(target):
+            os.unlink(target)
+            removed.append(target)
+            if not os.listdir(os.path.dirname(target)):
+                os.rmdir(os.path.dirname(target))
+        return removed
+
+    skill_projection.project_skill = _isolated_project_skill
+    skill_projection.remove_projected_skill = _isolated_remove_projected_skill
+    # skill retirement archives into a live dir by default — redirect it too
+    skill_compiler.RETIRED_DIR = os.path.join(artifact_dir, "retired-skills")
 
 
 def assert_eval_database(database_url: str) -> None:
@@ -319,7 +452,7 @@ async def run_lifecycle_events(events: list[str], session_factory=None) -> list[
 
 async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
                  session_offset: int, sessions_per_week: int,
-                 artifact_dir: str) -> dict:
+                 artifact_dir: str, max_sessions: int | None = None) -> dict:
     """Session-by-session distill → write gate → selected lifecycle cadence."""
     from app.database import async_session
     from app.services.lesson_store import save_lesson, label_exists
@@ -329,6 +462,10 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
     total_saved = 0
     maintenance: list[dict] = []
     for num, date_time, turns in iter_sessions(conv):
+        if max_sessions is not None and num > max_sessions:
+            print(f"[ingest] stopping at session {max_sessions} "
+                  "(--max-sessions preflight)", flush=True)
+            break
         # chunked distillation: per-session single calls plateau at ~10 facts
         # no matter the cap; smaller windows + a proportional floor force the
         # per-turn detail LoCoMo probes (titles, feelings, symbolism)
@@ -344,6 +481,7 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
                       .replace("{min_facts}",
                                str(max(3, int(len(chunk) * MIN_FACTS_PER_TURN)))))
             reply = await llm_retry(
+                workload="distill",
                 system_prompt=prompt,
                 user_message=body, max_tokens=4000, model=DISTILL_MODEL, timeout=600,
             )
@@ -409,20 +547,15 @@ async def recall_hits(db, question: str) -> list[str]:
 
 async def answer_questions(conv_idx: int, conv: dict, condition: str,
                            max_questions: int | None) -> list[dict]:
-    """condition: 'memory' (embed-only pipeline), 'hybrid' (keyword + entity
-    recall lanes on, mind-hybrid-recall A/B arm), or 'nospread'."""
+    """condition: a key of ARM_CONFIG — 'memory' is the shipped hybrid+spread
+    production pipeline; 'nospread' and 'embed-only' each flip one variable."""
     from app.config import settings
     from app.database import async_session
-    from app.services.llm_provider import llm_chat
 
-    if condition == "nospread":
-        object.__setattr__(settings, "spread_enabled", False)
-    else:
-        object.__setattr__(settings, "spread_enabled", True)
-    # Lane flags set explicitly both ways so arms stay clean A/B contrasts.
-    lanes_on = condition == "hybrid"
-    object.__setattr__(settings, "keyword_lane_enabled", lanes_on)
-    object.__setattr__(settings, "entity_lane_enabled", lanes_on)
+    # Every flag set explicitly both ways so arms stay clean A/B contrasts
+    # regardless of run order within one process.
+    for flag, value in ARM_CONFIG[condition].items():
+        object.__setattr__(settings, flag, value)
 
     qas = select_questions(conv, max_questions)
     sem = asyncio.Semaphore(LLM_CONCURRENCY)
@@ -434,6 +567,7 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
                 hits = await recall_hits(db, qa["question"])
             mem = "\n".join(hits) if hits else "(no memories retrieved)"
             reply = await llm_retry(
+                workload="answer",
                 system_prompt=ANSWER_PROMPT,
                 user_message=f"MEMORIES:\n{mem}\n\nQUESTION: {qa['question']}",
                 max_tokens=200, model=ANSWER_MODEL, timeout=240,
@@ -449,8 +583,6 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
 async def answer_baseline(conv_idx: int, conv: dict,
                           max_questions: int | None) -> list[dict]:
     """Full-context ceiling: whole transcript in the prompt."""
-    from app.services.llm_provider import llm_chat
-
     transcript_parts = []
     for num, date_time, turns in iter_sessions(conv):
         transcript_parts.append(f"=== Session {num} ({date_time}) ===\n"
@@ -462,6 +594,7 @@ async def answer_baseline(conv_idx: int, conv: dict,
     async def one(qa: dict) -> dict:
         async with sem:
             reply = await llm_retry(
+                workload="answer",
                 system_prompt=ANSWER_PROMPT.replace("MEMORIES retrieved for the question",
                                                     "full CONVERSATION transcript")
                                            .replace("these memories", "this transcript"),
@@ -490,13 +623,12 @@ def select_questions(conv: dict, max_questions: int | None) -> list[dict]:
 
 
 async def judge(results: list[dict]) -> dict:
-    from app.services.llm_provider import llm_chat
-
     sem = asyncio.Semaphore(LLM_CONCURRENCY)
 
     async def one(r: dict) -> None:
         async with sem:
             reply = await llm_retry(
+                workload="judge",
                 system_prompt=JUDGE_PROMPT,
                 user_message=(f"QUESTION: {r['question']}\nGOLD: {r['gold']}\n"
                               f"RESPONSE: {r['pred']}"),
@@ -516,17 +648,73 @@ async def judge(results: list[dict]) -> dict:
     return {"n": len(scored), "overall": round(overall, 4), "per_category": per_cat}
 
 
+# Every effective retrieval / inhibition / assembly / scoring flag that
+# shapes what the pipeline returns — receipted into the run summary so a
+# future run can prove it measured the same system (GATE 1).
+SNAPSHOT_SETTINGS = [
+    "spread_enabled", "keyword_lane_enabled", "entity_lane_enabled",
+    "token_bounded_assembly_enabled",
+    "memory_context_token_budget", "memory_candidate_limit",
+    "memory_max_delivered_neurons", "memory_token_estimator",
+    "weight_relevance", "weight_impact", "weight_recency", "weight_burst",
+    "weight_precision", "weight_novelty", "weight_spread_boost",
+    "weight_coldstart_prior",
+    "inhibition_enabled", "inhibition_default_threshold",
+    "inhibition_default_max_survivors", "inhibition_redundancy_cosine",
+    "inhibition_learning_alpha",
+    "default_effort",
+]
+
+
+def settings_snapshot() -> dict:
+    from app.config import settings
+    return {k: getattr(settings, k) for k in SNAPSHOT_SETTINGS}
+
+
+async def corpus_receipt() -> dict:
+    """Count + order-independent hash of the ingested graph, so every arm
+    can prove it answered against the identical corpus."""
+    from sqlalchemy import text
+    from app.database import async_session
+    async with async_session() as db:
+        rows = (await db.execute(
+            text("SELECT label, content FROM neurons ORDER BY label, content")
+        )).all()
+    h = hashlib.sha256()
+    for label, content in rows:
+        h.update((label or "").encode())
+        h.update(b"\x00")
+        h.update((content or "").encode())
+        h.update(b"\x01")
+    return {"neurons": len(rows), "corpus_sha256": h.hexdigest()}
+
+
+def code_commit() -> str:
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    out = subprocess.run(["git", "-C", repo, "rev-parse", "HEAD"],
+                         capture_output=True, text=True)
+    return out.stdout.strip() if out.returncode == 0 else "unknown"
+
+
 async def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--conv", type=int, default=0)
     ap.add_argument("--phase", default="all",
-                    choices=["ingest", "answer", "hybrid", "nospread",
+                    choices=["ingest", "answer", "nospread", "embed-only",
                              "baseline", "all"])
     ap.add_argument("--max-questions", type=int, default=None)
+    ap.add_argument("--max-sessions", type=int, default=None,
+                    help="preflight only: ingest just the first N sessions")
     ap.add_argument("--no-reset", action="store_true",
                     help="skip DB reset before ingest (resume)")
-    ap.add_argument("--strict-prompt", action="store_true",
-                    help="restore the sweep-1 strict refusal answer prompt")
+    ap.add_argument("--soft-prompt", action="store_true",
+                    help="iteration-1 soft answer rules (ablation only; "
+                         "the certificate default is strict refusal)")
+    ap.add_argument("--results-suffix", default="",
+                    help="extra tag on result filenames (required for "
+                         "partial/preflight runs so they can't be mistaken "
+                         "for certificate arms)")
     ap.add_argument("--lifecycle-mode", choices=LIFECYCLE_MODES,
                     default=os.environ.get("LOCOMO_LIFECYCLE_MODE", "consolidation"),
                     help="maintenance profile during session ingest")
@@ -540,18 +728,26 @@ async def main() -> None:
 
     assert args.sessions_per_week >= JANITOR_RUNS_PER_WEEK, \
         "sessions-per-week must be at least the 28 weekly janitor opportunities"
+    assert args.max_sessions is None or args.results_suffix, \
+        "partial ingest (--max-sessions) must tag its outputs (--results-suffix)"
 
-    if args.strict_prompt:
+    if args.soft_prompt:
         global ANSWER_PROMPT
-        ANSWER_PROMPT = _ANSWER_PROMPT_BASE + _ANSWER_RULES_STRICT
+        ANSWER_PROMPT = _ANSWER_PROMPT_BASE + _ANSWER_RULES_SOFT
 
     assert os.environ.get("TENANT_ID") == "corvus-locomo", \
         "run with TENANT_ID=corvus-locomo (throwaway tenant — never the real graph)"
     artifact_dir = create_eval_artifact_dir(
         args.conv, args.lifecycle_mode, args.eval_artifact_dir)
     configure_isolated_runtime(artifact_dir)
+    global RECEIPTS_PATH
+    RECEIPTS_PATH = os.path.join(artifact_dir, "llm-receipts.jsonl")
     from app.config import settings
     assert_eval_database(settings.database_url)
+    # Certificate contract: the confirmation verdict was REVISE/FEATURE-OFF —
+    # the run must measure the shipped legacy-count assembly.
+    assert settings.token_bounded_assembly_enabled is False, \
+        "TOKEN_BOUNDED_ASSEMBLY_ENABLED must be false for this certificate"
     # standalone process: the action registry normally fills at app startup
     from app.services.actions.init_registry import init_actions_registry
     init_actions_registry()
@@ -562,13 +758,55 @@ async def main() -> None:
     session_offset = sessions_before_conversation(dataset, args.conv)
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    prompt_tag = "-strict" if args.strict_prompt else ""
+    prompt_tag = "" if args.soft_prompt else "-strict"
     lifecycle_tag = ("" if args.lifecycle_mode == "consolidation"
                      else f"-{args.lifecycle_mode}")
-    summary: dict = {"conv": args.conv, "max_questions": args.max_questions,
-                     "strict_prompt": args.strict_prompt,
-                     "lifecycle_mode": args.lifecycle_mode,
-                     "eval_artifact_dir": artifact_dir}
+    tag = f"{prompt_tag}{lifecycle_tag}{args.results_suffix}"
+
+    conditions = [c for c in ("memory", "nospread", "embed-only", "baseline")
+                  if args.phase in ("all", {"memory": "answer"}.get(c, c))]
+
+    def out_path(name: str) -> str:
+        return os.path.join(RESULTS_DIR, f"conv{args.conv}-{name}{tag}.json")
+
+    # GATE 4: a banked arm is evidence — refuse to overwrite it silently.
+    existing = [out_path(c) for c in conditions if os.path.exists(out_path(c))]
+    assert not existing, (
+        f"result files already exist: {existing} — prior arms are "
+        "append-only evidence; move them aside or pass --results-suffix")
+
+    summary: dict = {
+        "conv": args.conv, "max_questions": args.max_questions,
+        "max_sessions": args.max_sessions,
+        "strict_prompt": not args.soft_prompt,
+        "lifecycle_mode": args.lifecycle_mode,
+        "eval_artifact_dir": artifact_dir,
+        "result_schema_version": RESULT_SCHEMA_VERSION,
+        "contract": {
+            "tenant_id": os.environ.get("TENANT_ID"),
+            "database": settings.database_url.rsplit("/", 1)[-1],
+            "dataset_sha256": DATASET_SHA256,
+            "dataset_conversations": None,   # filled after load
+            "dataset_sessions_total": None,
+            "code_commit": code_commit(),
+            "models": {"distill": DISTILL_MODEL, "answer": ANSWER_MODEL,
+                       "judge": JUDGE_MODEL},
+            "expected_provider": EXPECTED_PROVIDER,
+            "recall": {"mode": "cheap", "top_k": RECALL_TOP_K},
+            "distill_chunk_turns": DISTILL_CHUNK_TURNS,
+            "min_facts_per_turn": MIN_FACTS_PER_TURN,
+            "max_facts_per_session": MAX_FACTS_PER_SESSION,
+            "dedup_requires_approval": os.environ.get(
+                "MIND_DEDUP_REQUIRES_APPROVAL"),
+            "receipts_path": RECEIPTS_PATH,
+        },
+        "effective_flags": settings_snapshot(),
+        "arm_config": ARM_CONFIG,
+    }
+    summary["contract"]["dataset_conversations"] = len(dataset)
+    summary["contract"]["dataset_sessions_total"] = sum(
+        session_count(c) for c in dataset)
+
     if args.phase in ("ingest", "all"):
         if not args.no_reset:
             await reset_db()
@@ -578,30 +816,27 @@ async def main() -> None:
             session_offset=session_offset,
             sessions_per_week=args.sessions_per_week,
             artifact_dir=artifact_dir,
+            max_sessions=args.max_sessions,
         )
-    for condition in ("memory", "hybrid", "nospread", "baseline"):
-        phase_key = {"memory": "answer", "hybrid": "hybrid",
-                     "nospread": "nospread", "baseline": "baseline"}[condition]
-        if args.phase not in (phase_key, "all"):
-            continue
-        if args.phase == "all" and condition == "hybrid":
-            continue  # hybrid is an explicit A/B arm, never part of "all"
+        summary["lifecycle"]["corpus"] = await corpus_receipt()
+    for condition in conditions:
         if condition == "baseline":
             results = await answer_baseline(args.conv, conv, args.max_questions)
         else:
             results = await answer_questions(args.conv, conv, condition,
                                              args.max_questions)
         scores = await judge(results)
-        summary[condition] = scores
-        out = os.path.join(
-            RESULTS_DIR,
-            f"conv{args.conv}-{condition}{prompt_tag}{lifecycle_tag}.json")
-        with open(out, "w", encoding="utf-8") as fh:
-            json.dump({"scores": scores, "results": results}, fh, indent=2)
+        payload = {"scores": scores,
+                   "arm_flags": ARM_CONFIG.get(condition, "full-transcript"),
+                   "effective_flags": settings_snapshot()}
+        if condition != "baseline":
+            payload["corpus"] = await corpus_receipt()
+        summary[condition] = {k: v for k, v in payload.items() if k != "results"}
+        payload["results"] = results
+        with open(out_path(condition), "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
         print(f"[{condition}{prompt_tag}] {scores}", flush=True)
-    out = os.path.join(
-        RESULTS_DIR, f"conv{args.conv}-summary{prompt_tag}{lifecycle_tag}.json")
-    with open(out, "w", encoding="utf-8") as fh:
+    with open(out_path("summary"), "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
     print(json.dumps(summary, indent=2))
 

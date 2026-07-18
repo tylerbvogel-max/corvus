@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MindStyle, StatTile, UtilityBadge, Spark, Bars, UsageMeter } from './mindUi';
+import LocomoRunBeacon from './LocomoRunBeacon';
 
 /** Pallium dashboard — performance, trust, and growth for the
  *  corvus-mind tenant. Data: GET /metrics/mind + /metrics/mind/trust. */
@@ -78,6 +79,7 @@ export default function MindMetricsPage() {
   return (
     <div className="mm-root">
       <MindStyle />
+      <LocomoRunBeacon />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <h2>Pallium</h2>
         <span className="mm-sub">{m.generated_at} · <a onClick={load} style={{ cursor: 'pointer' }}>refresh</a></span>
