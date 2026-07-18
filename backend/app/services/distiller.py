@@ -16,6 +16,14 @@ dropped — an injected lesson's reappearance is usage, not confirmation.
 Prompt-injection posture (§8.3): episode/transcript content is DATA.
 The system prompt restricts extraction to operational lessons, and
 instruction-shaped candidates are dropped and counted, never saved.
+
+Deeds-corroborated words (mind-deeds-corroborated-words): the assistant's
+own prose is now an input, but an agent-asserted conclusion is admissible
+ONLY when the log's events corroborate it — the prompt requires a cited
+corroborating event, and _corroborated() is a deterministic backstop that
+drops citations naming nothing actually in the log. Survivors carry
+source_origin="agent-derived" so the class is separable in attribution,
+decay auditing, and lint, and retirable in one query if it underperforms.
 """
 
 import json
@@ -33,6 +41,8 @@ MAX_SESSIONS_PER_RUN = 3
 MAX_EVENTS_IN_PROMPT = 100
 MAX_USER_MESSAGES = 25
 MAX_USER_MESSAGE_CHARS = 500
+MAX_ASSISTANT_MESSAGES = 15
+MAX_ASSISTANT_MESSAGE_CHARS = 600
 MAX_PROMPT_CHARS = 24_000
 MAX_CANDIDATES_PER_SESSION = 5   # floor; rich sessions earn more
 MAX_CANDIDATES_CEILING = 12
@@ -65,7 +75,7 @@ _INSTRUCTION_SHAPED = re.compile(
 # or [] when the session taught nothing worth keeping.
 DISTILL_SYSTEM_PROMPT = """You are the memory distiller for an agentic institutional-memory system running on a developer's machine.
 
-INPUT: a condensed log of ONE coding-agent session — tool events (with success/failure and errors), the user's messages, and a list of ALREADY-KNOWN lessons that were injected into the session's context.
+INPUT: a condensed log of ONE coding-agent session — tool events (with success/failure and errors), the user's messages, the agent's own statements, and a list of ALREADY-KNOWN lessons that were injected into the session's context.
 
 TASK: extract at most {max_candidates} candidate lessons worth remembering across FUTURE sessions on this machine.
 
@@ -73,6 +83,7 @@ Extract ONLY:
 - situated, non-obvious knowledge tied to this machine, its projects, its tools, or its user (e.g. "X fails with Y; workaround Z verified by exit 0")
 - user corrections and preferences the user explicitly stated
 - tool behavior discovered through failure→success sequences
+- conclusions the AGENT itself asserted (diagnoses, causal explanations like "X failed BECAUSE Y") — but ONLY when a tool event in the log corroborates the claim: the error string, exit sequence, or measured value the claim explains must be present in the events. Deeds vouch for words. For these, set origin to "agent" and put the specific corroborating event in the corroboration field. An agent assertion with no corroborating event in the log must be DROPPED entirely — never included, never downgraded.
 
 Never extract:
 - general programming knowledge or generic agent best practices
@@ -94,7 +105,7 @@ SECOND TASK — attribution: for each ALREADY-KNOWN (injected) lesson, judge fro
 Base verdicts ONLY on observable events in the log; when in doubt, "unused".
 
 Respond with ONLY a JSON object, no markdown fences, no prose:
-{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"]}],
+{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "origin": "<'log' normally; 'agent' when the lesson restates a conclusion the agent asserted>", "corroboration": "<agent-origin only: the exact tool event from the log that corroborates the claim — quote its command/error/value>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"]}],
  "attributions": [{"label": "<the injected lesson's label>", "verdict": "load_bearing|contradicted|unused", "evidence": "<what in the log shows this>"}]}
 Use empty arrays when there is nothing to report."""
 
@@ -182,7 +193,77 @@ def _extract_user_messages(transcript_path: str | None) -> list[str]:
     return msgs
 
 
-def _condense(events: list[dict], user_msgs: list[str], injected: list[str]) -> str:
+def _extract_assistant_messages(transcript_path: str | None) -> list[str]:
+    """The assistant's own prose from the transcript — candidate
+    agent-asserted conclusions (diagnoses, causal syntheses stated between
+    tool calls). Turns that also carry tool_use blocks are preferred over
+    pure conversation: prose emitted mid-work sits adjacent to the deeds
+    that can corroborate it."""
+    if not transcript_path or not os.path.exists(transcript_path):
+        return []
+    adjacent: list[str] = []
+    pure: list[str] = []
+    with open(transcript_path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if len(adjacent) >= MAX_ASSISTANT_MESSAGES:
+                break
+            if '"type":"assistant"' not in line and '"type": "assistant"' not in line:
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            content = (rec.get("message") or {}).get("content")
+            if not isinstance(content, list):
+                continue
+            text = " ".join(
+                b["text"].strip() for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+                and isinstance(b.get("text"), str) and b["text"].strip()
+            ).strip()
+            if not text:
+                continue
+            has_tool = any(isinstance(b, dict) and b.get("type") == "tool_use"
+                           for b in content)
+            bucket = adjacent if has_tool else pure
+            if len(bucket) < MAX_ASSISTANT_MESSAGES:
+                bucket.append(text[:MAX_ASSISTANT_MESSAGE_CHARS])
+    return (adjacent + pure)[:MAX_ASSISTANT_MESSAGES]
+
+
+# Generic vocabulary that would let "the command failed with an error"
+# corroborate almost any session — matches must be concrete tokens.
+_CORROBORATION_STOPWORDS = frozenset({
+    "failed", "error", "errors", "exit", "command", "output", "session",
+    "event", "events", "message", "because", "with", "that", "this",
+    "then", "after", "when", "which", "from", "tool", "success",
+})
+
+
+def _corroborated(corroboration: str, events: list[dict]) -> bool:
+    """Deterministic backstop behind the prompt-level gate: the cited
+    corroborating event must share concrete tokens (paths, commands,
+    error fragments, names) with an event actually present in the log.
+    The model is told to cite the corroborating event; this catches
+    citations that name nothing the log contains."""
+    tokens = set(re.findall(r"[a-z0-9_./-]{4,}", corroboration.casefold()))
+    tokens -= _CORROBORATION_STOPWORDS
+    if not tokens:
+        return False
+    parts: list[str] = []
+    for e in events:
+        inp = e.get("input") or {}
+        parts.extend(str(x) for x in (
+            e.get("tool"), e.get("error"), inp.get("command"),
+            inp.get("description"), inp.get("file_path"),
+        ) if x)
+    haystack = " ".join(parts).casefold()
+    hits = sum(1 for t in tokens if t in haystack)
+    return hits >= min(2, len(tokens))
+
+
+def _condense(events: list[dict], user_msgs: list[str], injected: list[str],
+              assistant_msgs: list[str] | None = None) -> str:
     """Compact prompt body: errors first-class, everything capped."""
     errors = [e for e in events if e.get("event") == "PostToolUse" and not e.get("ok", True)]
     normal = [e for e in events if e.get("event") == "PostToolUse" and e.get("ok", True)]
@@ -199,6 +280,13 @@ def _condense(events: list[dict], user_msgs: list[str], injected: list[str]) -> 
     lines.extend(f"- {m}" for m in user_msgs) if user_msgs else lines.append("- (none captured)")
     lines.append("\n## ALREADY-KNOWN (injected) lessons — never re-extract these")
     lines.extend(f"- {x}" for x in injected) if injected else lines.append("- (none)")
+    if assistant_msgs:
+        # Last on purpose: lowest-trust input, so the MAX_PROMPT_CHARS
+        # truncation eats assistant prose before events or injected list.
+        lines.append("\n## Assistant statements (the agent's OWN assertions"
+                     " — NOT ground truth; usable only with a corroborating"
+                     " tool event above)")
+        lines.extend(f"- {m}" for m in assistant_msgs)
     return "\n".join(lines)[:MAX_PROMPT_CHARS]
 
 
@@ -232,14 +320,17 @@ def _parse_candidates(text: str) -> tuple[list[dict], list[dict]]:
 
 async def _validate_and_save(
     db: AsyncSession, candidates: list[dict], injected: list[str], session_id: str,
-    project: str | None = None, cap_events: int = 0,
+    project: str | None = None, events: list[dict] | None = None,
 ) -> dict:
-    """Gate candidates (schema, injected-usage, dupes, instruction-shaped)
-    and persist survivors through the write gate."""
-    counts = {"saved": 0, "usage_skipped": 0, "duplicate": 0, "flagged": 0, "invalid": 0}
+    """Gate candidates (schema, injected-usage, dupes, instruction-shaped,
+    agent-assertion corroboration) and persist survivors through the write
+    gate. Agent-origin survivors carry source_origin="agent-derived"."""
+    events = events or []
+    counts = {"saved": 0, "usage_skipped": 0, "duplicate": 0, "flagged": 0,
+              "invalid": 0, "uncorroborated": 0, "agent_derived": 0}
     saved_ids: list[int] = []
     injected_cf = [x.casefold() for x in injected]
-    for c in candidates[:candidate_cap(cap_events)]:
+    for c in candidates[:candidate_cap(len(events))]:
         label = str(c.get("label", "")).strip()
         lesson = str(c.get("lesson", "")).strip()
         evidence = str(c.get("evidence", "")).strip()
@@ -255,6 +346,16 @@ async def _validate_and_save(
         if _INSTRUCTION_SHAPED.search(f"{label} {lesson}"):
             counts["flagged"] += 1
             continue
+        agent_derived = str(c.get("origin", "log")).strip().casefold() == "agent"
+        if agent_derived:
+            # THE GATE IS THE FEATURE: words enter only when deeds vouch.
+            # The cited corroborating event must exist in the actual log —
+            # dropped, not downgraded, when it doesn't.
+            corroboration = str(c.get("corroboration", "")).strip()
+            if not corroboration or not _corroborated(corroboration, events):
+                counts["uncorroborated"] += 1
+                continue
+            evidence = f"{evidence} | corroborating event: {corroboration}"
         if await label_exists(db, label):
             counts["duplicate"] += 1
             continue
@@ -264,10 +365,13 @@ async def _validate_and_save(
             label=label, scope=scope, node_type=node_type,
             entities=raw_entities if isinstance(raw_entities, list) else None,
             authority_level=_SCOPE_AUTHORITY.get(scope, _DEFAULT_AUTHORITY),
-            source_origin="distiller", gap_source="distiller",
+            source_origin="agent-derived" if agent_derived else "distiller",
+            gap_source="distiller",
             project=project if scope == "Projects" else None,
         )
         counts["saved"] += 1
+        if agent_derived:
+            counts["agent_derived"] += 1
         if result.get("route") == "queue":
             counts["queued"] = counts.get("queued", 0) + 1
         if result.get("neuron_id"):
@@ -346,7 +450,8 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     assert len(events) > 0, f"log {path} has no parseable events"
     injected = [i["label"] for i in injections]
     user_msgs = _extract_user_messages(transcript)
-    body = _condense(events, user_msgs, injected)
+    assistant_msgs = _extract_assistant_messages(transcript)
+    body = _condense(events, user_msgs, injected, assistant_msgs)
 
     # .replace, not .format — the prompt's JSON schema braces are literal
     system_prompt = DISTILL_SYSTEM_PROMPT.replace(
@@ -367,13 +472,14 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
             project_counts[p] = project_counts.get(p, 0) + 1
     dominant = max(project_counts, key=project_counts.get) if project_counts else None
     counts = await _validate_and_save(db, candidates, injected, session_id,
-                                      project=dominant, cap_events=len(events))
+                                      project=dominant, events=events)
     attribution = await _apply_attributions(db, verdicts, injections)
     await db.commit()
 
     marker = {
         "distilled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "events": len(events), "user_messages": len(user_msgs),
+        "assistant_messages": len(assistant_msgs),
         "injected_known": len(injected), "candidates": len(candidates),
         "model_version": reply.get("model_version"),
         "cost_usd": reply.get("cost_usd"), "attribution": attribution, **counts,
