@@ -864,7 +864,6 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
     return slotConfigs.map(sc => ({
       mode: sc.mode,
       token_budget: sc.tokenBudget,
-      top_k: 60, // Keep as internal default; hidden from users per plan
       max_output_tokens: sc.maxOutputTokens,
       effort: sc.effort,
       priming: sc.priming,

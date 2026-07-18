@@ -431,8 +431,13 @@ class AutopilotRun(Base):
 class AutopilotProposal(Base):
     """Staged autopilot proposal with full provenance chain.
 
-    State machine: proposed → approved → applied
-                   proposed → rejected
+    State machine (one-step lifecycle, kernel Phase 4):
+        proposed → applied      (review approve = approve+apply, ONE transaction;
+                                 'approved' exists only transiently inside it)
+        proposed → rejected
+        proposed/approved → superseded   (terminal: recorded old-state drifted —
+                                          historically inspectable, never appliable)
+    Legacy rows may still sit at 'approved' until applied or superseded.
     """
     __tablename__ = "autopilot_proposals"
 

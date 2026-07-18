@@ -45,8 +45,10 @@ def _load_excludes() -> list:
 
 
 def _recall(query: str, top_k: int, source: str = "hook", project: str | None = None) -> tuple:
-    """Returns (lesson-type hits, query_id) — query_id links this recall's
-    persisted telemetry row so attribution can later reward/penalize it."""
+    """Returns (lesson-type hits, query_id, skill_pointers) — query_id links
+    this recall's persisted telemetry row so attribution can later
+    reward/penalize it; skill_pointers are compiled-skill signposts
+    (mind-skill-signpost) whose source lessons voted in the candidate set."""
     body = json.dumps({
         "query": query[:2000], "top_k": top_k, "include_content": True,
         "source": source, "project": project,
@@ -58,7 +60,7 @@ def _recall(query: str, top_k: int, source: str = "hook", project: str | None = 
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     hits = [h for h in data.get("hits", []) if h.get("node_type") in INJECTABLE_TYPES]
-    return hits, data.get("query_id")
+    return hits, data.get("query_id"), data.get("skill_pointers") or []
 
 
 def _already_injected(session_id: str) -> set:
@@ -74,6 +76,25 @@ def _already_injected(session_id: str) -> set:
                     continue
                 if rec.get("event") == "Injection":
                     seen.update(rec.get("neuron_ids", []))
+    except OSError:
+        pass
+    return seen
+
+
+def _already_pointed(session_id: str) -> set:
+    """Skill names already signposted this session — a pointer is a nudge,
+    and nudging the same playbook every prompt is nagging, not awareness."""
+    seen = set()
+    path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if rec.get("event") == "SkillPointer":
+                    seen.update(s.get("name") for s in rec.get("skills", []))
     except OSError:
         pass
     return seen
@@ -96,6 +117,42 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
     path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _log_pointers(session_id: str, cwd: str, trigger: str, pointers: list,
+                  query_id=None) -> None:
+    """Episode-log every signpost emission (mind-skill-signpost) so the
+    Evaluate>Skills conversion instrument can compare pointers shown
+    against Skill-tool loads, and so session dedupe has a ledger."""
+    os.makedirs(EPISODE_DIR, exist_ok=True)
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+        "event": "SkillPointer",
+        "session_id": session_id,
+        "cwd": cwd,
+        "trigger": trigger,
+        "query_id": query_id,
+        # path/node_score (mind-skill-node-scoring) ride along so the
+        # conversion instrument can learn WHICH eligibility path earns
+        # Skill-tool pulls.
+        "skills": [{k: p[k] for k in ("name", "votes", "path", "node_score")
+                    if p.get(k) is not None}
+                   for p in pointers],
+    }
+    path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _pointer_lines(pointers: list) -> list:
+    """One ~20-token line per signposted skill. Names the playbook and
+    where to get it; never the body — pull pays for itself only on load."""
+    lines = []
+    for p in pointers:
+        desc = f" — {p['description']}" if p.get("description") else ""
+        lines.append(f"Relevant playbook: {p['name']}{desc} "
+                     "(load the skill for the full procedure)")
+    return lines
 
 
 def _format_context(hits: list) -> str:
@@ -218,7 +275,7 @@ def main() -> int:
         project = _project_from_cwd(cwd)
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
-        hits, query_id = _recall(query, SESSION_START_TOP_K, source="hook_session_start", project=_project_from_cwd(cwd))
+        hits, query_id, pointers = _recall(query, SESSION_START_TOP_K, source="hook_session_start", project=_project_from_cwd(cwd))
         # Identity arrives via the deterministic self-capsule below, not
         # recall — persona must not depend on semantic luck (measured: only
         # 1 of 5 Assistant lessons survived top-k competition).
@@ -226,7 +283,7 @@ def main() -> int:
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
             return 0
-        hits, query_id = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt", project=_project_from_cwd(cwd))
+        hits, query_id, pointers = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt", project=_project_from_cwd(cwd))
     elif event == "PreToolUse":
         # Pre-mistake warning: only Bash (where machine gotchas live), only
         # high-confidence lesson hits, so it interrupts rarely and earns it.
@@ -235,20 +292,27 @@ def main() -> int:
         command = ((payload.get("tool_input") or {}).get("command") or "").strip()
         if len(command) < MIN_PROMPT_CHARS:
             return 0
-        hits, query_id = _recall(command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool", project=_project_from_cwd(cwd))
+        hits, query_id, pointers = _recall(command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool", project=_project_from_cwd(cwd))
         hits = [h for h in hits if h["score"] >= PRE_TOOL_MIN_SCORE]
+        # PreToolUse interrupts a tool call — it stays a rare, high-
+        # confidence warning channel. No signposts here.
+        pointers = []
     else:
         return 0
 
     seen = _already_injected(session_id)
     hits = [h for h in hits if h["neuron_id"] not in seen]
+    pointers = [p for p in pointers
+                if p.get("name") and p["name"] not in _already_pointed(session_id)]
     capsule = _self_capsule() if event == "SessionStart" else None
     charter = _charter_capsule() if event == "SessionStart" else None
-    if not hits and not capsule and not charter:
+    if not hits and not capsule and not charter and not pointers:
         return 0
 
     if hits:
         _log_injection(session_id, cwd, event, hits, query_id)
+    if pointers:
+        _log_pointers(session_id, cwd, event, pointers, query_id)
     # Capsule attribution (W7 fix): log the capsules' source neurons so
     # the distiller can render load_bearing/contradicted verdicts on
     # them. `seen` guards resume/compact re-fires within a session.
@@ -258,6 +322,9 @@ def main() -> int:
             if cap_hits:
                 _log_injection(session_id, cwd, f"capsule:{name}", cap_hits, None)
     context = _format_context(hits) if hits else ""
+    if pointers:
+        pointer_block = "\n".join(_pointer_lines(pointers))
+        context = (context + "\n" + pointer_block) if context else pointer_block
     if charter:
         context = ("Corvus-Mind charter (standing policies earned through "
                    "repeated verified use — always present, re-audited every "

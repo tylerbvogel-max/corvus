@@ -4,7 +4,7 @@ import { fetchStageTelemetry, type StageStat, type StageTelemetryReport } from '
 /**
  * Pipeline Timing — statistical view of per-stage recall latency from
  * Query.stage_telemetry_json. Surfaces where the latency budget goes, how far
- * measured p50 drifts from the documented estimate, per-stage stability (CoV +
+ * measured p50 drifts from the design target, per-stage stability (CoV +
  * percentiles), and drift over time. Read-only; all stats computed server-side.
  */
 
@@ -65,7 +65,7 @@ export default function PipelineTimingPage() {
       <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: '0 0 4px' }}>Pipeline Timing</h2>
       <p style={{ color: C.dim, fontSize: 13, margin: '0 0 6px', maxWidth: 720 }}>
         Per-stage recall latency measured from <code>stage_telemetry_json</code>. Where the budget goes,
-        how far reality drifts from the documented estimates, per-stage stability, and drift over time.
+        how far reality drifts from the design targets, per-stage stability, and drift over time.
       </p>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', color: C.dim, fontSize: 12, marginBottom: 6 }}>
         <span><strong style={{ color: C.text }}>{m.queries_with_telemetry}</strong> queries · {m.total_samples} stage samples</span>
@@ -83,7 +83,7 @@ export default function PipelineTimingPage() {
         <div style={{ color: C.accent, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 }}>Where the time goes</div>
         <div style={{ color: C.text, fontSize: 15, lineHeight: 1.5 }}>
           <strong>{dominant.label}</strong> is <strong>{dominant.share_pct}%</strong> of the median pipeline latency
-          {dominant.ratio_p50_vs_estimate != null && <> — <strong>{dominant.ratio_p50_vs_estimate}×</strong> its documented estimate</>}.
+          {dominant.ratio_p50_vs_estimate != null && <> — <strong>{dominant.ratio_p50_vs_estimate}×</strong> its design target</>}.
           {' '}Everything else combines to {Math.round(100 - dominant.share_pct)}%.
         </div>
       </div>
@@ -114,10 +114,10 @@ export default function PipelineTimingPage() {
         </div>
       </Section>
 
-      {/* 2 — Estimate vs actual */}
+      {/* 2 — Design target vs actual */}
       <Section
-        title="Estimate vs. actual (measured p50 ÷ documented estimate)"
-        subtitle="1× = matches the design assumption. Right/red = slower than documented; left/green = faster. Bars are log-scaled around 1×."
+        title="Design target vs. actual (measured p50 ÷ target)"
+        subtitle="1× = meets the design target. Right/red = slower; left/green = faster. Bars are log-scaled around 1×."
       >
         <RatioBars items={withEst} onTip={setTip} />
       </Section>
@@ -188,7 +188,7 @@ function RatioBars({ items, onTip }: { items: StageStat[]; onTip: (t: Tip) => vo
           <div key={s.stage} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 12, alignItems: 'center' }}>
             <span style={{ color: C.dim, fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
             <div style={{ position: 'relative', height: 20 }}
-              onMouseMove={e => onTip({ x: e.clientX, y: e.clientY, lines: [s.label, `measured p50 ${fmtMs(s.p50)}`, `documented ${fmtMs(s.estimate_ms!)} → ${r}×`] })}>
+              onMouseMove={e => onTip({ x: e.clientX, y: e.clientY, lines: [s.label, `measured p50 ${fmtMs(s.p50)}`, `design target ${fmtMs(s.estimate_ms!)} → ${r}×`] })}>
               <div style={{ position: 'absolute', inset: 0, background: C.input, borderRadius: 4 }} />
               <div style={{ position: 'absolute', left: '50%', top: -2, bottom: -2, width: 1, background: C.border }} />
               <div style={{ position: 'absolute', top: 0, bottom: 0, borderRadius: 4, background: slower ? C.red : C.green,
@@ -202,8 +202,8 @@ function RatioBars({ items, onTip }: { items: StageStat[]; onTip: (t: Tip) => vo
         );
       })}
       <div style={{ display: 'flex', gap: 16, marginTop: 4, fontSize: 11, color: C.dim }}>
-        <span><span style={{ color: C.green }}>▼</span> faster than documented</span>
-        <span><span style={{ color: C.red }}>▲</span> slower than documented</span>
+        <span><span style={{ color: C.green }}>▼</span> faster than target</span>
+        <span><span style={{ color: C.red }}>▲</span> slower than target</span>
       </div>
     </div>
   );

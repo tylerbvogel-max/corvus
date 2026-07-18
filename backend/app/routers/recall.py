@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.executor import prepare_context
 from app.services.lesson_store import save_lesson
+from app.services.skill_signpost import skill_pointers_for
 from app.tenant import tenant
 
 router = APIRouter(tags=["memory"])
@@ -80,7 +81,7 @@ async def _parent_projects(db: AsyncSession, ctx) -> dict:
 
 async def _persist_recall(
     db: AsyncSession, req: RecallRequest, ctx, latency_ms: float,
-    returned_ids: list[int],
+    returned_ids: list[int], skill_pointers: list[dict] | None = None,
 ) -> int | None:
     """Record the recall as a Query row + firings so the Evaluate pages,
     invocation counts, and decay signals see ambient memory traffic.
@@ -106,7 +107,26 @@ async def _persist_recall(
         run_opus=False,
         cost_usd=0.0,
         model_version=f"recall:{req.source[:32]}",
-        results_json=json.dumps([{"latency_ms": latency_ms, "source": req.source[:32]}]),
+        results_json=json.dumps([{
+            "latency_ms": latency_ms,
+            "source": req.source[:32],
+            "candidates_considered": ctx.candidates_considered,
+            "neurons_activated": ctx.neurons_activated,
+            "neurons_delivered": len(returned_ids),
+            "estimated_memory_tokens": ctx.estimated_memory_tokens,
+            "memory_context_chars": ctx.memory_context_chars,
+            "memory_context_utf8_bytes": ctx.memory_context_utf8_bytes,
+            "memory_token_budget": ctx.memory_token_budget,
+            "assembly_stop_reason": ctx.assembly_stop_reason,
+            "redundancy_suppressed": ctx.redundancy_suppressed,
+            "token_estimator_version": ctx.token_estimator_version,
+            "skill_pointers": [
+                {"skill": p["name"], "votes": p["votes"],
+                 "path": p.get("path"),
+                 **({"node_score": p["node_score"]}
+                    if p.get("node_score") is not None else {})}
+                for p in (skill_pointers or [])],
+        }]),
     )
     db.add(row)
     await db.flush()
@@ -132,7 +152,13 @@ async def _persist_recall(
 # 366, while the lessons that actually answered the query had 0 — and the
 # scaffolding took 4 of the top 5 slots. They stay in the graph (spread
 # traverses them as hubs); they just never consume a recall result slot.
-_SCAFFOLDING_NODE_TYPES = frozenset({"role", "department", "project"})
+# "skill" (mind-skill-node-scoring): compiled-skill graph shadows are
+# pointer fuel, not hits — their score feeds the direct signpost path
+# below instead of consuming a slot the hook would discard client-side.
+# This also removes them from MCP recall hits, intentionally: clients
+# should see the pointer, not a scaffold hit.
+_SCAFFOLDING_NODE_TYPES = frozenset({"role", "department", "project",
+                                     "document", "skill"})
 # Over-fetch multiple so dropped scaffolding is backfilled by real knowledge
 # rather than shrinking the result set.
 _SCAFFOLDING_HEADROOM = 3
@@ -169,6 +195,10 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
         }
         if req.include_content and neuron is not None:
             hit["content"] = neuron.content
+        # INJECTION BADGING (mind-reference-class): downstream consumers
+        # must be able to tell textbook from scar tissue.
+        if neuron is not None and neuron.source_origin == "document":
+            hit["reference"] = True
         hit["project"] = project_of.get(s["neuron_id"])
         if req.project and hit["project"] == req.project:
             hit["score"] = round(hit["score"] * 1.15, 4)  # situated boost
@@ -177,17 +207,52 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
         hits.sort(key=lambda h: -h["score"])
     hits = hits[:req.top_k]
     assert len(hits) <= req.top_k, "hit count must respect top_k"
+    ref_ids = [h["neuron_id"] for h in hits if h.get("reference")]
+    if ref_ids:  # one batched query, only when reference hits surfaced —
+        # the LLM-free hot path is unchanged for pure-lesson recalls
+        from app.services.reference_ingest import reference_sources_for
+        sources = await reference_sources_for(db, ref_ids)
+        for h in hits:
+            if h.get("reference"):
+                h["source"] = sources.get(h["neuron_id"])
+    # Skill signposting (mind-skill-signpost): member-lesson vote over the
+    # over-fetched candidate set — BEFORE the scaffolding filter and top_k
+    # cut, so a relevant cluster still signals when its lessons lose the
+    # final slots. Skill nodes themselves stay filtered from hits; their
+    # own scores feed the direct path (mind-skill-node-scoring) — this is
+    # the only place their relevance becomes visible at query time.
+    skill_pointers = skill_pointers_for(
+        [(s["neuron_id"], s["combined"]) for s in ctx.neuron_scores],
+        [(s["label"], s["combined"]) for s in ctx.neuron_scores
+         if (n := ctx.neuron_map.get(s["neuron_id"])) is not None
+         and n.node_type == "skill"])
     latency_ms = round((time.monotonic() - t0) * 1000, 1)
     query_id = None
     if req.persist:
         query_id = await _persist_recall(
-            db, req, ctx, latency_ms, [h["neuron_id"] for h in hits])
+            db, req, ctx, latency_ms, [h["neuron_id"] for h in hits],
+            skill_pointers)
     return {
         "intent": ctx.intent,
         "scopes": ctx.departments,
         "latency_ms": latency_ms,
         "query_id": query_id,
         "hits": hits,
+        "skill_pointers": skill_pointers,
+        "telemetry": {
+            "candidates_considered": ctx.candidates_considered,
+            "neurons_activated": ctx.neurons_activated,
+            "neurons_delivered": len(hits),
+            "pipeline_neurons_delivered": ctx.neurons_delivered,
+            "estimated_memory_tokens": ctx.estimated_memory_tokens,
+            "memory_context_chars": ctx.memory_context_chars,
+            "memory_context_utf8_bytes": ctx.memory_context_utf8_bytes,
+            "memory_token_budget": ctx.memory_token_budget,
+            "assembly_stop_reason": ctx.assembly_stop_reason,
+            "redundancy_suppressed": ctx.redundancy_suppressed,
+            "token_estimator_version": ctx.token_estimator_version,
+            "recall_latency_ms": latency_ms,
+        },
     }
 
 

@@ -115,8 +115,11 @@ async def entity_lane(
     sql = """
         WITH corpus AS (
             SELECT id, lower(e.ent) AS sent
-            FROM neurons, LATERAL jsonb_array_elements_text(entities) AS e(ent)
-            WHERE is_active = true AND entities IS NOT NULL
+            FROM neurons, LATERAL jsonb_array_elements_text(
+                CASE WHEN jsonb_typeof(entities) = 'array'
+                     THEN entities ELSE '[]'::jsonb END
+            ) AS e(ent)
+            WHERE is_active = true AND jsonb_typeof(entities) = 'array'
         ),
         df AS (
             SELECT sent, count(DISTINCT id) AS d,

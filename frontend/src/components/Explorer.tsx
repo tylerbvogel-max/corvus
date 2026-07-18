@@ -7,14 +7,38 @@ import NeuronDetail from './NeuronDetail'
 function collectDepartments(nodes: TreeNode[]): string[] {
   const depts = new Set<string>();
   function walk(n: TreeNode) {
-    if (n.department) depts.add(n.department);
+    if (n.department) {
+      const dept = n.department.toLowerCase();
+      // Filter out ATANT/assistant test/benchmark nodes
+      if (!dept.includes('atant') && !dept.includes('assistant') && !dept.includes('benchmark')) {
+        depts.add(n.department);
+      }
+    }
     (n.children ?? []).forEach(walk);
   }
   nodes.forEach(walk);
   return Array.from(depts).sort();
 }
 
-/** Recursively find a node and set its children. Returns a new tree (immutable update). */
+/** Filter out ATANT/assistant/benchmark neurons from tree. */
+function filterBenchmarkNodes(nodes: TreeNode[]): TreeNode[] {
+  return nodes
+    .filter(n => {
+      const dept = (n.department ?? '').toLowerCase();
+      const label = (n.label ?? '').toLowerCase();
+      return !dept.includes('atant') &&
+             !dept.includes('assistant') &&
+             !dept.includes('benchmark') &&
+             !label.includes('atant') &&
+             !label.includes('assistant') &&
+             !label.includes('benchmark');
+    })
+    .map(n => ({
+      ...n,
+      children: n.children ? filterBenchmarkNodes(n.children) : undefined,
+    }));
+}
+
 function setChildrenForNode(nodes: TreeNode[], parentId: number, children: TreeNode[]): TreeNode[] {
   return nodes.map(n => {
     if (n.id === parentId) {
@@ -78,7 +102,7 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
   // neurons are one-liners" when the depth simply wasn't fetched.
   useEffect(() => {
     fetchTree()
-      .then(data => { setTree(data); setDepartments(collectDepartments(data)); })
+      .then(data => { setTree(filterBenchmarkNodes(data)); setDepartments(collectDepartments(data)); })
       .catch(e => setError(e.message));
     fetchConceptNeurons().then(setConcepts).catch(() => {});
   }, []);
@@ -91,7 +115,7 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
       const dept = deptFilter || undefined;
       fetchTree(dept)
         .then(data => {
-          setTree(data);
+          setTree(filterBenchmarkNodes(data));
           setSearch(`#${navigateToNeuronId}`);
         })
         .catch(() => {});
@@ -103,7 +127,7 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
   useEffect(() => {
     const dept = deptFilter || undefined;
     fetchTree(dept)
-      .then(setTree)
+      .then(data => setTree(filterBenchmarkNodes(data)))
       .catch(e => setError(e.message));
   }, [deptFilter]);
 
@@ -113,7 +137,7 @@ export default function Explorer({ navigateToNeuronId, onNavigateHandled }: {
     if (search.length >= 2) {
       const dept = deptFilter || undefined;
       fetchTree(dept)
-        .then(setTree)
+        .then(data => setTree(filterBenchmarkNodes(data)))
         .catch(() => {});
     }
   }, [search, deptFilter]);

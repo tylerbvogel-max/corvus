@@ -181,8 +181,8 @@ class TenantConfig:
 
 
 def _get_tenant_id() -> str:
-    """Read TENANT_ID from environment, defaulting to corvus-aero."""
-    return os.environ.get("TENANT_ID", "corvus-aero")
+    """Read TENANT_ID from environment, defaulting to corvus-mind."""
+    return os.environ.get("TENANT_ID", "corvus-mind")
 
 
 # Singleton — initialized on first import

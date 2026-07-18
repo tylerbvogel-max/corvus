@@ -247,7 +247,7 @@ FALLBACK_CHAINS: MappingProxyType[str, tuple[str, ...]] = MappingProxyType({
 # down. Anything else re-raises: a parse bug must fail loudly, not silently
 # hop providers.
 _LAPSE_ERROR_MARKERS = (
-    "credit balance", "usage limit", "rate limit", "quota",
+    "credit balance", "usage limit", "hit your limit", "rate limit", "quota",
     "unauthorized", "authentication", "not logged in", "login",
     "expired", "billing", "subscription", "payment",
 )
@@ -368,9 +368,13 @@ async def _anthropic_chat(
         env=child_env, cwd="/tmp",
     )
     stdout, stderr = await proc.communicate(input=user_message.encode())
-    assert proc.returncode == 0, (
-        f"claude CLI failed (exit {proc.returncode}): {stderr.decode(errors='replace')[:500]}"
-    )
+    if proc.returncode != 0:
+        # Claude CLI reports subscription limits as a JSON result on stdout
+        # while leaving stderr empty. Preserve whichever stream has the
+        # receipt so _is_lapse_error can route to the same-grade fallback.
+        detail = (stderr or stdout).decode(errors="replace")[:500]
+        raise AssertionError(
+            f"claude CLI failed (exit {proc.returncode}): {detail}")
 
     payload = json.loads(stdout.decode())
     text = payload.get("result") or payload.get("text") or ""

@@ -1,0 +1,84 @@
+{
+    "frozen_at": "2026-07-17T09:46:47.286315-05:00",
+    "core_member_ids": [
+        47,
+        51,
+        57,
+        177,
+        1151,
+        1161
+    ],
+    "all_member_ids": [
+        47,
+        51,
+        57,
+        177,
+        1151,
+        1161,
+        71,
+        85,
+        109,
+        116,
+        126,
+        128,
+        156,
+        172,
+        209,
+        211
+    ],
+    "proposal_ids": [
+        1067,
+        1069,
+        1071,
+        1099
+    ],
+    "summed_firing_rows": 809,
+    "max_member_distinct_queries": 321,
+    "union_distinct_queries": 419,
+    "internal_activation_edges": 12,
+    "internal_evidence_links": 5,
+    "active_members": [
+        57
+    ],
+    "approved_unapplied_proposals": [
+        1067,
+        1069,
+        1071
+    ],
+    "neuron_content_sha256": {
+        "47": "d9955ac539c1a186362dfb0e3315b3171390e6b2c952baaf98d92118a13f8b68",
+        "1161": "814c3c12514805fba6f4a29869e2536a468876087e2f1e45ab52d80c9376a2c5",
+        "211": "529c53cfe00af31bcdbbe5dfd011533dc7ac843219e139df3203e42d668c4302",
+        "177": "f180a2dd1d1bdc45a0529cb62b42d776977a1154e1a0a9ca1f36d78acdd89dd6",
+        "116": "12dfd2b8e0d357512a375a6fa03e69e6959adabb6f0ef1874a85cbf01c385ad1",
+        "57": "2abf7d9f656686f26c5a81e3ea189b0816531182156b43bb7af6eaf85f09fed3",
+        "51": "ad785f52c594815cbefa09537456153e197ec01eb456965abaa21a42c31e5931",
+        "156": "6de6771daa3cbded23b089ada8e3ca8ca4a75b2719160bb96c48e0aaf7073416",
+        "1151": "8f598654c89120ca87a64bad13be39f44fe26262832f8c750d5c93ffa85b7463",
+        "109": "4c82faceb94fc3e3cffbf551737c912d10ad561614961c91692a95a31620fc01",
+        "128": "7e52493abf840be1ce456bf52d0d8750fa2b57887bac696a49ecaf1cd7a3132a",
+        "71": "51c9cca222a9f1e80c32bb0eeece365354f8a6a56af70aa18c6ebe76fbb0cd8a",
+        "85": "129a521c34d218ba58d63128a29328eda5f330404cd1954272b08a29798227ee",
+        "172": "d37fb6b17a94a312b718f11f1278ddd8a9eeebeda08f20a92fdd7f3743e0cda4",
+        "209": "bad82cc8ef9894cac2a732d0bf21fb8c6f61e3dfe77786b4b56678825943830c",
+        "126": "2a086fb44ac35d71b6e8dfa47206b96943973788320587d0ecd9b3efbb6cbc9c"
+    },
+    "neuron_embedding_sha256": {
+        "47": "0b7197670d84092344324c113a868a3ba25c05eacb4211488e3700d4ef8237d5",
+        "1161": "7f9d9c0a4d1b9c89166fcf8d552a98e91cf32693244592800f1f23ce9724a1d2",
+        "211": "9f025993ba5233bdd70864d94c7536e4492f55d6dedeaa39dc7b064488011041",
+        "177": "7c20f5821723260315ec55f9de543baf56ba2e69dff02c155c8eecf614cbaf10",
+        "116": "66b30dad3c276e3e5869462097e603146ee202ab1cabc99fea1a12958d42dded",
+        "57": "74a12d182a58db4a8fdd3c1e4e88c08c140cfbcaecd335678e753fbd3eedb387",
+        "51": "97bf945aed1fcb60ec526feb2e3daab8af013f4858a833bf0f061c5e37171cb1",
+        "156": "10181c9dddea7fb3d2fa0722d49bb327bacf4f20013c00df42b0800d1655f5d3",
+        "1151": "370ec985c5950e47e6ca2d5dd84511a19e78bcbc5c07d207a2f33012be517e52",
+        "109": "cafa269535adb3f57e9bcb654d174e23cb0921e98cb5073b200b6d4b25e54b0e",
+        "128": "a20a12049d09cd228c1321ce625501945be69bb84ffdd23c7ca657a06ab0f67b",
+        "71": "6a8edc3ea620d4e426647eec8a759cd4d3987cf277561405ebd36ac5a323d2a7",
+        "85": "f806f0166a2cbb2bbb78505ccfe88f4d38d0ef6f96b224ed0110ee41c209c339",
+        "172": "48b95c048f41ac331a4c27c8fbd87f87c78b6a7c28c88ade0c5e929dda14d4da",
+        "209": "318340a574793b163aa91bd39fb55f4d655122005c68b672f44139e5d111ccad",
+        "126": "b4301faebd76070c69a9f22cafc3e596a9307ffdf3a8686a05c0a8e8e85a42c4"
+    }
+}

@@ -89,6 +89,12 @@ async def compile_charter(db: AsyncSession) -> dict:
     (Native-memory parity: a MEMORY.md-style index, but membership is EARNED
     via attribution-driven authority promotion and re-audited every cycle,
     which a hand-written index cannot do.) Deterministic render, no LLM."""
+    # IDENTITY WALL (mind-reference-class): the charter is always-present
+    # identity — reference-class (document-ingested) neurons are excluded
+    # on every axis even if mislabeled or somehow holding charter-tier
+    # authority. A PDF can never become standing policy without the
+    # human-countersigned graduation path.
+    from app.services.reference_class import reference_exclusion_filters
     rows = (await db.execute(
         select(Neuron).where(
             Neuron.is_active.is_(True),
@@ -98,6 +104,7 @@ async def compile_charter(db: AsyncSession) -> dict:
             # Identity is delivered by the designated self-model capsule;
             # rendering Assistant lessons here would double-inject them.
             Neuron.department != "Assistant",
+            *reference_exclusion_filters(),
         ).order_by(Neuron.avg_utility.desc(), Neuron.id)
     )).scalars().all()
     lines: list[str] = []
@@ -230,7 +237,7 @@ async def _compose(cluster: list[Neuron]) -> dict | None:
     reply = await llm_chat(
         system_prompt=_COMPOSE_SYSTEM_PROMPT,
         user_message="\n\n".join(blocks)[:20_000],
-        max_tokens=3000, model="opus", timeout=300,
+        max_tokens=3000, model="opus", timeout=300, workload="skill_compilation",
     )
     text = reply.get("text", "")
     start, end = text.find("{"), text.rfind("}")
@@ -261,8 +268,12 @@ def _write_skill(name: str, description: str, body: str, source_ids: list[int]) 
         f"<!-- compiled by corvus-mind {datetime.now(timezone.utc).isoformat(timespec='seconds')} "
         f"from neurons {sorted(source_ids)} — do not hand-edit; the graph is the source of truth -->\n\n"
     )
-    with open(path, "w", encoding="utf-8") as fh:
-        fh.write(frontmatter + body.strip() + "\n")
+    rendered = frontmatter + body.strip() + "\n"
+    # Canonical-first multi-harness projection. Claude remains a target for
+    # compatibility, no longer the source format or sole destination.
+    from app.services.skill_projection import project_skill
+    outputs = project_skill(name, rendered)
+    assert outputs.get("claude-code") == path
     return path
 
 
@@ -282,6 +293,8 @@ def _remove_skill(name: str) -> None:
         os.replace(path, os.path.join(RETIRED_DIR, f"{name}-{stamp}.md"))
     if os.path.isdir(skill_dir) and not os.listdir(skill_dir):
         os.rmdir(skill_dir)
+    from app.services.skill_projection import remove_projected_skill
+    remove_projected_skill(name)
 
 
 async def _stale_entries(db: AsyncSession, manifest: list[dict],
@@ -317,7 +330,10 @@ async def _emit_skill_node(
     """Give the compiled skill its dark matter: a `skill` node anchored under
     its scope's department, with evidence-link edges from every source
     lesson — so the 3D universe and Explorer show what draws into it.
-    No embedding is set, so skill nodes never enter semantic recall."""
+    The node embeds like any neuron and scores in the prepare pipeline
+    (measured 2026-07-17: #1137 at 0.771+); recall filters it from hits
+    as scaffolding, and its score instead feeds the direct signpost path
+    (mind-skill-node-scoring, services/skill_signpost.py)."""
     from app.middleware.rbac import UserIdentity
     from app.services import action_bus
 
@@ -374,6 +390,7 @@ async def _self_model_growth_check(db: AsyncSession, manifest: list[dict]) -> No
     entry = next((m for m in manifest if m.get("name") == SELF_MODEL_NAME), None)
     if entry is None:
         return
+    from app.services.reference_class import reference_exclusion_filters
     known = set(entry.get("sources", []))
     grown = (await db.execute(
         select(Neuron).where(
@@ -383,6 +400,9 @@ async def _self_model_growth_check(db: AsyncSession, manifest: list[dict]) -> No
             Neuron.superseded_by.is_(None),
             Neuron.authority_level.in_(CHARTER_TIERS),
             Neuron.id.notin_(known) if known else Neuron.id.isnot(None),
+            # Identity wall: document knowledge never drifts into the
+            # self-model's growth queue (mind-reference-class).
+            *reference_exclusion_filters(),
         )
     )).scalars().all()
     if grown:
@@ -390,6 +410,59 @@ async def _self_model_growth_check(db: AsyncSession, manifest: list[dict]) -> No
             "pending_curation": [{"neuron_id": n.id, "label": n.label}
                                  for n in grown],
             "designated_sources": sorted(known)})
+
+
+async def refresh_projections_after_reconsolidation(
+    db: AsyncSession, retired_ids: list[int],
+) -> dict:
+    """Kernel Phase 3E: when reconsolidation retires lessons, no generated
+    artifact may keep citing them. Compiled skills whose source set
+    intersects the retired members are retracted immediately (archived,
+    graph shadow deactivated) — the next compiler run rebuilds them from
+    the synthesis; the charter (deterministic, cheap) recompiles in place.
+    Runs POST-COMMIT: disk artifacts must never move ahead of a
+    transaction that could still roll back. Mutates the DB only for
+    retracted skill shadows — the caller commits when db_changed."""
+    retired = set(retired_ids)
+    manifest, ghosts = _reconcile_manifest(_load_manifest())
+    retracted: list[str] = []
+    db_changed = False
+    for entry in list(manifest):
+        if entry.get("designated") or entry.get("name") == CHARTER_NAME:
+            continue
+        if retired & set(entry.get("sources", [])):
+            _remove_skill(entry["name"])
+            await _retract_skill_node(db, entry.get("node_id"))
+            db_changed = db_changed or entry.get("node_id") is not None
+            manifest = [m for m in manifest if m["name"] != entry["name"]]
+            retracted.append(entry["name"])
+            _log_action("compiler.retract", {
+                "skill": entry["name"],
+                "reason": "source-reconsolidated",
+                "retired_sources": sorted(retired & set(entry.get("sources", []))),
+            })
+    charter = {"included": 0}
+    charter_entry = next(
+        (m for m in manifest if m.get("name") == CHARTER_NAME), None)
+    if charter_entry is None or retired & set(charter_entry.get("sources", [])):
+        charter = await compile_charter(db)
+        manifest = [m for m in manifest if m["name"] != CHARTER_NAME]
+        if charter.get("path"):
+            manifest.append({
+                "name": CHARTER_NAME, "sources": charter["sources"],
+                "source_labels": charter.get("source_labels", []),
+                "designated": True, "path": charter["path"],
+                "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            })
+    _save_manifest(manifest)
+    stale_left = [
+        m["name"] for m in manifest
+        if retired & set(m.get("sources", []))
+    ]
+    assert not stale_left, f"stale source ids survived in {stale_left}"
+    return {"retracted": retracted, "reconciled_ghosts": ghosts,
+            "charter_recompiled": bool(charter.get("path")),
+            "db_changed": db_changed}
 
 
 async def run_compile(db: AsyncSession) -> dict:

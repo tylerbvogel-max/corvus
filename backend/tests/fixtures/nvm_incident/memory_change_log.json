@@ -1,0 +1,192 @@
+[
+    {
+        "id": 118,
+        "neuron_id": 51,
+        "field": "superseded_by",
+        "old_value": null,
+        "new_value": "65",
+        "reason": "staleness: superseded by 'Corvus frontend runs on port 5175 with nvm 22.22.0' (evidence recency)",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-14T03:12:23.772528"
+    },
+    {
+        "id": 119,
+        "neuron_id": 51,
+        "field": "avg_utility",
+        "old_value": "0.6000000000000001",
+        "new_value": "0.3",
+        "reason": "staleness: superseded by 'Corvus frontend runs on port 5175 with nvm 22.22.0' (evidence recency)",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-14T03:12:23.772528"
+    },
+    {
+        "id": 259,
+        "neuron_id": 177,
+        "field": "avg_utility",
+        "old_value": "0.5",
+        "new_value": "0.45",
+        "reason": "decay: recalled but never reinforced (warm zombie)",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-15T15:07:11.346627"
+    },
+    {
+        "id": 278,
+        "neuron_id": 57,
+        "field": "authority_level",
+        "old_value": "informational",
+        "new_value": "guidance",
+        "reason": "charter: utility 0.72 crossed the guidance bar",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-15T15:07:11.384202"
+    },
+    {
+        "id": 364,
+        "neuron_id": 211,
+        "field": "avg_utility",
+        "old_value": "0.5",
+        "new_value": "0.45",
+        "reason": "decay: recalled but never reinforced (warm zombie)",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-16T15:11:43.211782"
+    },
+    {
+        "id": 395,
+        "neuron_id": 211,
+        "field": "avg_utility",
+        "old_value": "0.45",
+        "new_value": "0.405",
+        "reason": "decay: recalled but never reinforced (warm zombie)",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-16T21:10:42.511692"
+    },
+    {
+        "id": 431,
+        "neuron_id": 211,
+        "field": "avg_utility",
+        "old_value": "0.405",
+        "new_value": "0.4",
+        "reason": "decay: recalled but never reinforced (warm zombie)",
+        "actor": "mind_janitor",
+        "changed_at": "2026-07-17T03:10:43.091071"
+    },
+    {
+        "id": 477,
+        "neuron_id": 211,
+        "field": "is_active",
+        "old_value": "true",
+        "new_value": "false",
+        "reason": "Near-duplicate of #47 'Corvus frontend uses nvm node 22.22.0' (similarity 0.857, verdict duplicate-mis-scoped). Deactivates #211.",
+        "actor": "vogel",
+        "changed_at": "2026-07-17T07:08:37.618903"
+    },
+    {
+        "id": 478,
+        "neuron_id": 211,
+        "field": "superseded_by",
+        "old_value": null,
+        "new_value": "47",
+        "reason": "Near-duplicate of #47 'Corvus frontend uses nvm node 22.22.0' (similarity 0.857, verdict duplicate-mis-scoped). Supersedes #211 into #47.",
+        "actor": "vogel",
+        "changed_at": "2026-07-17T07:08:37.618903"
+    },
+    {
+        "id": 491,
+        "neuron_id": 47,
+        "field": "is_active",
+        "old_value": "true",
+        "new_value": "false",
+        "reason": "Tyler-approved NVM consolidation: #47 is redundant with canonical #57. Deactivates #47.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 492,
+        "neuron_id": 47,
+        "field": "superseded_by",
+        "old_value": null,
+        "new_value": "57",
+        "reason": "Tyler-approved NVM consolidation: #47 is redundant with canonical #57. Supersedes #47 into #57.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 493,
+        "neuron_id": 51,
+        "field": "is_active",
+        "old_value": "true",
+        "new_value": "false",
+        "reason": "Tyler-approved NVM consolidation: #51 is redundant with canonical #57. Deactivates #51.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 494,
+        "neuron_id": 51,
+        "field": "superseded_by",
+        "old_value": "65",
+        "new_value": "57",
+        "reason": "Tyler-approved NVM consolidation: #51 is redundant with canonical #57. Supersedes #51 into #57.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 495,
+        "neuron_id": 177,
+        "field": "is_active",
+        "old_value": "true",
+        "new_value": "false",
+        "reason": "Tyler-approved NVM consolidation: #177 is redundant with canonical #57. Deactivates #177.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 496,
+        "neuron_id": 177,
+        "field": "superseded_by",
+        "old_value": null,
+        "new_value": "57",
+        "reason": "Tyler-approved NVM consolidation: #177 is redundant with canonical #57. Supersedes #177 into #57.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 497,
+        "neuron_id": 1151,
+        "field": "is_active",
+        "old_value": "false",
+        "new_value": "false",
+        "reason": "Tyler-approved NVM consolidation: #1151 is redundant with canonical #57. Deactivates #1151.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 498,
+        "neuron_id": 1151,
+        "field": "superseded_by",
+        "old_value": null,
+        "new_value": "57",
+        "reason": "Tyler-approved NVM consolidation: #1151 is redundant with canonical #57. Supersedes #1151 into #57.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 499,
+        "neuron_id": 1161,
+        "field": "is_active",
+        "old_value": "true",
+        "new_value": "false",
+        "reason": "Tyler-approved NVM consolidation: #1161 is redundant with canonical #57. Deactivates #1161.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    },
+    {
+        "id": 500,
+        "neuron_id": 1161,
+        "field": "superseded_by",
+        "old_value": null,
+        "new_value": "57",
+        "reason": "Tyler-approved NVM consolidation: #1161 is redundant with canonical #57. Supersedes #1161 into #57.",
+        "actor": "tyler",
+        "changed_at": "2026-07-17T07:25:31.934762"
+    }
+]

@@ -101,8 +101,8 @@ async def test_prepare_slot_contexts_groups_by_spread_cfg(monkeypatch):
     monkeypatch.setattr(ex, "_prepare_contexts_forked", fake_forked)
     stage_cb = object()
     slots = [
-        {"mode": "haiku_neuron", "top_k": 60},                                  # defaults
-        {"mode": "opus_neuron", "top_k": 80},                                   # same cfg
+        {"mode": "haiku_neuron", "top_k": 60},                                  # explicit cap
+        {"mode": "opus_neuron", "top_k": 80},                                   # distinct cap
         {"mode": "haiku_neuron", "top_k": 60, "spread_hops": 5, "spread_floor": 0.05},
         {"mode": "haiku_raw"},                                                   # no prep
     ]
@@ -111,10 +111,12 @@ async def test_prepare_slot_contexts_groups_by_spread_cfg(monkeypatch):
 
     assert len(calls) == 1, "ONE forked prep call covers all groups"
     params = calls[0]["params"]
-    assert len(params) == 2, "two distinct spread configs -> two groups"
-    assert set(ctx_by_cfg) == {(None, None), (5, 0.05)}
-    default_group = next(p for p in params if p["spread_hops"] is None)
-    assert default_group["top_k"] == 80, "group takes max top_k of its slots"
+    assert len(params) == 3, "spread, top_k, and budget each shape the packet"
+    assert set(ctx_by_cfg) == {
+        (None, None, 60, 8000), (None, None, 80, 8000),
+        (5, 0.05, 60, 8000),
+    }
+    assert {p["top_k"] for p in params if p["spread_hops"] is None} == {60, 80}
     assert calls[0]["on_stage"] is stage_cb
     assert totals["input_tokens"] == 10, "classify runs (and is counted) once"
 

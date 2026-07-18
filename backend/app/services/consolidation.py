@@ -18,14 +18,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models import Neuron, NeuronFiring, SystemState, ABSTRACTION_ARTIFACT
 
-# Refreshes Neuron.centrality = degree / max_degree over promoted edges.
+# Refreshes Neuron.centrality = degree / max_degree over promoted
+# CONDUCTING edges. Memory-semantics rows (supersedes / scoped-by /
+# evidence-link) are provenance, not activation topology — counting them
+# kept absorbed corpses outranking living memories (kernel receipt:
+# inactive #51 at 0.3898 vs active #57 at 0.2373; post-rewiring replay
+# showed the same inversion against the synthesis until this filter).
 # UPDATE only touches rows whose value actually changed.
 _CENTRALITY_REFRESH_SQL = """
 WITH deg AS (
     SELECT nid, COUNT(*) AS d FROM (
         SELECT source_id AS nid FROM neuron_edges
+        WHERE edge_type IN ('pyramidal', 'stellate')
         UNION ALL
         SELECT target_id AS nid FROM neuron_edges
+        WHERE edge_type IN ('pyramidal', 'stellate')
     ) endpoints
     GROUP BY nid
 ), mx AS (

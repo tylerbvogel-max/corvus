@@ -33,6 +33,7 @@ class PrefilterScoreStage:
         )
         state.scored = scored
         state.scored_engrams = scored_engrams
+        state.candidates_considered = len(scored)
         return state
 
     def describe(self, out: PipelineState) -> dict[str, Any]:

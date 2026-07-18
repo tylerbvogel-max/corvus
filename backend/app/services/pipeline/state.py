@@ -45,12 +45,15 @@ class PipelineState:
     total_queries: int = 0
     scored: list[NeuronScoreBreakdown] = field(default_factory=list)
     scored_engrams: list[NeuronScoreBreakdown] = field(default_factory=list)
+    candidates_considered: int = 0
 
     # --- continuity boost stage ---
     continuity_boosted_count: int = 0
 
     # --- spread + inhibit stages ---
     all_scored: list[NeuronScoreBreakdown] = field(default_factory=list)
+    neurons_activated: int = 0
+    redundancy_suppressed: int = 0
 
     # --- regulatory resolve stage ---
     resolved_regulations: list[Any] = field(default_factory=list)
@@ -63,3 +66,13 @@ class PipelineState:
     # (citation_hopping.HopMap) or None when disabled. Typed Any to keep this
     # scratch module import-light, mirroring `requester`.
     hop_map: Any = None
+    neurons_delivered: int = 0
+    estimated_memory_tokens: int = 0
+    memory_context_chars: int = 0
+    memory_context_utf8_bytes: int = 0
+    memory_context_text: str = ""
+    memory_token_budget: int = 0
+    assembly_stop_reason: str = "no_candidates"
+    oversized_first_neuron: bool = False
+    token_estimator_version: str = ""
+    memory_representations: dict[int, str] = field(default_factory=dict)

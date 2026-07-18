@@ -273,12 +273,12 @@ export default function AsciiWake() {
         const cx = r.left + r.width / 2 - base.left;
         const cy = r.top + r.height / 2 - base.top;
         const radius = Math.max(r.width, r.height) / 2 / cellW + 2.5;
-        splat(cx / cellW, cy / cellH, radius, -1.0);
+        splat(cx / cellW, cy / cellH, radius, -0.5);
         // Synced glow beat (box-shadow only: the CSS hover scale owns transform)
         (el as HTMLElement).animate(
           [
             { boxShadow: '0 0 0 rgba(0, 0, 0, 0)' },
-            { boxShadow: '0 0 14px var(--accent)', offset: 0.3 },
+            { boxShadow: '0 0 8px color-mix(in srgb, var(--accent) 55%, transparent)', offset: 0.3 },
             { boxShadow: '0 0 0 rgba(0, 0, 0, 0)' },
           ],
           { duration: 700, easing: 'ease-out' },

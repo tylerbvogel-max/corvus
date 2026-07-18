@@ -109,7 +109,9 @@ async def query_graph(
 
     Args:
         query: The user's question or topic
-        top_k: Maximum neurons to activate (default 30)
+        top_k: Explicit candidate/delivery safety cap (default 30). In
+            token-bounded mode, the memory-token ceiling normally decides the
+            delivered count before this cap is reached.
         token_budget: Token budget for the assembled prompt (default 4000)
         project_path: Optional project directory path for per-project neuron boosting
         requester_regions: Optional region scope for the requester — recall is
@@ -139,6 +141,16 @@ async def query_graph(
         result = {
             "system_prompt": ctx.system_prompt,
             "neurons_activated": ctx.neurons_activated,
+            "candidates_considered": ctx.candidates_considered,
+            "neurons_delivered": ctx.neurons_delivered,
+            "estimated_memory_tokens": ctx.estimated_memory_tokens,
+            "memory_context_chars": ctx.memory_context_chars,
+            "memory_context_utf8_bytes": ctx.memory_context_utf8_bytes,
+            "memory_token_budget": ctx.memory_token_budget,
+            "assembly_stop_reason": ctx.assembly_stop_reason,
+            "redundancy_suppressed": ctx.redundancy_suppressed,
+            "token_estimator_version": ctx.token_estimator_version,
+            "recall_latency_ms": ctx.recall_latency_ms,
             "departments": ctx.departments,
             "intent": ctx.intent,
             "recall_mode": "cheap",

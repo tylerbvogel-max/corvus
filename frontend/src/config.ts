@@ -36,9 +36,9 @@ export async function fetchTenantConfig(): Promise<TenantConfig> {
     // Fallback for dev/offline
   }
   _cached = {
-    tenant_id: 'corvus-aero',
-    display_name: 'Corvus Aero',
-    description: 'Biomimetic neuron graph for aerospace defense prompt preparation.',
+    tenant_id: 'corvus-mind',
+    display_name: 'Corvus Mind',
+    description: 'Agentic institutional memory for coding harnesses.',
   };
   return _cached;
 }

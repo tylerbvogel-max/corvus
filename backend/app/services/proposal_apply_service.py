@@ -122,6 +122,35 @@ async def _submit_refine_child(
     _require_applied(result, "neuron.refine")
 
 
+async def _submit_reconsolidate_child(
+    db: AsyncSession, item: ProposalItem, p: AutopilotProposal,
+    identity: UserIdentity, actor_type: str, root_action_id: int,
+) -> None:
+    """Route a 'reconsolidate' ProposalItem (a full FusionPlan) through the
+    proposal.reconsolidate action. idempotency_key = the plan hash, so
+    replaying an already-applied plan returns its recorded receipt instead
+    of re-executing (kernel Phase 4C)."""
+    from app.services.reconsolidation.apply import parse_reconsolidation_spec
+
+    assert item.neuron_spec_json is not None, "reconsolidate item must have spec"
+    _plan, plan_hash, member_hash = parse_reconsolidation_spec(
+        item.neuron_spec_json)
+    spec = json.loads(item.neuron_spec_json)
+    result = await action_bus.submit(
+        db=db, kind="proposal.reconsolidate", actor=identity,
+        actor_type=actor_type, source_proposal_id=p.id,
+        parent_action_id=root_action_id, reason=item.reason,
+        idempotency_key=f"fusionplan:{plan_hash}",
+        input_data={
+            "proposal_id": p.id, "item_id": item.id,
+            "fusion_plan": spec["fusion_plan"],
+            "member_state_hash": member_hash,
+            "actor_type": actor_type,
+        },
+    )
+    _require_applied(result, "proposal.reconsolidate")
+
+
 async def _dispatch_proposal_items(
     db: AsyncSession, items: list[ProposalItem], p: AutopilotProposal,
     total_queries: int, identity: UserIdentity, actor_type: str,
@@ -130,7 +159,11 @@ async def _dispatch_proposal_items(
     """Run every ProposalItem through the right write path. Returns has_edge_changes."""
     has_edge_changes = False
     for item in items:
-        if item.action == "create" and item.neuron_spec_json:
+        if item.action == "reconsolidate" and item.neuron_spec_json:
+            await _submit_reconsolidate_child(
+                db, item, p, identity, actor_type, root_action_id)
+            has_edge_changes = True
+        elif item.action == "create" and item.neuron_spec_json:
             await _submit_create_child(
                 db, item, p, total_queries, identity, actor_type, root_action_id,
             )

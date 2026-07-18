@@ -1,7 +1,13 @@
 """Hybrid-recall lane units (mind-hybrid-recall): query-entity extraction,
-entity normalization, and N-lane reciprocal-rank fusion. Hermetic — no DB."""
+entity normalization, lane SQL safety, and N-lane reciprocal-rank fusion."""
 
-from app.services.recall_lanes import extract_query_entities, normalize_entities
+import pytest
+
+from app.services.recall_lanes import (
+    entity_lane,
+    extract_query_entities,
+    normalize_entities,
+)
 from app.services.scoring_engine import calc_hybrid_relevance, calc_rrf
 
 
@@ -37,6 +43,29 @@ class TestExtractQueryEntities:
 
     def test_no_entities(self):
         assert extract_query_entities("what happened next?") == []
+
+
+class _EmptyResult:
+    def all(self):
+        return []
+
+
+class _SqlCaptureDb:
+    statement = None
+
+    async def execute(self, statement, _params):
+        self.statement = str(statement)
+        return _EmptyResult()
+
+
+@pytest.mark.asyncio
+async def test_entity_lane_excludes_legacy_scalar_json():
+    """Production has legacy scalar JSON values in ``entities``. PostgreSQL's
+    jsonb_array_elements_text raises on those unless the lane filters by JSON
+    type before invoking the lateral function."""
+    db = _SqlCaptureDb()
+    assert await entity_lane(db, ["Claude CLI"]) == {}
+    assert "jsonb_typeof(entities) = 'array'" in db.statement
 
 
 class TestCalcRrf:

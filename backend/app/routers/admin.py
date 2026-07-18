@@ -166,12 +166,20 @@ async def cost_report(db: AsyncSession = Depends(get_db)):
         )
     )).scalar() or 0
 
+    from app.services.model_usage_ledger import maintenance_cost_breakdown
+    maintenance = maintenance_cost_breakdown()
+    maint_total = maintenance["total_equivalent_usd"]
+
     return CostReportResponse(
         total_queries=total_queries,
         total_cost_usd=round(total_cost, 6),
         avg_cost_per_query=round(total_cost / total_queries, 6) if total_queries > 0 else 0.0,
         total_input_tokens=total_input,
         total_output_tokens=total_output,
+        maintenance_cost_usd=maint_total,
+        maintenance_per_query_usd=round(maint_total / total_queries, 6) if total_queries > 0 else 0.0,
+        maintenance_by_workload=maintenance["by_workload"],
+        maintenance_since=maintenance["ledger_started_at"],
     )
 
 
@@ -1206,8 +1214,34 @@ def _query_means(queries: list[dict], signal: str) -> list[float]:
     return means
 
 
-def _parse_query_scores(rows, signals: list[str]) -> list[dict]:
-    """Parse raw query rows into structured score dicts with per-signal values."""
+async def _reference_neuron_ids(db: AsyncSession) -> set[int]:
+    """Ids of reference-class neurons (mind-reference-class), matched on
+    all three class axes like reference_exclusion_filters. Scoring-health
+    drift assumes ORGANIC corpus growth; bulk document ingest (and bulk
+    revocation) violate that assumption, so reference-class neurons are
+    segmented out of the headline signal population and reported in
+    their own Library block instead."""
+    from sqlalchemy import or_
+    rows = (await db.execute(
+        select(Neuron.id).where(or_(
+            Neuron.source_origin == "document",
+            Neuron.node_type.in_(("reference", "document")),
+            Neuron.department == "Library",
+        ))
+    )).scalars().all()
+    return set(rows)
+
+
+def _parse_query_scores(
+    rows, signals: list[str], neuron_ids: set[int] | None = None,
+    exclude: bool = True,
+) -> list[dict]:
+    """Parse raw query rows into structured score dicts with per-signal values.
+
+    neuron_ids segments by population: exclude=True keeps neurons NOT in
+    the set (experiential headline); exclude=False keeps ONLY the set
+    (the Library block). None = no filtering (legacy behavior).
+    """
     query_scores: list[dict] = []
     for qid, scores_json, created_at in rows:
         try:
@@ -1218,10 +1252,16 @@ def _parse_query_scores(rows, signals: list[str]) -> list[dict]:
             continue
         signal_values: dict[str, list[float]] = {s: [] for s in signals}
         for neuron_score in scores:
+            if neuron_ids is not None:
+                member = neuron_score.get("neuron_id") in neuron_ids
+                if member == exclude:
+                    continue
             for s in signals:
                 val = neuron_score.get(s)
                 if val is not None:
                     signal_values[s].append(float(val))
+        if not any(signal_values[s] for s in signals):
+            continue  # a query with no surviving population tells us nothing
         query_scores.append({
             "query_id": qid,
             "created_at": created_at.isoformat() if created_at else None,
@@ -1332,13 +1372,35 @@ async def scoring_health(
             "per_query_timeline": [],
         }
 
-    query_scores = _parse_query_scores(rows, _SCORING_SIGNALS)
+    # Segment by origination (mind-reference-class): the headline signals
+    # and drift alerts cover the EXPERIENTIAL population only — organic
+    # growth is what the z-test assumes. Reference-class (Library) neurons
+    # arrive and leave in bulk (document ingest / revocation), so they get
+    # their own stats block and never trip drift alerts.
+    ref_ids = await _reference_neuron_ids(db)
+    query_scores = _parse_query_scores(rows, _SCORING_SIGNALS, ref_ids or None)
     query_scores.reverse()  # chronological order (oldest first)
     total = len(query_scores)
 
     signals_report, drift_alerts, can_detect_drift = _scoring_distribution(
         query_scores, recent_window, baseline_window, drift_threshold,
     )
+
+    library_block = None
+    if ref_ids:
+        lib_scores = _parse_query_scores(
+            rows, _SCORING_SIGNALS, ref_ids, exclude=False)
+        lib_scores.reverse()
+        if lib_scores:
+            lib_signals, _lib_alerts, _ = _scoring_distribution(
+                lib_scores, recent_window, baseline_window, drift_threshold)
+            library_block = {
+                "queries_with_reference_hits": len(lib_scores),
+                "signals": lib_signals,
+                "note": ("reference-class population (document-ingested); "
+                         "growth is curated, not organic — informational "
+                         "only, never drift-alerted"),
+            }
 
     return {
         "status": "ok",
@@ -1350,6 +1412,8 @@ async def scoring_health(
         "signals": signals_report,
         "drift_alerts": drift_alerts,
         "per_query_timeline": _scoring_timeline(query_scores),
+        "segmentation": {"reference_neurons": len(ref_ids),
+                         "library": library_block},
     }
 
 

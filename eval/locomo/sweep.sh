@@ -6,6 +6,8 @@
 #
 # Usage: sweep.sh <first_conv> <last_conv> [phases...]
 # Resume rule: pass --no-reset phases for a conv whose ingest is banked.
+# Set LOCOMO_LIFECYCLE_MODE=full-lifecycle to exercise the production-ratio
+# maintenance schedule across the suite's global session ordinals.
 set -u
 cd "$(dirname "$0")/../../backend"
 source venv/bin/activate
@@ -35,7 +37,7 @@ for c in $(seq "$first" "$last"); do
     echo "=== CONV $c phase=$ph ($(date +%F' '%H:%M)) ==="
     args=(--conv "$c" --phase "$ph")
     [ "$ph" != all ] && [ "$ph" != ingest ] && args+=(--no-reset)
-    python ../eval/locomo/run_locomo.py "${args[@]}" 2>&1 \
+    ../eval/locomo/run_locomo.sh "${args[@]}" 2>&1 \
       | grep -E "\[ingest\] done|\[db\]|\[memory\]|\[nospread\]|\[baseline\]|giving up|Traceback|Error"
   done
 done

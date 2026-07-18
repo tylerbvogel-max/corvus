@@ -302,7 +302,8 @@ export function fetchQueryRunCounts(texts: string[]): Promise<Record<string, num
 export interface SlotSpec {
   mode: string;
   token_budget: number;
-  top_k: number;
+  // Omit for tenant delivery policy; explicit values remain hard safety caps.
+  top_k?: number;
   max_output_tokens?: number;
   label?: string;
   effort?: string;  // per-slot reasoning effort override (low|medium|high)
@@ -512,6 +513,9 @@ export interface SpreadLogEntry {
 }
 
 export interface SpreadLogResponse {
+  // Headline counts/rate cover a rate_window_days time window; entries and
+  // corridors cover the `limit` most recent queries.
+  rate_window_days: number;
   total_queries: number;
   queries_with_spread: number;
   spread_rate: number;
@@ -615,7 +619,7 @@ export interface StageTrendPoint { bucket: string; stage: string; n: number; p50
 export interface StageTelemetryReport {
   error?: string;
   meta: {
-    queries_with_telemetry: number; total_samples: number;
+    queries_with_telemetry: number; excluded_incident_queries: number; total_samples: number;
     pipeline_total_p50_ms: number; date_range: [string | null, string | null];
   };
   stages: StageStat[];
@@ -1705,6 +1709,8 @@ export interface ProposalStats {
   approved: number;
   rejected: number;
   applied: number;
+  // Terminal: recorded old-state drifted before review/apply (kernel Phase 4).
+  superseded: number;
   total: number;
   // Pending counts keyed by origin bucket (autopilot | integrity | document |
   // emergent | manual). Powers per-producer badges in the sidebar nav.

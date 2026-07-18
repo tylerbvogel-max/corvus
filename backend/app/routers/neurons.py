@@ -1,7 +1,7 @@
 """Neuron inspection endpoints."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -445,9 +445,21 @@ def _build_spread_summary(
     }
 
 
+# Matches a serialized nonzero spread_boost (0.05, 0.5, 3, 1.2e-05 …) so
+# the rate can be counted in SQL without parsing every scores blob.
+_NONZERO_SPREAD_RE = r'"spread_boost": ?(0\.0*[1-9]|[1-9])'
+
+
 @router.get("/edges/spread-log")
-async def spread_log(limit: int = 100, db: AsyncSession = Depends(get_db)):
-    """Aggregate spread activation history across recent queries."""
+async def spread_log(limit: int = 100, days: int = 7, db: AsyncSession = Depends(get_db)):
+    """Aggregate spread activation history across recent queries.
+
+    The detailed entries/corridors cover the `limit` most recent queries,
+    but the headline rate is computed over a `days` time window — at high
+    query volume the last 100 queries can span minutes, and a burst of
+    spread-free traffic used to read as "spread rate 0%" while spread was
+    firing daily just outside the window.
+    """
     result = await db.execute(
         select(QueryModel)
         .where(QueryModel.neuron_scores_json.isnot(None))
@@ -470,9 +482,31 @@ async def spread_log(limit: int = 100, db: AsyncSession = Depends(get_db)):
         )
         entries.append(entry)
 
-    return _build_spread_summary(
+    summary = _build_spread_summary(
         parsed_queries, entries, neuron_spread_counts, dept_corridors, neuron_map,
     )
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    window_filter = (
+        QueryModel.neuron_scores_json.isnot(None),
+        QueryModel.created_at >= cutoff,
+    )
+    window_total = (await db.execute(
+        select(sa_func.count(QueryModel.id)).where(*window_filter)
+    )).scalar() or 0
+    window_spread = (await db.execute(
+        select(sa_func.count(QueryModel.id)).where(
+            *window_filter,
+            QueryModel.neuron_scores_json.op("~")(_NONZERO_SPREAD_RE),
+        )
+    )).scalar() or 0
+    summary.update({
+        "rate_window_days": days,
+        "total_queries": window_total,
+        "queries_with_spread": window_spread,
+        "spread_rate": round(window_spread / window_total, 4) if window_total else 0,
+    })
+    return summary
 
 
 @router.get("/edges/spread-trail")

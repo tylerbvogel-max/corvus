@@ -51,10 +51,31 @@ async def mind_inbox(db: AsyncSession = Depends(get_db)):
     return report
 
 
+@router.get("/mind/subscription")
+async def mind_subscription():
+    """Live Claude subscription utilization (5-hour block + weekly limits)."""
+    from app.services.claude_usage import subscription_report
+    report = await subscription_report()
+    assert isinstance(report, dict), "subscription report must be a dict"
+    return report
+
+
+@router.get("/mind/subscription/codex")
+async def mind_codex_subscription():
+    """Live Codex subscription rate limits and token activity."""
+    from app.services.codex_usage import subscription_report
+    report = await subscription_report()
+    assert isinstance(report, dict), "Codex subscription report must be a dict"
+    return report
+
+
 @router.get("/mind/skills")
 async def mind_skills(db: AsyncSession = Depends(get_db)):
     """Compiled skills with source health and rendered bodies."""
-    from app.services.mind_metrics import skills_report
+    from app.services.mind_metrics import (
+        skills_report, uncompiled_skill_invocations,
+    )
     rows = await skills_report(db)
     assert isinstance(rows, list), "skills report must be a list"
-    return {"skills": rows}
+    others = uncompiled_skill_invocations({r.get("name") for r in rows})
+    return {"skills": rows, "uncompiled_invocations": others}

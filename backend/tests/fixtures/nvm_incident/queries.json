@@ -1,0 +1,2564 @@
+[
+    {
+        "id": 248,
+        "user_message": "node -e \"\nconst {execSync} = require('child_process');\n\" ; node tools/bounty-sim/sim.mjs 2>&1 | head -5; echo '---serve test---'; timeout 3 node tools/bounty-sim/sim.mjs --serve 2>&1 | head -20",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-11T20:11:54.359367"
+    },
+    {
+        "id": 335,
+        "user_message": "timeout 90 node sim.mjs 2>&1 | tail -80",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-12T09:57:01.534609"
+    },
+    {
+        "id": 755,
+        "user_message": "add ATANT as kill-list node",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T16:18:38.266117"
+    },
+    {
+        "id": 761,
+        "user_message": "source ~/Projects/corvus/backend/venv/bin/activate && pip install httpx -q && python3 ~/Projects/corvus/eval/atant/run_atant.py --phase pilot 2>&1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T16:26:04.897832"
+    },
+    {
+        "id": 762,
+        "user_message": "source ~/Projects/corvus/backend/venv/bin/activate && python3 ~/Projects/corvus/eval/atant/run_atant.py --phase pilot 2>&1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T16:26:59.872855"
+    },
+    {
+        "id": 764,
+        "user_message": "source ~/Projects/corvus/backend/venv/bin/activate && python3 ~/Projects/corvus/eval/atant/run_atant.py --phase pilot 2>&1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T16:27:21.232756"
+    },
+    {
+        "id": 770,
+        "user_message": "source ~/Projects/corvus/backend/venv/bin/activate && python3 ~/Projects/corvus/eval/atant/generate_narratives.py 2>&1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T16:30:52.363792"
+    },
+    {
+        "id": 771,
+        "user_message": "source ~/Projects/corvus/backend/venv/bin/activate && timeout 1200 python3 ~/Projects/corvus/eval/atant/run_full_eval.py 2>&1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T18:42:36.549899"
+    },
+    {
+        "id": 796,
+        "user_message": "Where does Eve live?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T18:43:44.839429"
+    },
+    {
+        "id": 817,
+        "user_message": "Where does Eve live?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T18:43:46.541666"
+    },
+    {
+        "id": 847,
+        "user_message": "Where does Eve live?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T18:43:49.03137"
+    },
+    {
+        "id": 866,
+        "user_message": "Where does Eve live?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-13T18:43:50.67172"
+    },
+    {
+        "id": 1756,
+        "user_message": "ls ~/.config/opencode/node_modules/ 2>/dev/null | head; find ~/.opencode -name \"*.d.ts\" -path \"*plugin*\" 2>/dev/null | head; ls ~/.opencode/bin/; cat ~/.config/opencode/package.json 2>/dev/null",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T08:29:59.50606"
+    },
+    {
+        "id": 1833,
+        "user_message": "cd ~/Projects/master-corvus && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx tsc --noEmit -p tsconfig.app.json 2>&1 | head -10; echo \"tsc exit: $?\"; fuser 5175/tcp 2>/dev/null && echo \"dev server running\" || echo \"dev server not running\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T10:22:50.810564"
+    },
+    {
+        "id": 1834,
+        "user_message": "kill 24371 2>/dev/null; cd ~/Projects/master-corvus && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && nohup npm run dev > /tmp/claude-1000/-home-tylerbvogel/f9b85881-b35a-47af-a358-6c3b5ce0257c/scratchpad/master-corvus-dev.log 2>&1 & sleep 6; curl -s -o /dev/null -w \"%{http_code}\" http",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T10:23:13.087381"
+    },
+    {
+        "id": 1844,
+        "user_message": "fuser -k 5175/tcp 2>/dev/null; sleep 1; cd ~/Projects/master-corvus && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && nohup npm run dev > /tmp/claude-1000/-home-tylerbvogel/f9b85881-b35a-47af-a358-6c3b5ce0257c/scratchpad/master-corvus-dev.log 2>&1 & sleep 6; curl -s -o /dev/null -w \"%{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T10:38:44.315915"
+    },
+    {
+        "id": 1845,
+        "user_message": "Can you put a prompt into the applicable node for a fresh session and I can use it to run this down? Also, go ahead and give me the prompt here, We'll get to it now with clearing our heads.",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T10:41:50.366324"
+    },
+    {
+        "id": 1936,
+        "user_message": "cd ~/Projects/corvus/frontend && npx tsc --noEmit && echo TSC-OK",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T11:48:07.560863"
+    },
+    {
+        "id": 2130,
+        "user_message": "find ~/.nvm ~/.config/nvm ~/.claude ~/.local -iname \"*dataviz*\" -not -path \"*/node_modules/.cache/*\" 2>/dev/null | head; find / -maxdepth 6 -ipath \"*skills/dataviz*\" 2>/dev/null | grep -v proc | head -5",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:15:30.821358"
+    },
+    {
+        "id": 2132,
+        "user_message": "D=~/.config/nvm/versions/node/v22.22.0/lib/node_modules/@anthropic-ai/claude-code; ls $D 2>/dev/null; find $D -maxdepth 3 -iname \"*skill*\" -o -maxdepth 3 -iname \"*dataviz*\" 2>/dev/null | head; grep -l \"categorical colors\" $D/* 2>/dev/null | head -3",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:15:58.523209"
+    },
+    {
+        "id": 2133,
+        "user_message": "D=~/.config/nvm/versions/node/v22.22.0/lib/node_modules/@anthropic-ai/claude-code; find $D -maxdepth 4 -name \"*.md\" -path \"*skill*\" 2>/dev/null | head; B=$(find $D -name \"cli.js\" -o -name \"*.cjs\" -size +1M 2>/dev/null | head -1); echo \"bundle: $B\"; ls -la $D/bin 2>/dev/null; for f in $D/bin/* $D/nod",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:16:08.354847"
+    },
+    {
+        "id": 2183,
+        "user_message": "cd ~/Projects/corvus/frontend && source ~/.config/nvm/nvm.sh >/dev/null 2>&1; npx tsc --noEmit 2>&1 | head -20; echo \"tsc exit: $?\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:36:51.475544"
+    },
+    {
+        "id": 2186,
+        "user_message": "kill 14010 && sleep 1; cd ~/Projects/corvus/frontend && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 nohup npm run dev > /tmp/claude-1000/-home-tylerbvogel/911d6667-0eba-4397-8637-d7532c29f6f1/scratchpad/vite-dev.log 2>&1 & sleep 4; fuser 8004/tcp 2>/dev/null && ta",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:37:17.819956"
+    },
+    {
+        "id": 2213,
+        "user_message": "source ~/.config/nvm/nvm.sh >/dev/null && nvm use 22.22.0 >/dev/null && (npm run dev >/tmp/claude-1000/-home-tylerbvogel/bfa618d1-0419-4e55-812a-4baa53181ed7/scratchpad/mc-dev.log 2>&1 &) && sleep 6 && curl -s localhost:5175/roadmap-state.json | python3 -c \"import json,sys; d=json.load(sys.stdin); p",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:52:24.175336"
+    },
+    {
+        "id": 2221,
+        "user_message": "bash -c 'source ~/.bashrc >/dev/null 2>&1; claude() { echo \"[claude would launch with args: $*]\"; }; export -f claude 2>/dev/null; corvus() { printf \"\\n\\033[1;36m  \u23e6  CORVUS\\033[0m \\033[2mis enabled.\\033[0m\\n\"; printf \"\\033[2m     memory: online  \u00b7  tenant: %s\\033[0m\\n\\n\" \"${TENANT_ID:-corvus-aero}\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:58:13.940058"
+    },
+    {
+        "id": 2223,
+        "user_message": "CLI=$(readlink -f ~/.config/nvm/versions/node/v22.22.0/bin/claude); echo \"$CLI\"; ls -la \"$CLI\"; echo \"--- glyph counts:\"; for g in '\u273b' '\u273d' '\u2733' '\u00b7'; do printf '%s : ' \"$g\"; grep -o \"$g\" \"$CLI\" | wc -l; done",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:59:02.262255"
+    },
+    {
+        "id": 2224,
+        "user_message": "CLI=/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe\nfile \"$CLI\" | cut -c1-120\necho \"--- glyph counts (-a):\"\nfor g in '\u273b' '\u273d' '\u2733' '\u2736' '\u2722' '\u273b'; do printf '%s : %s\\n' \"$g\" \"$(grep -ao \"$g\" \"$CLI\" | wc -l)\"; done\necho \"--- is there a plain j",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:59:11.21627"
+    },
+    {
+        "id": 2227,
+        "user_message": "CLI=/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe\necho \"=== most-frequent non-ASCII symbol chars in the bundle ===\"\nstrings -n 2 \"$CLI\" \\\n  | grep -oP '[\\x{2000}-\\x{2BFF}\\x{1F300}-\\x{1FAFF}]' \\\n  | sort | uniq -c | sort -rn | head -25",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-14T14:59:44.784293"
+    },
+    {
+        "id": 2339,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T00:09:35.212892"
+    },
+    {
+        "id": 2342,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T00:10:22.770823"
+    },
+    {
+        "id": 2345,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T00:45:47.803755"
+    },
+    {
+        "id": 2351,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm ls playwright --depth=0",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T00:47:46.443342"
+    },
+    {
+        "id": 2363,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T08:41:52.138607"
+    },
+    {
+        "id": 2364,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T08:42:39.257924"
+    },
+    {
+        "id": 2373,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T08:52:55.858199"
+    },
+    {
+        "id": 2375,
+        "user_message": "grep -n 'fwd-agency-lab' /home/tylerbvogel/Projects/master-corvus/public/roadmap-state.json; tail -40 CORVUS-CHRONICLE.md; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T08:53:30.808157"
+    },
+    {
+        "id": 2386,
+        "user_message": "ls -la ~/.local/bin 2>/dev/null; find ~/.nvm/versions/node -maxdepth 3 -type l -name 'claude' -o -type f -name 'claude' 2>/dev/null; find ~/.cache -maxdepth 4 -name 'claude' 2>/dev/null | head",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T08:57:06.873148"
+    },
+    {
+        "id": 2389,
+        "user_message": "ls -l ~/.config/nvm/versions/node/v20.20.0/bin/claude; grep -n 'Haiku\\|haiku' backend/app/services/llm_provider.py | head -10; ~/.config/nvm/versions/node/v20.20.0/bin/claude --version",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T08:57:21.874847"
+    },
+    {
+        "id": 2401,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:43:35.532721"
+    },
+    {
+        "id": 2403,
+        "user_message": "systemctl --user restart corvus-mind.service; fuser -k 8004/tcp || true; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:44:12.953495"
+    },
+    {
+        "id": 2404,
+        "user_message": "grep -n \"localStorage.*tab\\|activeTab\\|setActiveTab\" frontend/src/App.tsx | head -40; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:44:53.754039"
+    },
+    {
+        "id": 2405,
+        "user_message": "grep -n \"useState<Tab\\|localStorage\\|location.hash\" src/App.tsx | head -50; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:45:00.79736"
+    },
+    {
+        "id": 2408,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>l",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:45:46.842374"
+    },
+    {
+        "id": 2409,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:46:03.365941"
+    },
+    {
+        "id": 2410,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>l",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:46:19.454801"
+    },
+    {
+        "id": 2413,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>l",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:46:52.230673"
+    },
+    {
+        "id": 2415,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1200,height:850}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>lo",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:47:49.382555"
+    },
+    {
+        "id": 2418,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:51:26.947025"
+    },
+    {
+        "id": 2419,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:51:40.948087"
+    },
+    {
+        "id": 2420,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:51:52.625703"
+    },
+    {
+        "id": 2421,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:52:06.956913"
+    },
+    {
+        "id": 2423,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:53:09.171576"
+    },
+    {
+        "id": 2424,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T09:53:53.609047"
+    },
+    {
+        "id": 2428,
+        "user_message": "grep -n 'IconClock' frontend/src/App.tsx; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:02:00.675887"
+    },
+    {
+        "id": 2430,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:02:23.412462"
+    },
+    {
+        "id": 2431,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:03:12.779124"
+    },
+    {
+        "id": 2437,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:06:53.513691"
+    },
+    {
+        "id": 2438,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:07:49.424224"
+    },
+    {
+        "id": 2440,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:09:27.314967"
+    },
+    {
+        "id": 2441,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:900}}); await p.goto('http://127.0.0.1:8004'); await p.getByRole('butt",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:10:13.036401"
+    },
+    {
+        "id": 2447,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:14:02.748149"
+    },
+    {
+        "id": 2448,
+        "user_message": "fuser -k 8004/tcp || true; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:14:38.589918"
+    },
+    {
+        "id": 2449,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:14:57.970967"
+    },
+    {
+        "id": 2450,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:15:45.171857"
+    },
+    {
+        "id": 2451,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1000,height:700}}); p.on('pageerror',e=>console.log('PAGEERROR',e.message)); p.on(",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:16:44.976501"
+    },
+    {
+        "id": 2452,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:17:40.249529"
+    },
+    {
+        "id": 2453,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:18:37.490524"
+    },
+    {
+        "id": 2454,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1000,height:700}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{l",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:19:32.502797"
+    },
+    {
+        "id": 2456,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:900,height:650}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{lo",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:20:36.410659"
+    },
+    {
+        "id": 2460,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:24:02.557353"
+    },
+    {
+        "id": 2461,
+        "user_message": "fuser -k 8004/tcp || true; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:24:54.177436"
+    },
+    {
+        "id": 2462,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:25:31.267474"
+    },
+    {
+        "id": 2463,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:1000}}); await p.goto('http://127.0.0.1:8004'); await p.evaluate(()=>{",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:26:25.954845"
+    },
+    {
+        "id": 2466,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1400,height:1000}}); await p.route('**/neurons/graph-3d**',r=>r.fulfill({contentTy",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:27:46.832631"
+    },
+    {
+        "id": 2467,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1200,height:900}}); await p.route('**/neurons/graph-3d**',r=>r.fulfill({contentTyp",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:28:53.151721"
+    },
+    {
+        "id": 2470,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:29:56.518044"
+    },
+    {
+        "id": 2471,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1200,height:900}}); await p.route('**/neurons/graph-3d**',r=>r.fulfill({contentTyp",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:31:11.542628"
+    },
+    {
+        "id": 2473,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright'; const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1200,height:900}}); await p.route('**/neurons/graph-3d**',r=>r.fulfill({contentTyp",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:32:14.592801"
+    },
+    {
+        "id": 2477,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright';const b=await chromium.launch({headless:true});const p=await b.newPage({viewport:{width:1200,height:900}});await p.route('**/neurons/graph-3d**',r=>r.fulfill({contentType:'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:33:26.116763"
+    },
+    {
+        "id": 2479,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:34:22.774689"
+    },
+    {
+        "id": 2482,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && fuser -k 8004/tcp || true; VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:35:32.55554"
+    },
+    {
+        "id": 2483,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node --input-type=module -e \"import { chromium } from 'playwright';const b=await chromium.launch({headless:true});const p=await b.newPage({viewport:{width:1200,height:900}});await p.route('**/neurons/graph-3d**',r=>r.fulfill({contentType:'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:36:42.894075"
+    },
+    {
+        "id": 2489,
+        "user_message": "source \"$HOME/.nvm/nvm.sh\" && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:39:25.290076"
+    },
+    {
+        "id": 2491,
+        "user_message": "command -v node; node --version 2>/dev/null || true; command -v npm; find /home/tylerbvogel -path '*/bin/node' -type f 2>/dev/null | head -20",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:39:34.46604"
+    },
+    {
+        "id": 2492,
+        "user_message": "find /home/tylerbvogel/.local /home/tylerbvogel/.config /home/tylerbvogel/.cache -path '*/bin/node' -type f 2>/dev/null | head -30; ls -la /home/tylerbvogel/.nvm /home/tylerbvogel/.local/share/fnm/node-versions 2>/dev/null || true; npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:39:51.214233"
+    },
+    {
+        "id": 2493,
+        "user_message": "PATH=/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin:$PATH npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T10:39:57.777644"
+    },
+    {
+        "id": 2556,
+        "user_message": "node - <<'NODE'\nconst fs=require('fs');\nconst dir='/tmp/corvus-hybrid-eval/eval/locomo/results';\nfor (const f of ['conv0-hybrid.json','conv0-hybrid-strict.json']) {\n const d=JSON.parse(fs.readFileSync(`${dir}/${f}`));\n const wrong=d.results.filter(x=>!x.correct);\n const refusals=wrong.filter(x=>/no ",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T11:48:35.096261"
+    },
+    {
+        "id": 2562,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T11:52:08.401493"
+    },
+    {
+        "id": 2570,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T11:55:34.467563"
+    },
+    {
+        "id": 2574,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T11:56:06.131143"
+    },
+    {
+        "id": 2603,
+        "user_message": "find frontend -maxdepth 3 -type f | sort | head -160; git diff -- frontend/src/config.ts frontend/src/components/AsciiWake.tsx frontend/src/components/CirclePacking.tsx frontend/src/components/Explorer.tsx frontend/src/components/MindMetricsPage.tsx frontend/src/components/mindUi.tsx; sed -n '1,220p",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:36:38.082247"
+    },
+    {
+        "id": 2604,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:36:41.666347"
+    },
+    {
+        "id": 2608,
+        "user_message": "node /tmp/corvus-runtime.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:38:18.674317"
+    },
+    {
+        "id": 2610,
+        "user_message": "node /tmp/corvus-runtime.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:39:25.010868"
+    },
+    {
+        "id": 2611,
+        "user_message": "node /tmp/corvus-runtime.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:40:14.541086"
+    },
+    {
+        "id": 2612,
+        "user_message": "node /tmp/corvus-runtime.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:40:39.843174"
+    },
+    {
+        "id": 2634,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:56:40.082139"
+    },
+    {
+        "id": 2638,
+        "user_message": "node /tmp/verify_pallium_ui.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T12:59:37.155672"
+    },
+    {
+        "id": 2639,
+        "user_message": "node /tmp/verify_pallium_ui.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:02:58.850645"
+    },
+    {
+        "id": 2647,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:07:44.908014"
+    },
+    {
+        "id": 2648,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:08:30.086029"
+    },
+    {
+        "id": 2649,
+        "user_message": "node /tmp/verify_pallium_retry.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:08:45.738132"
+    },
+    {
+        "id": 2666,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:13:37.637146"
+    },
+    {
+        "id": 2668,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:14:15.699979"
+    },
+    {
+        "id": 2669,
+        "user_message": "ps -ef | grep -E '[v]ite build|[t]sc -b|[n]pm run build'; ls -lt dist/assets/index-*.js | head -3; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx tsc -b --pretty false",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:15:06.731521"
+    },
+    {
+        "id": 2671,
+        "user_message": "node /tmp/verify_codex_pallium.cjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:17:03.635235"
+    },
+    {
+        "id": 2682,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm install",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:20:45.535985"
+    },
+    {
+        "id": 2683,
+        "user_message": "cp -a /home/tylerbvogel/Projects/corvus/frontend/node_modules ./node_modules && cp /home/tylerbvogel/Projects/corvus/frontend/package-lock.json ./package-lock.json && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:22:12.653173"
+    },
+    {
+        "id": 2684,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:22:28.22899"
+    },
+    {
+        "id": 2685,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:22:40.908631"
+    },
+    {
+        "id": 2686,
+        "user_message": "curl -sS -I http://127.0.0.1:5173/ && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/ /tmp/tyler-site-desktop.png",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:24:07.262191"
+    },
+    {
+        "id": 2687,
+        "user_message": "/bin/bash -lc 'curl -sS -I http://127.0.0.1:5173/ && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/ /tmp/tyler-site-desktop.png && npx playwright screenshot --viewport-size=390,844 http://127.0.0.1:5173/ /tmp/ty",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:24:15.018133"
+    },
+    {
+        "id": 2689,
+        "user_message": "/bin/bash -lc 'curl -sS -I http://127.0.0.1:5173/ && source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/ /tmp/tyler-site-desktop.png && npx playwright screenshot --viewport-size=390,844 http://127.0.0.1:5173/ /tmp/ty",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:25:27.659312"
+    },
+    {
+        "id": 2690,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:26:04.636567"
+    },
+    {
+        "id": 2691,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/ /tmp/tyler-site-desktop.png'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:26:20.9718"
+    },
+    {
+        "id": 2692,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:27:20.624948"
+    },
+    {
+        "id": 2693,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:27:46.228064"
+    },
+    {
+        "id": 2694,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:28:35.673059"
+    },
+    {
+        "id": 2695,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/ /tmp/tyler-site-desktop.png'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:28:48.895856"
+    },
+    {
+        "id": 2698,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:34:09.314595"
+    },
+    {
+        "id": 2699,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/ /tmp/tyler-site-desktop.png'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:34:29.602259"
+    },
+    {
+        "id": 2703,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:37:56.040989"
+    },
+    {
+        "id": 2704,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:38:15.918183"
+    },
+    {
+        "id": 2705,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:38:30.109992"
+    },
+    {
+        "id": 2709,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:40:45.276518"
+    },
+    {
+        "id": 2710,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:41:09.520443"
+    },
+    {
+        "id": 2716,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:47:05.268854"
+    },
+    {
+        "id": 2717,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-resume.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:47:33.273342"
+    },
+    {
+        "id": 2722,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:54:17.782693"
+    },
+    {
+        "id": 2723,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-desktop.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:54:47.065714"
+    },
+    {
+        "id": 2724,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-desktop.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:55:26.579441"
+    },
+    {
+        "id": 2725,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:57:07.101179"
+    },
+    {
+        "id": 2726,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-desktop.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:57:22.36502"
+    },
+    {
+        "id": 2729,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T13:58:10.092455"
+    },
+    {
+        "id": 2732,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:03:35.136368"
+    },
+    {
+        "id": 2733,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-color-vision.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:04:01.276035"
+    },
+    {
+        "id": 2738,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:17:05.029309"
+    },
+    {
+        "id": 2739,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:19:30.459449"
+    },
+    {
+        "id": 2740,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:19:50.057458"
+    },
+    {
+        "id": 2741,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:20:13.660691"
+    },
+    {
+        "id": 2744,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:23:03.879442"
+    },
+    {
+        "id": 2745,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:25:31.846607"
+    },
+    {
+        "id": 2746,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:26:34.783125"
+    },
+    {
+        "id": 2747,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:27:01.514383"
+    },
+    {
+        "id": 2748,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:27:23.335954"
+    },
+    {
+        "id": 2751,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:30:18.22805"
+    },
+    {
+        "id": 2752,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:30:32.445324"
+    },
+    {
+        "id": 2753,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:31:40.760471"
+    },
+    {
+        "id": 2754,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:32:17.053671"
+    },
+    {
+        "id": 2755,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:32:44.404251"
+    },
+    {
+        "id": 2757,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:38:54.154835"
+    },
+    {
+        "id": 2758,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/probe-wake-edges.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:39:14.426205"
+    },
+    {
+        "id": 2759,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:39:53.808891"
+    },
+    {
+        "id": 2762,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:45:34.258368"
+    },
+    {
+        "id": 2763,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-desktop.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:45:50.878609"
+    },
+    {
+        "id": 2764,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:46:36.328537"
+    },
+    {
+        "id": 2771,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 --full-page https://blueamberadvisory.com/ /tmp/blueamber-full.png'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:52:55.188299"
+    },
+    {
+        "id": 2772,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/analyze-blueamber.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T14:53:40.657036"
+    },
+    {
+        "id": 2776,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:07:42.009466"
+    },
+    {
+        "id": 2779,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:08:07.39602"
+    },
+    {
+        "id": 2781,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-explore.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:08:24.389051"
+    },
+    {
+        "id": 2782,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-explore.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:08:33.389302"
+    },
+    {
+        "id": 2783,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-explore.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:09:41.795002"
+    },
+    {
+        "id": 2784,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:09:41.78757"
+    },
+    {
+        "id": 2788,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:18:25.20134"
+    },
+    {
+        "id": 2790,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:18:54.128601"
+    },
+    {
+        "id": 2793,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:19:33.858579"
+    },
+    {
+        "id": 2795,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:20:12.297312"
+    },
+    {
+        "id": 2796,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:22:09.272248"
+    },
+    {
+        "id": 2797,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:22:49.629557"
+    },
+    {
+        "id": 2827,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:35:01.336396"
+    },
+    {
+        "id": 2834,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:38:49.589441"
+    },
+    {
+        "id": 2835,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-accent.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:39:22.135706"
+    },
+    {
+        "id": 2837,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:40:15.442473"
+    },
+    {
+        "id": 2845,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:44:51.824898"
+    },
+    {
+        "id": 2846,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:45:17.058677"
+    },
+    {
+        "id": 2847,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-accent.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:45:30.37579"
+    },
+    {
+        "id": 2857,
+        "user_message": "What Node version and nvm setup should I use for master-corvus, and is that version enforced by the repository?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:50:22.734715"
+    },
+    {
+        "id": 2858,
+        "user_message": "Where is the Codex CLI installed on this machine, where is its config, and what version was last verified?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:50:23.723278"
+    },
+    {
+        "id": 2868,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:53:17.760429"
+    },
+    {
+        "id": 2869,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:53:49.602201"
+    },
+    {
+        "id": 2870,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-intersection.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:54:09.35579"
+    },
+    {
+        "id": 2877,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:59:18.121075"
+    },
+    {
+        "id": 2878,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:59:42.524887"
+    },
+    {
+        "id": 2879,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-drift.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T15:59:59.602944"
+    },
+    {
+        "id": 2882,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T17:20:05.718641"
+    },
+    {
+        "id": 2883,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T17:20:27.727471"
+    },
+    {
+        "id": 2884,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-chapter-connector.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T17:20:47.895591"
+    },
+    {
+        "id": 2889,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T19:32:21.996368"
+    },
+    {
+        "id": 2890,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T19:32:44.268598"
+    },
+    {
+        "id": 2891,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-readability.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T19:33:01.009482"
+    },
+    {
+        "id": 2893,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T19:33:50.869157"
+    },
+    {
+        "id": 2894,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T19:34:10.186215"
+    },
+    {
+        "id": 2895,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-clean-rail.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T19:34:24.669028"
+    },
+    {
+        "id": 2903,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:20:55.189946"
+    },
+    {
+        "id": 2904,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:21:20.601897"
+    },
+    {
+        "id": 2905,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:21:36.550034"
+    },
+    {
+        "id": 2907,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:23:33.272297"
+    },
+    {
+        "id": 2908,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:24:17.269411"
+    },
+    {
+        "id": 2910,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:24:43.96865"
+    },
+    {
+        "id": 2914,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:24:56.47853"
+    },
+    {
+        "id": 2915,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:25:46.253939"
+    },
+    {
+        "id": 2916,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:26:36.253925"
+    },
+    {
+        "id": 2917,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:27:31.648717"
+    },
+    {
+        "id": 2918,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:28:11.516707"
+    },
+    {
+        "id": 2919,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:28:35.672739"
+    },
+    {
+        "id": 2931,
+        "user_message": "How should I select the Node version for Corvus frontend work, and is it pinned by the repo?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:39:32.197568"
+    },
+    {
+        "id": 2934,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:40:00.703118"
+    },
+    {
+        "id": 2938,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:41:19.509019"
+    },
+    {
+        "id": 2942,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && VITE_API_PORT=8005 npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:42:32.917977"
+    },
+    {
+        "id": 2943,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:42:33.228078"
+    },
+    {
+        "id": 2945,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:43:00.2864"
+    },
+    {
+        "id": 2947,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:43:08.699595"
+    },
+    {
+        "id": 2948,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery-mobile.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:44:09.750964"
+    },
+    {
+        "id": 2949,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:45:37.633508"
+    },
+    {
+        "id": 2950,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:46:10.773465"
+    },
+    {
+        "id": 2953,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-orrery.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:46:22.026843"
+    },
+    {
+        "id": 2956,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:52:29.130617"
+    },
+    {
+        "id": 2957,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:53:06.595795"
+    },
+    {
+        "id": 2958,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:53:22.018531"
+    },
+    {
+        "id": 2959,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:53:55.135755"
+    },
+    {
+        "id": 2960,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:54:55.167628"
+    },
+    {
+        "id": 2961,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:55:22.242052"
+    },
+    {
+        "id": 2962,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:55:30.624381"
+    },
+    {
+        "id": 2963,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:56:48.87751"
+    },
+    {
+        "id": 2964,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:57:22.249791"
+    },
+    {
+        "id": 2965,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:57:34.521779"
+    },
+    {
+        "id": 2966,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:58:08.21921"
+    },
+    {
+        "id": 2967,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:58:38.964782"
+    },
+    {
+        "id": 2968,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T22:58:47.444505"
+    },
+    {
+        "id": 2975,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:03:22.450964"
+    },
+    {
+        "id": 2976,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:03:53.571783"
+    },
+    {
+        "id": 2977,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:04:07.326729"
+    },
+    {
+        "id": 3014,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm install --package-lock-only --ignore-scripts && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:14:01.678428"
+    },
+    {
+        "id": 3018,
+        "user_message": "sed -n '1,45p' package-lock.json; git diff --check; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-three-body.mjs; git add .; git status --short; git diff --cached --check; git diff --cached --stat",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:14:43.881273"
+    },
+    {
+        "id": 3085,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:35:42.019962"
+    },
+    {
+        "id": 3095,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check && git status --short",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:42:59.017591"
+    },
+    {
+        "id": 3097,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:43:38.892674"
+    },
+    {
+        "id": 3099,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npx playwright screenshot --viewport-size=1440,1000 http://127.0.0.1:5173/#programs /tmp/career-orrery-programs.png",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:43:46.10713"
+    },
+    {
+        "id": 3102,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm install --save-dev @playwright/test@^1.61.1 --ignore-scripts && node scripts/verify-aircraft.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:45:59.918581"
+    },
+    {
+        "id": 3103,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check && git status --short && git diff --stat",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:47:28.47421"
+    },
+    {
+        "id": 3121,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && node scripts/verify-origins.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-15T23:59:16.140243"
+    },
+    {
+        "id": 3122,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T00:01:09.091992"
+    },
+    {
+        "id": 3135,
+        "user_message": "Very cool take on it! Now, back to some design work:\n\nCan we redesign this dots and line design so the dots are not off to the side of the line? Actually, can we make it where there are separate lines, zig zagging between them downward so it looks like an angular path?\n\nIn fact, do you have any othe",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:40:38.88898"
+    },
+    {
+        "id": 3137,
+        "user_message": "curl -sS -I http://127.0.0.1:5173/ | head -5; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:41:34.797143"
+    },
+    {
+        "id": 3138,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:41:55.588267"
+    },
+    {
+        "id": 3139,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:42:02.619578"
+    },
+    {
+        "id": 3146,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:52:55.01747"
+    },
+    {
+        "id": 3147,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:54:07.920356"
+    },
+    {
+        "id": 3149,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:54:55.740282"
+    },
+    {
+        "id": 3152,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:56:21.527227"
+    },
+    {
+        "id": 3160,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:56:55.593982"
+    },
+    {
+        "id": 3163,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:57:14.259064"
+    },
+    {
+        "id": 3165,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:57:34.423358"
+    },
+    {
+        "id": 3167,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:57:42.846971"
+    },
+    {
+        "id": 3169,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:58:20.94956"
+    },
+    {
+        "id": 3173,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T08:59:11.431153"
+    },
+    {
+        "id": 3180,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:00:03.854119"
+    },
+    {
+        "id": 3257,
+        "user_message": "curl -sS -I http://127.0.0.1:5173/ | head -5; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:18:14.867548"
+    },
+    {
+        "id": 3259,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:19:23.911628"
+    },
+    {
+        "id": 3260,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:19:46.467425"
+    },
+    {
+        "id": 3261,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:22:17.489037"
+    },
+    {
+        "id": 3268,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check && git status --short",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:25:49.982863"
+    },
+    {
+        "id": 3274,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:28:21.523318"
+    },
+    {
+        "id": 3283,
+        "user_message": "command -v node; command -v npm; find /home/tylerbvogel/.nvm -maxdepth 4 -type f -name npm -print 2>/dev/null | head -n 20",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:34:10.712064"
+    },
+    {
+        "id": 3285,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh\nnvm use 22.22.0 >/dev/null\nnpm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:34:23.863038"
+    },
+    {
+        "id": 3292,
+        "user_message": "sed -n '1,220p' scripts/verify-contact.mjs; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:36:15.408113"
+    },
+    {
+        "id": 3295,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:37:39.266864"
+    },
+    {
+        "id": 3296,
+        "user_message": "node -e '\nconst queries = [\n  \"Corvus-Mind systemd restart\",\n  \"Graph is a regression test bed\",\n  \"Tyler configured OpenCode but did not build it\",\n  \"Anthropic calls use Claude CLI, not SDK\",\n  \"Frontend/backend port disambiguation\"\n];\n(async () => {\n  for (let repeat = 1; repeat <= 2; repeat++) {",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:37:41.114918"
+    },
+    {
+        "id": 3311,
+        "user_message": "ls -ld scripts 2>&1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:40:05.957848"
+    },
+    {
+        "id": 3321,
+        "user_message": "curl -sS -I http://127.0.0.1:5173/ | head -5; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:43:50.134538"
+    },
+    {
+        "id": 3322,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:44:59.982555"
+    },
+    {
+        "id": 3323,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:45:24.393815"
+    },
+    {
+        "id": 3325,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && node scripts/verify-contact.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T09:58:30.167673"
+    },
+    {
+        "id": 3330,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:02:26.001345"
+    },
+    {
+        "id": 3332,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs && node scripts/verify-origins.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:02:47.507959"
+    },
+    {
+        "id": 3334,
+        "user_message": "node /home/tylerbvogel/.codex/skills/.system/openai-docs/scripts/fetch-codex-manual.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:03:18.447414"
+    },
+    {
+        "id": 3350,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:09:59.925587"
+    },
+    {
+        "id": 3351,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs && node scripts/verify-origins.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:10:46.814676"
+    },
+    {
+        "id": 3361,
+        "user_message": "node -e 'const p=\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/inhibited-low-r1.json\";const x=JSON.parse(require(\"fs\").readFileSync(p));console.log({status:x.status,judged:x.results.filter(r=>typeof r.correct===\"boolean\").length,mtime:require(\"fs\").statSync(p).mtime.toISOString()",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:17:46.475799"
+    },
+    {
+        "id": 3376,
+        "user_message": "sleep 25\nnode -e 'const fs=require(\"fs\"),d=\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation\";for(const f of fs.readdirSync(d).filter(f=>f.endsWith(\".json\")&&f!==\"metadata.json\"&&f!==\"summary.json\").sort()){const x=JSON.parse(fs.readFileSync(`${d}/${f}`));console.log(f,x.status,x.res",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:26:59.932672"
+    },
+    {
+        "id": 3387,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && node scripts/verify-performance.mjs && node scripts/verify-contact.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:30:16.243942"
+    },
+    {
+        "id": 3396,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs && node scripts/verify-contact.mjs && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:32:35.191413"
+    },
+    {
+        "id": 3406,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:35:26.204544"
+    },
+    {
+        "id": 3414,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:37:38.613859"
+    },
+    {
+        "id": 3417,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs && node scripts/verify-contact.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:38:05.774388"
+    },
+    {
+        "id": 3421,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:39:57.562248"
+    },
+    {
+        "id": 3426,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node -e \"import('@playwright/test').then(async({chromium})=>{const b=await chromium.launch({headless:true}),p=await b.newPage();await p.goto('http://127.0.0.1:5173');console.log(await p.evaluate(()=>({hidden:document.hidden,state:document.",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:41:11.719612"
+    },
+    {
+        "id": 3434,
+        "user_message": "node -e 'const fs=require(\"fs\"),p=\".pytest_cache/v/cache/lastfailed\";console.log(fs.existsSync(p)?fs.readFileSync(p,\"utf8\"):\"no lastfailed\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:42:07.918361"
+    },
+    {
+        "id": 3442,
+        "user_message": "node - <<'NODE'\nconst x=require('/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/inhibited-low-r1.json');\nconst wrong=x.results.filter(r=>!r.correct);\nconst norm=s=>s.trim().toLowerCase().replace(/[^a-z]+$/,'');\nconsole.log({wrong:wrong.length,wrong_refusal:wrong.filter(r=>norm(r.pr",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:43:46.766607"
+    },
+    {
+        "id": 3443,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:44:08.548541"
+    },
+    {
+        "id": 3445,
+        "user_message": "node -e 'const p=require(\"./package.json\"); console.log(p.scripts)'\nps -p 18566,18567 -o pid,ppid,lstart,etime,stat,args",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:44:43.178943"
+    },
+    {
+        "id": 3453,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs && node scripts/verify-contact.mjs && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:46:21.375456"
+    },
+    {
+        "id": 3461,
+        "user_message": "sed -n '24,42p' ../deploy/memory-tenant.env",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:48:39.930281"
+    },
+    {
+        "id": 3462,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs && node scripts/verify-contact.mjs && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:48:41.276426"
+    },
+    {
+        "id": 3467,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:50:17.625673"
+    },
+    {
+        "id": 3472,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-contact.mjs && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:51:54.054064"
+    },
+    {
+        "id": 3476,
+        "user_message": "node - <<'NODE'\nconst x=require('/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json'),r=x.results;\nconst mean=k=>r.reduce((a,z)=>a+(z[k]||0),0)/r.length;\nconst pct=(a,p)=>a.slice().sort((x,y)=>x-y)[Math.round((a.length-1)*p)];\nconst counts=k=>Object.fromEntries([...new",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:53:18.31121"
+    },
+    {
+        "id": 3478,
+        "user_message": "node - <<'NODE'\nfor(const arm of ['inhibited-low','token-3k']){\n const x=require('/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/'+arm+'-r1.json'),r=x.results;\n const norm=s=>s.trim().toLowerCase().replace(/[^a-z]+$/,'');\n console.log(arm,{refusals:r.filter(z=>norm(z.pred)==='no in",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:53:56.938833"
+    },
+    {
+        "id": 3479,
+        "user_message": "node - <<'NODE'\nconst x=require('/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json'),norm=s=>s.trim().toLowerCase().replace(/[^a-z]+$/,'');\nfor(const r of x.results.filter(z=>z.category===5&&norm(z.pred)!=='no information available')) console.log('-',r.pred);\nNODE",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:54:05.01691"
+    },
+    {
+        "id": 3480,
+        "user_message": "node - <<'NODE'\nconst x=require('/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json');\nfor(const r of x.results.filter(z=>z.stop_reason!=='token_ceiling')) console.log({question:r.question,delivered:r.neurons_delivered,estimated:r.estimated_memory_tokens,candidates:r.c",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:54:12.232472"
+    },
+    {
+        "id": 3481,
+        "user_message": "node - <<'NODE'\nconst x=require('/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json'),r=x.results;\nconst s=r.reduce((a,z)=>a+z.redundancy_suppressed,0);console.log({total:s,mean:s/r.length,queries:r.filter(z=>z.redundancy_suppressed).length,max:Math.max(...r.map(z=>z.r",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:54:18.703661"
+    },
+    {
+        "id": 3482,
+        "user_message": "sleep 25\nnode -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:54:25.316138"
+    },
+    {
+        "id": 3483,
+        "user_message": "sleep 25\nnode -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:54:59.614238"
+    },
+    {
+        "id": 3486,
+        "user_message": "sleep 30\nnode -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:55:48.017078"
+    },
+    {
+        "id": 3487,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:56:26.168835"
+    },
+    {
+        "id": 3488,
+        "user_message": "sleep 25\nnode -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:56:32.031931"
+    },
+    {
+        "id": 3491,
+        "user_message": "sleep 30\nnode -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:57:21.384462"
+    },
+    {
+        "id": 3492,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:57:59.299678"
+    },
+    {
+        "id": 3493,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:58:50.836947"
+    },
+    {
+        "id": 3495,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T10:59:47.828542"
+    },
+    {
+        "id": 3499,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,x.scores?.overall??\"\")'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:00:58.077442"
+    },
+    {
+        "id": 3500,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,JSON.stringify(x.scores||{}))'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:01:34.816685"
+    },
+    {
+        "id": 3503,
+        "user_message": "node -e 'const x=require(\"/home/tylerbvogel/.corvus-mind/evals/token-assembly-confirmation/token-3k-r1.json\"),r=x.results||[];console.log(x.status,r.filter(z=>typeof z.correct===\"boolean\").length+\"/\"+r.length,JSON.stringify(x.scores||{}))'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:02:03.483951"
+    },
+    {
+        "id": 3565,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && node scripts/verify-performance.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:21:04.242343"
+    },
+    {
+        "id": 3570,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-performance.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:21:39.690643"
+    },
+    {
+        "id": 3593,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:27:25.25326"
+    },
+    {
+        "id": 3656,
+        "user_message": "cd ~/Projects/tyler-vogel-site && cat .env.example; npm run build 2>&1 | tail -8",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:43:07.734559"
+    },
+    {
+        "id": 3686,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:51:46.854398"
+    },
+    {
+        "id": 3690,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:52:34.59668"
+    },
+    {
+        "id": 3700,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T11:54:39.310711"
+    },
+    {
+        "id": 3735,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh\nnvm use 22.22.0 >/dev/null\nnpm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:06:41.533363"
+    },
+    {
+        "id": 3748,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh\nnvm use 22.22.0 >/dev/null\nnpm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:14:02.936763"
+    },
+    {
+        "id": 3759,
+        "user_message": "git diff --check; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build; fuser 5173/tcp 2>/dev/null || true",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:39:38.820879"
+    },
+    {
+        "id": 3763,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:40:47.025204"
+    },
+    {
+        "id": 3765,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:41:12.218715"
+    },
+    {
+        "id": 3774,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:45:12.523159"
+    },
+    {
+        "id": 3785,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:49:25.190142"
+    },
+    {
+        "id": 3786,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:49:43.711796"
+    },
+    {
+        "id": 3789,
+        "user_message": "Let me clarify, the problem is not happening in this environment or machine, this issue is occuring on another machine",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T12:51:00.606612"
+    },
+    {
+        "id": 3804,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T13:48:09.610814"
+    },
+    {
+        "id": 3805,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T13:48:40.962643"
+    },
+    {
+        "id": 3809,
+        "user_message": "vogeltyler@L2-TVOGEL2:~$ opencode debug config | grep -nEi \\\n  'azure|baseURL|apiVersion|resourceName|gpt-5.1'\n93:    \"azure\": {\n96:        \"baseURL\": \"https://aurorafluent.openai.azure.us/openai\",\n98:        \"apiVersion\": \"2025-04-01-preview\",\n99:        \"resourceName\": \"aurora-fluent-prod\"\n102:   ",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T13:56:29.861511"
+    },
+    {
+        "id": 3815,
+        "user_message": "selecting the model gave me this for the URL as a copy: \n \n https://fluent.proudbush-f9b612ab.usgovvirginia.azurecontainerapps.us/?model=gpt-5.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:19:33.185109"
+    },
+    {
+        "id": 3820,
+        "user_message": "grep -RniE \"Go to (PROOF|PROBLEMS|ORIGINS|RECORD)|PROVISIONAL ARCHIVE|Not the pitch|Expected (five|six)\" scripts src | head -100; source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:24:06.189306"
+    },
+    {
+        "id": 3825,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:29:26.952495"
+    },
+    {
+        "id": 3826,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-resume.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:29:53.191386"
+    },
+    {
+        "id": 3827,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:29:53.190509"
+    },
+    {
+        "id": 3828,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:29:53.191615"
+    },
+    {
+        "id": 3830,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:32:00.634998"
+    },
+    {
+        "id": 3832,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:33:09.077282"
+    },
+    {
+        "id": 3834,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T14:34:16.445353"
+    },
+    {
+        "id": 3923,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check && grep -RniE \"Go to FOUNDATIONS|#origins|TrackRecordPanel|OriginsPanel\" src scripts || true",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:09:11.652264"
+    },
+    {
+        "id": 3926,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:11:06.00662"
+    },
+    {
+        "id": 3932,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:14:05.839265"
+    },
+    {
+        "id": 3934,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:14:39.101784"
+    },
+    {
+        "id": 3941,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-origins.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:17:57.459645"
+    },
+    {
+        "id": 3978,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build && git diff --check",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:31:38.702302"
+    },
+    {
+        "id": 3984,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:33:57.556449"
+    },
+    {
+        "id": 3985,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:34:24.596341"
+    },
+    {
+        "id": 3991,
+        "user_message": "/bin/bash -lc 'source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs'",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:37:09.179747"
+    },
+    {
+        "id": 4026,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:49:54.277135"
+    },
+    {
+        "id": 4030,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build; echo BUILD_EXIT:$?",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:50:42.780711"
+    },
+    {
+        "id": 4033,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null; npm run build >/tmp/master-corvus-build.log 2>&1; code=$?; tail -n 30 /tmp/master-corvus-build.log; echo BUILD_EXIT:$code",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T15:51:31.321785"
+    },
+    {
+        "id": 4085,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:16:54.900116"
+    },
+    {
+        "id": 4087,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:17:22.532293"
+    },
+    {
+        "id": 4088,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:17:34.510955"
+    },
+    {
+        "id": 4089,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:17:48.897748"
+    },
+    {
+        "id": 4102,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:21:36.243107"
+    },
+    {
+        "id": 4104,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:26:50.53478"
+    },
+    {
+        "id": 4106,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-aircraft.mjs\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:27:24.010735"
+    },
+    {
+        "id": 4117,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node scripts/verify-story.mjs\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T16:35:47.645847"
+    },
+    {
+        "id": 4176,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:22:03.933724"
+    },
+    {
+        "id": 4214,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:30:24.020233"
+    },
+    {
+        "id": 4219,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:31:39.905135"
+    },
+    {
+        "id": 4225,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:32:44.685676"
+    },
+    {
+        "id": 4236,
+        "user_message": "how do I use node and nvm on this machine",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:36:01.43851"
+    },
+    {
+        "id": 4246,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:37:33.111561"
+    },
+    {
+        "id": 4255,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:40:06.295923"
+    },
+    {
+        "id": 4272,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:46:33.487917"
+    },
+    {
+        "id": 4276,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:47:34.122385"
+    },
+    {
+        "id": 4278,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:390,height:844}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); awai",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:48:12.532414"
+    },
+    {
+        "id": 4284,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:50:42.470607"
+    },
+    {
+        "id": 4288,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:1440,height:1000}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); aw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:51:28.686699"
+    },
+    {
+        "id": 4289,
+        "user_message": "node -e \"const {chromium}=require('playwright'); (async()=>{const b=await chromium.launch({headless:true}); const p=await b.newPage({viewport:{width:390,height:844}}); const errors=[]; p.on('pageerror',e=>errors.push(e.message)); await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'}); awai",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:51:54.719824"
+    },
+    {
+        "id": 4299,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:54:17.45404"
+    },
+    {
+        "id": 4306,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:56:14.774701"
+    },
+    {
+        "id": 4312,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:57:11.230675"
+    },
+    {
+        "id": 4322,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-16T23:59:01.657694"
+    },
+    {
+        "id": 4330,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:00:11.696735"
+    },
+    {
+        "id": 4344,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:04:39.375184"
+    },
+    {
+        "id": 4349,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:06:00.720024"
+    },
+    {
+        "id": 4358,
+        "user_message": "/bin/bash -lc \"source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:07:59.921822"
+    },
+    {
+        "id": 4381,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:14:17.632605"
+    },
+    {
+        "id": 4385,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:14:47.410432"
+    },
+    {
+        "id": 4387,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-card-headings.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:15:09.505541"
+    },
+    {
+        "id": 4390,
+        "user_message": "how do I use node and nvm on this machine",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:15:14.470591"
+    },
+    {
+        "id": 4395,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-card-headings.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:15:17.898531"
+    },
+    {
+        "id": 4413,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:20:56.897093"
+    },
+    {
+        "id": 4415,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:21:21.159756"
+    },
+    {
+        "id": 4416,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-corvus-dossier.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:21:43.404372"
+    },
+    {
+        "id": 4421,
+        "user_message": "git diff --check; source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:25:08.464386"
+    },
+    {
+        "id": 4423,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:25:29.724455"
+    },
+    {
+        "id": 4424,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-corvus-dossier.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:25:35.831966"
+    },
+    {
+        "id": 4444,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:33:08.410798"
+    },
+    {
+        "id": 4449,
+        "user_message": "git diff --check; source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:34:29.976447"
+    },
+    {
+        "id": 4451,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:34:50.29513"
+    },
+    {
+        "id": 4452,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-opencode-dossier.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:34:57.068942"
+    },
+    {
+        "id": 4460,
+        "user_message": "git diff --check; source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:37:06.505612"
+    },
+    {
+        "id": 4462,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:37:26.990463"
+    },
+    {
+        "id": 4465,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-corvus-dossier.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:37:34.58938"
+    },
+    {
+        "id": 4471,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && node /tmp/verify-opencode-dossier.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:37:59.372482"
+    },
+    {
+        "id": 4476,
+        "user_message": "uname -a; findmnt -no SOURCE,FSTYPE,OPTIONS /; command -v wsl.exe || true; snap list --all 2>/dev/null | head -20; flatpak list 2>/dev/null | head -20",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:38:38.125449"
+    },
+    {
+        "id": 4489,
+        "user_message": "command -v node; node --version; command -v claude || true; command -v codex || true; /home/tylerbvogel/.config/nvm/versions/node/v20.20.0/bin/npm ls -g --depth=0 2>/dev/null || true; /home/tylerbvogel/.config/nvm/versions/node/v18.20.8/bin/npm ls -g --depth=0 2>/dev/null || true",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:40:25.734231"
+    },
+    {
+        "id": 4492,
+        "user_message": "grep -n '\"version\"' /home/tylerbvogel/Projects/market-panel/screener/venv/lib/python3.11/site-packages/playwright/driver/package/package.json | head -1; grep -n 'chromium.*revision\\|revision.*1217\\|revision.*1228' /home/tylerbvogel/Projects/market-panel/screener/venv/lib/python3.11/site-packages/pla",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:40:55.060174"
+    },
+    {
+        "id": 4498,
+        "user_message": "find /home/tylerbvogel/.config/nvm/versions/node -maxdepth 5 -path '*/node_modules/openclaw' -print -exec du -sh {} \\; 2>/dev/null; find /home/tylerbvogel/.config/nvm/versions/node -maxdepth 3 -type l -iname '*openclaw*' -ls 2>/dev/null",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:41:38.878796"
+    },
+    {
+        "id": 4500,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 20.20.0 >/dev/null && npm uninstall -g openclaw",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:42:02.632021"
+    },
+    {
+        "id": 4506,
+        "user_message": "df -B1 /; df -h /; journalctl --disk-usage; du -sh /var/cache/apt /home/tylerbvogel/.npm /home/tylerbvogel/.cache /home/tylerbvogel/.config/nvm 2>/dev/null",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:54:52.113067"
+    },
+    {
+        "id": 4508,
+        "user_message": "source /home/tylerbvogel/.config/nvm/nvm.sh && nvm use 20.20.0 >/dev/null && if command -v openclaw >/dev/null; then command -v openclaw; exit 1; else echo 'openclaw executable: absent'; fi",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:54:52.146885"
+    },
+    {
+        "id": 4509,
+        "user_message": "test ! -e /home/tylerbvogel/.config/nvm/versions/node/v20.20.0/lib/node_modules/openclaw && echo 'openclaw npm package: absent'; find /home/tylerbvogel -xdev \\( -path '/home/tylerbvogel/Projects' -o -path '/home/tylerbvogel/.codex' -o -path '/home/tylerbvogel/.claude' -o -path '/home/tylerbvogel/.co",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T00:54:52.300596"
+    },
+    {
+        "id": 4511,
+        "user_message": "test ! -e /home/tylerbvogel/.openclaw && echo 'config/data: absent'; test ! -e /home/tylerbvogel/.config/nvm/versions/node/v20.20.0/lib/node_modules/openclaw && echo 'npm package: absent'; test ! -e /home/tylerbvogel/.config/nvm/versions/node/v20.20.0/bin/openclaw && echo 'executable: absent'; test ",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T07:05:32.682438"
+    },
+    {
+        "id": 4515,
+        "user_message": "NVM Node versions activation path requirements on this machine and Corvus projects",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T07:12:17.38598"
+    },
+    {
+        "id": 4545,
+        "user_message": "NVM Node versions activation path requirements on this machine and Corvus projects",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T07:26:27.137256"
+    },
+    {
+        "id": 4597,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T08:37:00.686207"
+    },
+    {
+        "id": 4599,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run dev -- --host 127.0.0.1",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T08:37:26.208549"
+    },
+    {
+        "id": 4615,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node -e \"import('/home/tylerbvogel/Projects/tyler-vogel-site/node_modules/playwright/index.mjs').then(()=>console.log('ok')).catch(e=>{console.error(e);process.exit(1)})\"",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T08:51:40.628695"
+    },
+    {
+        "id": 4617,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T08:53:37.646548"
+    },
+    {
+        "id": 4619,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T08:55:11.671676"
+    },
+    {
+        "id": 4625,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:00:13.517162"
+    },
+    {
+        "id": 4626,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node /tmp/verify_roadmap_ledger.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:00:38.222104"
+    },
+    {
+        "id": 4641,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node -e \"const s=require('./public/roadmap-state.json'); const ids=new Set(['bench-beam','bench-longmemeval','fwd-gtm-glean-positioning','fwd-gtm-mem0-positioning','fwd-gtm-measurement-moat','eng-layer-neg1','trust-rename']); for(const [i,n] o",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:20:31.20829"
+    },
+    {
+        "id": 4645,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:21:58.197088"
+    },
+    {
+        "id": 4648,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node /tmp/verify_roadmap_reorder.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:24:12.421664"
+    },
+    {
+        "id": 4652,
+        "user_message": "source ~/.config/nvm/nvm.sh && nvm use 22.22.0 >/dev/null && npm run build",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:37:16.87657"
+    },
+    {
+        "id": 4655,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node /tmp/verify_roadmap_reorder.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:38:24.253751"
+    },
+    {
+        "id": 4658,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node /tmp/verify_roadmap_reorder.mjs",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:39:26.112319"
+    },
+    {
+        "id": 4661,
+        "user_message": "/home/tylerbvogel/.config/nvm/versions/node/v22.22.0/bin/node - <<'NODE'\nconst s=require('./public/roadmap-state.json');\nconst terms=/duplicat|dedup|consolidat|\\bfus(?:e|ed|ion)|redundan|canonical|confirmation|weight/i;\nfor(const n of s.nodes){\n const fields=Object.entries(n).filter(([,v])=>typeof v",
+        "classified_intent": "general_query",
+        "created_at": "2026-07-17T09:41:07.607389"
+    }
+]

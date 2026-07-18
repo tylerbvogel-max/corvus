@@ -75,6 +75,16 @@ class ContextResponse(BaseModel):
     role_keys: list[str]
     keywords: list[str]
     neurons_activated: int
+    candidates_considered: int = 0
+    neurons_delivered: int = 0
+    estimated_memory_tokens: int = 0
+    memory_context_chars: int = 0
+    memory_context_utf8_bytes: int = 0
+    memory_token_budget: int = 0
+    assembly_stop_reason: str | None = None
+    redundancy_suppressed: int = 0
+    token_estimator_version: str | None = None
+    recall_latency_ms: float = 0.0
     neuron_scores: list[dict] = []
     classify_cost_usd: float = 0
 
@@ -100,6 +110,16 @@ async def get_context(req: ContextRequest, db: AsyncSession = Depends(get_db)):
         role_keys=ctx.role_keys,
         keywords=ctx.keywords,
         neurons_activated=ctx.neurons_activated,
+        candidates_considered=ctx.candidates_considered,
+        neurons_delivered=ctx.neurons_delivered,
+        estimated_memory_tokens=ctx.estimated_memory_tokens,
+        memory_context_chars=ctx.memory_context_chars,
+        memory_context_utf8_bytes=ctx.memory_context_utf8_bytes,
+        memory_token_budget=ctx.memory_token_budget,
+        assembly_stop_reason=ctx.assembly_stop_reason,
+        redundancy_suppressed=ctx.redundancy_suppressed,
+        token_estimator_version=ctx.token_estimator_version,
+        recall_latency_ms=ctx.recall_latency_ms,
         neuron_scores=ctx.neuron_scores,
         classify_cost_usd=ctx.classify_cost_usd,
     )
@@ -584,7 +604,7 @@ def _slot_dicts_from_request(req: QueryRequest) -> list[dict] | None:
         slot_dicts = [{
             "mode": "opus_neuron",
             "token_budget": settings.token_budget,
-            "top_k": settings.top_k_neurons,
+            "top_k": None,
             "priming": True,
         }]
     slot_dicts[0]["audit"] = True

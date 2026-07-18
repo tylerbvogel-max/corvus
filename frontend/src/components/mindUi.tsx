@@ -36,6 +36,13 @@ export const MIND_CSS = `
 .mm-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1px 7px; border-radius: 9px; border: 1px solid var(--mm-border); }
 .mm-chip { display: inline-block; font-size: 0.68rem; padding: 1px 7px; border-radius: 8px; background: rgba(144,133,233,0.14); color: var(--mm-violet); }
 .mm-empty { color: var(--mm-ink3); font-size: 0.8rem; padding: 0.4rem 0; }
+.mm-meter-row { margin: 8px 0; font-size: 0.78rem; }
+.mm-meter-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
+.mm-meter-label { color: var(--mm-ink2); }
+.mm-meter-val { font-family: 'JetBrains Mono', monospace; color: var(--mm-ink); }
+.mm-meter-track { display: block; height: 10px; border-radius: 5px; overflow: hidden; }
+.mm-meter-fill { display: block; height: 10px; border-radius: 0 5px 5px 0; min-width: 2px; }
+.mm-meter-sub { color: var(--mm-ink3); font-size: 0.7rem; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
 .mm-pre { font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; white-space: pre-wrap; background: rgba(0,0,0,0.25); border: 1px solid var(--mm-border); border-radius: 8px; padding: 0.7rem; max-height: 420px; overflow: auto; color: var(--mm-ink2); }
 `;
 
@@ -77,6 +84,33 @@ export function Spark({ points, w = 120, h = 26 }: { points: number[]; w?: numbe
       <path d={path} fill="none" stroke="var(--mm-blue)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={x(points.length - 1)} cy={y(points[points.length - 1])} r={3} fill="var(--mm-blue)" stroke="#1a1a19" strokeWidth={2} />
     </svg>
+  );
+}
+
+/** Ratio-against-a-limit meter (dataviz form: Meter). The fill carries
+ *  severity (blue → warning → serious); the unfilled track is a lighter
+ *  step of the SAME hue so state reads across the whole bar. Percent and
+ *  severity word always rendered as text — state is never color-alone. */
+export function UsageMeter({ label, percent, severity, sub }:
+  { label: string; percent: number; severity: string; sub?: string }) {
+  const elevated = severity !== 'normal';
+  const fill = severity === 'warning' ? 'var(--mm-warn)'
+    : elevated ? 'var(--mm-serious)' : 'var(--mm-blue)';
+  const track = severity === 'warning' ? 'rgba(250,178,25,0.16)'
+    : elevated ? 'rgba(236,131,90,0.16)' : 'rgba(57,135,229,0.16)';
+  const pct = Math.min(100, Math.max(0, percent));
+  return (
+    <div className="mm-meter-row" role="meter" aria-valuenow={pct} aria-valuemin={0}
+      aria-valuemax={100} aria-label={`${label}: ${pct}% used`}>
+      <div className="mm-meter-head">
+        <span className="mm-meter-label">{label}</span>
+        <span className="mm-meter-val">{pct}%{elevated ? ` · ${severity}` : ''}</span>
+      </div>
+      <span className="mm-meter-track" style={{ background: track }}>
+        <span className="mm-meter-fill" style={{ width: `${pct}%`, background: fill }} />
+      </span>
+      {sub && <div className="mm-meter-sub">{sub}</div>}
+    </div>
   );
 }
 

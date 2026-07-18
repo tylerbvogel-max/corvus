@@ -690,23 +690,41 @@ async def performance_report(db: AsyncSession = Depends(get_db)):
     }
 
 
-# Documented per-stage latency estimates (the "~200ms" figures in the docs) plus
-# pipeline order + display label. The stage-telemetry report surfaces measured
-# p50 against these so drift between the design's assumptions and reality is visible.
+# Design latency targets, pipeline order, and human-readable labels. The
+# stage-telemetry report surfaces measured p50 against these targets so drift
+# between the intended cheap-recall path and reality is visible.
 STAGE_META = MappingProxyType({
-    "structural_resolve": {"label": "Structural resolve", "order": 0, "estimate_ms": 0.1},
-    "classify":           {"label": "Classify (LLM)",     "order": 1, "estimate_ms": 200.0},
-    "prefilter_score":    {"label": "Prefilter + score",  "order": 2, "estimate_ms": 3.0},
-    "continuity_boost":   {"label": "Continuity boost",   "order": 3, "estimate_ms": 1.0},
-    "spread_activation":  {"label": "Spread activation",  "order": 4, "estimate_ms": 1.0},
-    "inhibitory":         {"label": "Inhibitory",         "order": 5, "estimate_ms": 5.0},
-    "regulatory_resolve": {"label": "Regulatory resolve", "order": 6, "estimate_ms": 50.0},
-    "assemble_prompt":    {"label": "Assemble prompt",    "order": 7, "estimate_ms": 10.0},
+    "structural_resolve": {"label": "Structural fast path",          "order": 0, "estimate_ms": 0.1},
+    # CheapClassifyStage embeds locally then classifies from nearest-neighbor
+    # tags. It never invokes an LLM; 150ms is the cheap-recall design target.
+    "classify":           {"label": "Semantic encode + neighbor vote", "order": 1, "estimate_ms": 150.0},
+    "prefilter_score":    {"label": "Retrieve + score candidates",    "order": 2, "estimate_ms": 3.0},
+    "continuity_boost":   {"label": "Conversation continuity",        "order": 3, "estimate_ms": 1.0},
+    "spread_activation":  {"label": "Graph spread activation",        "order": 4, "estimate_ms": 1.0},
+    "inhibitory":         {"label": "Redundancy inhibition",          "order": 5, "estimate_ms": 5.0},
+    "engram_edge_boost":  {"label": "Engram association boost",       "order": 6, "estimate_ms": 1.0},
+    "regulatory_resolve": {"label": "Regulatory context resolve",     "order": 7, "estimate_ms": 50.0},
+    "assemble_prompt":    {"label": "Assemble memory context",        "order": 8, "estimate_ms": 10.0},
 })
+
+# A pipeline observation is an incident, not a representative recall sample,
+# when a core shared-prefix stage stalls well beyond normal scheduling jitter.
+# Keep its raw Query.stage_telemetry_json for forensics; exclude the *entire*
+# pipeline observation from the performance dashboard so one overloaded host
+# does not contaminate any of its stage distributions.
+PERFORMANCE_INCIDENT_FILTER = """
+NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(q.stage_telemetry_json) incident
+    WHERE (incident->>'stage' = 'classify'
+           AND (incident->>'duration_ms')::float > 5000)
+       OR (incident->>'stage' = 'prefilter_score'
+           AND (incident->>'duration_ms')::float > 1000)
+)
+"""
 
 
 async def _stage_stats(db: AsyncSession) -> list[dict]:
-    """Per-stage latency distribution across all recorded telemetry samples."""
+    """Per-stage latency distribution across non-incident pipeline observations."""
     rows = (await db.execute(text(
         "SELECT stage, COUNT(*) n, AVG(d) mean, COALESCE(STDDEV_SAMP(d),0) sd, "
         "percentile_cont(0.5)  WITHIN GROUP (ORDER BY d) p50, "
@@ -716,7 +734,8 @@ async def _stage_stats(db: AsyncSession) -> list[dict]:
         "MIN(d) mn, MAX(d) mx FROM ("
         "  SELECT t->>'stage' AS stage, (t->>'duration_ms')::float AS d "
         "  FROM queries q, jsonb_array_elements(q.stage_telemetry_json) t "
-        "  WHERE q.stage_telemetry_json IS NOT NULL AND (t->>'duration_ms') IS NOT NULL"
+        "  WHERE q.stage_telemetry_json IS NOT NULL AND (t->>'duration_ms') IS NOT NULL "
+        f"AND {PERFORMANCE_INCIDENT_FILTER}"
         ") s GROUP BY stage"
     ))).all()
     out = []
@@ -746,6 +765,7 @@ async def _stage_trend(db: AsyncSession) -> list[dict]:
         "percentile_cont(0.95) WITHIN GROUP (ORDER BY (t->>'duration_ms')::float) p95 "
         "FROM queries q, jsonb_array_elements(q.stage_telemetry_json) t "
         "WHERE q.stage_telemetry_json IS NOT NULL AND (t->>'duration_ms') IS NOT NULL "
+        f"AND {PERFORMANCE_INCIDENT_FILTER} "
         "AND q.created_at IS NOT NULL GROUP BY bucket, stage ORDER BY bucket"
     ))).all()
     return [{"bucket": r.bucket, "stage": r.stage, "n": int(r.n),
@@ -757,11 +777,14 @@ async def stage_telemetry_report(db: AsyncSession = Depends(get_db)):
     """Per-stage pipeline-latency statistics from Query.stage_telemetry_json.
 
     Aggregates every recorded stage duration: distribution (mean/stddev/CoV,
-    p50/p90/p95/p99, min/max), the share of total pipeline latency, documented
-    estimate vs. measured p50, and a per-day drift series. Pure SQL, no LLM calls.
+    p50/p90/p95/p99, min/max), the share of total pipeline latency, design
+    target vs. measured p50, and a per-day drift series. Pipeline observations
+    with a core-stage incident are excluded while their raw telemetry is retained.
+    Pure SQL, no LLM calls.
     """
     n_q = (await db.execute(text(
-        "SELECT COUNT(*) FROM queries WHERE stage_telemetry_json IS NOT NULL"
+        "SELECT COUNT(*) FROM queries q WHERE q.stage_telemetry_json IS NOT NULL "
+        f"AND {PERFORMANCE_INCIDENT_FILTER}"
     ))).scalar() or 0
     if n_q == 0:
         return {"error": "No stage telemetry recorded yet"}
@@ -771,13 +794,19 @@ async def stage_telemetry_report(db: AsyncSession = Depends(get_db)):
     total_p50 = sum(s["p50"] for s in stats) or 1.0
     for s in stats:
         s["share_pct"] = round(100.0 * s["p50"] / total_p50, 1)
+    n_incident = (await db.execute(text(
+        "SELECT COUNT(*) FROM queries q WHERE q.stage_telemetry_json IS NOT NULL "
+        f"AND NOT ({PERFORMANCE_INCIDENT_FILTER})"
+    ))).scalar() or 0
     rng = (await db.execute(text(
-        "SELECT MIN(created_at), MAX(created_at) FROM queries "
-        "WHERE stage_telemetry_json IS NOT NULL"
+        "SELECT MIN(created_at), MAX(created_at) FROM queries q "
+        "WHERE q.stage_telemetry_json IS NOT NULL "
+        f"AND {PERFORMANCE_INCIDENT_FILTER}"
     ))).first()
     return {
         "meta": {
             "queries_with_telemetry": int(n_q),
+            "excluded_incident_queries": int(n_incident),
             "total_samples": sum(s["n"] for s in stats),
             "pipeline_total_p50_ms": round(total_p50, 2),
             "date_range": [rng[0].isoformat() if rng and rng[0] else None,

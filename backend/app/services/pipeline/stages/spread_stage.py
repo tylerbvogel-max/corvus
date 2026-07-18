@@ -27,7 +27,11 @@ class SpreadActivationStage:
             max_hops=state.spread_hops,
             min_activation=state.spread_floor,
         )
+        state.neurons_activated = len(state.scored)
         return state
 
     def describe(self, out: PipelineState) -> dict[str, Any]:
-        return {"propagated": len(out.scored)}
+        return {
+            "propagated": len(out.scored),
+            "neurons_activated": out.neurons_activated,
+        }

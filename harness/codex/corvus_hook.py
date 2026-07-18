@@ -25,6 +25,7 @@ TIMEOUT_SECONDS = 10
 def _normalize(payload: dict) -> dict:
     """Map Codex aliases without changing Claude-shaped payloads."""
     normalized = dict(payload)
+    normalized["harness"] = "codex"
     normalized.setdefault("tool_name", payload.get("tool"))
     normalized.setdefault("tool_input", payload.get("tool_input") or payload.get("input"))
     normalized.setdefault(

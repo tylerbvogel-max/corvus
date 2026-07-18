@@ -19,8 +19,16 @@ interface HierNode {
 }
 
 function treeToHier(nodes: TreeNode[]): HierNode {
-  const convert = (n: TreeNode): HierNode => {
-    const kids = n.children ?? []
+  const isBenchmark = (dept: string | null | undefined, label: string | null | undefined) => {
+    const deptLower = (dept ?? '').toLowerCase();
+    const labelLower = (label ?? '').toLowerCase();
+    return deptLower.includes('atant') || deptLower.includes('assistant') || deptLower.includes('benchmark') ||
+           labelLower.includes('atant') || labelLower.includes('assistant') || labelLower.includes('benchmark');
+  };
+
+  const convert = (n: TreeNode): HierNode | null => {
+    if (isBenchmark(n.department, n.label)) return null;
+    const kids = (n.children ?? []).map(convert).filter((c): c is HierNode => c !== null);
     return {
       name: n.label,
       id: n.id,
@@ -30,10 +38,11 @@ function treeToHier(nodes: TreeNode[]): HierNode {
       role_key: n.role_key,
       invocations: n.invocations,
       avg_utility: n.avg_utility,
-      children: kids.length > 0 ? kids.map(convert) : undefined,
+      children: kids.length > 0 ? kids : undefined,
       value: kids.length === 0 ? 1 : undefined,
-    }
+    };
   }
+  const children = nodes.map(convert).filter((c): c is HierNode => c !== null);
   return {
     name: 'Corvus',
     id: 0,
@@ -43,8 +52,8 @@ function treeToHier(nodes: TreeNode[]): HierNode {
     role_key: null,
     invocations: 0,
     avg_utility: 0,
-    children: nodes.map(convert),
-  }
+    children,
+  };
 }
 
 // DEPT_COLORS imported from constants.ts

@@ -126,13 +126,14 @@ async def _embed_created(db: AsyncSession, neuron_id: int) -> None:
     recall until the next full re-embed.
     """
     from app.services.embedding_service import embed_text
+    from app.services.reconsolidation.inheritance import embedding_input
     from app.services.semantic_prefilter import update_cache_incremental
 
     neuron = await db.get(Neuron, neuron_id)
     assert neuron is not None, f"created neuron {neuron_id} must exist"
-    text = f"{neuron.label}. {neuron.summary or ''} {neuron.content or ''}"
+    text = embedding_input(neuron.label, neuron.summary, neuron.content)
     loop = asyncio.get_running_loop()
-    vec = await loop.run_in_executor(None, embed_text, text[:2000])
+    vec = await loop.run_in_executor(None, embed_text, text)
     assert len(vec) > 0, "embedding must be non-empty"
     neuron.embedding = json.dumps(vec)
     await db.flush()
@@ -153,12 +154,23 @@ async def label_exists(db: AsyncSession, label: str) -> bool:
 
 
 async def _nearest_active_lesson(db: AsyncSession, spec: dict) -> dict | None:
-    """Cosine-nearest active lesson to the candidate spec, if it clears
-    the near-verbatim bar (FUSE_SIM). Same eligibility as the janitor's
-    dedup census (reference class excluded). One local embed per save."""
+    """Nearest active lesson the candidate should queue against, if any.
+
+    Two lanes (kernel Phase 1A), same eligibility as the janitor's dedup
+    census; one local embed per save:
+    - cosine: near-verbatim at FUSE_SIM — the original write gate.
+    - lexical: NVM receipt — the judged duplicates entered at 0.757-0.822
+      cosine, under the 0.88 radar, and lint was the only backstop. A
+      candidate in the near-miss band (>= NEAR_MISS_SIM) whose token/
+      entity signals or fact fingerprint (shared paths/commands/versions)
+      match an active lesson queues for review instead of silently
+      inserting. The global cosine bar is NOT lowered.
+    A cosine hit outranks a lexical hit; ties break by similarity."""
     import numpy as np
     from app.services.embedding_service import embed_text
     from app.services.mind_janitors import FUSE_SIM, _load_lessons
+    from app.services.mind_lint import NEAR_MISS_SIM, lexical_high
+    from app.services.reconsolidation.fingerprints import nominates
 
     text = f"{spec['label']}. {spec.get('summary') or ''} {spec.get('content') or ''}"
     loop = asyncio.get_running_loop()
@@ -168,6 +180,14 @@ async def _nearest_active_lesson(db: AsyncSession, spec: dict) -> dict | None:
     if norm == 0:
         return None
     vec /= norm
+    # Transient row (never added to the session) so the lexical helpers
+    # see the candidate exactly as it would land.
+    candidate = Neuron(
+        label=spec["label"], content=spec.get("content"),
+        summary=spec.get("summary"), layer=spec.get("layer", 3),
+        node_type=spec.get("node_type", "lesson"),
+        entities=spec.get("entities"),
+    )
     best: dict | None = None
     for n in await _load_lessons(db):
         emb = np.array(json.loads(n.embedding), dtype=np.float64)
@@ -175,8 +195,16 @@ async def _nearest_active_lesson(db: AsyncSession, spec: dict) -> dict | None:
         if denom == 0:
             continue
         sim = float(vec @ (emb / denom))
-        if sim >= FUSE_SIM and (best is None or sim > best["sim"]):
-            best = {"id": n.id, "label": n.label, "sim": sim}
+        if sim >= FUSE_SIM:
+            lane = "cosine"
+        elif sim >= NEAR_MISS_SIM and (lexical_high(candidate, n)
+                                       or nominates(candidate, n)):
+            lane = "lexical"
+        else:
+            continue
+        if best is None or (lane == "cosine", sim) > (best["lane"] == "cosine",
+                                                      best["sim"]):
+            best = {"id": n.id, "label": n.label, "sim": sim, "lane": lane}
     return best
 
 
@@ -250,16 +278,18 @@ async def save_lesson(
     near = await _nearest_active_lesson(db, spec)
     if near is not None:
         proposal.gap_description = (
-            f"NEAR-DUPLICATE @ sim {near['sim']:.3f} of #{near['id']} "
-            f"'{near['label'][:60]}' — {proposal.gap_description}"
+            f"NEAR-DUPLICATE ({near['lane']} lane) @ sim {near['sim']:.3f} "
+            f"of #{near['id']} '{near['label'][:60]}' — "
+            f"{proposal.gap_description}"
         )[:2000]
         await db.commit()
-        logger.info("near-dup gate queued lesson %r (sim %.3f vs #%s)",
-                    label[:60], near["sim"], near["id"])
+        logger.info("near-dup gate queued lesson %r (%s lane, sim %.3f vs #%s)",
+                    label[:60], near["lane"], near["sim"], near["id"])
         return {
             "route": "queue",
             "reason": (f"near-duplicate of #{near['id']} "
-                       f"'{near['label'][:60]}' (sim {near['sim']:.3f}) — "
+                       f"'{near['label'][:60]}' ({near['lane']} lane, "
+                       f"sim {near['sim']:.3f}) — "
                        "queued for human review instead of silent insert"),
             "proposal_id": proposal.id,
             "neuron_id": None,

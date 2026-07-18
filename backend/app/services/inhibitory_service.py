@@ -18,6 +18,7 @@ Feature-flagged via settings.inhibition_enabled.
 """
 
 import json
+import re
 import numpy as np
 
 from sqlalchemy import select, text
@@ -26,6 +27,100 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models import InhibitoryRegulator, Neuron
 from app.services.scoring_engine import NeuronScoreBreakdown
+
+
+_REDUNDANCY_TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+
+def _normalized_memory_text(content: str | None, summary: str | None) -> str:
+    """Canonical lexical form used only as deterministic duplicate evidence."""
+    text_value = (content or summary or "").lower()
+    return " ".join(_REDUNDANCY_TOKEN_RE.findall(text_value))
+
+
+def _lexical_overlap(left: str, right: str) -> tuple[float, float]:
+    """Return (Jaccard, shorter-set containment) for normalized texts."""
+    a, b = set(left.split()), set(right.split())
+    if not a or not b:
+        return 0.0, 0.0
+    intersection = len(a & b)
+    return intersection / len(a | b), intersection / min(len(a), len(b))
+
+
+def _deterministic_duplicate(
+    left: dict,
+    right: dict,
+    cosine_threshold: float,
+) -> bool:
+    """Conservative duplicate verdict; cosine alone is never sufficient.
+
+    Scope equality protects situated/complementary truths. Exact normalized
+    content is sufficient within a scope. Near duplicates additionally need a
+    high embedding cosine AND strong lexical agreement, preventing the known
+    consolidation failure where semantically similar complementary memories
+    outrank true duplicates by cosine.
+    """
+    if left["scope"] != right["scope"]:
+        return False
+    ltext, rtext = left["text"], right["text"]
+    if not ltext or not rtext:
+        return False
+    if ltext == rtext:
+        return True
+
+    lemb, remb = left.get("embedding"), right.get("embedding")
+    if lemb is None or remb is None or len(lemb) != len(remb):
+        return False
+    cosine = float(np.dot(lemb, remb))
+    if cosine < cosine_threshold:
+        return False
+    jaccard, containment = _lexical_overlap(ltext, rtext)
+    return jaccard >= 0.82 and containment >= 0.92
+
+
+async def apply_token_bounded_redundancy(
+    db: AsyncSession,
+    scored: list[NeuronScoreBreakdown],
+) -> tuple[list[NeuronScoreBreakdown], int]:
+    """Suppress deterministic duplicates without imposing a survivor target."""
+    if not scored:
+        return [], 0
+    ids = [s.neuron_id for s in scored]
+    rows = (await db.execute(
+        select(
+            Neuron.id, Neuron.department, Neuron.role_key, Neuron.content,
+            Neuron.summary, Neuron.embedding,
+        ).where(Neuron.id.in_(ids))
+    )).all()
+    meta: dict[int, dict] = {}
+    for nid, department, role_key, content, summary, embedding_json in rows:
+        embedding = None
+        if embedding_json:
+            try:
+                embedding = np.asarray(json.loads(embedding_json), dtype=np.float32)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
+        meta[nid] = {
+            "scope": (department or "", role_key or ""),
+            "text": _normalized_memory_text(content, summary),
+            "embedding": embedding,
+        }
+
+    survivors: list[NeuronScoreBreakdown] = []
+    kept_meta: list[dict] = []
+    suppressed = 0
+    for score in scored:
+        candidate = meta.get(score.neuron_id)
+        if candidate is not None and any(
+            _deterministic_duplicate(candidate, prior, settings.inhibition_redundancy_cosine)
+            for prior in kept_meta
+        ):
+            suppressed += 1
+            continue
+        survivors.append(score)
+        if candidate is not None:
+            kept_meta.append(candidate)
+    return survivors, suppressed
 
 
 async def _load_neuron_metadata(

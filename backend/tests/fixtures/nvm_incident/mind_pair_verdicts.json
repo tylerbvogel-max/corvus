@@ -1,0 +1,110 @@
+[
+    {
+        "id": 8,
+        "neuron_a_id": 57,
+        "neuron_b_id": 177,
+        "content_hash_a": "96efd406dbbb20e6",
+        "content_hash_b": "8f474d032c7c5afe",
+        "sim": 0.7894352279314674,
+        "verdict": "duplicate-mis-scoped",
+        "detail": "{\"misfiled_id\": 177, \"correct_scope\": \"Environment\"}",
+        "source": "haiku-judge",
+        "judged_at": "2026-07-17T05:02:16.568695"
+    },
+    {
+        "id": 9,
+        "neuron_a_id": 51,
+        "neuron_b_id": 57,
+        "content_hash_a": "d4bee43785243b3e",
+        "content_hash_b": "96efd406dbbb20e6",
+        "sim": 0.821834444769094,
+        "verdict": "duplicate-mis-scoped",
+        "detail": "{\"misfiled_id\": 51, \"correct_scope\": \"Environment\"}",
+        "source": "haiku-judge",
+        "judged_at": "2026-07-17T05:02:16.574776"
+    },
+    {
+        "id": 20,
+        "neuron_a_id": 47,
+        "neuron_b_id": 211,
+        "content_hash_a": "9c8feac0002e36c8",
+        "content_hash_b": "e56030835d7e3880",
+        "sim": 0.8574394147114509,
+        "verdict": "duplicate-mis-scoped",
+        "detail": "{\"misfiled_id\": 211, \"correct_scope\": \"Environment\"}",
+        "source": "haiku-judge",
+        "judged_at": "2026-07-17T05:05:12.073599"
+    },
+    {
+        "id": 50,
+        "neuron_a_id": 57,
+        "neuron_b_id": 1161,
+        "content_hash_a": "96efd406dbbb20e6",
+        "content_hash_b": "6b6ddbc86be129cd",
+        "sim": 0.7935782296097907,
+        "verdict": "duplicate-mis-scoped",
+        "detail": "{\"misfiled_id\": 1161, \"correct_scope\": \"Environment\"}",
+        "source": "haiku-judge",
+        "judged_at": "2026-07-17T05:10:34.603414"
+    },
+    {
+        "id": 65,
+        "neuron_a_id": 51,
+        "neuron_b_id": 177,
+        "content_hash_a": "d4bee43785243b3e",
+        "content_hash_b": "8f474d032c7c5afe",
+        "sim": 0.7905230074185778,
+        "verdict": "complementary",
+        "detail": null,
+        "source": "sonnet-judge",
+        "judged_at": "2026-07-17T05:33:36.538077"
+    },
+    {
+        "id": 70,
+        "neuron_a_id": 51,
+        "neuron_b_id": 211,
+        "content_hash_a": "d4bee43785243b3e",
+        "content_hash_b": "e56030835d7e3880",
+        "sim": 0.806108153718526,
+        "verdict": "complementary",
+        "detail": null,
+        "source": "sonnet-judge",
+        "judged_at": "2026-07-17T05:33:36.556132"
+    },
+    {
+        "id": 72,
+        "neuron_a_id": 47,
+        "neuron_b_id": 51,
+        "content_hash_a": "9c8feac0002e36c8",
+        "content_hash_b": "d4bee43785243b3e",
+        "sim": 0.7965533469586168,
+        "verdict": "duplicate-mis-scoped",
+        "detail": "{\"misfiled_id\": 51, \"correct_scope\": \"Environment\"}",
+        "source": "sonnet-judge",
+        "judged_at": "2026-07-17T05:33:41.328919"
+    },
+    {
+        "id": 77,
+        "neuron_a_id": 51,
+        "neuron_b_id": 65,
+        "content_hash_a": "d4bee43785243b3e",
+        "content_hash_b": "d9578b240c4d1ff3",
+        "sim": 0.7814857506870757,
+        "verdict": "duplicate",
+        "detail": null,
+        "source": "sonnet-judge",
+        "judged_at": "2026-07-17T05:33:47.686582"
+    },
+    {
+        "id": 82,
+        "neuron_a_id": 57,
+        "neuron_b_id": 211,
+        "content_hash_a": "96efd406dbbb20e6",
+        "content_hash_b": "e56030835d7e3880",
+        "sim": 0.7576293210698415,
+        "verdict": "genuinely-scoped",
+        "detail": null,
+        "source": "sonnet-judge",
+        "judged_at": "2026-07-17T05:33:52.64227"
+    }
+]

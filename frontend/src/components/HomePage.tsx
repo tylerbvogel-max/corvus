@@ -575,7 +575,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
 
         // Workspace priming always on for the hero chat (Query Lab keeps a toggle)
         const slot: SlotSpec = {
-          mode: `${model}_neuron`, token_budget: 8000, top_k: 60, priming: true,
+          mode: `${model}_neuron`, token_budget: 8000, priming: true,
           spread_hops: spreadHops === 'auto' ? undefined : spreadHops, spread_floor: spreadFloor,
         };
         const { promise, abort } = submitQueryStream(

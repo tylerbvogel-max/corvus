@@ -57,12 +57,27 @@ export interface NeuronStats {
   total_firings: number;
 }
 
+export interface MaintenanceWorkloadCost {
+  workload: string;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  models: string[];
+  equivalent_cost_usd: number;
+}
+
 export interface CostReport {
   total_queries: number;
   total_cost_usd: number;
   avg_cost_per_query: number;
   total_input_tokens: number;
   total_output_tokens: number;
+  maintenance_cost_usd: number;
+  maintenance_per_query_usd: number;
+  maintenance_by_workload: MaintenanceWorkloadCost[];
+  maintenance_since: string | null;
 }
 
 export interface CitationRelevanceClaim {
@@ -97,6 +112,9 @@ export interface SlotResult {
   cost_usd: number;
   cache_creation_tokens?: number;
   cache_read_tokens?: number;
+  observed_total_input_tokens?: number;
+  estimated_memory_tokens?: number;
+  memory_estimation_error_tokens?: number | null;
   duration_ms: number;
   token_budget: number | null;
   top_k: number | null;
@@ -191,6 +209,18 @@ export interface QueryResponse {
   role_keys: string[];
   keywords: string[];
   neurons_activated: number;
+  candidates_considered?: number;
+  neurons_delivered?: number;
+  estimated_memory_tokens?: number;
+  memory_context_chars?: number;
+  memory_context_utf8_bytes?: number;
+  memory_token_budget?: number;
+  assembly_stop_reason?: string | null;
+  redundancy_suppressed?: number;
+  token_estimator_version?: string | null;
+  oversized_first_neuron?: boolean;
+  recall_latency_ms?: number;
+  observed_total_model_input_tokens?: number;
   neuron_scores: NeuronScoreResponse[];
   classify_cost: number;
   classify_input_tokens: number;

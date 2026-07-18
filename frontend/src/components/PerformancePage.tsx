@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   fetchStats, fetchCostReport, fetchSpreadLog, fetchScoringHealth,
-  fetchStageTelemetry, type StageStat, type StageTelemetryReport,
+  fetchStageTelemetry, type StageTelemetryReport,
   type SpreadLogResponse, type ScoringHealthResponse,
 } from '../api';
 import type { NeuronStats, CostReport } from '../types';
@@ -10,8 +10,8 @@ import type { NeuronStats, CostReport } from '../types';
  * Performance — the unified operations dashboard (absorbs the old Dashboard
  * and Pipeline Timing pages). Top to bottom: volume/cost/token/spread tiles,
  * the Corvus-overhead hero line, scoring-health drift monitor, then the
- * per-stage latency suite (budget, estimate-vs-actual, distribution &
- * stability, drift over time). Read-only; no LLM calls.
+ * per-stage latency suite (budget with inline target comparison, distribution
+ * & stability, drift over time). Read-only; no LLM calls.
  */
 
 const C = {
@@ -62,7 +62,6 @@ export default function PerformancePage() {
   const stages = data?.stages ?? [];
   const dominant = useMemo(() => [...stages].sort((a, b) => b.share_pct - a.share_pct)[0], [stages]);
   const byBudget = useMemo(() => [...stages].sort((a, b) => b.p50 - a.p50), [stages]);
-  const withEst = useMemo(() => stages.filter(s => s.estimate_ms != null && s.ratio_p50_vs_estimate != null), [stages]);
   const trendPts = useMemo(
     () => (data?.trend ?? []).filter(t => t.stage === trendStage).sort((a, b) => a.bucket.localeCompare(b.bucket)),
     [data, trendStage],
@@ -87,16 +86,15 @@ export default function PerformancePage() {
       {stats && cost && (
         <div style={tiles}>
           <Tile value={cost.total_queries.toLocaleString()} label="Queries" />
-          <Tile value={`$${cost.total_cost_usd.toFixed(4)}`} label="Total cost" />
-          <Tile value={`$${cost.avg_cost_per_query.toFixed(6)}`} label="Avg / query" />
+          <Tile value={`$${cost.maintenance_cost_usd.toFixed(2)}`} label="Total cost (API est.)" />
+          <Tile value={`$${cost.maintenance_per_query_usd.toFixed(6)}`} label="Maintenance / query" />
           <Tile value={cost.total_input_tokens.toLocaleString()} label="Input tokens" />
           <Tile value={cost.total_output_tokens.toLocaleString()} label="Output tokens" />
           <Tile value={stats.total_neurons.toLocaleString()} label="Neurons" />
           <Tile value={stats.total_firings.toLocaleString()} label="Firings" />
           {spreadLog && <>
-            <Tile value={spreadLog.queries_with_spread.toLocaleString()} label="Queries with spread" />
-            <Tile value={`${Math.round(spreadLog.spread_rate * 100)}%`} label="Spread rate" />
-            <Tile value={spreadLog.top_corridors.length} label="Cross-dept corridors" />
+            <Tile value={spreadLog.queries_with_spread.toLocaleString()} label={`Queries with spread (${spreadLog.rate_window_days}d)`} />
+            <Tile value={`${(spreadLog.spread_rate * 100).toFixed(1)}%`} label={`Spread rate (${spreadLog.rate_window_days}d)`} />
           </>}
         </div>
       )}
@@ -106,11 +104,12 @@ export default function PerformancePage() {
         <div style={{ ...card, borderColor: C.accent, margin: '14px 0 20px' }}>
           <div style={heroKicker}>Corvus overhead per query</div>
           <div style={{ color: C.text, fontSize: 15, lineHeight: 1.5 }}>
-            The pipeline adds a median <strong>{fmtMs(m.pipeline_total_p50_ms)}</strong> and{' '}
-            <strong>${cost.avg_cost_per_query.toFixed(6)}</strong> per query
-            ({m.queries_with_telemetry.toLocaleString()} queries measured).{' '}
+            The pipeline adds a median <strong>{fmtMs(m.pipeline_total_p50_ms)}</strong>, and the
+            maintenance jobs that keep the graph viable amortize to{' '}
+            <strong>${cost.maintenance_per_query_usd.toFixed(6)}</strong> per query
+            ({m.queries_with_telemetry.toLocaleString()} queries measured; the hot path itself makes no LLM calls).{' '}
             <strong>{dominant.label}</strong> is <strong>{dominant.share_pct}%</strong> of that latency
-            {dominant.ratio_p50_vs_estimate != null && <> — <strong>{dominant.ratio_p50_vs_estimate}×</strong> its documented estimate</>};
+            {dominant.ratio_p50_vs_estimate != null && <> — <strong>{dominant.ratio_p50_vs_estimate}×</strong> its design target</>};
             {' '}everything else combines to {Math.round(100 - dominant.share_pct)}%.
           </div>
         </div>
@@ -119,6 +118,41 @@ export default function PerformancePage() {
         <div style={{ ...caution, marginBottom: 18 }}>
           Small sample (n={m.queries_with_telemetry}) — treat these as directional, not precise. Percentile tails especially are noisy.
         </div>
+      )}
+
+      {/* Maintenance cost by action type */}
+      {cost && cost.maintenance_by_workload.length > 0 && (
+        <Section
+          title="Cost by action type"
+          subtitle={`What each maintenance job would bill at API list price (calls run on subscription, so these are price/token equivalents, not cash; benchmark evals excluded). Cost scales with how much CLI-session content gets distilled — not with graph size. Ledger since ${cost.maintenance_since ? cost.maintenance_since.slice(0, 10) : '—'}. Total $${cost.maintenance_cost_usd.toFixed(2)} ÷ ${cost.total_queries.toLocaleString()} queries = $${cost.maintenance_per_query_usd.toFixed(6)}/query.`}
+        >
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 640 }}>
+              <thead>
+                <tr style={{ color: C.dim, textAlign: 'right' }}>
+                  <th style={{ ...th, textAlign: 'left' }}>Action type</th>
+                  <th style={{ ...th, textAlign: 'left' }}>Models</th>
+                  <th style={th}>calls</th><th style={th}>input</th><th style={th}>output</th>
+                  <th style={th}>cache write</th><th style={th}>cache read</th><th style={th}>cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cost.maintenance_by_workload.map(w => (
+                  <tr key={w.workload} style={{ borderTop: `1px solid ${C.border}` }}>
+                    <td style={{ ...tdc, textAlign: 'left', color: C.text }}>{w.workload}</td>
+                    <td style={{ ...tdc, textAlign: 'left' }}>{w.models.join(', ')}</td>
+                    <td style={tdc}>{w.calls.toLocaleString()}</td>
+                    <td style={tdc}>{w.input_tokens.toLocaleString()}</td>
+                    <td style={tdc}>{w.output_tokens.toLocaleString()}</td>
+                    <td style={tdc}>{w.cache_creation_tokens.toLocaleString()}</td>
+                    <td style={tdc}>{w.cache_read_tokens.toLocaleString()}</td>
+                    <td style={{ ...tdc, color: C.text, fontWeight: 600 }}>${w.equivalent_cost_usd.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
       )}
 
       {/* Scoring health */}
@@ -174,35 +208,35 @@ export default function PerformancePage() {
       {m && byBudget.length > 0 && <>
         <Section
           title="Latency budget (median per stage)"
-          subtitle={`One hue = magnitude. Log scale by default because the top stage dwarfs the rest. ${m.queries_with_telemetry} queries · ${m.total_samples} stage samples${m.date_range[0] ? ` · ${m.date_range[0].slice(0, 10)} → ${(m.date_range[1] || '').slice(0, 10)}` : ''}.`}
+          subtitle={`One hue = magnitude. Log scale by default because the top stage dwarfs the rest. ${m.queries_with_telemetry} representative queries · ${m.total_samples} stage samples${m.excluded_incident_queries ? ` · ${m.excluded_incident_queries} incident pipelines excluded (raw telemetry retained)` : ''}${m.date_range[0] ? ` · ${m.date_range[0].slice(0, 10)} → ${(m.date_range[1] || '').slice(0, 10)}` : ''}.`}
           right={<Toggle on={logScale} setOn={setLogScale} label="log scale" />}
         >
           <div style={{ display: 'grid', gap: 9 }}>
             {byBudget.map(s => {
               const frac = logScale ? log1p(s.p50) / log1p(maxBudget) : s.p50 / maxBudget;
+              const hasTarget = s.estimate_ms != null && s.ratio_p50_vs_estimate != null;
+              const slower = (s.ratio_p50_vs_estimate ?? 0) >= 1;
               return (
-                <div key={s.stage} style={barRow}>
+                <div key={s.stage} style={latencyRow}>
                   <span style={barLabel}>{s.label}</span>
                   <div style={{ position: 'relative', height: 20 }}
-                    onMouseMove={e => setTip({ x: e.clientX, y: e.clientY, lines: [s.label, `p50 ${fmtMs(s.p50)} · p95 ${fmtMs(s.p95)}`, `max ${fmtMs(s.max)} · n=${s.n}`] })}>
+                    onMouseMove={e => setTip({ x: e.clientX, y: e.clientY, lines: [s.label, `measured p50 ${fmtMs(s.p50)} · p95 ${fmtMs(s.p95)}`, hasTarget ? `design target ${fmtMs(s.estimate_ms!)} → ${s.ratio_p50_vs_estimate}×` : `max ${fmtMs(s.max)} · n=${s.n}`] })}>
                     <div style={{ position: 'absolute', inset: 0, background: C.input, borderRadius: 4 }} />
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${Math.max(frac * 100, 0.6)}%`, background: C.accent, borderRadius: 4, minWidth: 3 }} />
                     <span style={{ position: 'absolute', left: 8, top: 2, fontSize: 11, color: '#0d0d0d', fontWeight: 700, textShadow: '0 0 2px rgba(255,255,255,.4)' }}>
                       {fmtMs(s.p50)} · {s.share_pct}%
                     </span>
                   </div>
+                  <div style={targetCell}>
+                    {hasTarget ? <>
+                      <span style={targetKicker}>target {fmtMs(s.estimate_ms!)}</span>
+                      <strong style={{ color: slower ? C.red : C.green }}>{slower ? '▲' : '▼'} {s.ratio_p50_vs_estimate}×</strong>
+                    </> : <span style={targetKicker}>no target</span>}
+                  </div>
                 </div>
               );
             })}
           </div>
-        </Section>
-
-        {/* Estimate vs actual */}
-        <Section
-          title="Estimate vs. actual (measured p50 ÷ documented estimate)"
-          subtitle="1× = matches the design assumption. Right/red = slower than documented; left/green = faster. Bars are log-scaled around 1×."
-        >
-          <RatioBars items={withEst} onTip={setTip} />
         </Section>
 
         {/* Distribution & stability */}
@@ -263,41 +297,6 @@ function Tile({ value, label }: { value: string | number; label: string }) {
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px' }}>
       <div style={{ color: C.text, fontFamily: 'var(--font-mono, monospace)', fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{value}</div>
       <div style={{ color: C.dim, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 3 }}>{label}</div>
-    </div>
-  );
-}
-
-function RatioBars({ items, onTip }: { items: StageStat[]; onTip: (t: Tip) => void }) {
-  const ratios = items.map(s => s.ratio_p50_vs_estimate!);
-  const maxLog = Math.max(...ratios.map(r => Math.abs(Math.log10(r))), 0.3);
-  return (
-    <div style={{ display: 'grid', gap: 9 }}>
-      {items.map(s => {
-        const r = s.ratio_p50_vs_estimate!;
-        const l = Math.log10(r);
-        const half = (Math.abs(l) / maxLog) * 50; // % of half-width
-        const slower = r >= 1;
-        return (
-          <div key={s.stage} style={barRow}>
-            <span style={barLabel}>{s.label}</span>
-            <div style={{ position: 'relative', height: 20 }}
-              onMouseMove={e => onTip({ x: e.clientX, y: e.clientY, lines: [s.label, `measured p50 ${fmtMs(s.p50)}`, `documented ${fmtMs(s.estimate_ms!)} → ${r}×`] })}>
-              <div style={{ position: 'absolute', inset: 0, background: C.input, borderRadius: 4 }} />
-              <div style={{ position: 'absolute', left: '50%', top: -2, bottom: -2, width: 1, background: C.border }} />
-              <div style={{ position: 'absolute', top: 0, bottom: 0, borderRadius: 4, background: slower ? C.red : C.green,
-                left: slower ? '50%' : `${50 - half}%`, width: `${Math.max(half, 0.6)}%` }} />
-              <span style={{ position: 'absolute', top: 2, fontSize: 11, fontWeight: 700, color: C.text,
-                left: slower ? `calc(50% + ${half}% + 6px)` : undefined, right: slower ? undefined : `calc(50% + ${half}% + 6px)` }}>
-                {slower ? '▲' : '▼'} ×{r}
-              </span>
-            </div>
-          </div>
-        );
-      })}
-      <div style={{ display: 'flex', gap: 16, marginTop: 4, fontSize: 11, color: C.dim }}>
-        <span><span style={{ color: C.green }}>▼</span> faster than documented</span>
-        <span><span style={{ color: C.red }}>▲</span> slower than documented</span>
-      </div>
     </div>
   );
 }
@@ -371,8 +370,10 @@ const caution: CSSProperties = { background: 'rgba(200,117,51,0.1)', border: `1p
 const alertBox: CSSProperties = { border: '1px solid', borderRadius: 8, padding: '8px 12px' };
 const heroKicker: CSSProperties = { color: C.accent, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 };
 const tiles: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 };
-const barRow: CSSProperties = { display: 'grid', gridTemplateColumns: '150px 1fr', gap: 12, alignItems: 'center' };
-const barLabel: CSSProperties = { color: C.dim, fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const latencyRow: CSSProperties = { display: 'grid', gridTemplateColumns: '230px minmax(0, 1fr) 108px', gap: 12, alignItems: 'center' };
+const barLabel: CSSProperties = { color: C.dim, fontSize: 12, textAlign: 'right', whiteSpace: 'nowrap' };
+const targetCell: CSSProperties = { display: 'grid', gap: 1, justifyItems: 'start', fontSize: 11, fontFamily: 'var(--font-mono, monospace)', whiteSpace: 'nowrap' };
+const targetKicker: CSSProperties = { color: C.dim, fontSize: 10 };
 const th: CSSProperties = { padding: '6px 10px', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4 };
 const tdc: CSSProperties = { padding: '6px 10px', textAlign: 'right', color: C.dim, fontFamily: 'var(--font-mono, monospace)', whiteSpace: 'nowrap' };
 const select: CSSProperties = { background: C.input, color: C.text, border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 12 };

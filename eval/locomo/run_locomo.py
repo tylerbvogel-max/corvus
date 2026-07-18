@@ -1,12 +1,11 @@
 """LoCoMo benchmark harness for the corvus-mind memory pipeline (kill-locomo-bench).
 
-Honest conditions (roadmap node, 2026-07-12):
+Honest conditions (roadmap node, updated 2026-07-17):
   1. INGEST session-by-session: each LoCoMo session is distilled into atomic
      memory facts (Opus, conversation-mode distill prompt) which enter the
      graph through the SAME write-gate path as production saves
-     (lesson_store.save_lesson); the consolidation janitor runs between
-     sessions, exactly as between real sessions. Never one whole-transcript
-     blob — that would test the context window, not memory.
+     (lesson_store.save_lesson). Never one whole-transcript blob — that would
+     test the context window, not memory.
   2. ANSWER via recall only: each question runs the standard prepare
      pipeline (classify → prefilter → spread → inhibit → assemble) against
      the ingested tenant; the answering model sees ONLY recalled memories.
@@ -18,6 +17,17 @@ Deviation from prod distiller (documented): the production distiller prompt
 extracts machine/tool lessons from coding-agent episode logs; LoCoMo is
 persona dialogue, so this harness uses a conversation-mode extraction prompt.
 The write path (write gate, embedding, janitors, recall) is unchanged prod code.
+
+Maintenance is selected with --lifecycle-mode:
+  raw             distill every session; no maintenance before scoring
+  consolidation   historical arm; consolidate after every session
+  full-lifecycle  production-equivalent event cadence for a modeled
+                  200-session week: 28 full janitors and 7 compilers.
+The cadence is indexed across the full LoCoMo dataset, even when conversations
+run as separate processes, so fractional 7/8- and 28/29-session spacing is
+preserved without sleeping. Compiler output and episode markers are redirected
+to a per-run eval directory; the production graph and skill directory are never
+touched.
 
 Run (from backend/, venv active):
   TENANT_ID=corvus-locomo PYTHONPATH=. python ../eval/locomo/run_locomo.py \
@@ -35,9 +45,15 @@ import os
 import re
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 
 DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locomo10.json")
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+EVAL_ARTIFACT_ROOT = os.path.expanduser("~/.corvus-mind/evals/locomo")
+LIFECYCLE_MODES = ("raw", "consolidation", "full-lifecycle")
+DEFAULT_SESSIONS_PER_WEEK = 200
+JANITOR_RUNS_PER_WEEK = 28       # every six hours
+COMPILER_RUNS_PER_WEEK = 7       # daily
 # Model tiers are env-overridable so a run can be made cheap. Note what is
 # safe to lower and what is not:
 #   DISTILL/ANSWER are the SYSTEM UNDER TEST — lowering them lowers absolute
@@ -135,9 +151,13 @@ async def llm_retry(**kwargs) -> dict:
     raise RuntimeError("unreachable")
 
 
-def load_conversation(conv_idx: int) -> dict:
+def load_dataset() -> list[dict]:
     with open(DATA_PATH, encoding="utf-8") as fh:
-        data = json.load(fh)
+        return json.load(fh)
+
+
+def load_conversation(conv_idx: int) -> dict:
+    data = load_dataset()
     assert 0 <= conv_idx < len(data), f"conv index out of range (0..{len(data) - 1})"
     return data[conv_idx]
 
@@ -149,6 +169,91 @@ def iter_sessions(conv: dict):
     while f"session_{n}" in conversation:  # bounded by dataset keys (JPL-2)
         yield n, conversation.get(f"session_{n}_date_time"), conversation[f"session_{n}"]
         n += 1
+
+
+def session_count(conv: dict) -> int:
+    return sum(1 for _ in iter_sessions(conv))
+
+
+def sessions_before_conversation(dataset: list[dict], conv_idx: int) -> int:
+    """Global suite offset keeps lifecycle cadence stable across processes."""
+    return sum(session_count(conv) for conv in dataset[:conv_idx])
+
+
+def cadence_due(session_ordinal: int, runs_per_week: int,
+                sessions_per_week: int = DEFAULT_SESSIONS_PER_WEEK) -> bool:
+    """True when this session crosses a fractional event-cadence boundary."""
+    assert session_ordinal >= 1, "session ordinal must be positive"
+    assert 1 <= runs_per_week <= sessions_per_week
+    previous = ((session_ordinal - 1) * runs_per_week) // sessions_per_week
+    current = (session_ordinal * runs_per_week) // sessions_per_week
+    return current > previous
+
+
+def lifecycle_events(mode: str, session_ordinal: int,
+                     sessions_per_week: int = DEFAULT_SESSIONS_PER_WEEK) -> list[str]:
+    assert mode in LIFECYCLE_MODES, f"unknown lifecycle mode: {mode}"
+    if mode == "raw":
+        return []
+    if mode == "consolidation":
+        return ["consolidation"]
+    events = []
+    if cadence_due(session_ordinal, JANITOR_RUNS_PER_WEEK, sessions_per_week):
+        events.append("janitor")
+    if cadence_due(session_ordinal, COMPILER_RUNS_PER_WEEK, sessions_per_week):
+        events.append("compiler")
+    return events
+
+
+def create_eval_artifact_dir(conv_idx: int, mode: str,
+                             requested: str | None = None) -> str:
+    if requested:
+        path = os.path.abspath(os.path.expanduser(requested))
+    else:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        path = os.path.join(EVAL_ARTIFACT_ROOT,
+                            f"{stamp}-p{os.getpid()}-conv{conv_idx}-{mode}")
+    eval_skills = os.path.realpath(os.path.join(path, "skills"))
+    eval_episodes = os.path.realpath(os.path.join(path, "episodes"))
+    assert eval_skills != os.path.realpath(os.path.expanduser("~/.claude/skills")), \
+        "eval compiler output must not target the live Claude skill directory"
+    assert eval_episodes != os.path.realpath(
+        os.path.expanduser("~/.corvus-mind/episodes")), \
+        "eval episodes must not target the live Corvus episode directory"
+    os.makedirs(os.path.join(path, "episodes"), exist_ok=True)
+    os.makedirs(os.path.join(path, "skills"), exist_ok=True)
+    return path
+
+
+def configure_isolated_runtime(artifact_dir: str) -> None:
+    """Set paths before importing janitor/compiler modules."""
+    episode_dir = os.path.join(artifact_dir, "episodes")
+    os.environ["CORVUS_MIND_EPISODE_DIR"] = episode_dir
+    from app.services import mind_janitors, skill_compiler
+    mind_janitors.EPISODE_DIR = episode_dir
+    mind_janitors.ACTIONS_LOG = os.path.join(episode_dir, "janitor-actions.jsonl")
+    skill_compiler.SKILLS_DIR = os.path.join(artifact_dir, "skills")
+    skill_compiler.MANIFEST_PATH = os.path.join(artifact_dir, "compiled-skills.json")
+
+
+def assert_eval_database(database_url: str) -> None:
+    """A tenant name cannot override an accidentally inherited production URL."""
+    db_name = database_url.split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+    assert db_name == "corvus_locomo", \
+        f"LoCoMo harness requires corvus_locomo database, got {db_name!r}"
+
+
+def mark_distilled_session(artifact_dir: str, conv_idx: int, session_num: int,
+                           saved: int) -> None:
+    marker_path = os.path.join(
+        artifact_dir, "episodes", f"locomo-{conv_idx}-{session_num}.jsonl.distilled")
+    with open(marker_path, "w", encoding="utf-8") as fh:
+        json.dump({
+            "distilled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "session_id": f"locomo-{conv_idx}-{session_num}",
+            "saved": saved,
+            "source": "locomo_conversation_adapter",
+        }, fh, indent=2)
 
 
 def render_session(turns: list[dict]) -> str:
@@ -185,16 +290,44 @@ async def reset_db() -> None:
     print("[db] schema dropped + recreated", flush=True)
 
 
-async def ingest(conv_idx: int, conv: dict) -> None:
-    """Session-by-session distill → write gate; consolidation between sessions."""
+async def run_lifecycle_events(events: list[str], session_factory=None) -> list[dict]:
+    """Execute scheduled production maintenance in its normal dependency order."""
+    from app.services.mind_janitors import run_consolidation, run_janitors
+    from app.services.skill_compiler import run_compile
+
+    if session_factory is None:
+        from app.database import async_session
+        session_factory = async_session
+
+    reports = []
+    for event in events:
+        async with session_factory() as db:
+            if event == "consolidation":
+                report = await run_consolidation(db)
+            elif event == "janitor":
+                report = await run_janitors(db)
+            elif event == "compiler":
+                report = await run_compile(db)
+            else:
+                raise AssertionError(f"unknown lifecycle event: {event}")
+        reports.append({
+            "event": event,
+            "report": json.loads(json.dumps(report, default=str)),
+        })
+    return reports
+
+
+async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
+                 session_offset: int, sessions_per_week: int,
+                 artifact_dir: str) -> dict:
+    """Session-by-session distill → write gate → selected lifecycle cadence."""
     from app.database import async_session
     from app.services.lesson_store import save_lesson, label_exists
-    from app.services.llm_provider import llm_chat
-    from app.services.mind_janitors import run_consolidation
 
     speakers = (conv["conversation"].get("speaker_a"),
                 conv["conversation"].get("speaker_b"))
     total_saved = 0
+    maintenance: list[dict] = []
     for num, date_time, turns in iter_sessions(conv):
         # chunked distillation: per-session single calls plateau at ~10 facts
         # no matter the cap; smaller windows + a proportional floor force the
@@ -235,13 +368,26 @@ async def ingest(conv_idx: int, conv: dict) -> None:
                 )
                 saved += 1
         total_saved += saved
-        # between-session janitor: consolidation only (the honest condition —
-        # the graph curates itself between sessions, as in production)
-        async with async_session() as db:
-            report = await run_consolidation(db)
+        mark_distilled_session(artifact_dir, conv_idx, num, saved)
+        ordinal = session_offset + num
+        events = lifecycle_events(lifecycle_mode, ordinal, sessions_per_week)
+        reports = await run_lifecycle_events(events)
+        maintenance.extend({"session": num, "suite_session": ordinal, **r}
+                           for r in reports)
+        event_text = ",".join(events) if events else "none"
         print(f"[ingest] session {num}: {len(facts)} candidates, {saved} saved, "
-              f"{len(report['fused'])} fused by janitor", flush=True)
+              f"maintenance={event_text}", flush=True)
     print(f"[ingest] done: {total_saved} facts saved", flush=True)
+    return {
+        "mode": lifecycle_mode,
+        "sessions": session_count(conv),
+        "session_offset": session_offset,
+        "sessions_per_week": sessions_per_week,
+        "janitor_runs_per_week": JANITOR_RUNS_PER_WEEK,
+        "compiler_runs_per_week": COMPILER_RUNS_PER_WEEK,
+        "events": maintenance,
+        "artifact_dir": artifact_dir,
+    }
 
 
 def gold_answer(qa: dict) -> str:
@@ -381,7 +527,19 @@ async def main() -> None:
                     help="skip DB reset before ingest (resume)")
     ap.add_argument("--strict-prompt", action="store_true",
                     help="restore the sweep-1 strict refusal answer prompt")
+    ap.add_argument("--lifecycle-mode", choices=LIFECYCLE_MODES,
+                    default=os.environ.get("LOCOMO_LIFECYCLE_MODE", "consolidation"),
+                    help="maintenance profile during session ingest")
+    ap.add_argument("--sessions-per-week", type=int,
+                    default=int(os.environ.get(
+                        "LOCOMO_SESSIONS_PER_WEEK", str(DEFAULT_SESSIONS_PER_WEEK))),
+                    help="modeled activity used to convert timers to session cadence")
+    ap.add_argument("--eval-artifact-dir",
+                    help="isolated episode/compiler output directory (unique by default)")
     args = ap.parse_args()
+
+    assert args.sessions_per_week >= JANITOR_RUNS_PER_WEEK, \
+        "sessions-per-week must be at least the 28 weekly janitor opportunities"
 
     if args.strict_prompt:
         global ANSWER_PROMPT
@@ -389,19 +547,38 @@ async def main() -> None:
 
     assert os.environ.get("TENANT_ID") == "corvus-locomo", \
         "run with TENANT_ID=corvus-locomo (throwaway tenant — never the real graph)"
+    artifact_dir = create_eval_artifact_dir(
+        args.conv, args.lifecycle_mode, args.eval_artifact_dir)
+    configure_isolated_runtime(artifact_dir)
+    from app.config import settings
+    assert_eval_database(settings.database_url)
     # standalone process: the action registry normally fills at app startup
     from app.services.actions.init_registry import init_actions_registry
     init_actions_registry()
-    conv = load_conversation(args.conv)
+    dataset = load_dataset()
+    assert 0 <= args.conv < len(dataset), \
+        f"conv index out of range (0..{len(dataset) - 1})"
+    conv = dataset[args.conv]
+    session_offset = sessions_before_conversation(dataset, args.conv)
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     prompt_tag = "-strict" if args.strict_prompt else ""
+    lifecycle_tag = ("" if args.lifecycle_mode == "consolidation"
+                     else f"-{args.lifecycle_mode}")
     summary: dict = {"conv": args.conv, "max_questions": args.max_questions,
-                     "strict_prompt": args.strict_prompt}
+                     "strict_prompt": args.strict_prompt,
+                     "lifecycle_mode": args.lifecycle_mode,
+                     "eval_artifact_dir": artifact_dir}
     if args.phase in ("ingest", "all"):
         if not args.no_reset:
             await reset_db()
-        await ingest(args.conv, conv)
+        summary["lifecycle"] = await ingest(
+            args.conv, conv,
+            lifecycle_mode=args.lifecycle_mode,
+            session_offset=session_offset,
+            sessions_per_week=args.sessions_per_week,
+            artifact_dir=artifact_dir,
+        )
     for condition in ("memory", "hybrid", "nospread", "baseline"):
         phase_key = {"memory": "answer", "hybrid": "hybrid",
                      "nospread": "nospread", "baseline": "baseline"}[condition]
@@ -417,11 +594,13 @@ async def main() -> None:
         scores = await judge(results)
         summary[condition] = scores
         out = os.path.join(
-            RESULTS_DIR, f"conv{args.conv}-{condition}{prompt_tag}.json")
+            RESULTS_DIR,
+            f"conv{args.conv}-{condition}{prompt_tag}{lifecycle_tag}.json")
         with open(out, "w", encoding="utf-8") as fh:
             json.dump({"scores": scores, "results": results}, fh, indent=2)
         print(f"[{condition}{prompt_tag}] {scores}", flush=True)
-    out = os.path.join(RESULTS_DIR, f"conv{args.conv}-summary{prompt_tag}.json")
+    out = os.path.join(
+        RESULTS_DIR, f"conv{args.conv}-summary{prompt_tag}{lifecycle_tag}.json")
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
     print(json.dumps(summary, indent=2))

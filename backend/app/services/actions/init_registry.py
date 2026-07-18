@@ -39,6 +39,18 @@ from app.services.actions.eval_run_lifecycle import (
     handle_eval_run_complete,
     handle_eval_run_start,
 )
+from app.services.actions.edge_rewire import (
+    EdgeRewireInput,
+    handle_edge_rewire,
+)
+from app.services.actions.neuron_stats_rebuild import (
+    NeuronStatsRebuildInput,
+    handle_neuron_stats_rebuild,
+)
+from app.services.actions.proposal_reconsolidate import (
+    ProposalReconsolidateInput,
+    handle_proposal_reconsolidate,
+)
 
 
 def init_actions_registry() -> None:
@@ -95,5 +107,23 @@ def init_actions_registry() -> None:
         kind="eval.run.complete",
         schema=EvalRunCompleteInput,
         handler=handle_eval_run_complete,
+        requires_approval=False,
+    )
+    register_action(
+        kind="edge.rewire",
+        schema=EdgeRewireInput,
+        handler=handle_edge_rewire,
+        requires_approval=False,
+    )
+    register_action(
+        kind="neuron.stats.rebuild",
+        schema=NeuronStatsRebuildInput,
+        handler=handle_neuron_stats_rebuild,
+        requires_approval=False,
+    )
+    register_action(
+        kind="proposal.reconsolidate",
+        schema=ProposalReconsolidateInput,
+        handler=handle_proposal_reconsolidate,
         requires_approval=False,
     )

@@ -13,6 +13,8 @@ existing behavior).
 
 from __future__ import annotations
 
+import asyncio
+import json
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -94,9 +96,22 @@ async def handle_neuron_refine(
         return _skipped_audit(payload, f"unsupported_field:{payload.field}")
 
     old_department = neuron.department
+    text_changed = (payload.field in ("content", "summary", "label")
+                    and payload.new_value != payload.old_value)
     _apply_field_to_neuron(neuron, payload.field, payload.new_value)
     if payload.field in ("content", "summary"):
         populate_external_references(neuron)
+
+    # KERNEL RULE (mind-reconsolidation-kernel Phase 2): refined text must
+    # never ride the old semantic vector. Frozen NVM receipt: #1099 rewrote
+    # #57's label/summary/content and recall kept ranking the new text by
+    # the pre-refinement embedding — no embed call existed anywhere in
+    # actions/. Only neurons already in semantic space regenerate;
+    # creation-time embedding stays lesson_store._embed_created's job.
+    embedding_regenerated = False
+    if text_changed and neuron.embedding is not None:
+        await _regenerate_embedding(db, neuron)
+        embedding_regenerated = True
 
     # EDGE-RETYPING POLICY (graph lint, decided 2026-07-16): edge_type
     # stellate/pyramidal encodes same-region vs cross-region AT LINK TIME,
@@ -151,9 +166,26 @@ async def handle_neuron_refine(
             "field": payload.field, "refinement_id": ref.id,
             "proposal_id": payload.proposal_id, "item_id": payload.item_id,
             "edges_retyped": retyped,
+            "embedding_regenerated": embedding_regenerated,
         },
         "payload": {"refinement_id": ref.id},
     }
+
+
+async def _regenerate_embedding(db: AsyncSession, neuron: Neuron) -> None:
+    """New text, new vector — in the SAME transaction, with the semantic
+    cache refreshed alongside. Fails closed: a refine that cannot
+    re-embed must not commit stale-vector state."""
+    from app.services.embedding_service import embed_text
+    from app.services.reconsolidation.inheritance import embedding_input
+    from app.services.semantic_prefilter import update_cache_incremental
+
+    text = embedding_input(neuron.label, neuron.summary, neuron.content)
+    loop = asyncio.get_running_loop()
+    vec = await loop.run_in_executor(None, embed_text, text)
+    assert vec, "embedding must be non-empty"
+    neuron.embedding = json.dumps(vec)
+    await update_cache_incremental(db, [neuron.id], "neuron")
 
 
 async def _retype_edges_for_region(db: AsyncSession, neuron: Neuron) -> int:

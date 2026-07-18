@@ -63,7 +63,9 @@ ENTITY_OVERLAP_HIGH = 0.5     # guessed — calibrate as entity coverage grows
 MAX_SCOPE_LINT_PROPOSALS = 5
 MAX_COMPONENT_PROPOSALS = 3
 COMPONENT_MIN_MEMBERS = 3     # below this, pairwise proposals suffice
-OPUS_COMPOSE_MIN_MEMBERS = 4  # canonical-content composition is rare + expensive
+# (OPUS_COMPOSE_MIN_MEMBERS removed 2026-07-17: composition is now
+# coverage-delta driven inside reconsolidation.review — N>=4 was never
+# the right criterion.)
 
 HEALTH_TOP_SLOTS = 6          # injection top-k whose waste we measure
 

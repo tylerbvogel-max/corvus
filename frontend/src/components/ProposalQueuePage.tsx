@@ -19,7 +19,7 @@ import { getReviewerName, setReviewerName } from '../auth';
 import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
 import { diffWords } from 'diff';
 
-type StateFilter = 'all' | 'proposed' | 'approved' | 'rejected' | 'applied';
+type StateFilter = 'all' | 'proposed' | 'approved' | 'rejected' | 'applied' | 'superseded';
 export type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
 
 const STATE_COLORS: Record<string, string> = {
@@ -27,6 +27,7 @@ const STATE_COLORS: Record<string, string> = {
   approved: '#4caf50',
   rejected: '#e74c3c',
   applied: '#2196f3',
+  superseded: '#7f8c8d', // terminal: old-state drifted before review/apply
 };
 
 const ORIGIN_COLORS: Record<string, string> = {
@@ -176,20 +177,20 @@ export default function ProposalQueuePage({
     }
   }, []);
 
-  const handleReview = useCallback(async (action: 'approve' | 'reject', applyAfter = false) => {
+  // ONE-step lifecycle (reconsolidation kernel Phase 4): the backend
+  // applies on approve inside the same transaction, so there is no
+  // second /apply call. A 409 means the proposal's recorded old-state
+  // drifted and it was terminally superseded instead.
+  const handleReview = useCallback(async (action: 'approve' | 'reject') => {
     if (!selected || !reviewer.trim()) return;
     setActionLoading(true);
     try {
       const updated = await reviewProposal(selected.id, action, reviewer.trim(), reviewNotes);
-      if (applyAfter && action === 'approve') {
-        const applied = await applyProposal(updated.id, reviewer.trim());
-        setSelected(applied);
-      } else {
-        setSelected(updated);
-      }
+      setSelected(updated);
       await load();
     } catch (e) {
       setError(String(e));
+      await load(); // a 409 supersession still changed the row — refresh
     } finally {
       setActionLoading(false);
     }
@@ -211,22 +212,18 @@ export default function ProposalQueuePage({
 
   // Bulk review — loops single-review endpoint sequentially so we surface
   // per-item failures without a half-applied batch.
-  const handleBulk = useCallback(async (action: 'approve' | 'reject' | 'apply') => {
+  const handleBulk = useCallback(async (action: 'approve' | 'reject') => {
     if (selectedIds.size === 0 || !reviewer.trim()) return;
     const ids = Array.from(selectedIds);
     setActionLoading(true);
     let done = 0;
     const failures: number[] = [];
-    const verb = action === 'approve' ? 'Approving' : action === 'reject' ? 'Rejecting' : 'Applying';
-    const pastVerb = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'applied';
+    const verb = action === 'approve' ? 'Approving' : 'Rejecting';
+    const pastVerb = action === 'approve' ? 'approved' : 'rejected';
     for (const id of ids) {
       setBulkProgress(`${verb} ${done + 1}/${ids.length}...`);
       try {
-        if (action === 'apply') {
-          await applyProposal(id, reviewer.trim());
-        } else {
-          await reviewProposal(id, action, reviewer.trim(), reviewNotes);
-        }
+        await reviewProposal(id, action, reviewer.trim(), reviewNotes);
       } catch {
         failures.push(id);
       }
@@ -323,7 +320,7 @@ export default function ProposalQueuePage({
       if ((e.key === 'a' || e.key === 'A') && selected && selected.state === 'proposed') {
         e.preventDefault();
         if (!reviewer.trim()) { reviewerInputRef.current?.focus(); return; }
-        void handleReview('approve', e.key === 'A');
+        void handleReview('approve'); // one-step: approve applies
         return;
       }
       if (e.key === 'r' && selected && selected.state === 'proposed') {
@@ -390,7 +387,9 @@ export default function ProposalQueuePage({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 8px', flex: 1, overflow: 'hidden' }}>
             {stats && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', fontSize: '0.7rem' }}>
-                {(['proposed', 'approved', 'rejected', 'applied'] as const).map(s => (
+                {/* ONE-step lifecycle: approve = apply, so 'approved' is not a
+                    resting population — surface it only as an anomaly. */}
+                {(['proposed', 'rejected', 'applied', 'superseded'] as const).map(s => (
                   <span key={s} style={{
                     padding: '1px 6px', borderRadius: 10,
                     background: STATE_COLORS[s] + '22', color: STATE_COLORS[s],
@@ -399,6 +398,18 @@ export default function ProposalQueuePage({
                     {s}: {stats[s]}
                   </span>
                 ))}
+                {stats.approved > 0 && (
+                  <span
+                    title="Approved-but-unapplied rows cannot occur under the one-step lifecycle — these are stuck legacy rows; run the stale-approved sweep to retire them."
+                    style={{
+                      padding: '1px 6px', borderRadius: 10,
+                      background: '#e74c3c22', color: '#e74c3c',
+                      fontWeight: 600, border: '1px dashed #e74c3c',
+                    }}
+                  >
+                    ⚠ stuck approved: {stats.approved}
+                  </span>
+                )}
               </div>
             )}
 
@@ -435,6 +446,7 @@ export default function ProposalQueuePage({
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="applied">Applied</option>
+                <option value="superseded">Superseded</option>
               </select>
               <button
                 onClick={() => setGroupByCluster(g => !g)}
@@ -477,7 +489,7 @@ export default function ProposalQueuePage({
                       fontSize: '0.72rem', fontWeight: 600,
                       opacity: actionLoading || !reviewer.trim() ? 0.5 : 1,
                     }}
-                  >Approve all</button>
+                  >Approve & apply all</button>
                   <button
                     onClick={() => handleBulk('reject')}
                     disabled={actionLoading || !reviewer.trim()}
@@ -488,17 +500,6 @@ export default function ProposalQueuePage({
                       opacity: actionLoading || !reviewer.trim() ? 0.5 : 1,
                     }}
                   >Reject all</button>
-                  <button
-                    onClick={() => handleBulk('apply')}
-                    disabled={actionLoading || !reviewer.trim()}
-                    title="Apply approved selections to graph (non-approved will be skipped)"
-                    style={{
-                      flex: 1, padding: '4px 6px', borderRadius: 4, border: 'none',
-                      background: '#2196f3', color: '#fff', cursor: 'pointer',
-                      fontSize: '0.72rem', fontWeight: 600,
-                      opacity: actionLoading || !reviewer.trim() ? 0.5 : 1,
-                    }}
-                  >Apply all</button>
                   <button
                     onClick={() => setSelectedIds(new Set())}
                     style={{
@@ -724,6 +725,7 @@ export default function ProposalQueuePage({
                     <button
                       onClick={() => handleReview('approve')}
                       disabled={actionLoading || !reviewer.trim()}
+                      title="Approve = apply, one transaction (kernel one-step lifecycle)"
                       style={{
                         flex: 1, padding: '8px 16px', borderRadius: 6, border: 'none',
                         background: '#4caf50', color: '#fff', cursor: 'pointer',
@@ -731,20 +733,7 @@ export default function ProposalQueuePage({
                         opacity: actionLoading || !reviewer.trim() ? 0.5 : 1,
                       }}
                     >
-                      Approve <kbd style={kbdInline}>a</kbd>
-                    </button>
-                    <button
-                      onClick={() => handleReview('approve', true)}
-                      disabled={actionLoading || !reviewer.trim()}
-                      title="Approve and apply to graph"
-                      style={{
-                        flex: 1, padding: '8px 16px', borderRadius: 6, border: 'none',
-                        background: '#2196f3', color: '#fff', cursor: 'pointer',
-                        fontWeight: 600,
-                        opacity: actionLoading || !reviewer.trim() ? 0.5 : 1,
-                      }}
-                    >
-                      Approve & Apply <kbd style={kbdInline}>A</kbd>
+                      Approve & Apply <kbd style={kbdInline}>a</kbd>
                     </button>
                     <button
                       onClick={() => handleReview('reject')}
@@ -940,13 +929,213 @@ function EvidenceCard({ evidence }: { evidence: GapEvidence | DocumentEvidence |
   );
 }
 
+interface FusionMemberPreview {
+  neuron_id: number;
+  content_hash: string;
+  node_type?: string | null;
+  label?: string | null;
+  summary?: string | null;
+  content?: string | null;
+  is_active: boolean;
+  department?: string | null;
+  authority_level?: string | null;
+  invocations: number;
+  avg_utility: number;
+  superseded_by?: number | null;
+}
+
+interface FusionPlanPreviewData {
+  component_member_ids: number[];
+  member_snapshots: FusionMemberPreview[];
+  disposition: 'retain-canonical' | 'synthesize-new' | 'abstain';
+  canonical_neuron_id?: number | null;
+  coverage_delta: boolean;
+  proposed_node_type?: string | null;
+  proposed_department?: string | null;
+  proposed_label?: string | null;
+  proposed_summary?: string | null;
+  proposed_content?: string | null;
+  facets?: Array<{ kind: string; text: string; evidence_member_ids: number[]; resolution?: string | null }>;
+  inheritance?: {
+    invocations_union_distinct: number;
+    invocations_member_sum?: number;
+    invocations_member_max?: number;
+    utility_replayed: number;
+    utility_events_replayed: number;
+    utility_events_deduped: number;
+    utility_provenance_gaps: string[];
+    authority_level: string;
+    effective_date?: string | null;
+    last_verified?: string | null;
+    embedding_action: string;
+    entities_action: string;
+    centrality_action: string;
+  } | null;
+  rewiring?: {
+    internal_activation_edges_to_retire: Array<{ source_id: number; target_id: number; edge_type: string }>;
+    provenance_links_to_create: Array<{ source_id: number; target_id: number; edge_type: string }>;
+    external_peers: Array<{ peer_id: number; union_cofire_queries: number; recomputed_weight: number; edge_type: string }>;
+    inactive_peers_dropped: number[];
+  } | null;
+}
+
+function FusionPlanPreview({ plan, planHash }: { plan: FusionPlanPreviewData; planHash?: string }) {
+  const inheritance = plan.inheritance;
+  const rewiring = plan.rewiring;
+  const dispositionColor = plan.disposition === 'abstain' ? '#e74c3c'
+    : plan.disposition === 'retain-canonical' ? '#e8a838' : '#4caf50';
+  const afterTitle = plan.disposition === 'retain-canonical'
+    ? `Retain neuron #${plan.canonical_neuron_id}`
+    : plan.disposition === 'abstain' ? 'No mutation' : 'Create new synthesis';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{
+        display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+        padding: '9px 11px', borderRadius: 7,
+        background: `${dispositionColor}18`, border: `1px solid ${dispositionColor}66`,
+      }}>
+        <span style={{ color: dispositionColor, fontWeight: 800, letterSpacing: '0.04em' }}>
+          {plan.disposition.toUpperCase()}
+        </span>
+        <span>{afterTitle}</span>
+        {plan.coverage_delta && <span style={{ color: 'var(--text-dim)' }}>coverage delta</span>}
+        {planHash && <code style={{ marginLeft: 'auto', color: 'var(--text-dim)', fontSize: '0.7rem' }}>plan {planHash.slice(0, 12)}</code>}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10 }}>
+        <div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Before: {plan.member_snapshots.length} members</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {plan.member_snapshots.map(member => {
+              const retained = plan.disposition === 'retain-canonical' && member.neuron_id === plan.canonical_neuron_id;
+              return (
+                <div key={member.neuron_id} style={{ padding: 8, borderRadius: 6, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                    <strong>#{member.neuron_id} {member.label || 'Unlabeled member'}</strong>
+                    <span style={{ color: retained ? '#4caf50' : '#e8a838', fontSize: '0.68rem', fontWeight: 700 }}>
+                      {retained ? 'RETAIN' : plan.disposition === 'abstain' ? 'UNCHANGED' : 'RETIRE'}
+                    </span>
+                  </div>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '0.7rem', marginTop: 2 }}>
+                    {member.department || 'unscoped'} · {member.node_type || 'memory'} · {member.invocations} invocations · utility {member.avg_utility.toFixed(3)}
+                  </div>
+                  {member.summary && <div style={{ marginTop: 5 }}>{member.summary}</div>}
+                  {member.content && <div style={{ marginTop: 5, color: 'var(--text-dim)', whiteSpace: 'pre-wrap' }}>{member.content}</div>}
+                  <code style={{ display: 'block', marginTop: 5, color: 'var(--text-dim)', fontSize: '0.65rem' }}>state {member.content_hash}</code>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>After: {afterTitle}</div>
+          <div style={{ padding: 10, borderRadius: 6, background: `${dispositionColor}0f`, border: `1px solid ${dispositionColor}55` }}>
+            {plan.disposition === 'retain-canonical' ? (
+              <div>The identity and ID of neuron <strong>#{plan.canonical_neuron_id}</strong> survive; its statistics are rebuilt from all members.</div>
+            ) : plan.disposition === 'abstain' ? (
+              <div>Conflicting or genuinely scoped truths stay separate. Approval cannot mutate this component.</div>
+            ) : (
+              <>
+                <div style={{ fontSize: '0.68rem', color: dispositionColor, fontWeight: 700, textTransform: 'uppercase' }}>
+                  {plan.proposed_department || 'unscoped'} · {plan.proposed_node_type || 'lesson'}
+                </div>
+                <h4 style={{ margin: '5px 0' }}>{plan.proposed_label}</h4>
+                {plan.proposed_summary && <div style={{ fontWeight: 600 }}>{plan.proposed_summary}</div>}
+                {plan.proposed_content && <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{plan.proposed_content}</div>}
+              </>
+            )}
+          </div>
+          {!!plan.facets?.length && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {plan.facets.map((facet, i) => (
+                <div key={`${facet.kind}-${i}`} style={{ padding: 6, borderRadius: 5, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <strong style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>{facet.kind}</strong>{' '}{facet.text}
+                  <span style={{ color: 'var(--text-dim)', fontSize: '0.68rem' }}> · evidence #{facet.evidence_member_ids.join(', #')}</span>
+                  {facet.resolution && <div style={{ marginTop: 3, color: '#4caf50' }}>Resolution: {facet.resolution}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {inheritance && (
+        <div style={{ padding: 10, borderRadius: 7, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Inheritance: rebuilt, not blended</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(145px, 1fr))', gap: 7 }}>
+            <Metric label="UNION invocations" value={inheritance.invocations_union_distinct} accent="#4caf50" />
+            <Metric label="Rejected member sum" value={inheritance.invocations_member_sum ?? 'legacy unavailable'} accent="#e74c3c" />
+            <Metric label="Rejected member max" value={inheritance.invocations_member_max ?? 'legacy unavailable'} accent="#e74c3c" />
+            <Metric label="Replayed utility" value={inheritance.utility_replayed.toFixed(6)} accent="#4caf50" />
+            <Metric label="Authority" value={inheritance.authority_level} />
+            <Metric label="Effective / verified" value={`${inheritance.effective_date || 'unknown'} / ${inheritance.last_verified || 'none'}`} />
+          </div>
+          <div style={{ marginTop: 7, color: 'var(--text-dim)' }}>
+            Utility evidence: {inheritance.utility_events_replayed} replayed, {inheritance.utility_events_deduped} same-query events deduped.
+          </div>
+          {inheritance.utility_provenance_gaps.length > 0 && (
+            <div style={{ marginTop: 7, padding: 7, borderRadius: 5, background: '#e8a83814', border: '1px solid #e8a83855' }}>
+              <strong>Provenance gaps</strong>
+              {inheritance.utility_provenance_gaps.map((gap, i) => <div key={i} style={{ marginTop: 3 }}>· {gap}</div>)}
+            </div>
+          )}
+          <div style={{ marginTop: 7, color: 'var(--text-dim)', fontSize: '0.7rem' }}>
+            Embedding: {inheritance.embedding_action} · Entities: {inheritance.entities_action} · Centrality: {inheritance.centrality_action}
+          </div>
+        </div>
+      )}
+
+      {rewiring && (
+        <div style={{ padding: 10, borderRadius: 7, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Rewiring preview</div>
+          <div>{rewiring.internal_activation_edges_to_retire.length} internal conducting edges retire · {rewiring.provenance_links_to_create.length} evidence links preserve lineage</div>
+          <div style={{ marginTop: 7, fontWeight: 600 }}>External peers ({rewiring.external_peers.length})</div>
+          <div style={{ marginTop: 4, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 4, maxHeight: 220, overflow: 'auto' }}>
+            {rewiring.external_peers.map(peer => (
+              <div key={peer.peer_id} style={{ padding: 5, borderRadius: 4, background: 'var(--bg-input)' }}>
+                <strong>#{peer.peer_id}</strong> · UNION co-fire {peer.union_cofire_queries} · weight {peer.recomputed_weight.toFixed(3)} · {peer.edge_type}
+              </div>
+            ))}
+            {rewiring.external_peers.length === 0 && <span style={{ color: 'var(--text-dim)' }}>No external conducting peers.</span>}
+          </div>
+          <div style={{ marginTop: 7, color: rewiring.inactive_peers_dropped.length ? '#e8a838' : 'var(--text-dim)' }}>
+            Dropped inactive/superseded peers: {rewiring.inactive_peers_dropped.length ? `#${rewiring.inactive_peers_dropped.join(', #')}` : 'none'}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Metric({ label, value, accent = 'var(--text)' }: { label: string; value: string | number; accent?: string }) {
+  return (
+    <div style={{ padding: 7, borderRadius: 5, background: 'var(--bg-input)' }}>
+      <div style={{ color: 'var(--text-dim)', fontSize: '0.66rem', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ color: accent, fontWeight: 700, marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
+
 function ItemCard({ item, onOpenDiff }: { item: ProposalItem; onOpenDiff: () => void }) {
-  const spec = item.neuron_spec_json ? JSON.parse(item.neuron_spec_json) : null;
+  let spec: Record<string, any> | null = null;
+  try { spec = item.neuron_spec_json ? JSON.parse(item.neuron_spec_json) : null; }
+  catch { spec = null; }
   const [expanded, setExpanded] = useState(false);
 
   const oldLen = item.old_value?.length ?? 0;
   const newLen = item.new_value?.length ?? 0;
   const truncated = oldLen > 400 || newLen > 400;
+
+  if (item.action === 'reconsolidate' && spec?.fusion_plan) {
+    return (
+      <div style={{ padding: 10, borderRadius: 7, marginBottom: 6, background: 'var(--bg-input)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+        <FusionPlanPreview plan={spec.fusion_plan as FusionPlanPreviewData} planHash={spec.plan_hash as string | undefined} />
+        {item.reason && <div style={{ marginTop: 8, color: 'var(--text-dim)', fontStyle: 'italic' }}>{item.reason}</div>}
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -1153,8 +1342,7 @@ function Cheatsheet({ onClose }: { onClose: () => void }) {
   const rows: [string, string][] = [
     ['j / k', 'Next / previous proposal'],
     ['d', 'Open diff for focused proposal'],
-    ['a', 'Approve focused proposal'],
-    ['Shift+A', 'Approve & apply to graph'],
+    ['a', 'Approve & apply (one step)'],
     ['r', 'Reject focused proposal'],
     ['y', 'Apply (when approved)'],
     ['x', 'Toggle focused in multi-select'],

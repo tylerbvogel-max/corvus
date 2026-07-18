@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron, Query, SynapticLearningEvent
 from app.services.mind_janitors import ACTIONS_LOG, EPISODE_DIR, LESSON_TYPES
-from app.services.skill_compiler import MANIFEST_PATH
+from app.services.skill_compiler import CHARTER_NAME, MANIFEST_PATH, RETIRED_DIR
 
 RECALL_MARKER = "recall:%"
 GROWTH_DAYS = 30
@@ -32,6 +32,16 @@ def _percentile(sorted_values: list[float], pct: float) -> float | None:
 
 async def recall_metrics(db: AsyncSession) -> dict:
     """Latency percentiles, per-source counts, per-stage mean timings."""
+    total = (await db.execute(
+        select(sa_func.count(Query.id)).where(Query.model_version.like(RECALL_MARKER))
+    )).scalar() or 0
+    source_rows = (await db.execute(
+        select(Query.model_version, sa_func.count(Query.id))
+        .where(Query.model_version.like(RECALL_MARKER))
+        .group_by(Query.model_version)
+    )).all()
+    by_source = {model_version.removeprefix("recall:"): count
+                 for model_version, count in source_rows}
     rows = (await db.execute(
         select(Query.model_version, Query.results_json, Query.stage_telemetry_json,
                Query.created_at)
@@ -39,11 +49,8 @@ async def recall_metrics(db: AsyncSession) -> dict:
         .order_by(Query.id.desc()).limit(2000)
     )).all()
     latencies: list[float] = []
-    by_source: dict[str, int] = {}
     stage_sums: dict[str, list[float]] = {}
     for model_version, results_json, telemetry, _created in rows:
-        by_source[model_version.removeprefix("recall:")] = \
-            by_source.get(model_version.removeprefix("recall:"), 0) + 1
         try:
             latencies.append(float(json.loads(results_json or "[]")[0]["latency_ms"]))
         except (ValueError, KeyError, IndexError, TypeError):
@@ -55,7 +62,8 @@ async def recall_metrics(db: AsyncSession) -> dict:
                 stage_sums.setdefault(name, []).append(float(dur))
     latencies.sort()
     return {
-        "total": len(rows),
+        "total": total,
+        "performance_window": len(rows),
         "by_source": by_source,
         "latency_ms": {"p50": _percentile(latencies, 0.5),
                        "p95": _percentile(latencies, 0.95),
@@ -327,6 +335,79 @@ async def inbox_report(db: AsyncSession) -> dict:
     }
 
 
+def skill_invocation_counts() -> dict[str, dict]:
+    """Per-skill harness invocation tallies from the episode logs.
+
+    The episode hook records every PostToolUse with `skill` on its input
+    allowlist, so Skill-tool calls are already captured — this just
+    counts them. Covers only hook-instrumented harness sessions; a skill
+    read some other way (or before the hooks existed) is not counted.
+    """
+    counts: dict[str, dict] = {}
+    try:
+        paths = [os.path.join(EPISODE_DIR, f) for f in os.listdir(EPISODE_DIR)
+                 if f.endswith(".jsonl")]
+    except OSError:
+        return counts
+    for path in paths:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    try:
+                        e = json.loads(line)
+                    except (ValueError, TypeError):
+                        continue
+                    if e.get("event") != "PostToolUse" or e.get("tool") != "Skill":
+                        continue
+                    name = str((e.get("input") or {}).get("skill") or "unknown")
+                    b = counts.setdefault(name, {"count": 0, "last_invoked_at": None})
+                    b["count"] += 1
+                    ts = e.get("ts")
+                    if ts and (b["last_invoked_at"] is None or ts > b["last_invoked_at"]):
+                        b["last_invoked_at"] = ts
+        except OSError:
+            continue
+    return counts
+
+
+def skill_pointer_counts() -> dict[str, dict]:
+    """Per-skill signpost emissions from the episode logs.
+
+    The injection hook logs a SkillPointer event each time it actually
+    shows a pointer line (mind-skill-signpost). Paired with
+    skill_invocation_counts(), this is the conversion instrument:
+    pointers shown vs skills subsequently loaded.
+    """
+    counts: dict[str, dict] = {}
+    try:
+        paths = [os.path.join(EPISODE_DIR, f) for f in os.listdir(EPISODE_DIR)
+                 if f.endswith(".jsonl")]
+    except OSError:
+        return counts
+    for path in paths:
+        try:
+            with open(path, encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    try:
+                        e = json.loads(line)
+                    except (ValueError, TypeError):
+                        continue
+                    if e.get("event") != "SkillPointer":
+                        continue
+                    for s in e.get("skills", []):
+                        name = str(s.get("name") or "unknown")
+                        b = counts.setdefault(
+                            name, {"count": 0, "last_pointed_at": None})
+                        b["count"] += 1
+                        ts = e.get("ts")
+                        if ts and (b["last_pointed_at"] is None
+                                   or ts > b["last_pointed_at"]):
+                            b["last_pointed_at"] = ts
+        except OSError:
+            continue
+    return counts
+
+
 async def skills_report(db: AsyncSession) -> list[dict]:
     """Compiled-skill inventory with source health and rendered body."""
     try:
@@ -334,6 +415,8 @@ async def skills_report(db: AsyncSession) -> list[dict]:
             manifest = json.load(fh)
     except (OSError, ValueError):
         manifest = []
+    invocations = skill_invocation_counts()
+    pointer_counts = skill_pointer_counts()
     out = []
     for entry in manifest:
         sources = []
@@ -348,8 +431,48 @@ async def skills_report(db: AsyncSession) -> list[dict]:
                 body = fh.read()[:8000]
         except OSError:
             pass
+        inv = invocations.get(entry.get("name", ""), {})
         out.append({**entry, "source_health": sources, "body": body,
-                    "stale": any(not s["healthy"] for s in sources)})
+                    "stale": any(not s["healthy"] for s in sources),
+                    # The charter is push-injected whole at SessionStart by
+                    # the memory hook — the Skill tool never loads it, so an
+                    # invocation count would be a category error.
+                    "delivery": "sessionstart-injected"
+                    if entry.get("name") == CHARTER_NAME else "skill-tool",
+                    "invocations": inv.get("count", 0),
+                    "last_invoked_at": inv.get("last_invoked_at"),
+                    "pointers_emitted": pointer_counts.get(
+                        entry.get("name", ""), {}).get("count", 0),
+                    "last_pointed_at": pointer_counts.get(
+                        entry.get("name", ""), {}).get("last_pointed_at")})
+    return out
+
+
+def uncompiled_skill_invocations(manifest_names: set[str]) -> list[dict]:
+    """Observed Skill-tool loads for skills NOT in the compiled manifest.
+
+    Keeps usage visible for (a) retired mind-* skills, whose history
+    outlives their manifest row, and (b) harness/bundled skills that Mind
+    never compiled — otherwise the page silently discards most of the
+    recorded invocation data.
+    """
+    try:
+        retired = os.listdir(RETIRED_DIR)
+    except OSError:
+        retired = []
+    out = []
+    for name, inv in skill_invocation_counts().items():
+        if name in manifest_names:
+            continue
+        if name.startswith("mind-"):
+            kind = ("retired-compiled"
+                    if any(f.startswith(name + "-") for f in retired)
+                    else "compiled-unknown")
+        else:
+            kind = "harness"
+        out.append({"name": name, "kind": kind, "invocations": inv["count"],
+                    "last_invoked_at": inv["last_invoked_at"]})
+    out.sort(key=lambda x: -x["invocations"])
     return out
 
 
@@ -369,5 +492,7 @@ async def collect_all(db: AsyncSession) -> dict:
         "distiller": report["distiller"]["cost_usd"],
         "recall_and_injection": 0.0,
     }
+    from app.services.model_usage_ledger import usage_report
+    report["model_usage"] = usage_report(report["distiller"]["cost_usd"])
     assert "recall" in report and "growth" in report, "metrics payload incomplete"
     return report

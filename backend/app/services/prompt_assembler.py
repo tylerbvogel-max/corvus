@@ -388,6 +388,7 @@ def assemble_prompt(
     resolved_regulations: list | None = None,
     citation_tokens: dict[int, str] | None = None,
     engram_citation_tokens: dict[int, str] | None = None,
+    memory_entries: list[str] | None = None,
 ) -> str:
     """Pack top-K neurons + resolved regulatory text into a system prompt within token budget.
 
@@ -420,9 +421,16 @@ def assemble_prompt(
             parts, prior_neuron_ids, prior_neuron_map, used_tokens, budget,
         )
 
-    functional, regulatory = _partition_neurons(scored_neurons, neuron_map)
-    used_tokens = _pack_functional_section(parts, functional, used_tokens, budget, citation_label_by_id)
-    used_tokens = _pack_regulatory_section(parts, regulatory, used_tokens, budget, citation_label_by_id)
+    if memory_entries is None:
+        # Rollback path: retain legacy department-grouped packing byte-for-byte.
+        functional, regulatory = _partition_neurons(scored_neurons, neuron_map)
+        used_tokens = _pack_functional_section(parts, functional, used_tokens, budget, citation_label_by_id)
+        used_tokens = _pack_regulatory_section(parts, regulatory, used_tokens, budget, citation_label_by_id)
+    else:
+        # Token-bounded mode preselects indivisible entries in global rank
+        # order. Do not regroup, truncate, or silently omit them here.
+        parts.extend(memory_entries)
+        used_tokens += _estimate_tokens("\n\n".join(memory_entries))
 
     # Pack live regulatory text from resolved engrams
     if resolved_regulations:

@@ -117,6 +117,7 @@ def build_record(payload: dict) -> dict:
         "session_id": payload.get("session_id", "unknown"),
         "cwd": _redact(cwd),
         "project": _project_from_cwd(cwd),
+        "harness": payload.get("harness") or "claude_code",
     }
     if event == "PostToolUse":
         record["tool"] = payload.get("tool_name", "unknown")
@@ -128,6 +129,12 @@ def build_record(payload: dict) -> dict:
     elif event == "Stop":
         record["transcript_path"] = payload.get("transcript_path")
         record["distill_ready"] = True
+        # Harnesses may expose these fields now or later. Preserve them when
+        # present; absence means unknown, never zero.
+        if payload.get("model"):
+            record["model"] = payload["model"]
+        if isinstance(payload.get("usage"), dict):
+            record["usage"] = payload["usage"]
     return record
 
 

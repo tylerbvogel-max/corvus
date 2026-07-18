@@ -259,6 +259,7 @@ async def proposal_stats(db: AsyncSession = Depends(get_db)):
         approved=counts.get("approved", 0),
         rejected=counts.get("rejected", 0),
         applied=counts.get("applied", 0),
+        superseded=counts.get("superseded", 0),
         total=sum(counts.values()),
         proposed_by_origin=origin_counts,
     )
@@ -328,31 +329,81 @@ async def review_proposal(
     db: AsyncSession = Depends(get_db),
     identity: UserIdentity = Depends(resolve_identity),
 ):
-    """Approve or reject a proposal. Only 'proposed' state proposals can be reviewed.
+    """Review a proposal. ONE-step lifecycle (kernel Phase 4, Tyler
+    directive 2026-07-17): approve = approve AND apply in a single
+    transaction — an approved-but-unapplied proposal can no longer exist
+    through this path. If the proposal's recorded old-state drifted, it is
+    terminally superseded instead (409). If any apply step fails, the
+    whole transaction (approval included) rolls back and the proposal
+    stays 'proposed' (500). The reject path is unchanged.
 
     `reviewed_by` is taken from the resolved auth identity, not the request
     body — this makes the proposal-level audit trail tamper-proof and keeps
     it aligned with action-bus lineage at apply time. The `reviewer` field
     in the request body is accepted for backward compat but ignored.
     """
+    from app.services.proposal_apply_service import ProposalApplyError
+    from app.services.reconsolidation.lifecycle import (
+        ProposalStaleError, approve_and_apply,
+    )
+
     p = await db.get(AutopilotProposal, proposal_id)
     if not p:
         raise HTTPException(404, "Proposal not found")
     if p.state != "proposed":
         raise HTTPException(400, f"Cannot review proposal in state '{p.state}'")
 
-    p.state = "approved" if req.action == "approve" else "rejected"
-    p.reviewed_by = identity.user_id
-    p.reviewed_at = datetime.utcnow()
-    p.review_notes = req.notes
+    if req.action != "approve":
+        p.state = "rejected"
+        p.reviewed_by = identity.user_id
+        p.reviewed_at = datetime.utcnow()
+        p.review_notes = req.notes
+        # If rejecting an integrity proposal, revert linked findings to open
+        if p.gap_source and p.gap_source.startswith("integrity_"):
+            await _revert_integrity_findings(db, p.id)
+        await db.commit()
+        await db.refresh(p)
+        return _proposal_detail(p)
 
-    # If rejecting an integrity proposal, revert linked findings to open
-    if p.state == "rejected" and p.gap_source and p.gap_source.startswith("integrity_"):
-        await _revert_integrity_findings(db, p.id)
+    try:
+        has_edge_changes = await approve_and_apply(db, p, identity, req.notes)
+    except ProposalStaleError as exc:
+        await db.commit()  # persist the terminal supersession
+        raise HTTPException(
+            409, f"Proposal superseded — its recorded old-state drifted: "
+                 f"{'; '.join(exc.violations)}")
+    except ProposalApplyError as exc:
+        await db.rollback()  # approval rolls back with the writes
+        raise HTTPException(500, str(exc))
 
     await db.commit()
+    await _post_apply_refresh(db, p, has_edge_changes)
     await db.refresh(p)
     return _proposal_detail(p)
+
+
+async def _post_apply_refresh(
+    db: AsyncSession, p: AutopilotProposal, has_edge_changes: bool,
+) -> None:
+    """Post-commit refreshes: process caches and (for reconsolidations)
+    compiled skill/charter projections whose source lessons were retired.
+    Disk artifacts refresh only after the transaction is durable."""
+    if has_edge_changes:
+        from app.services.adjacency_cache import invalidate_adjacency_cache
+        invalidate_adjacency_cache()
+    from app.services.reconsolidation.lifecycle import find_reconsolidation_item
+    item = find_reconsolidation_item(p)
+    if item is None:
+        return
+    from app.services.reconsolidation.apply import parse_reconsolidation_spec
+    from app.services.skill_compiler import (
+        refresh_projections_after_reconsolidation,
+    )
+    plan, _ph, _mh = parse_reconsolidation_spec(item.neuron_spec_json)
+    refreshed = await refresh_projections_after_reconsolidation(
+        db, sorted(plan.member_ids))
+    if refreshed.get("db_changed"):
+        await db.commit()
 
 
 @router.post("/{proposal_id}/apply", response_model=ProposalDetailOut)
@@ -364,12 +415,20 @@ async def apply_proposal(
 ):
     """Apply an approved proposal — writes neurons/updates to the graph.
 
+    LEGACY path: review (approve) now applies in the same transaction, so
+    this endpoint only serves rows approved before the one-step lifecycle.
+    Old-state revalidation runs first — a drifted proposal is terminally
+    superseded (409) instead of applying against dead state (Phase 4A).
+
     Dispatch lives in proposal_apply_service (shared with the tiered write
     gate's auto route): all per-item writes pass through the action bus as
     child actions of a single `proposal.apply` root action.
     """
     from app.services.proposal_apply_service import (
         ProposalApplyError, apply_approved_proposal,
+    )
+    from app.services.reconsolidation.lifecycle import (
+        mark_superseded, revalidate_items,
     )
 
     p = await db.get(AutopilotProposal, proposal_id)
@@ -378,16 +437,24 @@ async def apply_proposal(
     if p.state != "approved":
         raise HTTPException(400, f"Cannot apply proposal in state '{p.state}' — must be 'approved'")
 
+    stale = await revalidate_items(db, p)
+    if stale:
+        mark_superseded(
+            db, p, reason="stale at apply time: " + "; ".join(stale)[:800],
+            actor_id=identity.user_id)
+        await db.commit()
+        raise HTTPException(
+            409, f"Proposal superseded — its recorded old-state drifted: "
+                 f"{'; '.join(stale)}")
+
     try:
         has_edge_changes = await apply_approved_proposal(db, p, identity, actor_type="user")
     except ProposalApplyError as exc:
+        await db.rollback()
         raise HTTPException(500, str(exc))
 
     await db.commit()
-
-    if has_edge_changes:
-        from app.services.adjacency_cache import invalidate_adjacency_cache
-        invalidate_adjacency_cache()
+    await _post_apply_refresh(db, p, has_edge_changes)
 
     await db.refresh(p)
     return _proposal_detail(p)

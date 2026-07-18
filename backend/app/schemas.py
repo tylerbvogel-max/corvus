@@ -6,7 +6,9 @@ from pydantic import BaseModel, Field
 class QuerySlotRequest(BaseModel):
     mode: str = Field(..., min_length=1)  # e.g. "haiku_neuron", "sonnet_raw", "opus_neuron"
     token_budget: int = Field(8000, ge=1000, le=32000)
-    top_k: int = Field(60, ge=1, le=500)
+    # None means "tenant policy". An explicit value remains a hard
+    # candidate/delivery safety cap for compatibility.
+    top_k: int | None = Field(None, ge=1, le=500)
     max_output_tokens: int | None = Field(None, ge=256, le=8192)
     label: str | None = None
     # Per-slot reasoning effort override (None = inherit the request-level
@@ -69,6 +71,9 @@ class SlotResult(BaseModel):
     cost_usd: float
     cache_creation_tokens: int = 0
     cache_read_tokens: int = 0
+    observed_total_input_tokens: int = 0
+    estimated_memory_tokens: int = 0
+    memory_estimation_error_tokens: int | None = None
     token_budget: int | None = None
     top_k: int | None = None
     label: str | None = None
@@ -154,6 +159,18 @@ class QueryResponse(BaseModel):
     role_keys: list[str] = []
     keywords: list[str] = []
     neurons_activated: int = 0
+    candidates_considered: int = 0
+    neurons_delivered: int = 0
+    estimated_memory_tokens: int = 0
+    memory_context_chars: int = 0
+    memory_context_utf8_bytes: int = 0
+    memory_token_budget: int = 0
+    assembly_stop_reason: str | None = None
+    redundancy_suppressed: int = 0
+    token_estimator_version: str | None = None
+    oversized_first_neuron: bool = False
+    recall_latency_ms: float = 0.0
+    observed_total_model_input_tokens: int = 0
     neuron_scores: list[NeuronScoreResponse] = []
     classify_cost: float = 0
     classify_input_tokens: int = 0
@@ -290,12 +307,29 @@ class ResetResponse(BaseModel):
     status: str
 
 
+class MaintenanceWorkloadCost(BaseModel):
+    workload: str
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    cache_creation_tokens: int
+    cache_read_tokens: int
+    models: list[str]
+    equivalent_cost_usd: float
+
+
 class CostReportResponse(BaseModel):
     total_queries: int
     total_cost_usd: float
     avg_cost_per_query: float
     total_input_tokens: int
     total_output_tokens: int
+    # Graph-upkeep cost at API list price (hot path is LLM-free; the jobs
+    # below are what make it viable). Amortized over all queries.
+    maintenance_cost_usd: float = 0.0
+    maintenance_per_query_usd: float = 0.0
+    maintenance_by_workload: list[MaintenanceWorkloadCost] = []
+    maintenance_since: str | None = None
 
 
 class QuerySummary(BaseModel):
@@ -592,6 +626,7 @@ class ProposalStatsOut(BaseModel):
     approved: int = 0
     rejected: int = 0
     applied: int = 0
+    superseded: int = 0  # terminal: recorded old-state drifted (kernel Phase 4)
     total: int = 0
     # Pending-proposal counts grouped by producer origin. Keys match the
     # values returned by _classify_origin: autopilot | integrity | document |

@@ -47,6 +47,19 @@ class PreparedContext:
     keywords: list[str]
     neuron_scores: list[dict] = field(default_factory=list)
     neurons_activated: int = 0
+    candidates_considered: int = 0
+    neurons_delivered: int = 0
+    estimated_memory_tokens: int = 0
+    memory_context_chars: int = 0
+    memory_context_utf8_bytes: int = 0
+    memory_context_text: str = ""
+    memory_token_budget: int = 0
+    assembly_stop_reason: str = "no_candidates"
+    redundancy_suppressed: int = 0
+    token_estimator_version: str = ""
+    oversized_first_neuron: bool = False
+    memory_representations: dict[int, str] = field(default_factory=dict)
+    recall_latency_ms: float = 0.0
     neuron_map: dict[int, Neuron] = field(default_factory=dict)
     all_scored: list[NeuronScoreBreakdown] = field(default_factory=list)
     classify_cost_usd: float = 0.0
@@ -63,6 +76,9 @@ class PreparedContext:
     # Resolved eCFR regulations (ResolvedRegulation) surfaced this query — used
     # to label engram hop citations for the frontend. Empty when none resolved.
     resolved_regulations: list = field(default_factory=list)
+    # Full post-spread/post-redundancy activation list for telemetry. Public
+    # all_scored remains the delivered slice for attribution compatibility.
+    activated_scores: list[NeuronScoreBreakdown] = field(default_factory=list)
 
 
 async def _embed_query_async(user_message: str):
@@ -223,6 +239,10 @@ async def _select_and_score_candidates(
             query_embedding=query_embedding,
         )
 
+    if settings.token_bounded_assembly_enabled:
+        # Hybrid lane union can exceed the semantic lane's top_n. Rank first,
+        # then enforce one independently observable activation candidate pool.
+        scored = scored[:effective_pool]
     assert isinstance(scored, list), "scored must be a list"
     return scored, scored_engrams
 
@@ -232,8 +252,17 @@ async def _apply_inhibition_and_boost(
     scored: list[NeuronScoreBreakdown],
     effective_top_k: int,
     project_path: str | None,
-) -> tuple[list[NeuronScoreBreakdown], int]:
-    if settings.inhibition_enabled:
+) -> tuple[list[NeuronScoreBreakdown], int, int]:
+    redundancy_suppressed = 0
+    if settings.token_bounded_assembly_enabled:
+        if settings.inhibition_enabled:
+            from app.services.inhibitory_service import apply_token_bounded_redundancy
+            all_scored, redundancy_suppressed = await apply_token_bounded_redundancy(db, scored)
+        else:
+            all_scored = scored
+        # Count is now a caller/safety cap, never an inferred survivor target.
+        effective_top_k = min(effective_top_k, settings.memory_max_delivered_neurons)
+    elif settings.inhibition_enabled:
         from app.services.inhibitory_service import apply_inhibition
         all_scored, effective_top_k = await apply_inhibition(db, scored, effective_top_k)
     else:
@@ -252,7 +281,7 @@ async def _apply_inhibition_and_boost(
 
     assert len(all_scored) >= 0, "all_scored must not be negative length"
     assert effective_top_k >= 0, f"effective_top_k must be non-negative, got {effective_top_k}"
-    return all_scored, effective_top_k
+    return all_scored, effective_top_k, redundancy_suppressed
 
 
 async def _load_neuron_map(
@@ -348,12 +377,22 @@ async def prepare_context(
     from app.services.pipeline.state import PipelineState
     from app.services.pipeline.stages import build_default_pipeline
 
+    started_at = time.monotonic()
     effective_recall_mode = recall_mode or settings.recall_mode
+    if settings.token_bounded_assembly_enabled:
+        resolved_top_k = (
+            top_k if top_k is not None
+            else min(settings.memory_candidate_limit, settings.memory_max_delivered_neurons)
+        )
+        resolved_pool = settings.memory_candidate_limit
+    else:
+        resolved_top_k = top_k if top_k is not None else settings.top_k_neurons
+        resolved_pool = settings.semantic_prefilter_top_n
     initial_state = PipelineState(
         user_message=user_message,
-        effective_top_k=top_k or settings.top_k_neurons,
-        effective_pool=settings.semantic_prefilter_top_n,
-        effective_budget=token_budget or settings.token_budget,
+        effective_top_k=resolved_top_k,
+        effective_pool=resolved_pool,
+        effective_budget=token_budget if token_budget is not None else settings.token_budget,
         project_path=project_path,
         prior_neuron_ids=prior_neuron_ids,
         requester=requester,
@@ -369,6 +408,7 @@ async def prepare_context(
     # Structural resolve short-circuit returns the already-built PreparedContext.
     if isinstance(final, PreparedContext):
         final.stage_telemetry = pipeline_ctx.telemetry_json()
+        final.recall_latency_ms = round((time.monotonic() - started_at) * 1000, 1)
         return final
 
     state: PipelineState = final
@@ -378,7 +418,9 @@ async def prepare_context(
         from app.services.project_cache import record_project_firings
         await record_project_firings(db, state.project_path, state.top_slice)
 
-    return _state_to_prepared_context(state, pipeline_ctx)
+    result = _state_to_prepared_context(state, pipeline_ctx)
+    result.recall_latency_ms = round((time.monotonic() - started_at) * 1000, 1)
+    return result
 
 
 def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
@@ -387,7 +429,23 @@ def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
         system_prompt=state.system_prompt, intent=state.intent,
         departments=state.departments, role_keys=state.role_keys, keywords=state.keywords,
         neuron_scores=_build_neuron_score_dicts(state.top_slice, state.neuron_map),
-        neurons_activated=min(len(state.all_scored), state.effective_top_k),
+        neurons_activated=(
+            state.neurons_activated or len(state.all_scored)
+            if settings.token_bounded_assembly_enabled
+            else min(len(state.all_scored), state.effective_top_k)
+        ),
+        candidates_considered=state.candidates_considered,
+        neurons_delivered=state.neurons_delivered or len(state.top_slice),
+        estimated_memory_tokens=state.estimated_memory_tokens,
+        memory_context_chars=state.memory_context_chars,
+        memory_context_utf8_bytes=state.memory_context_utf8_bytes,
+        memory_context_text=state.memory_context_text,
+        memory_token_budget=state.memory_token_budget,
+        assembly_stop_reason=state.assembly_stop_reason,
+        redundancy_suppressed=state.redundancy_suppressed,
+        token_estimator_version=state.token_estimator_version,
+        oversized_first_neuron=state.oversized_first_neuron,
+        memory_representations=state.memory_representations,
         neuron_map=state.neuron_map, all_scored=state.top_slice,
         classify_cost_usd=state.classify_result.get("cost_usd", 0),
         classify_input_tokens=state.classify_result.get("input_tokens", 0),
@@ -395,6 +453,7 @@ def _state_to_prepared_context(state, pipeline_ctx) -> PreparedContext:
         stage_telemetry=pipeline_ctx.telemetry_json(),
         hop_map=state.hop_map,
         resolved_regulations=state.resolved_regulations,
+        activated_scores=state.all_scored,
     )
     assert isinstance(result.system_prompt, str) and len(result.system_prompt) > 0, \
         "PreparedContext.system_prompt must be a non-empty string"
@@ -412,18 +471,50 @@ async def _assemble_top_slice(
     prior_neuron_ids: list[int] | None,
     resolved_regulations: list,
     requester=None,
-) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str, HopMap | None]:
+) -> tuple[list[NeuronScoreBreakdown], dict[int, Neuron], str, HopMap | None, dict]:
     """Select top-k neurons, load their data, and assemble the system prompt.
 
     When ``settings.citation_hopping_enabled`` a per-query frequency-hop key is
     minted for each selected neuron and returned as the 4th tuple element (the
     secret map the exit layer verifies against); None otherwise."""
-    if settings.hierarchy_selection_enabled:
-        top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
+    if settings.token_bounded_assembly_enabled:
+        # The candidate/safety cap bounds hydration; tokens decide delivery.
+        candidate_slice = all_scored[:effective_top_k]
+        neuron_map = await _load_neuron_map(
+            db, [s.neuron_id for s in candidate_slice], requester)
+        candidate_slice = [s for s in candidate_slice if s.neuron_id in neuron_map]
+
+        from app.services.memory_assembly import (
+            assemble_memory_packet, estimate_memory_tokens, render_memory_entry,
+        )
+        if settings.citation_hopping_enabled:
+            placeholder = (
+                settings.citation_hop_prefix
+                + ("0" * settings.citation_hop_hex_width)
+            )
+            placeholder_labels = {s.neuron_id: placeholder for s in candidate_slice}
+        else:
+            placeholder_labels = {
+                s.neuron_id: str(i + 1) for i, s in enumerate(candidate_slice)
+            }
+        memory_budget = min(settings.memory_context_token_budget, effective_budget)
+        packet = assemble_memory_packet(
+            candidate_slice,
+            neuron_map,
+            memory_budget,
+            min(effective_top_k, settings.memory_max_delivered_neurons),
+            citation_labels=placeholder_labels,
+            estimator=settings.memory_token_estimator,
+        )
+        top_slice = packet.scores
+        neuron_map = {s.neuron_id: neuron_map[s.neuron_id] for s in top_slice}
     else:
-        top_slice = all_scored[:effective_top_k]
-    neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice], requester)
-    top_slice = [s for s in top_slice if s.neuron_id in neuron_map]
+        if settings.hierarchy_selection_enabled:
+            top_slice = await select_with_hierarchy(db, all_scored, effective_top_k)
+        else:
+            top_slice = all_scored[:effective_top_k]
+        neuron_map = await _load_neuron_map(db, [s.neuron_id for s in top_slice], requester)
+        top_slice = [s for s in top_slice if s.neuron_id in neuron_map]
 
     prior_neuron_map: dict[int, Neuron] | None = None
     if prior_neuron_ids:
@@ -443,14 +534,54 @@ async def _assemble_top_slice(
         citation_tokens = hop_map.token_by_neuron
         engram_citation_tokens = hop_map.token_by_engram
 
+    memory_entries: list[str] | None = None
+    assembly_telemetry = {
+        "neurons_delivered": len(top_slice),
+        "estimated_memory_tokens": 0,
+        "memory_context_chars": 0,
+        "memory_context_utf8_bytes": 0,
+        "memory_context_text": "",
+        "memory_token_budget": 0,
+        "assembly_stop_reason": "legacy_count_limit",
+        "oversized_first_neuron": False,
+        "token_estimator_version": "",
+        "memory_representations": {},
+    }
+    if settings.token_bounded_assembly_enabled:
+        labels = citation_tokens or {
+            s.neuron_id: str(i + 1) for i, s in enumerate(top_slice)
+        }
+        memory_entries = [
+            render_memory_entry(
+                score, neuron_map[score.neuron_id], labels.get(score.neuron_id),
+                packet.representations[score.neuron_id],
+            )
+            for score in top_slice
+        ]
+        memory_text = "\n\n".join(memory_entries)
+        assembly_telemetry = {
+            "neurons_delivered": len(top_slice),
+            "estimated_memory_tokens": estimate_memory_tokens(
+                memory_text, settings.memory_token_estimator),
+            "memory_context_chars": len(memory_text),
+            "memory_context_utf8_bytes": len(memory_text.encode("utf-8")),
+            "memory_context_text": memory_text,
+            "memory_token_budget": packet.budget,
+            "assembly_stop_reason": packet.stop_reason,
+            "oversized_first_neuron": packet.oversized_first_neuron,
+            "token_estimator_version": packet.estimator_version,
+            "memory_representations": dict(packet.representations),
+        }
+
     system_prompt = assemble_prompt(
         intent, top_slice, neuron_map, budget_tokens=effective_budget,
         prior_neuron_ids=prior_neuron_ids, prior_neuron_map=prior_neuron_map,
         resolved_regulations=resolved_regulations,
         citation_tokens=citation_tokens,
         engram_citation_tokens=engram_citation_tokens,
+        memory_entries=memory_entries,
     )
-    return top_slice, neuron_map, system_prompt, hop_map
+    return top_slice, neuron_map, system_prompt, hop_map, assembly_telemetry
 
 
 # Each slot is a dict: {mode, model, neurons, response, input_tokens, output_tokens, cost_usd}
@@ -515,6 +646,7 @@ async def _prepare_contexts_forked(
     from app.services.pipeline.state import PipelineState
     from app.services.pipeline.stages import build_default_pipeline
 
+    started_at = time.monotonic()
     assert group_params, "group_params must be non-empty"
     stages = build_default_pipeline(settings.recall_mode)
     split = next(i for i, st in enumerate(stages) if st.name == _PIPELINE_FORK_STAGE)
@@ -523,7 +655,11 @@ async def _prepare_contexts_forked(
     initial = PipelineState(
         user_message=user_message,
         effective_top_k=max(g["top_k"] for g in group_params),
-        effective_pool=settings.semantic_prefilter_top_n,
+        effective_pool=(
+            settings.memory_candidate_limit
+            if settings.token_bounded_assembly_enabled
+            else settings.semantic_prefilter_top_n
+        ),
         effective_budget=max(g["budget"] for g in group_params),
         prior_neuron_ids=prior_neuron_ids,
     )
@@ -532,6 +668,7 @@ async def _prepare_contexts_forked(
     if isinstance(shared, PreparedContext):
         # Structural resolve short-circuit: one answer context for everyone.
         shared.stage_telemetry = shared_pctx.telemetry_json()
+        shared.recall_latency_ms = round((time.monotonic() - started_at) * 1000, 1)
         return [shared for _ in group_params]
 
     results: list[PreparedContext] = []
@@ -551,16 +688,32 @@ async def _prepare_contexts_forked(
         final = await run_pipeline(suffix, st, group_pctx)
         if isinstance(final, PreparedContext):
             final.stage_telemetry = group_pctx.telemetry_json()
+            final.recall_latency_ms = round((time.monotonic() - started_at) * 1000, 1)
             results.append(final)
         else:
-            results.append(_state_to_prepared_context(final, group_pctx))
+            prepared = _state_to_prepared_context(final, group_pctx)
+            prepared.recall_latency_ms = round((time.monotonic() - started_at) * 1000, 1)
+            results.append(prepared)
     return results
 
 
-def _slot_spread_cfg(slot: dict) -> tuple[int | None, float | None]:
-    """A slot's (spread_hops, spread_floor) override pair; Nones = tenant defaults."""
+def _slot_spread_cfg(slot: dict) -> tuple:
+    """Context-shaping slot config; exact keys must not share a packet."""
     assert isinstance(slot, dict), "slot must be a dict"
-    return (slot.get("spread_hops"), slot.get("spread_floor"))
+    requested_top_k = slot.get("top_k")
+    if requested_top_k is None:
+        requested_top_k = (
+            min(settings.memory_candidate_limit, settings.memory_max_delivered_neurons)
+            if settings.token_bounded_assembly_enabled
+            else settings.top_k_neurons
+        )
+    budget = slot.get("token_budget")
+    if budget is None:
+        budget = settings.token_budget
+    return (
+        slot.get("spread_hops"), slot.get("spread_floor"),
+        requested_top_k, budget,
+    )
 
 
 async def _prepare_slot_contexts(
@@ -570,9 +723,9 @@ async def _prepare_slot_contexts(
     on_stage: StageCallback,
     prior_neuron_ids: list[int] | None,
 ) -> tuple[dict[tuple, PreparedContext | None], dict]:
-    """One context prep per distinct per-slot spread config.
+    """One context prep per distinct context-shaping slot config.
 
-    Slots sharing (spread_hops, spread_floor) share a PreparedContext. The
+    Slots sharing spread, explicit top-k, and budget share a PreparedContext. The
     pipeline prefix (classify -> prefilter -> score) runs ONCE regardless of
     group count; distinct configs fork at the spread stage and get their own
     spread -> assemble suffix, so the packed context differs where the knobs
@@ -590,10 +743,9 @@ async def _prepare_slot_contexts(
             group_keys.append(key)
     group_params = []
     for key in group_keys:
-        group = [s for s in neuron_slots if _slot_spread_cfg(s) == key]
         group_params.append({
-            "top_k": max(s.get("top_k", settings.top_k_neurons) for s in group),
-            "budget": max(s.get("token_budget", settings.token_budget) for s in group),
+            "top_k": key[2],
+            "budget": key[3],
             "spread_hops": key[0],
             "spread_floor": key[1],
         })
@@ -808,7 +960,11 @@ async def _run_direct_call(
             "detail": {
                 "model": model,
                 "duration_ms": duration_ms,
-                "tokens_in": result.get("input_tokens", 0),
+                "tokens_in": (
+                    result.get("input_tokens", 0)
+                    + result.get("cache_creation_tokens", 0)
+                    + result.get("cache_read_tokens", 0)
+                ),
                 "tokens_out": result.get("output_tokens", 0),
             },
         })
@@ -841,11 +997,19 @@ def _populate_query_from_results(
     for slot in slot_results:
         if slot["mode"] == "haiku_neuron" and not query.response_text:
             query.response_text = slot["response"]
-            query.execute_input_tokens = slot["input_tokens"]
+            query.execute_input_tokens = slot.get(
+                "observed_total_input_tokens",
+                slot["input_tokens"] + slot.get("cache_creation_tokens", 0)
+                + slot.get("cache_read_tokens", 0),
+            )
             query.execute_output_tokens = slot["output_tokens"]
         elif slot["mode"] == "opus_raw" and not query.opus_response_text:
             query.opus_response_text = slot["response"]
-            query.opus_input_tokens = slot["input_tokens"]
+            query.opus_input_tokens = slot.get(
+                "observed_total_input_tokens",
+                slot["input_tokens"] + slot.get("cache_creation_tokens", 0)
+                + slot.get("cache_read_tokens", 0),
+            )
             query.opus_output_tokens = slot["output_tokens"]
     total_cost = sum(s["cost_usd"] for s in slot_results) + classify_result.get("cost_usd", 0)
     query.cost_usd = total_cost
@@ -889,14 +1053,34 @@ def _build_response(
 ) -> dict:
     assert total_cost >= 0, f"total_cost must be non-negative, got {total_cost}"
 
+    observed_total_model_input = sum(
+        s.get("observed_total_input_tokens", (
+            s.get("input_tokens", 0)
+            + s.get("cache_creation_tokens", 0)
+            + s.get("cache_read_tokens", 0)
+        ))
+        for s in slot_results
+    )
     return {
         "query_id": query.id,
         "intent": ctx.intent if needs_neurons and ctx else None,
         "departments": ctx.departments if ctx else [],
         "role_keys": ctx.role_keys if ctx else [],
         "keywords": ctx.keywords if ctx else [],
-        "neurons_activated": min(len(all_scored), max_top_k),
-        "neurons_candidates": len(all_scored),
+        "neurons_activated": ctx.neurons_activated if ctx else 0,
+        "neurons_candidates": ctx.candidates_considered if ctx else 0,
+        "candidates_considered": ctx.candidates_considered if ctx else 0,
+        "neurons_delivered": ctx.neurons_delivered if ctx else 0,
+        "estimated_memory_tokens": ctx.estimated_memory_tokens if ctx else 0,
+        "memory_context_chars": ctx.memory_context_chars if ctx else 0,
+        "memory_context_utf8_bytes": ctx.memory_context_utf8_bytes if ctx else 0,
+        "memory_token_budget": ctx.memory_token_budget if ctx else 0,
+        "assembly_stop_reason": ctx.assembly_stop_reason if ctx else "no_candidates",
+        "redundancy_suppressed": ctx.redundancy_suppressed if ctx else 0,
+        "token_estimator_version": ctx.token_estimator_version if ctx else "",
+        "oversized_first_neuron": ctx.oversized_first_neuron if ctx else False,
+        "recall_latency_ms": ctx.recall_latency_ms if ctx else 0.0,
+        "observed_total_model_input_tokens": observed_total_model_input,
         "neuron_scores": _build_neuron_score_dicts(all_scored, neuron_map),
         "classify_cost": classify_result.get("cost_usd", 0),
         "classify_input_tokens": classify_result["input_tokens"],
@@ -925,12 +1109,17 @@ async def _update_counters_and_fire(
     state = await get_system_state(db)
     total_tokens = classify_result["input_tokens"] + classify_result["output_tokens"]
     for slot in slot_results:
-        total_tokens += slot["input_tokens"] + slot["output_tokens"]
+        total_tokens += (
+            slot["input_tokens"]
+            + slot.get("cache_creation_tokens", 0)
+            + slot.get("cache_read_tokens", 0)
+            + slot["output_tokens"]
+        )
     state.global_token_counter += total_tokens
     state.total_queries += 1
 
     if needs_neurons:
-        included_k = settings.top_k_neurons
+        included_ids = {s.neuron_id for s in all_scored}
         for idx, score in enumerate(all_scored):
             await record_firing(
                 db, score.neuron_id, query.id,
@@ -938,8 +1127,8 @@ async def _update_counters_and_fire(
                 global_query_offset=state.total_queries,
                 score=score,
                 rank=idx + 1,
-                prompt_position=idx if idx < included_k else None,
-                was_included=idx < included_k,
+                prompt_position=idx if score.neuron_id in included_ids else None,
+                was_included=score.neuron_id in included_ids,
             )
             await propagate_activation(db, score.neuron_id, score.combined, query.id)
         cofire_neurons = [s for s in all_scored if s.combined >= settings.min_cofire_score]
@@ -1106,6 +1295,12 @@ def _format_slot_result_dict(
 ) -> dict:
     """Shape one slot's SlotResult payload from its execution artifacts."""
     assert isinstance(result_data, dict), "result_data must be a dict"
+    observed_total_input = (
+        result_data["input_tokens"]
+        + result_data["cache_creation"]
+        + result_data["cache_read"]
+    )
+    estimated_memory = ctx.estimated_memory_tokens if ctx else 0
     return {
         "mode": mode,
         "model": model_name,
@@ -1121,8 +1316,15 @@ def _format_slot_result_dict(
         "cost_usd": result_data["cost_usd"],
         "cache_creation_tokens": result_data["cache_creation"],
         "cache_read_tokens": result_data["cache_read"],
+        "observed_total_input_tokens": observed_total_input,
+        "estimated_memory_tokens": estimated_memory,
+        # This is memory-estimate vs WHOLE model input, not an authoritative
+        # memory-only tokenizer error; prompt/question overhead is included.
+        "memory_estimation_error_tokens": (
+            observed_total_input - estimated_memory if ctx else None
+        ),
         "token_budget": token_budget,
-        "top_k": ctx.neurons_activated if ctx else 0,
+        "top_k": ctx.neurons_delivered if ctx else 0,
         # Label from the EFFECTIVE model (primary override may differ from mode)
         "label": label or _eval_slot_label(f"{model_name}_{slot_type}", uses_neurons, token_budget),
         "model_version": result_data.get("model_version"),
@@ -1427,7 +1629,12 @@ async def _finalize_query_results(
     for slot_result in slot_results:
         if slot_result.get("response") and not query.response_text:
             query.response_text = slot_result["response"]
-            query.execute_input_tokens = slot_result.get("input_tokens", 0)
+            query.execute_input_tokens = slot_result.get(
+                "observed_total_input_tokens",
+                slot_result.get("input_tokens", 0)
+                + slot_result.get("cache_creation_tokens", 0)
+                + slot_result.get("cache_read_tokens", 0),
+            )
             query.execute_output_tokens = slot_result.get("output_tokens", 0)
             query.model_version = slot_result.get("model")
             query.citation_relevance_json = slot_result.get("citation_relevance")
@@ -1522,7 +1729,7 @@ async def execute_query(
         slots = [{
             "mode": "haiku_neuron",
             "token_budget": settings.token_budget,
-            "top_k": settings.top_k_neurons,
+            "top_k": None,
             "priming": True,
         }]
 

@@ -204,6 +204,86 @@ Gate override: the north-star retrospective is still `active`; the user explicit
 - **One substrate, two projections** (settled in the phase-6 discussion): injection is *push* — small, per-prompt, query-matched declarative facts; skills are *pull* — a one-line trigger in the harness listing, full body loaded on task match at ~zero standing cost, working even with the backend down. The compiler's job is deciding which lesson clusters have crossed from fact to procedure.
 - **Eligibility**: same-scope embedding clusters (union-find @ ≥0.55) of ≥3 active, unsuperseded lessons. Composer = Opus (quality-first-backend), declarative-playbook prompt, JSON out, evidence citations kept inline. Output namespaced `mind-*` in `~/.claude/skills/` (dir created — didn't exist) with provenance frontmatter comment (source neuron ids; "do not hand-edit; the graph is the source of truth").
 - **Reverse check**: manifest (`~/.corvus-mind/compiled-skills.json`) records skill → source ids; a skill is retracted + recompiled when any source rots (inactive / superseded / utility < 0.4) or its cluster grows. The compiler only ever touches manifest-owned `mind-*` dirs. Compiler actions are logged as episodes (emit / retract / compose_failed).
+
+### 8.6 Transferable Capability Capsule (2026-07-14)
+
+Corvus-Mind now has an explicit harness-neutral transport contract rather than
+relying on several clients reaching the same backend:
+
+- `services/capability_capsule.py` emits schema `corvus.capability-capsule`
+  version `1.0.0`: identity, governance, active unsuperseded memories, compiled
+  skills, semantic tool requirements, lifecycle requirements, harness profiles,
+  and SHA-256 integrity (optional HMAC authenticity via
+  `CORVUS_CAPSULE_SIGNING_KEY`). Stable memory identity is separate from the
+  content-version hash so gate-added evidence produces a version conflict, not
+  a duplicate identity.
+- Portability scopes are explicit and conservative: universal, user,
+  organization, project, machine, harness. Machine/harness memories travel for
+  inspection but are withheld from automatic rebinding into a different body.
+- `GET /capabilities/capsule`, `POST /capabilities/verify`,
+  `POST /capabilities/reconcile`, and `POST /capabilities/health` provide export,
+  integrity checking, preview/apply reconciliation, and dimension-level health.
+  Apply routes only novel portable memories through `lesson_store.save_lesson`
+  at informational authority; there is no raw restore or identity-promotion
+  bypass.
+- Skills compile canonical-first into
+  `~/.corvus-mind/capabilities/skills/`, then project into the declared Claude
+  Code, Codex, and OpenCode skill directories. The injection hook reads the
+  canonical self-model/charter with a one-cycle Claude-directory fallback.
+- `harness/parity_probe.py` measures each declared body; OpenCode is honestly
+  degraded when it lacks advisory pre-tool injection. `verify_transfer_live.py`
+  plants a transport lesson and proves duplicate preview, tamper rejection,
+  evidence-gated import, idempotent replay, and stable re-export identity.
+
+**Live evidence (2026-07-14):** real capsule contained 257 active,
+unsuperseded memories after the scope/supersession filter. Claude Code and Codex
+scored 100%; OpenCode scored 97.5% (lifecycle coverage 0.8: no pre-tool advisory
+surface). Five existing skills were rendered byte-for-byte to canonical + all
+three targets. The planted lesson initially exposed a project-binding identity
+bug, then an evidence-append identity bug; both were fixed without deleting the
+planted graph row. Final replay: 257/257 already present, 0 new, 0 conflicts,
+tampered capsule HTTP 422, apply no-op, planted stable id
+`mem_b3b8c333339d412a90a7d563` present on re-export. Capability tests: 14 passed;
+focused capability/reference/recall/write-gate suite: 57 passed before the final
+two identity tests were added (the capability file alone then passed 14/14).
 - **Verified live**: the 5-lesson Corvus dev-servers cluster compiled to `mind-corvus-dev-servers` ($0.02) — correct port map (8002/8003/8004-vite/8005/5175), working startup commands, gotchas, all evidence-cited. Second run emitted nothing (idempotent). Bounded: ≤2 Opus calls/run.
 
 All six design layers are now live and unattended: capture → distill (30min) → gate → graph → janitors (6h) → compile (24h) → recall/injection/skills.
+
+### 8.5 Codex CLI harness (2026-07-14)
+
+Codex CLI 0.144.4 is the third Corvus-Mind harness, alongside Claude Code and
+opencode. The implementation lives in `harness/codex/` and follows the
+opencode precedent: a thin harness adapter shells out to the existing
+`harness/claude-code/memory_inject_hook.py` and `episode_hook.py`. Recall,
+redaction, exclusions, attribution, capsule delivery, and episode semantics
+remain single-source; Codex is a harness, never a Corvus model provider.
+
+- **Recall:** the existing `mind_mcp_server.py` is registered globally as the
+  `corvus-mind` stdio MCP server, launched with the backend venv Python. No API
+  key path was introduced; Codex retains ChatGPT-token subscription auth.
+- **Injection:** Codex has native `SessionStart`, `UserPromptSubmit`, and
+  `PreToolUse` command hooks. `additionalContext` becomes developer context,
+  so the compiled charter/self-model and query-matched lessons arrive
+  ambiently. `~/.codex/AGENTS.md` is not used: it would be only a static
+  fallback if hooks were disabled or untrusted. Changed hooks must be reviewed
+  once with `/hooks`; vetted automation may use the explicit hook-trust bypass.
+- **Capture:** native `PostToolUse` and `Stop` hooks feed the shared episode
+  hook. `Stop` supplies Codex's rollout JSONL as `transcript_path`, so no SQLite
+  polling or duplicate transcript writer is needed. Codex documents that
+  transcript format as unstable; the distiller must treat it as best-effort.
+
+Observed acceptance evidence: `/health` returned HTTP 200 with port 8005;
+a real Codex MCP call returned neuron 28 (`Corvus-mind backend runs on port
+8005`); a separately unrequested charter policy appeared in the model's
+answer; and session `019f6279-f5aa-7ae3-b0cc-af580df5c0a3` appeared at
+`/metrics/mind/sessions` with 5 events, 4 injections, and a distill-ready Stop
+record pointing to the Codex rollout.
+
+**Parity gaps versus Claude Code:** Codex's rollout schema is not stable, and
+locked-down noninteractive `read-only` runs cancel the stdio server's localhost
+HTTP hop unless network/sandbox permission is granted (the scoped
+`danger-full-access` acceptance run completed in 124.7 ms). Interactive use can
+approve the local MCP operation. Otherwise recall, ambient injection,
+PreToolUse warnings, capture, attribution, and distiller intake have native
+event parity.

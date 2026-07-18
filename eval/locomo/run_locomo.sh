@@ -5,7 +5,8 @@
 # silently falls back to Corvus stock defaults (50/50 relevance-vs-usage, raw
 # additive spread), i.e. it would benchmark a system nobody runs.
 #
-# Usage: ./run_locomo.sh --conv 0 --phase all [--max-questions N]
+# Usage: ./run_locomo.sh --conv 0 --phase all [--max-questions N] \
+#          [--lifecycle-mode raw|consolidation|full-lifecycle]
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

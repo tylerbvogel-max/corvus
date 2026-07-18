@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 def _default_database_url() -> str:
     """Derive database URL from TENANT_ID. DB name = tenant ID with hyphens as underscores."""
     import os
-    tid = os.environ.get("TENANT_ID", "corvus-aero")
+    tid = os.environ.get("TENANT_ID", "corvus-mind")
     db_name = tid.replace("-", "_")
     return f"postgresql+asyncpg://yggdrasil:yggdrasil@localhost:5432/{db_name}"
 
@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     # GTM-A external endpoint rate limit (per-tenant,user token bucket)
     v1_rate_limit_capacity: int = 30      # burst allowance
     v1_rate_limit_refill_per_sec: float = 0.5  # sustained rate (~30 req/min)
-    port: int = 8002
-    tenant_id: str = "corvus-aero"
+    port: int = 8005
+    tenant_id: str = "corvus-mind"
     cors_origins: str = ""  # Comma-separated; empty = auto from port
     haiku_model: str = "claude-haiku-4-5-20251001"
     # Reasoning effort for Claude CLI calls (low|medium|high). Default low: the
@@ -89,6 +89,19 @@ class Settings(BaseSettings):
     entailment_max_claims: int = 10       # cap on judged claims per answer
     entailment_source_chars: int = 1500   # per-source excerpt cap in the judge prompt
     token_budget: int = 8000
+    # ── Token-bounded memory assembly (mind-token-bounded-neuron-assembly) ──
+    # Provisional constants from one fixed-corpus LoCoMo conv0 sweep
+    # (2026-07-16). Recalibrate after the repeated confirmation triangle.
+    # This is a MEMORY-ONLY ceiling, independent from answer max output tokens
+    # and independently observable from the whole-prompt token_budget above.
+    memory_context_token_budget: int = 3000
+    memory_candidate_limit: int = 150
+    # Pathology/estimator guard only; normal delivery is governed by tokens.
+    memory_max_delivered_neurons: int = 250
+    memory_token_estimator: str = "utf8_bytes_div4_ceil_v1"
+    # Conservative rollback default. The corvus-mind deployment enables this
+    # only after the fixed-corpus confirmation gates pass.
+    token_bounded_assembly_enabled: bool = False
     propagation_decay: float = 0.6
     top_k_neurons: int = 60
     # Scoring weights (6 signals, sum = 1.0)
@@ -210,10 +223,11 @@ class Settings(BaseSettings):
     rrf_k: int = 60
     # Hybrid-recall retrieval lanes (mind-hybrid-recall, 2026-07-14): tsvector
     # keyword lane + write-time-entity lane fused with the embedding lane by
-    # RRF. Default OFF until the LoCoMo A/B settles the decision — with both
-    # off, recall behavior is byte-identical to embed-only + substring RRF.
-    keyword_lane_enabled: bool = False
-    entity_lane_enabled: bool = False
+    # RRF. Enabled after the fixed-corpus LoCoMo A/B (2026-07-15): hybrid +
+    # strict refusal scored 69.9% overall / 89.4% adversarial versus the
+    # embed-only arm's 63.8% / 78.7%; warm p95 recall remained 84.9 ms.
+    keyword_lane_enabled: bool = True
+    entity_lane_enabled: bool = True
     recall_lane_top_n: int = 50
     # Impact analysis blast radius (graph traversal)
     impact_max_hops: int = 3
@@ -226,7 +240,10 @@ class Settings(BaseSettings):
     inhibition_redundancy_cosine: float = 0.92
     inhibition_learning_alpha: float = 0.2
     # Typed edge spread thresholds
-    spread_stellate_decay: float = 0.3
+    # 0.45 lets ~21% of stellate edges conduct at a median-scoring seed
+    # (0.3 left them nearly inert at ~4%), while staying below pyramidal
+    # decay so co-fire evidence still outranks similarity wiring.
+    spread_stellate_decay: float = 0.45
     spread_pyramidal_min_weight: float = 0.20
     # Concept neuron (instantiation edge) spread thresholds
     spread_instantiate_decay: float = 0.6
