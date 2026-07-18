@@ -784,6 +784,7 @@ from app.routers import distill as distill_router
 from app.routers import janitor as janitor_router
 from app.routers import compile as compile_router
 from app.routers import mind_metrics as mind_metrics_router
+from app.routers import auditor as auditor_router
 
 app.include_router(query.router)
 app.include_router(recall_router.router)
@@ -793,6 +794,7 @@ app.include_router(distill_router.router)
 app.include_router(janitor_router.router)
 app.include_router(compile_router.router)
 app.include_router(mind_metrics_router.router)
+app.include_router(auditor_router.router)
 app.include_router(neurons.router)
 app.include_router(admin.router)
 app.include_router(autopilot.router)

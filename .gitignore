@@ -81,3 +81,6 @@ __pycache__/
 
 # Ruff cache
 .ruff_cache/
+# Live-DB-derived eval fixture: real memory content, never publish.
+# Regenerate locally via backend/tests/fixtures/auditor_golden/freeze_golden.py
+backend/tests/fixtures/auditor_golden/golden.json

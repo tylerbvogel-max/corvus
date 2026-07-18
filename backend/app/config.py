@@ -341,6 +341,29 @@ class Settings(BaseSettings):
     # Off by default — forcing every source to appear hurts open-ended answers.
     citation_hop_require_all: bool = False
 
+    # Reconsolidation auditor (mind-reconsolidation-auditor): scheduled doubt.
+    # ALL numeric values below are PROVISIONAL guessed constants — the node
+    # mandate is to report observed candidate volume/precision per run and
+    # recalibrate from data. Cadence is evidence time (distilled sessions
+    # since the last run), never wall time.
+    auditor_light_pass_sessions: int = 5     # light pass at >= N fresh sessions
+    auditor_deep_pass_sessions: int = 50     # deep pass at >= N fresh sessions
+    auditor_max_candidates_per_run: int = 40      # scored candidates kept
+    auditor_max_critic_calls_light: int = 4       # bounded critic batch (light)
+    auditor_max_critic_calls_deep: int = 16       # bounded critic batch (deep)
+    auditor_max_proposals_per_run: int = 10
+    auditor_control_sample_size: int = 3     # healthy controls per deep run
+    # Deep runs also probe N sub-threshold neurons (rotated by run date):
+    # subtle semantic defects fire NO deterministic signal — the manual
+    # sweep's Pareto-probe insight, made recurring. Golden replay
+    # 2026-07-18 measured 0.0 deterministic recall on enrich-class
+    # defects; only probing gets them in front of the critic.
+    auditor_deep_probe_sample: int = 6
+    # Hard cap 2: concurrent `claude -p` subprocesses OOM this 6.5GB machine
+    # at 3+ (silent SIGKILL, zero output) — see env note; do not raise.
+    auditor_critic_concurrency: int = 2
+    auditor_risk_threshold: float = 0.35     # min risk score to reach critic
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     def model_post_init(self, __context) -> None:

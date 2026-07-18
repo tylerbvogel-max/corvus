@@ -91,10 +91,18 @@ async def revalidate_items(
             # item wanted to change now lives in another representation
             # (live receipt: scope proposals #1069/#1071 aimed at #51/#177
             # after #1099 absorbed them — 'current' by old-value match,
-            # dead by identity). Re-pointing supersession itself is the
-            # one legitimate mutation left.
+            # dead by identity). Legitimate mutations left: re-pointing
+            # supersession, and COMPLETING absorption (is_active -> false)
+            # — live receipt: auditor proposal #1181 aimed to finish
+            # half-absorbed #101 (active + superseded_by=174, the exact
+            # inconsistency it flagged) and this guard killed the repair
+            # (2026-07-18). Deactivating a corpse doesn't touch the fact;
+            # reactivating one stays blocked.
+            completes_absorption = (
+                item.field == "is_active"
+                and (item.new_value or "").strip().lower() == "false")
             if neuron.superseded_by is not None and \
-                    item.field != "superseded_by":
+                    item.field != "superseded_by" and not completes_absorption:
                 violations.append(
                     f"item {item.id}: target #{item.target_neuron_id} was "
                     f"superseded by #{neuron.superseded_by} — the fact "

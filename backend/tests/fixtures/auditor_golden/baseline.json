@@ -1,0 +1,338 @@
+{
+  "phase_a": {
+    "threshold": 0.35,
+    "splits": {
+      "calibration": {
+        "defects": 10,
+        "caught": 2,
+        "recall": 0.2,
+        "controls": 9,
+        "control_false_positives": 1,
+        "control_fp_rate": 0.111
+      },
+      "test": {
+        "defects": 15,
+        "caught": 1,
+        "recall": 0.067,
+        "controls": 4,
+        "control_false_positives": 1,
+        "control_fp_rate": 0.25
+      }
+    },
+    "signal_fires": {
+      "negative_utility": 4,
+      "retrieval_without_use": 10,
+      "orphaned": 25,
+      "unsupported_inference": 1,
+      "volatile_unverified": 8,
+      "synthetic_marker": 3,
+      "label_content_mismatch": 1
+    },
+    "misses": [
+      {
+        "neuron_id": 46,
+        "split": "calibration",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.1827,
+        "signals": {
+          "negative_utility": 0.022,
+          "retrieval_without_use": 1.0,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 84,
+        "split": "calibration",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.0954,
+        "signals": {
+          "retrieval_without_use": 0.33,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 236,
+        "split": "calibration",
+        "expected": "deactivate",
+        "manual": "deactivate",
+        "risk_score": 0.2052,
+        "signals": {
+          "unsupported_inference": 0.8,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 284,
+        "split": "calibration",
+        "expected": "enrich",
+        "manual": "correct-and-enrich",
+        "risk_score": 0.0421,
+        "signals": {
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 328,
+        "split": "calibration",
+        "expected": "merge",
+        "manual": "merge",
+        "risk_score": 0.0433,
+        "signals": {
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1036,
+        "split": "calibration",
+        "expected": "enrich",
+        "manual": "correct-and-enrich",
+        "risk_score": 0.1775,
+        "signals": {
+          "negative_utility": 0.022,
+          "retrieval_without_use": 1.0,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1116,
+        "split": "calibration",
+        "expected": "deactivate",
+        "manual": "deactivate-stale-artifact",
+        "risk_score": 0.1062,
+        "signals": {
+          "volatile_unverified": 0.31,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1122,
+        "split": "calibration",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.1076,
+        "signals": {
+          "volatile_unverified": 0.309,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 47,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.1907,
+        "signals": {
+          "volatile_unverified": 0.329,
+          "retrieval_without_use": 0.6,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 83,
+        "split": "test",
+        "expected": "deactivate",
+        "manual": "deactivate-duplicate",
+        "risk_score": 0.0427,
+        "signals": {
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 175,
+        "split": "test",
+        "expected": "deactivate",
+        "manual": "deactivate-stale-capacity",
+        "risk_score": 0.1186,
+        "signals": {
+          "label_content_mismatch": 0.75,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 211,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.2127,
+        "signals": {
+          "volatile_unverified": 0.328,
+          "negative_utility": 0.111,
+          "retrieval_without_use": 0.51,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 215,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.0427,
+        "signals": {
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 289,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.0769,
+        "signals": {
+          "retrieval_without_use": 0.32,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 303,
+        "split": "test",
+        "expected": "deactivate",
+        "manual": "deactivate-stale-transient-port",
+        "risk_score": 0.1123,
+        "signals": {
+          "volatile_unverified": 0.321,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 323,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "correct-and-enrich",
+        "risk_score": 0.0421,
+        "signals": {
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1025,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.0656,
+        "signals": {
+          "retrieval_without_use": 0.23,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1075,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "adjacent-label-correction",
+        "risk_score": 0.2942,
+        "signals": {
+          "volatile_unverified": 0.313,
+          "retrieval_without_use": 1.0,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1087,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.1749,
+        "signals": {
+          "volatile_unverified": 0.313,
+          "negative_utility": 0.111,
+          "retrieval_without_use": 0.47,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1093,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich",
+        "risk_score": 0.0687,
+        "signals": {
+          "retrieval_without_use": 0.24,
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1113,
+        "split": "test",
+        "expected": "deactivate",
+        "manual": "deactivate-stale-harness-guidance",
+        "risk_score": 0.0421,
+        "signals": {
+          "orphaned": 0.8
+        }
+      },
+      {
+        "neuron_id": 1115,
+        "split": "test",
+        "expected": "enrich",
+        "manual": "enrich-and-supersede-snapshot",
+        "risk_score": 0.0421,
+        "signals": {
+          "orphaned": 0.8
+        }
+      }
+    ],
+    "control_false_positives": [
+      {
+        "neuron_id": 28,
+        "split": "calibration",
+        "risk_score": 0.6243,
+        "signals": {
+          "overbroad_claim": 0.4,
+          "volatile_unverified": 0.329,
+          "retrieval_without_use": 1.0,
+          "orphaned": 0.8,
+          "supersession_inconsistent": 1.0
+        }
+      },
+      {
+        "neuron_id": 265,
+        "split": "test",
+        "risk_score": 0.7279,
+        "signals": {
+          "overbroad_claim": 1.0,
+          "volatile_unverified": 0.322,
+          "retrieval_without_use": 1.0,
+          "orphaned": 0.8
+        }
+      }
+    ]
+  },
+  "phase_b": {
+    "reviewed": [
+      {
+        "neuron_id": 321,
+        "expected": "deactivate",
+        "got": "deactivate",
+        "confidence": 0.95,
+        "violations": []
+      },
+      {
+        "neuron_id": 1075,
+        "expected": "enrich",
+        "got": "narrow",
+        "confidence": 0.88,
+        "violations": []
+      },
+      {
+        "neuron_id": 211,
+        "expected": "enrich",
+        "got": "deactivate",
+        "confidence": 0.95,
+        "violations": []
+      },
+      {
+        "neuron_id": 47,
+        "expected": "enrich",
+        "got": "deactivate",
+        "confidence": 0.92,
+        "violations": []
+      }
+    ],
+    "family_agreement": 1,
+    "mutating_agreement": 3,
+    "validation_failures": 0,
+    "cost_usd": 0.11979374999999999
+  }
+}

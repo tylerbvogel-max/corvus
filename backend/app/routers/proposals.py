@@ -44,6 +44,8 @@ def _classify_origin(p: AutopilotProposal) -> str:
         return "document"
     if src == "emergent_queue":
         return "emergent"
+    if src == "reconsolidation_quality":
+        return "auditor"
     if p.autopilot_run_id is not None:
         return "autopilot"
     return "manual"
@@ -178,23 +180,26 @@ def _apply_origin_filter(stmt, origin: str):
     is_integrity = AutopilotProposal.gap_source.like("integrity_%")
     is_document = AutopilotProposal.gap_source == "document_ingest"
     is_emergent = AutopilotProposal.gap_source == "emergent_queue"
+    is_auditor = AutopilotProposal.gap_source == "reconsolidation_quality"
     if origin == "integrity":
         return stmt.where(is_integrity)
     if origin == "document":
         return stmt.where(is_document)
     if origin == "emergent":
         return stmt.where(is_emergent)
+    if origin == "auditor":
+        return stmt.where(is_auditor)
     if origin == "autopilot":
         return stmt.where(
             AutopilotProposal.autopilot_run_id.isnot(None),
-            ~is_integrity, ~is_document, ~is_emergent,
+            ~is_integrity, ~is_document, ~is_emergent, ~is_auditor,
         )
     if origin == "manual":
         return stmt.where(
             AutopilotProposal.autopilot_run_id.is_(None),
             or_(
                 AutopilotProposal.gap_source.is_(None),
-                and_(~is_integrity, ~is_document, ~is_emergent),
+                and_(~is_integrity, ~is_document, ~is_emergent, ~is_auditor),
             ),
         )
     raise HTTPException(400, f"Unknown origin: {origin!r}")
@@ -277,6 +282,8 @@ def _classify_origin_tuple(run_id: int | None, src: str | None) -> str:
         return "document"
     if s == "emergent_queue":
         return "emergent"
+    if s == "reconsolidation_quality":
+        return "auditor"
     if run_id is not None:
         return "autopilot"
     return "manual"

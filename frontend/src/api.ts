@@ -1657,6 +1657,16 @@ export interface GapEvidence {
   threshold: number;
   neuron_ids: number[];
   query_ids: number[];
+  // Reconsolidation-auditor extension (signal === 'reconsolidation_quality')
+  disposition?: string | null;
+  confidence?: number | null;
+  defect_classes?: string[] | null;
+  evidence_citations?: string[] | null;
+  risk_breakdown?: Record<string, { score: number; detail: string }> | null;
+  blast_radius?: string | null;
+  uncertainty?: string | null;
+  heightened_review?: boolean | null;
+  evidence_hash?: string | null;
 }
 
 export interface DocumentEvidence {

@@ -23,7 +23,7 @@ import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
 import { diffWords } from 'diff';
 
 type StateFilter = 'all' | 'proposed' | 'approved' | 'rejected' | 'applied' | 'superseded';
-export type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
+export type OriginFilter = 'all' | 'autopilot' | 'integrity' | 'document' | 'emergent' | 'auditor' | 'manual';
 
 const STATE_COLORS: Record<string, string> = {
   proposed: '#e8a838',
@@ -38,6 +38,7 @@ const ORIGIN_COLORS: Record<string, string> = {
   integrity: '#2196f3',
   document: '#4caf50',
   emergent: '#e8a838',
+  auditor: '#e74c8b', // reconsolidation quality audit (scheduled doubt)
   manual: '#7f8c8d',
 };
 
@@ -47,6 +48,7 @@ const SOURCE_OPTIONS: { key: OriginFilter; label: string }[] = [
   { key: 'integrity', label: 'Integrity' },
   { key: 'document', label: 'Document' },
   { key: 'emergent', label: 'Emergent' },
+  { key: 'auditor', label: 'Auditor' },
   { key: 'manual', label: 'Manual' },
 ];
 
@@ -804,6 +806,7 @@ function producerLabel(p: ProposalSummary): string | null {
   if (p.origin === 'integrity' && p.finding_id) return `finding #${p.finding_id}`;
   if (p.origin === 'document') return 'Document ingest';
   if (p.origin === 'emergent') return 'Emergent queue';
+  if (p.origin === 'auditor') return 'Quality audit';
   return null;
 }
 
@@ -909,14 +912,59 @@ function EvidenceCard({ evidence }: { evidence: GapEvidence | DocumentEvidence |
     }}>
       {isGapEvidence && (
         <>
-          <div style={{ fontWeight: 600, marginBottom: 2 }}>{(evidence as GapEvidence).signal}</div>
+          <div style={{ fontWeight: 600, marginBottom: 2 }}>
+            {(evidence as GapEvidence).signal}
+            {(evidence as GapEvidence).heightened_review && (
+              <span style={{
+                marginLeft: 8, padding: '1px 6px', borderRadius: 8, fontSize: '0.62rem',
+                background: '#e74c3c22', color: '#e74c3c', fontWeight: 700,
+              }}>HEIGHTENED REVIEW</span>
+            )}
+          </div>
           <div style={{ color: 'var(--text-dim)' }}>{(evidence as GapEvidence).description}</div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 4, color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+          <div style={{ display: 'flex', gap: 12, marginTop: 4, color: 'var(--text-dim)', fontSize: '0.72rem', flexWrap: 'wrap' }}>
             <span>Value: {(evidence as GapEvidence).metric_value.toFixed(2)}</span>
             <span>Threshold: {(evidence as GapEvidence).threshold.toFixed(2)}</span>
             {(evidence as GapEvidence).neuron_ids.length > 0 && <span>Neurons: {(evidence as GapEvidence).neuron_ids.join(', ')}</span>}
             {(evidence as GapEvidence).query_ids.length > 0 && <span>Queries: {(evidence as GapEvidence).query_ids.join(', ')}</span>}
+            {(evidence as GapEvidence).disposition && <span>Disposition: {(evidence as GapEvidence).disposition}</span>}
+            {typeof (evidence as GapEvidence).confidence === 'number' && (
+              <span>Critic confidence: {((evidence as GapEvidence).confidence as number).toFixed(2)}</span>
+            )}
           </div>
+          {((evidence as GapEvidence).defect_classes?.length ?? 0) > 0 && (
+            <div style={{ marginTop: 4, color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+              Defects: {(evidence as GapEvidence).defect_classes!.join(', ')}
+            </div>
+          )}
+          {(evidence as GapEvidence).risk_breakdown && (
+            <div style={{ marginTop: 4, fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+              {Object.entries((evidence as GapEvidence).risk_breakdown!)
+                .sort(([, a], [, b]) => b.score - a.score)
+                .map(([name, sig]) => (
+                  <div key={name} style={{ fontFamily: 'monospace' }}>
+                    {name}={sig.score} — {sig.detail}
+                  </div>
+                ))}
+            </div>
+          )}
+          {((evidence as GapEvidence).evidence_citations?.length ?? 0) > 0 && (
+            <div style={{ marginTop: 4, fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+              {(evidence as GapEvidence).evidence_citations!.map((c, i) => (
+                <div key={i} style={{ fontStyle: 'italic' }}>&ldquo;{c}&rdquo;</div>
+              ))}
+            </div>
+          )}
+          {(evidence as GapEvidence).blast_radius && (
+            <div style={{ marginTop: 4, fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+              Blast radius: {(evidence as GapEvidence).blast_radius}
+            </div>
+          )}
+          {(evidence as GapEvidence).uncertainty && (
+            <div style={{ marginTop: 2, fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+              Uncertainty: {(evidence as GapEvidence).uncertainty}
+            </div>
+          )}
         </>
       )}
       {isDocEvidence && (

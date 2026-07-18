@@ -241,6 +241,30 @@ class TestLifecycle:
         assert len(violations) == 1 and "lives elsewhere" in violations[0]
 
     @pytest.mark.asyncio
+    async def test_revalidate_allows_completing_absorption(self):
+        # Auditor receipt #1181 (2026-07-18): #101 sat half-absorbed
+        # (active + superseded_by set — the exact inconsistency the
+        # auditor flagged) and the corpse rule killed the deactivation
+        # that would complete it. is_active -> false on a superseded
+        # target finishes absorption; it does not mutate the fact.
+        n = Neuron(id=101, layer=3, is_active=True, superseded_by=174)
+        p = AutopilotProposal(id=1181, state="approved")
+        p.items = [ProposalItem(id=10, proposal_id=1181, action="update",
+                                target_neuron_id=101, field="is_active",
+                                old_value="true", new_value="false")]
+        assert await revalidate_items(_db_with_neurons({101: n}), p) == []
+
+    @pytest.mark.asyncio
+    async def test_revalidate_still_blocks_corpse_reactivation(self):
+        n = Neuron(id=101, layer=3, is_active=False, superseded_by=174)
+        p = AutopilotProposal(id=1182, state="approved")
+        p.items = [ProposalItem(id=10, proposal_id=1182, action="update",
+                                target_neuron_id=101, field="is_active",
+                                old_value="false", new_value="true")]
+        violations = await revalidate_items(_db_with_neurons({101: n}), p)
+        assert len(violations) == 1 and "lives elsewhere" in violations[0]
+
+    @pytest.mark.asyncio
     async def test_revalidate_reconsolidate_item_uses_member_hashes(self):
         plan = _golden_plan()
         item = ProposalItem(id=11, proposal_id=2, action="reconsolidate",

@@ -534,6 +534,19 @@ class GapEvidenceOut(BaseModel):
     threshold: float
     neuron_ids: list[int] = []
     query_ids: list[int] = []
+    # Reconsolidation-auditor extension (gap_source=reconsolidation_quality):
+    # optional so every other producer is untouched. The reviewer must see
+    # disposition, calibrated confidence, the inspectable risk breakdown,
+    # citations, blast radius, and the heightened-review flag.
+    disposition: str | None = None
+    confidence: float | None = None
+    defect_classes: list[str] | None = None
+    evidence_citations: list[str] | None = None
+    risk_breakdown: dict | None = None
+    blast_radius: str | None = None
+    uncertainty: str | None = None
+    heightened_review: bool | None = None
+    evidence_hash: str | None = None
 
 
 class DocumentEvidenceOut(BaseModel):

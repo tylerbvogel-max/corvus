@@ -488,8 +488,11 @@ async def collect_all(db: AsyncSession) -> dict:
         "janitors": janitor_metrics(),
         "compiler": compiler_metrics(),
     }
+    from app.services.memory_quality_auditor import auditor_metrics
+    report["auditor"] = auditor_metrics()
     report["cost_ledger_usd"] = {
         "distiller": report["distiller"]["cost_usd"],
+        "auditor_critic": report["auditor"]["lifetime"]["critic_cost_usd"],
         "recall_and_injection": 0.0,
     }
     from app.services.model_usage_ledger import usage_report
