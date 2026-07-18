@@ -1,4 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-*/
 
 # Playwright
 test-results/
 playwright-report/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Turbo
+.turbo/
+
+# TypeScript cache
+*.tsbuildinfo

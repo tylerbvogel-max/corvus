@@ -1,0 +1,7 @@
+{
+  "excluded_cwd_prefixes": [
+    "~/Projects/personal",
+    "~/Projects/work-private",
+    "~/Documents/private"
+  ]
+}

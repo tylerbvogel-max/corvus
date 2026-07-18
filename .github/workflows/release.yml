@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install backend deps
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run tests
+        run: |
+          cd backend
+          python -m pytest tests/ -q --tb=short
+      
+      - name: Build Docker image
+        run: |
+          docker build -t corvus-mind:${{ github.ref_name }} .
+      
+      - name: Build MCP server package
+        run: |
+          cd harness/claude-code
+          # Create a standalone entry point
+          cat > mind_mcp_server_entry.py << 'EOF'
+#!/usr/bin/env python3
+"""Standalone MCP server entry point for pipx/pip install."""
+import sys
+sys.path.insert(0, '/usr/local/lib/corvus-mind')
+from mind_mcp_server import main
+if __name__ == '__main__':
+    main()
+EOF
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            install.sh
+            config.example.json
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    needs: build
+    if: github.repository == 'tylerbvogel/corvus'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build MCP package
+        run: |
+          mkdir -p dist/corvus_mind_mcp
+          cp harness/claude-code/mind_mcp_server.py dist/corvus_mind_mcp/__main__.py
+          cat > dist/corvus_mind_mcp/__init__.py << 'EOF'
+__version__ = "0.1.0"
+EOF
+          cat > dist/pyproject.toml << 'EOF'
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corvus-mind-mcp"
+version = "0.1.0"
+description = "Corvus-Mind MCP server for agentic institutional memory"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.26.0", "httpx>=0.28"]
+entry-points = {console_scripts = ["corvus-mind-mcp = corvus_mind_mcp.__main__:main"]}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+]
+EOF
+          cd dist && python -m build --wheel
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

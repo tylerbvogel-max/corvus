@@ -2,10 +2,19 @@
 backend/venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
 
 # Node
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 
 # Data
 backend/*.db
@@ -14,11 +23,61 @@ backend/*.db-wal
 backend/*.db.bak*
 backend/*.json
 
-# Env
+# Env (keep .env.example for reference)
 .env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
 
-# Backups
-*.sql.gz
+# IDE/Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+backend/backup.log
+
+# Backups
+*.sql.gz
+*.sql
+
+# Docker
+.docker/
+
+# Coverage
+coverage/
+
+# Type checking
+.mypy_cache/
+.pyre_cache/
+dmypy.json
+
+# Frontend build artifacts
+frontend/dist-*/
+frontend/.turbo/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+
+# Systemd service files with absolute paths (use templates instead)
+deploy/*.service
+
+# Large test datasets (if not in repo)
+eval/locomo/locomo10.json
+
+# Python bytecode optimization
+__pycache__/
+*.pyc
+
+# Ruff cache
+.ruff_cache/

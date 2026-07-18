@@ -2,11 +2,11 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: corvus
       POSTGRES_PASSWORD: corvus
-      POSTGRES_DB: corvus
+      POSTGRES_DB: corvus_mind
     ports:
       - "5432:5432"
     volumes:
@@ -23,12 +23,22 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql+asyncpg://corvus:corvus@db:5432/corvus"
-      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
-      TENANT_ID: "${TENANT_ID:-corvus-aero}"
-      PORT: "${PORT:-8002}"
+      DATABASE_URL: "postgresql+asyncpg://corvus:corvus@db:5432/corvus_mind"
+      # LLM Providers - at least one required
+      # Anthropic via Claude CLI (uses your personal subscription - RECOMMENDED)
+      CLAUDE_CLI_PATH: "/root/.config/nvm/versions/node/v20.20.0/bin/claude"
+      # Or use API keys instead:
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      # GROQ_API_KEY: ${GROQ_API_KEY}
+      TENANT_ID: "corvus-mind"
+      PORT: "8005"
     ports:
-      - "${PORT:-8002}:${PORT:-8002}"
+      - "8005:8005"
+    # Mount your local Claude CLI auth so the container uses your personal subscription
+    # (run `claude auth login` on host first)
+    volumes:
+      - ~/.claude:/root/.claude:ro
 
 volumes:
   pgdata:
