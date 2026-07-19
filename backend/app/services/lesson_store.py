@@ -208,6 +208,21 @@ async def _nearest_active_lesson(db: AsyncSession, spec: dict) -> dict | None:
     return best
 
 
+def _near_dup_disposition(near: dict | None, requires_approval: bool) -> str:
+    """'insert' | 'queue' | 'skip' for a near-dup gate hit. Pure.
+
+    With approval required (every real tenant), any hit queues for human
+    review — unchanged. With approval disabled (throwaway eval tenants),
+    the gate models the approved outcome: near-verbatim cosine hits are
+    true duplicates (skip); lexical review-band nominations insert, because
+    that lane flags suspicion for a reviewer, not a verdict."""
+    if near is None:
+        return "insert"
+    if requires_approval:
+        return "queue"
+    return "skip" if near["lane"] == "cosine" else "insert"
+
+
 async def _embed_and_wire(db: AsyncSession, neuron_id: int) -> None:
     """Make a freshly-created lesson recallable: embed it, then wire it to
     its nearest neighbors so it joins spread activation at birth rather than
@@ -275,13 +290,27 @@ async def save_lesson(
     # janitor was the only backstop. Embed the candidate BEFORE routing;
     # a near-verbatim cosine hit against an active lesson forces the
     # human-review queue instead of a silent insert.
+    #
+    # When mind_dedup_requires_approval is FALSE (throwaway eval tenants
+    # only — documented never-on-a-real-tenant), the queue has no human to
+    # drain it, so the gate models the approved steady state instead:
+    # a cosine hit (>= FUSE_SIM, near-verbatim) skips as a true duplicate;
+    # a lexical-band nomination inserts with its annotation kept — the
+    # 2026-07-18 LoCoMo Phase A showed that lane parking 180 DISTINCT
+    # persona facts (65% of the corpus) into review limbo, cratering
+    # recall ~20pp. Review-band suspicion gets benefit of the doubt in
+    # auto mode; near-verbatim does not.
+    from app.config import settings
     near = await _nearest_active_lesson(db, spec)
+    disposition = _near_dup_disposition(
+        near, settings.mind_dedup_requires_approval)
     if near is not None:
         proposal.gap_description = (
             f"NEAR-DUPLICATE ({near['lane']} lane) @ sim {near['sim']:.3f} "
             f"of #{near['id']} '{near['label'][:60]}' — "
             f"{proposal.gap_description}"
         )[:2000]
+    if disposition == "queue":
         await db.commit()
         logger.info("near-dup gate queued lesson %r (%s lane, sim %.3f vs #%s)",
                     label[:60], near["lane"], near["sim"], near["id"])
@@ -291,6 +320,19 @@ async def save_lesson(
                        f"'{near['label'][:60]}' ({near['lane']} lane, "
                        f"sim {near['sim']:.3f}) — "
                        "queued for human review instead of silent insert"),
+            "proposal_id": proposal.id,
+            "neuron_id": None,
+        }
+    if disposition == "skip":
+        proposal.state = "rejected"
+        await db.commit()
+        logger.info("near-dup gate auto-skipped duplicate %r (cosine sim "
+                    "%.3f vs #%s)", label[:60], near["sim"], near["id"])
+        return {
+            "route": "skip",
+            "reason": (f"auto-skip: near-verbatim duplicate of #{near['id']} "
+                       f"'{near['label'][:60]}' (sim {near['sim']:.3f}); "
+                       "dedup approval disabled on this tenant"),
             "proposal_id": proposal.id,
             "neuron_id": None,
         }

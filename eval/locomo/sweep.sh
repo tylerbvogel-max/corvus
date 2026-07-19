@@ -13,10 +13,17 @@ cd "$(dirname "$0")/../../backend"
 source venv/bin/activate
 export PYTHONPATH=. TENANT_ID=corvus-locomo
 
+# Probe with the SAME absolute path llm_provider calls (systemd units don't
+# carry the nvm PATH — a bare `claude` probe failed for 16h on 2026-07-19
+# while the CLI was healthy the whole time), and strip the nested-session
+# markers exactly like the real call path does.
+CLAUDE_CLI="${CLAUDE_CLI_PATH:-$HOME/.config/nvm/versions/node/v20.20.0/bin/claude}"
+
 wait_for_cli() {
   # bounded: 96 probes x 10 min = 16h max (JPL-2)
   for _ in $(seq 1 96); do
-    if out=$(claude -p "reply with exactly: ok" --output-format text \
+    if out=$(env -u CLAUDECODE -u CLAUDE_CODE_ENTRYPOINT -u CLAUDE_CODE_SSE_PORT \
+               "$CLAUDE_CLI" -p "reply with exactly: ok" --output-format text \
                --strict-mcp-config --no-session-persistence 2>&1 </dev/null) \
        && [ -n "$out" ]; then
       return 0

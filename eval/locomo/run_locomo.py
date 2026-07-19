@@ -460,6 +460,7 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
     speakers = (conv["conversation"].get("speaker_a"),
                 conv["conversation"].get("speaker_b"))
     total_saved = 0
+    total_skipped = 0
     maintenance: list[dict] = []
     for num, date_time, turns in iter_sessions(conv):
         if max_sessions is not None and num > max_sessions:
@@ -486,7 +487,7 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
                 user_message=body, max_tokens=4000, model=DISTILL_MODEL, timeout=600,
             )
             facts.extend(parse_json_block(reply.get("text", ""), "[", "]") or [])
-        saved = 0
+        saved = skipped = queued = 0
         async with async_session() as db:
             for f in facts:
                 label = str(f.get("label", "")).strip()[:200]
@@ -496,7 +497,7 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
                 if await label_exists(db, label):
                     label = f"{label[:190]} (s{num})"
                 raw_entities = f.get("entities")
-                await save_lesson(
+                res = await save_lesson(
                     db, lesson=fact,
                     entities=raw_entities if isinstance(raw_entities, list) else None,
                     evidence=f"LoCoMo conv {conv_idx} session {num} ({date_time}) "
@@ -504,8 +505,22 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
                     label=label, scope="User", source_origin="distiller",
                     gap_source="locomo_eval",
                 )
-                saved += 1
+                # Count what actually happened, not what was attempted —
+                # "306 saved" with 198 parked in review limbo is how the
+                # 2026-07-18 write-gate starvation went unnoticed.
+                if res.get("neuron_id") is not None:
+                    saved += 1
+                elif res.get("route") == "skip":
+                    skipped += 1
+                else:
+                    queued += 1
+        # Certificate contract: with dedup approval disabled, NOTHING may
+        # park in a review queue nobody drains. Fail fast, not 20pp later.
+        assert queued == 0, (
+            f"{queued} facts routed to the review queue during session "
+            f"{num} — write gate is not honoring the auto-fuse tenant flag")
         total_saved += saved
+        total_skipped += skipped
         mark_distilled_session(artifact_dir, conv_idx, num, saved)
         ordinal = session_offset + num
         events = lifecycle_events(lifecycle_mode, ordinal, sessions_per_week)
@@ -514,10 +529,13 @@ async def ingest(conv_idx: int, conv: dict, *, lifecycle_mode: str,
                            for r in reports)
         event_text = ",".join(events) if events else "none"
         print(f"[ingest] session {num}: {len(facts)} candidates, {saved} saved, "
-              f"maintenance={event_text}", flush=True)
-    print(f"[ingest] done: {total_saved} facts saved", flush=True)
+              f"{skipped} dup-skipped, maintenance={event_text}", flush=True)
+    print(f"[ingest] done: {total_saved} facts saved, "
+          f"{total_skipped} dup-skipped", flush=True)
     return {
         "mode": lifecycle_mode,
+        "facts_saved": total_saved,
+        "facts_dup_skipped": total_skipped,
         "sessions": session_count(conv),
         "session_offset": session_offset,
         "sessions_per_week": sessions_per_week,

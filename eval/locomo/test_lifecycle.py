@@ -189,6 +189,28 @@ def test_skill_projection_is_captured_inside_artifact_dir(tmp_path):
     assert skill_compiler.SKILLS_DIR.startswith(str(tmp_path))
 
 
+# ── Write-gate disposition: auto-fuse tenants must never park facts ──
+# (2026-07-18 Phase A: the lexical lane queued 65% of the corpus into a
+# review queue nobody drains, cratering both arms ~20pp.)
+
+def test_near_dup_gate_queues_on_real_tenants():
+    from app.services.lesson_store import _near_dup_disposition
+    hit = {"id": 1, "label": "x", "sim": 0.91, "lane": "cosine"}
+    assert _near_dup_disposition(hit, requires_approval=True) == "queue"
+    hit["lane"] = "lexical"
+    assert _near_dup_disposition(hit, requires_approval=True) == "queue"
+
+
+def test_near_dup_gate_auto_mode_skips_verbatim_inserts_lexical():
+    from app.services.lesson_store import _near_dup_disposition
+    cosine = {"id": 1, "label": "x", "sim": 0.91, "lane": "cosine"}
+    lexical = {"id": 1, "label": "x", "sim": 0.66, "lane": "lexical"}
+    assert _near_dup_disposition(cosine, requires_approval=False) == "skip"
+    assert _near_dup_disposition(lexical, requires_approval=False) == "insert"
+    assert _near_dup_disposition(None, requires_approval=False) == "insert"
+    assert _near_dup_disposition(None, requires_approval=True) == "insert"
+
+
 def test_write_skill_end_to_end_stays_in_artifact_dir(tmp_path):
     locomo.configure_isolated_runtime(str(tmp_path))
     from app.services import skill_compiler
