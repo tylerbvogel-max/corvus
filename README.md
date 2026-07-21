@@ -429,6 +429,30 @@ Key metrics tracked:
 - **Hallucination rate** — citation-hopping catch rate
 - **Consolidation safety** — false merge rate (should be ~0 with human gate)
 
+### LoCoMo full-suite result (2026-07-21)
+
+**65.4 overall** on all 10 conversations / 1,986 questions (LLM-judge percent-correct,
+judge fixed at Claude Sonnet), run end-to-end through the shipped production pipeline —
+chunked distillation through the write gate, hybrid three-lane recall (no LLM in the hot
+path), strict refuse-when-unsure answering, and the full maintenance lifecycle (janitors +
+skill compilers) at production-equivalent cadence:
+
+| | single-hop | multi-hop | temporal | open-domain | adversarial |
+|---|---|---|---|---|---|
+| memory (shipped config) | 65.8 | 40.8 | 65.7 | 38.5 | **85.7** |
+| full-context baseline | 87.0 | 64.2 | 65.4 | 44.8 | 59.2 |
+
+The headline trade: the memory system gives up ~6.6pp overall versus stuffing the whole
+transcript into context, and buys **+26.5pp on adversarial trap questions** — on the 446
+questions whose correct answer is "no information available," it refuses correctly 85.7%
+of the time, and not one of its adversarial misses was a wrongful refusal. Provider
+integrity was receipt-verified per call (16,652 calls, zero fallbacks, single model
+version per workload); the dataset is SHA-256-pinned and loaded fail-closed.
+
+> The LoCoMo dataset (CC BY-NC 4.0) is not distributed with this repo — fetch it from
+> [snap-research/locomo](https://github.com/snap-research/locomo) and place it at
+> `eval/locomo/locomo10.json`.
+
 ---
 
 ## Project Structure
