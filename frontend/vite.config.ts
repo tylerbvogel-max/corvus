@@ -12,6 +12,7 @@ export default defineConfig({
       '/neurons': apiTarget,
       '/metrics': apiTarget,
       '/agency-lab': apiTarget,
+      '/roadmap-ledgers': apiTarget,
       '/capabilities': apiTarget,
       '/recall': apiTarget,
       '/janitor': apiTarget,

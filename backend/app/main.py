@@ -780,6 +780,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 from app.routers import recall as recall_router
 from app.routers import capabilities as capabilities_router
 from app.routers import agency_lab as agency_lab_router
+from app.routers import roadmap_ledgers as roadmap_ledgers_router
 from app.routers import distill as distill_router
 from app.routers import janitor as janitor_router
 from app.routers import compile as compile_router
@@ -790,6 +791,7 @@ app.include_router(query.router)
 app.include_router(recall_router.router)
 app.include_router(capabilities_router.router)
 app.include_router(agency_lab_router.router)
+app.include_router(roadmap_ledgers_router.router)
 app.include_router(distill_router.router)
 app.include_router(janitor_router.router)
 app.include_router(compile_router.router)
@@ -904,7 +906,7 @@ if frontend_dist.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
     # SPA catch-all — must NOT match API prefixes
-    _api_prefixes = ("/neurons", "/queries", "/query", "/context", "/eval-scores", "/admin", "/health", "/tenant", "/tenants", "/docs", "/openapi", "/ingest", "/models", "/chat", "/learning-analytics", "/v1", "/mcp")
+    _api_prefixes = ("/neurons", "/queries", "/query", "/context", "/eval-scores", "/admin", "/health", "/tenant", "/tenants", "/docs", "/openapi", "/ingest", "/models", "/chat", "/learning-analytics", "/roadmap-ledgers", "/v1", "/mcp")
 
     def _is_api_path(path: str) -> bool:
         return bool(path) and any(path.startswith(p.lstrip("/")) for p in _api_prefixes)

@@ -1185,6 +1185,34 @@ class TenantConfig(Base):
     certified_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
 
+# ── Roadmap ledgers: durable, project-scoped long-horizon plans ─────
+
+class RoadmapLedger(Base):
+    """One project roadmap stored as a revision-guarded JSON document.
+
+    The document shape intentionally preserves the original master-corvus
+    roadmap schema.  Keeping sections, nodes, edges, milestones, and future
+    extension fields together lets the ledger evolve without coupling roadmap
+    semantics to the neuron graph's ontology.
+    """
+
+    __tablename__ = "roadmap_ledgers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    project_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    state: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # Separate from state.version: revision is the optimistic-concurrency token
+    # for API writes; state.version remains the human-readable source release.
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), index=True,
+    )
+
+
 # ── Agency Lab: incentive economy for persistent agent organizations ──
 
 class AgencyPolicy(Base):

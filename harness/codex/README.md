@@ -1,16 +1,20 @@
 # Codex harness
 
-Codex 0.144.4 provides native command hooks for the same lifecycle events used
+Codex 0.145.0 provides native command hooks for the same lifecycle events used
 by Claude Code. `corvus_hook.py` is therefore only a compatibility adapter over
 the existing hooks in `harness/claude-code/`; it contains no memory logic.
 
 - Recall: the existing `mind_mcp_server.py` is registered as `corvus-mind`.
 - Injection: `SessionStart`, `UserPromptSubmit`, and `PreToolUse` delegate to
-  `memory_inject_hook.py`. Codex adds its `additionalContext` as developer
-  context, including the compiled charter and self-model at session start.
+  `memory_inject_hook.py` and `roadmap_gate_hook.py`. Codex adds their merged
+  `additionalContext` as developer context, including the compiled charter,
+  self-model, and deterministic roadmap admission policy at session start.
+  Mapped-project mutations block until the session holds a revision-pinned
+  admission or a logged off-ledger override.
 - Capture: `PostToolUse` and `Stop` delegate to `episode_hook.py`. Codex supplies
   its rollout JSONL as `transcript_path`; that format is explicitly unstable,
-  so the distiller should continue treating it as best-effort input.
+  so the distiller should continue treating it as best-effort input. Stop also
+  emits a planning return receipt after admitted material work.
 
 Install `hooks.json` at `~/.codex/hooks.json`, then review and trust it with
 `/hooks` in Codex. For vetted noninteractive acceptance runs only, Codex also

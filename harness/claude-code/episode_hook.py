@@ -19,6 +19,8 @@ import re
 import sys
 from datetime import datetime, timezone
 
+import roadmap_admission
+
 EPISODE_DIR = os.path.expanduser("~/.corvus-mind/episodes")
 CONFIG_PATH = os.path.expanduser("~/.corvus-mind/config.json")
 MAX_FIELD_CHARS = 400
@@ -152,6 +154,8 @@ def main() -> int:
     path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    if record["event"] == "Stop":
+        roadmap_admission.planning_return(session_id)
     return 0
 
 

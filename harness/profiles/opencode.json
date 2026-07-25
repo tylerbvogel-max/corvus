@@ -3,6 +3,6 @@
   "skill_target": "opencode",
   "skill_directory": "~/.config/opencode/skills",
   "semantic_capabilities": ["shell", "filesystem", "web", "hooks", "mcp"],
-  "lifecycle_events": ["session_start", "prompt_submit", "post_tool", "stop"],
-  "limitations": ["no advisory pre-tool context", "no native ask-user semantic primitive declared"]
+  "lifecycle_events": ["session_start", "prompt_submit", "pre_tool", "post_tool", "stop"],
+  "limitations": ["pre-tool supports blocking but not advisory context", "no native ask-user semantic primitive declared"]
 }

@@ -166,6 +166,249 @@ export function deleteSession(id: number): Promise<{ ok: boolean }> {
   return json(`/chat/sessions/${id}`, { method: 'DELETE' });
 }
 
+// ── Project roadmap ledgers ──
+
+export type RoadmapStatus =
+  | 'done' | 'active' | 'in-progress' | 'planned' | 'proposed' | 'unblocked'
+  | 'bug' | 'deprioritized' | 'polish' | 'conceptual' | 'cancelled';
+
+export type RoadmapHorizon =
+  | 'thesis' | 'horizon-3' | 'horizon-2' | 'horizon-1' | 'active';
+
+export type RoadmapAssumptionStatus =
+  | 'standing' | 'supported' | 'challenged' | 'invalidated';
+
+export type RoadmapReviewCadence =
+  | 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'event' | 'manual';
+
+export interface RoadmapAssumption {
+  id: string;
+  statement: string;
+  status: RoadmapAssumptionStatus;
+  confidence: number;
+  evidenceFor?: string[];
+  evidenceAgainst?: string[];
+  invalidationTrigger?: string;
+  consequence?: string;
+  lastValidatedAt?: string;
+}
+
+export interface RoadmapSection extends Record<string, unknown> {
+  id: string;
+  label: string;
+  color: string;
+}
+
+export interface RoadmapNode extends Record<string, unknown> {
+  id: string;
+  section: string;
+  label: string;
+  status: RoadmapStatus;
+  summary?: string;
+  prompt?: string;
+  verification?: string[];
+  prereqs?: string[];
+  completedAt?: string;
+  horizon?: RoadmapHorizon;
+  assumptions?: RoadmapAssumption[];
+  reviewCadence?: RoadmapReviewCadence;
+  nextReviewAt?: string | null;
+  lastReviewedAt?: string;
+  reviewHistory?: Array<Record<string, unknown>>;
+  deferred?: boolean;
+  deferredOrder?: number;
+}
+
+export interface RoadmapEdge extends Record<string, unknown> {
+  from: string;
+  to: string;
+  type?: string;
+}
+
+export interface RoadmapMilestone extends Record<string, unknown> {
+  id: string;
+  label: string;
+  summary?: string;
+  prereqs?: string[];
+  color?: string;
+}
+
+export interface RoadmapState extends Record<string, unknown> {
+  version: number;
+  updatedAt: string;
+  sections: RoadmapSection[];
+  nodes: RoadmapNode[];
+  edges: RoadmapEdge[];
+  milestones?: RoadmapMilestone[];
+}
+
+export interface RoadmapSummary {
+  records: number;
+  in_scope: number;
+  out_of_scope: number;
+  done: number;
+  moving: number;
+  completion: number;
+  assumptions: number;
+  challenged_assumptions: number;
+  reviews_due: number;
+  reviews_upcoming: number;
+  horizons: Record<RoadmapHorizon, number>;
+  unclassified_horizon: number;
+}
+
+export interface RoadmapLedgerSummary {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  project_path: string | null;
+  revision: number;
+  summary: RoadmapSummary;
+  updated_at: string;
+}
+
+export interface RoadmapLedger extends RoadmapLedgerSummary {
+  state: RoadmapState;
+  created_at: string;
+}
+
+export interface RoadmapWorkOrder {
+  id: string;
+  plan_node_id: string;
+  status: string;
+  worker_profile_id: number | null;
+  worker: {
+    id: number;
+    key: string;
+    display_name: string;
+    model: string;
+    harness: string;
+  } | null;
+  policy: {
+    id: number;
+    name: string;
+    version: number;
+    mode: string;
+  } | null;
+  task_class: string;
+  risk_tier: number;
+  contract_digest: string;
+  contract: Record<string, unknown>;
+  completion: Record<string, unknown> | null;
+  audit: Record<string, unknown>;
+  roadmap_revision: number;
+  kind: 'delivery' | 'strategic-review';
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface RoadmapAdmissionEvent {
+  ts: string;
+  event: 'PlanningAdmission' | 'PlanningReturn';
+  session_id: string;
+  ledger_slug: string;
+  ledger_revision: number;
+  record_id: string | null;
+  record_label?: string | null;
+  mode?: 'bound' | 'off-ledger';
+  admission_mode?: 'bound' | 'off-ledger';
+  reason?: string | null;
+  harness?: string | null;
+  material_tool_count?: number;
+  tools?: string[];
+  status?: 'reconcile-required';
+}
+
+export function listRoadmapLedgers(): Promise<RoadmapLedgerSummary[]> {
+  return json('/roadmap-ledgers');
+}
+
+export function getRoadmapLedger(slug: string): Promise<RoadmapLedger> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}`);
+}
+
+export function createRoadmapLedger(payload: {
+  name: string;
+  slug?: string;
+  description?: string;
+  project_path?: string;
+}): Promise<RoadmapLedger> {
+  return json('/roadmap-ledgers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function saveRoadmapLedger(
+  slug: string, expectedRevision: number, state: RoadmapState,
+): Promise<RoadmapLedger> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expected_revision: expectedRevision, state }),
+  });
+}
+
+export function listRoadmapWorkOrders(slug: string): Promise<RoadmapWorkOrder[]> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}/work-orders`);
+}
+
+export function listRoadmapAdmissions(
+  slug: string, limit = 50,
+): Promise<RoadmapAdmissionEvent[]> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}/admissions?limit=${limit}`);
+}
+
+export function commissionRoadmapNode(
+  slug: string, nodeId: string, payload: {
+    expected_revision: number;
+    worker_profile_id: number;
+    policy_id: number;
+    task_class: string;
+    risk_tier: number;
+    permissions?: Record<string, unknown>;
+    ttl_minutes?: number;
+  },
+): Promise<RoadmapWorkOrder> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}/nodes/${encodeURIComponent(nodeId)}/commission`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function commissionRoadmapReview(
+  slug: string, nodeId: string, payload: {
+    expected_revision: number;
+    worker_profile_id: number;
+    policy_id: number;
+    risk_tier: number;
+    permissions?: Record<string, unknown>;
+    ttl_minutes?: number;
+  },
+): Promise<RoadmapWorkOrder> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}/nodes/${encodeURIComponent(nodeId)}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...payload,
+      task_class: 'strategic-review',
+    }),
+  });
+}
+
+export function acceptRoadmapDelivery(
+  slug: string, nodeId: string, workOrderId: string, expectedRevision: number,
+): Promise<RoadmapLedger> {
+  return json(`/roadmap-ledgers/${encodeURIComponent(slug)}/nodes/${encodeURIComponent(nodeId)}/accept/${encodeURIComponent(workOrderId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ expected_revision: expectedRevision }),
+  });
+}
+
 export function generateSessionTitle(id: number): Promise<{ title: string; cost_usd: number }> {
   return json(`/chat/sessions/${id}/generate-title`, { method: 'POST' });
 }

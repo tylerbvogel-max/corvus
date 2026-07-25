@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Corvus Mind MCP server — the minimal two-tool memory surface.
+"""Corvus Mind MCP server — memory plus roadmap admission.
 
 Thin stdio client of the corvus-mind backend (port 8005): no app imports,
 no DB, no embedding model, so it starts fast in every Claude Code session.
@@ -8,10 +8,10 @@ Run with the corvus backend venv python (for the `mcp` package):
     ~/Projects/corvus/backend/venv/bin/python \
         ~/Projects/corvus/harness/claude-code/mind_mcp_server.py
 
-Per the anticipated-use rule the surface is minimal: recall(query),
-remember(lesson, evidence, label, scope), and forget_document(canonical_id)
-— the third added deliberately for mind-reference-class (document-scoped
-revocation must be reachable from inside a session).
+Per the anticipated-use rule the surface stays narrow: three memory tools plus
+roadmap_context and roadmap_admit.  Planning admission is expected in every
+material session, so it belongs on the native tool surface rather than behind
+an ad-hoc shell command.
 """
 
 import json
@@ -32,6 +32,14 @@ def _post(path: str, body: dict) -> dict:
         headers={"Content-Type": "application/json"}, method="POST",
     )
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _get(path: str, query: dict | None = None) -> dict:
+    suffix = f"?{urllib.parse.urlencode(query)}" if query else ""
+    with urllib.request.urlopen(
+        f"{BACKEND}{path}{suffix}", timeout=HTTP_TIMEOUT_S,
+    ) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
@@ -91,6 +99,55 @@ def forget_document(canonical_id: str) -> str:
         data = _post(
             f"/admin/reference/documents/{urllib.parse.quote(canonical_id)}/revoke",
             {})
+    except OSError as exc:
+        return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})
+    return json.dumps(data, ensure_ascii=False)
+
+
+@mcp.tool()
+def roadmap_context(cwd: str = "") -> str:
+    """Return the deterministic project-ledger admission brief.
+
+    Use at the beginning of roadmap-scoped work when the injected shortlist is
+    insufficient or the session began outside the eventual project directory.
+    This is read-only and also repairs a missing local startup projection.
+    """
+    try:
+        data = _get("/roadmap-ledgers/admission-context", {"cwd": cwd})
+    except OSError as exc:
+        return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})
+    return json.dumps(data, ensure_ascii=False)
+
+
+@mcp.tool()
+def roadmap_admit(
+    session_id: str,
+    ledger_slug: str,
+    record_id: str = "",
+    mode: str = "bound",
+    reason: str = "",
+    cwd: str = "",
+    harness: str = "",
+) -> str:
+    """Admit this coding session to a roadmap record before material mutation.
+
+    mode="bound" requires an unfinished record_id.  Use mode="off-ledger" only
+    for intentionally unplanned work and provide a concrete reason.  The
+    receipt is pinned to the current ledger revision; revision drift requires
+    another admission.  This never changes or closes the roadmap itself.
+    """
+    try:
+        data = _post(
+            f"/roadmap-ledgers/{urllib.parse.quote(ledger_slug)}/admissions",
+            {
+                "session_id": session_id,
+                "mode": mode,
+                "record_id": record_id or None,
+                "reason": reason or None,
+                "cwd": cwd or None,
+                "harness": harness or None,
+            },
+        )
     except OSError as exc:
         return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})
     return json.dumps(data, ensure_ascii=False)

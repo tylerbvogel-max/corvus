@@ -43,6 +43,7 @@ import ProposalQueuePage, { type ProposalProducerTarget, type OriginFilter } fro
 import DocumentIngestPage from './components/DocumentIngestPage'
 import IntegrityPage from './components/IntegrityPage'
 import GroupLandingPage from './components/GroupLandingPage'
+import RoadmapLedgersPage from './components/RoadmapLedgersPage'
 
 import { fetchTenantConfig } from './config'
 import type { TenantConfig } from './config'
@@ -79,7 +80,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'agency-missions' | 'agency-venture-graph' | 'agency-economy' | 'agency-workforce' | 'agency-experiments' | 'agency-outcomes';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'agency-missions' | 'agency-venture-graph' | 'agency-economy' | 'agency-workforce' | 'agency-experiments' | 'agency-outcomes';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -173,6 +174,7 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'Design, fund, and evaluate persistent agent workforces',
       icon: IconCompass,
       items: [
+        { key: 'roadmap-ledgers', label: 'Roadmap Ledgers', description: 'Project-scoped long-horizon plans, gates, and durable kickoff context' },
         { key: 'agency-missions', label: 'Missions', description: 'North-star venture registry and disposable agent work orders' },
         { key: 'agency-venture-graph', label: 'Venture Graph', description: 'Live topology of north-star nodes, dependencies, workers, audits, and work orders' },
         { key: 'agency-economy', label: 'Economy', description: 'Versioned reward contracts, audits, escrow, and capital policy' },
@@ -212,7 +214,7 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
     for (const g of groups) g.items = g.items.filter(i => !hidden.has(i.key));
     return groups.filter(g => g.items.length > 0);
   }
-  const agencyKeys = new Set(['agency-missions', 'agency-venture-graph', 'agency-economy', 'agency-workforce', 'agency-experiments', 'agency-outcomes']);
+  const agencyKeys = new Set(['roadmap-ledgers', 'agency-missions', 'agency-venture-graph', 'agency-economy', 'agency-workforce', 'agency-experiments', 'agency-outcomes']);
   for (const g of groups) g.items = g.items.filter(i => !agencyKeys.has(i.key));
   return groups.filter(g => g.items.length > 0);
 }
@@ -628,6 +630,7 @@ export default function App() {
       case 'mind-sessions': return <MindSessionsPage />;
       case 'mind-inbox': return <MindInboxPage />;
       case 'mind-skills': return <MindSkillsPage />;
+      case 'roadmap-ledgers': return <RoadmapLedgersPage />;
       case 'agency-economy': return <AgencyLabPage view="economy" />;
       case 'agency-missions': return <AgencyLabPage view="missions" />;
       case 'agency-venture-graph': return <AgencyLabPage view="venture-graph" />;

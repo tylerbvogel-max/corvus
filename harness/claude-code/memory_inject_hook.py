@@ -63,6 +63,16 @@ def _recall(query: str, top_k: int, source: str = "hook", project: str | None = 
     return hits, data.get("query_id"), data.get("skill_pointers") or []
 
 
+def _safe_recall(
+    query: str, top_k: int, source: str = "hook", project: str | None = None,
+) -> tuple:
+    """Ambient recall may fail; deterministic capsules must still arrive."""
+    try:
+        return _recall(query, top_k, source=source, project=project)
+    except (OSError, ValueError):
+        return [], None, []
+
+
 def _already_injected(session_id: str) -> set:
     """Neuron ids already injected this session (from the episode log)."""
     seen = set()
@@ -275,7 +285,10 @@ def main() -> int:
         project = _project_from_cwd(cwd)
         query = (f"working knowledge, gotchas, tool profiles, and user "
                  f"preferences for {project}")
-        hits, query_id, pointers = _recall(query, SESSION_START_TOP_K, source="hook_session_start", project=_project_from_cwd(cwd))
+        hits, query_id, pointers = _safe_recall(
+            query, SESSION_START_TOP_K, source="hook_session_start",
+            project=_project_from_cwd(cwd),
+        )
         # Identity arrives via the deterministic self-capsule below, not
         # recall — persona must not depend on semantic luck (measured: only
         # 1 of 5 Assistant lessons survived top-k competition).
@@ -283,7 +296,10 @@ def main() -> int:
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
             return 0
-        hits, query_id, pointers = _recall(prompt, PROMPT_TOP_K, source="hook_user_prompt", project=_project_from_cwd(cwd))
+        hits, query_id, pointers = _safe_recall(
+            prompt, PROMPT_TOP_K, source="hook_user_prompt",
+            project=_project_from_cwd(cwd),
+        )
     elif event == "PreToolUse":
         # Pre-mistake warning: only Bash (where machine gotchas live), only
         # high-confidence lesson hits, so it interrupts rarely and earns it.
@@ -292,7 +308,10 @@ def main() -> int:
         command = ((payload.get("tool_input") or {}).get("command") or "").strip()
         if len(command) < MIN_PROMPT_CHARS:
             return 0
-        hits, query_id, pointers = _recall(command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool", project=_project_from_cwd(cwd))
+        hits, query_id, pointers = _safe_recall(
+            command[:400], PRE_TOOL_TOP_K, source="hook_pre_tool",
+            project=_project_from_cwd(cwd),
+        )
         hits = [h for h in hits if h["score"] >= PRE_TOOL_MIN_SCORE]
         # PreToolUse interrupts a tool call — it stays a rare, high-
         # confidence warning channel. No signposts here.
