@@ -165,6 +165,7 @@ async def run_reconsolidation(
     item_id: int | None,
     identity: UserIdentity,
     actor_type: str,
+    total_queries: int,
     parent_action_id: int,
 ) -> dict:
     """Execute an approved FusionPlan. Called from the
@@ -194,6 +195,7 @@ async def run_reconsolidation(
             "neuron.create",
             {"spec": _synthesis_create_spec(plan, list(live.values())),
              "proposal_id": proposal_id, "item_id": item_id,
+             "total_queries": total_queries,
              "reason": "reconsolidation synthesis (no winner bias): new "
                        "canonical representation for the component"},
         )

@@ -16,8 +16,9 @@ component proposals (winner-take-all canonical selection retired).
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 os.environ.setdefault("TENANT_ID", "corvus-mind")
@@ -175,12 +176,25 @@ class TestClosedGaps:
             old_value="old fact", new_value="entirely rewritten canonical fact",
         )
         cache = AsyncMock()
+        embedding_module = ModuleType("app.services.embedding_service")
+        embedding_module.embed_text = MagicMock(return_value=fresh)
+        prefilter_module = ModuleType("app.services.semantic_prefilter")
+        prefilter_module.update_cache_incremental = cache
+        async def run_inline(fn, *args):
+            return fn(*args)
+        inline_loop = SimpleNamespace(
+            run_in_executor=lambda _executor, fn, *args: run_inline(fn, *args),
+        )
         with patch("app.services.reference_hooks.populate_external_references"), \
              patch("app.services.neuron_index.invalidate_index"), \
-             patch("app.services.embedding_service.embed_text",
-                   return_value=fresh) as embed, \
-             patch("app.services.semantic_prefilter.update_cache_incremental",
-                   new=cache):
+             patch(
+                 "app.services.actions.neuron_refine.asyncio.get_running_loop",
+                 return_value=inline_loop,
+             ), \
+             patch.dict(sys.modules, {
+                 "app.services.embedding_service": embedding_module,
+                 "app.services.semantic_prefilter": prefilter_module,
+             }):
             result = await handle_neuron_refine(
                 payload, SimpleNamespace(user_id="contract-test"), db, MagicMock(),
             )
@@ -189,7 +203,7 @@ class TestClosedGaps:
         assert neuron.content == "entirely rewritten canonical fact"
         assert neuron.embedding == json.dumps(fresh)  # new text, NEW vector
         # Regenerated from the FINAL text (label. summary content recipe).
-        embedded_text = embed.call_args[0][0]
+        embedded_text = embedding_module.embed_text.call_args[0][0]
         assert "entirely rewritten canonical fact" in embedded_text
         cache.assert_awaited_once_with(db, [57], "neuron")
 
@@ -220,6 +234,36 @@ class TestClosedGaps:
             )
         assert result["audit"]["embedding_regenerated"] is False
         assert neuron.embedding == stale
+
+    @pytest.mark.asyncio
+    async def test_query_age_provenance_can_be_repaired_through_refinement(self):
+        """A synthesis created before total_queries was threaded through the
+        action bus can be repaired without an unaudited direct DB write."""
+        from app.models import Neuron
+        from app.services.actions.neuron_refine import (
+            NeuronRefineInput, handle_neuron_refine,
+        )
+
+        neuron = Neuron(
+            id=1303, label="canonical", content="c", layer=3,
+            node_type="lesson", created_at_query_count=0,
+        )
+        db = MagicMock()
+        db.get = AsyncMock(return_value=neuron)
+        db.flush = AsyncMock()
+        db.add = MagicMock(side_effect=lambda obj: setattr(obj, "id", 1001))
+        payload = NeuronRefineInput(
+            target_neuron_id=1303, field="created_at_query_count",
+            old_value="0", new_value="713",
+        )
+        with patch("app.services.reference_hooks.populate_external_references"), \
+             patch("app.services.neuron_index.invalidate_index"):
+            result = await handle_neuron_refine(
+                payload, SimpleNamespace(user_id="contract-test"), db, MagicMock(),
+            )
+        assert neuron.created_at_query_count == 713
+        assert result["audit"]["refinement_id"] == 1001
+        assert result["audit"]["embedding_regenerated"] is False
 
     @pytest.mark.asyncio
     async def test_closed_gap_fuse_pair_membership_adds_zero_utility(self):

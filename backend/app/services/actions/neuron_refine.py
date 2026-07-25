@@ -6,9 +6,9 @@ Used by:
   - Autopilot _apply_single_update
   - Corvus observation update/merge paths
 
-Supported fields: content, summary, label, is_active, department (region
-tag assignment for emergent seeding). Anything else is a no-op (matches
-existing behavior).
+Supported fields include identity text, lifecycle/scope fields, and
+created_at_query_count for audited repair of query-age provenance. Anything
+else is a no-op (matches existing behavior).
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ from app.models import Action, Neuron, NeuronRefinement, ProposalItem
 _SUPPORTED_FIELDS = frozenset({
     "content", "summary", "label", "is_active", "department",
     "node_type", "source_origin", "superseded_by",
+    "created_at_query_count",
 })
 
 
@@ -67,6 +68,8 @@ def _apply_field_to_neuron(neuron: Neuron, field: str, new_value: str) -> None:
         neuron.source_origin = new_value
     elif field == "superseded_by":
         neuron.superseded_by = int(new_value) if new_value.strip() else None
+    elif field == "created_at_query_count":
+        neuron.created_at_query_count = int(new_value)
 
 
 def _skipped_audit(payload: NeuronRefineInput, reason: str) -> dict[str, Any]:

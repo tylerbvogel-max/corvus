@@ -411,7 +411,8 @@ class _FakeBus:
                 node_type=spec["node_type"], label=spec["label"],
                 content=spec["content"], summary=spec["summary"],
                 department=spec["department"],
-                authority_level=spec["authority_level"], invocations=0)
+                authority_level=spec["authority_level"], invocations=0,
+                created_at_query_count=input_data.get("total_queries", 0))
             payload = {"neuron_id": self.synthesis_id}
         elif kind == "neuron.stats.rebuild":
             n = self.neurons[input_data["neuron_id"]]
@@ -471,7 +472,7 @@ class TestRunReconsolidation:
                 db, plan, plan.member_state_hash(),
                 proposal_id=1200, item_id=77,
                 identity=SimpleNamespace(user_id="tyler"),
-                actor_type="user", parent_action_id=1,
+                actor_type="user", total_queries=713, parent_action_id=1,
             )
         return receipt, bus
 
@@ -484,6 +485,9 @@ class TestRunReconsolidation:
         assert kinds[0] == "neuron.create"
         assert kinds[1] == "neuron.stats.rebuild"
         assert kinds[-1] == "edge.rewire"
+        create = next(d for k, d in bus.calls if k == "neuron.create")
+        assert create["total_queries"] == 713
+        assert neurons[9999].created_at_query_count == 713
         # Union-distinct inheritance, never sum(809)/max(321).
         stats = next(d for k, d in bus.calls if k == "neuron.stats.rebuild")
         assert stats["invocations"] == 419

@@ -124,7 +124,8 @@ async def _submit_refine_child(
 
 async def _submit_reconsolidate_child(
     db: AsyncSession, item: ProposalItem, p: AutopilotProposal,
-    identity: UserIdentity, actor_type: str, root_action_id: int,
+    total_queries: int, identity: UserIdentity, actor_type: str,
+    root_action_id: int,
 ) -> None:
     """Route a 'reconsolidate' ProposalItem (a full FusionPlan) through the
     proposal.reconsolidate action. idempotency_key = the plan hash, so
@@ -145,6 +146,7 @@ async def _submit_reconsolidate_child(
             "proposal_id": p.id, "item_id": item.id,
             "fusion_plan": spec["fusion_plan"],
             "member_state_hash": member_hash,
+            "total_queries": total_queries,
             "actor_type": actor_type,
         },
     )
@@ -161,7 +163,8 @@ async def _dispatch_proposal_items(
     for item in items:
         if item.action == "reconsolidate" and item.neuron_spec_json:
             await _submit_reconsolidate_child(
-                db, item, p, identity, actor_type, root_action_id)
+                db, item, p, total_queries, identity, actor_type,
+                root_action_id)
             has_edge_changes = True
         elif item.action == "create" and item.neuron_spec_json:
             await _submit_create_child(

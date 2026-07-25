@@ -26,6 +26,7 @@ class ProposalReconsolidateInput(BaseModel):
     item_id: int | None = None
     fusion_plan: dict
     member_state_hash: str
+    total_queries: int = 0
     actor_type: str = "user"
 
 
@@ -43,6 +44,7 @@ async def handle_proposal_reconsolidate(
         db, plan, payload.member_state_hash,
         proposal_id=payload.proposal_id, item_id=payload.item_id,
         identity=actor, actor_type=payload.actor_type,
+        total_queries=payload.total_queries,
         parent_action_id=action_row.id,
     )
     return {"audit": receipt, "payload": receipt}
