@@ -36,8 +36,16 @@ For each pair, classify the relationship as one of:
 - "contradictory": the entries assert incompatible facts
 - "ambiguous": the entries may conflict but need more context to determine
 
+For "contradictory" pairs ONLY, also emit "resolution_hint":
+- "state_update": both entries describe the same perishable, time-varying
+  state (a plan, a current location or status, an in-flight activity) and
+  the later observation naturally replaces the earlier one
+- "standing_conflict": the entries make standing claims (identity,
+  profession, relationships, possessions, stable interests, completed
+  events) that genuinely conflict — recency cannot decide which is true
+
 Return a JSON array of objects, one per pair:
-[{"pair_index": 0, "classification": "consistent|contradictory|ambiguous", "reasoning": "brief explanation"}]
+[{"pair_index": 0, "classification": "consistent|contradictory|ambiguous", "resolution_hint": "state_update|standing_conflict", "reasoning": "brief explanation"}]
 
 Be precise. Two entries about different aspects of the same topic are NOT contradictory.
 Entries that apply to different materials, processes, or contexts are NOT contradictory.
@@ -114,6 +122,7 @@ def _build_conflict_finding(
     pair: SimilarPair,
     classification: str,
     reasoning: str,
+    resolution_hint: str | None = None,
 ) -> IntegrityFindingData:
     """Build a finding for a contradictory or ambiguous pair."""
     severity = "warning" if classification == "contradictory" else "info"
@@ -126,6 +135,7 @@ def _build_conflict_finding(
                      "department": pair.b_department, "layer": pair.b_layer},
         "cosine_similarity": round(pair.similarity, 4),
         "classification": classification,
+        "resolution_hint": resolution_hint,
         "llm_reasoning": reasoning,
     }
 
@@ -184,6 +194,7 @@ async def scan_contradictions(
 
     sim_matrix = compute_pairwise_similarity(matrix)
     candidates = extract_pairs_in_range(sim_matrix, metadata, s_min, s_max, max_pairs)
+    candidates = await _drop_already_flagged(db, candidates)
 
     findings_data = await _classify_and_build_findings(db, candidates, batch_size)
 
@@ -203,6 +214,35 @@ async def scan_contradictions(
             "conflicts_found": len(findings_data),
         },
     )
+
+
+async def _drop_already_flagged(
+    db: AsyncSession,
+    candidates: list[SimilarPair],
+) -> list[SimilarPair]:
+    """Drop candidate pairs that already carry a contradiction finding.
+
+    Without this, every scan re-flags the same live pair: resolved-but-
+    still-active pairs (supersede-with-history keeps the older neuron
+    active) and review-flagged pairs would be re-classified and re-filed
+    each janitor pass — the repeat-fire loop that demoted the same neuron
+    0.5 → 0.25 → 0.125 across the LoCoMo certificate runs."""
+    if not candidates:
+        return candidates
+    rows = (await db.execute(
+        select(IntegrityFinding.neuron_ids_json).where(
+            IntegrityFinding.finding_type == "contradiction")
+    )).scalars().all()
+    seen: set[frozenset[int]] = set()
+    for raw in rows:
+        try:
+            ids = json.loads(raw or "[]")
+        except ValueError:
+            continue
+        if len(ids) == 2:
+            seen.add(frozenset(ids))
+    return [p for p in candidates
+            if frozenset((p.neuron_a_id, p.neuron_b_id)) not in seen]
 
 
 async def _classify_and_build_findings(
@@ -232,10 +272,14 @@ async def _classify_and_build_findings(
             idx = cls.get("pair_index", -1)
             classification = cls.get("classification", "consistent")
             reasoning = cls.get("reasoning", "")
+            hint = cls.get("resolution_hint")
+            if hint not in ("state_update", "standing_conflict"):
+                hint = None
 
             if 0 <= idx < len(batch) and classification in ("contradictory", "ambiguous"):
                 findings.append(_build_conflict_finding(
                     batch[idx], classification, reasoning,
+                    resolution_hint=hint,
                 ))
 
     return findings

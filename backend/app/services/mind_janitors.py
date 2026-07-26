@@ -735,17 +735,22 @@ async def run_staleness(db: AsyncSession, max_pairs: int = 40) -> dict:
     superseded: list[dict] = []
     scoped: list[dict] = []
     flagged: list[dict] = []
+    review: list[dict] = []
+    resolved_noop: list[dict] = []
     for finding in list(findings)[:MAX_ACTIONS_PER_RUN]:
         resolution = await _resolve_contradiction(db, finding)
         if resolution is None:
             continue
         bucket = {"superseded": superseded, "scoped": scoped,
-                  "reference_flagged": flagged}[resolution["verdict"]]
+                  "reference_flagged": flagged,
+                  "review_flagged": review,
+                  "already_superseded": resolved_noop}[resolution["verdict"]]
         bucket.append(resolution)
     await db.commit()
     return {"open_contradictions": len(findings),
             "superseded": superseded, "scoped": scoped,
-            "reference_flagged": flagged}
+            "reference_flagged": flagged, "review_flagged": review,
+            "already_superseded": resolved_noop}
 
 
 async def _resolve_contradiction(
@@ -789,6 +794,43 @@ async def _resolve_contradiction(
         _log_action("staleness.scoped", detail)
         return detail
     newer, older = (a, b) if (a.created_at or datetime.min) >= (b.created_at or datetime.min) else (b, a)
+    # REPEAT-FIRE GUARD (mind-identity-fact-supersession): supersede-with-
+    # history keeps the older neuron active, so a pre-existing finding can
+    # arrive here pointing at an already-superseded loser. Re-superseding
+    # re-halves utility every janitor pass (observed 0.5 → 0.25 → 0.125 in
+    # the LoCoMo certificate runs). Resolve the finding without mutating.
+    if older.superseded_by is not None:
+        finding.status = "resolved"
+        finding.resolution = "already_superseded"
+        finding.resolved_by = "mind_janitor"
+        finding.resolved_at = datetime.utcnow().replace(tzinfo=None)
+        detail = {"finding_id": finding.id, "verdict": "already_superseded",
+                  "newer": newer.id, "older": older.id}
+        _log_action("staleness.already_superseded", detail)
+        return detail
+    # DURABILITY GATE (mind-identity-fact-supersession): recency only
+    # arbitrates perishable state. Supersede solely when the classifier
+    # said contradictory AND hinted state_update; ambiguous pairs,
+    # standing conflicts, and legacy findings without a hint go to the
+    # integrity inbox unmutated (resolution marker, status stays open —
+    # same pattern as lived-experience precedence above). Of the LoCoMo
+    # certificate's 29 label-recoverable supersessions, only 9 were
+    # genuine state updates; 13 fired on compatible pairs with durable
+    # casualties. Fail closed: no hint means no automatic retirement.
+    try:
+        det = json.loads(finding.detail_json or "{}")
+    except ValueError:
+        det = {}
+    classification = det.get("classification")
+    hint = det.get("resolution_hint")
+    if classification != "contradictory" or hint != "state_update":
+        finding.resolution = "needs_review"
+        detail = {"finding_id": finding.id, "verdict": "review_flagged",
+                  "classification": classification, "resolution_hint": hint,
+                  "newer": newer.id, "newer_label": newer.label,
+                  "older": older.id, "older_label": older.label}
+        _log_action("staleness.review_flagged", detail)
+        return detail
     reason = f"staleness: superseded by '{newer.label}' (evidence recency)"
     _log_change(db, older.id, "superseded_by", older.superseded_by, newer.id, reason)
     _log_change(db, older.id, "avg_utility", older.avg_utility,
