@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
-  acceptRoadmapDelivery, commissionRoadmapNode, commissionRoadmapReview,
-  createRoadmapLedger, fetchAgencyDashboard, fetchAgencyPolicies,
-  getRoadmapLedger, listRoadmapAdmissions, listRoadmapLedgers,
-  listRoadmapWorkOrders,
-  saveRoadmapLedger,
-  type AgencyPolicy, type AgencyWorker, type RoadmapAdmissionEvent,
+  createRoadmapLedger, getRoadmapLedger, listRoadmapAdmissions,
+  listRoadmapLedgers, reconcileRoadmapNode, saveRoadmapLedger,
+  type RoadmapAdmissionEvent,
   type RoadmapAssumption,
   type RoadmapAssumptionStatus, type RoadmapHorizon, type RoadmapLedger,
   type RoadmapLedgerSummary, type RoadmapNode, type RoadmapReviewCadence,
   type RoadmapSection, type RoadmapState, type RoadmapStatus,
-  type RoadmapWorkOrder,
 } from '../api';
 import './RoadmapLedgersPage.css';
 
@@ -60,8 +56,7 @@ const REVIEW_CADENCES: Array<{ key: RoadmapReviewCadence; label: string }> = [
 
 type Readiness = 'complete' | 'ready' | 'blocked' | 'dropped';
 type ReviewSignal = 'due' | 'upcoming' | 'current' | 'unscheduled' | 'event' | 'manual' | 'retired';
-type CommissionKind = 'delivery' | 'strategic-review';
-type Dialog = 'ledger' | 'record' | 'section' | 'commission' | null;
+type Dialog = 'ledger' | 'record' | 'section' | 'reconcile' | null;
 
 function asDate(value: unknown): string {
   if (typeof value !== 'string' || !value) return '—';
@@ -421,61 +416,49 @@ function RecordDialog({ state, node, onClose, onSave }: {
   );
 }
 
-function CommissionDialog({ ledger, node, kind, onClose, onCreated }: {
+function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
   ledger: RoadmapLedger;
   node: RoadmapNode;
-  kind: CommissionKind;
   onClose: () => void;
-  onCreated: (order: RoadmapWorkOrder) => void;
+  onSaved: (ledger: RoadmapLedger) => void;
 }) {
-  const review = kind === 'strategic-review';
-  const [workers, setWorkers] = useState<AgencyWorker[]>([]);
-  const [policies, setPolicies] = useState<AgencyPolicy[]>([]);
-  const [workerId, setWorkerId] = useState(0);
-  const [policyId, setPolicyId] = useState(0);
-  const [taskClass, setTaskClass] = useState(
-    review ? 'strategic-review'
-      : (typeof node.taskClass === 'string' ? node.taskClass : 'coding'),
-  );
-  const [riskTier, setRiskTier] = useState(
-    review ? 1 : (typeof node.riskTier === 'number' ? node.riskTier : 2),
-  );
+  const [form, setForm] = useState({
+    disposition: 'partial' as 'complete' | 'partial' | 'failed' | 'blocked',
+    resultRecap: '',
+    verificationPassed: false,
+    confidence: 80,
+    claims: '',
+    limitations: '',
+    disclosures: '',
+    evidence: '',
+    verifier: '',
+    acceptedBy: 'tyler',
+    nextAction: '',
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    Promise.all([fetchAgencyDashboard(), fetchAgencyPolicies()])
-      .then(([dashboard, rows]) => {
-        const activeWorkers = dashboard.workers.filter(worker => worker.status === 'active');
-        setWorkers(activeWorkers);
-        setPolicies(rows);
-        setWorkerId(activeWorkers[0]?.id ?? 0);
-        setPolicyId((rows.find(policy => policy.status === 'live') ?? rows[0])?.id ?? 0);
-      })
-      .catch(reason => setError(reason instanceof Error ? reason.message : String(reason)));
-  }, []);
+  const lines = (value: string) => value.split('\n').map(item => item.trim()).filter(Boolean);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError('');
-    const common = {
-      expected_revision: ledger.revision,
-      worker_profile_id: workerId,
-      policy_id: policyId,
-      risk_tier: riskTier,
-      permissions: review
-        ? { filesystem: 'read-only', commands: ['read'], network: true }
-        : { filesystem: 'project', commands: ['read', 'edit', 'test'], network: false },
-      ttl_minutes: review ? 1440 : 240,
-    };
     try {
-      onCreated(review
-        ? await commissionRoadmapReview(ledger.slug, node.id, common)
-        : await commissionRoadmapNode(ledger.slug, node.id, {
-          ...common,
-          task_class: taskClass,
-        }));
+      onSaved(await reconcileRoadmapNode(ledger.slug, node.id, {
+        expected_revision: ledger.revision,
+        disposition: form.disposition,
+        result_recap: form.resultRecap.trim(),
+        verification_passed: form.verificationPassed,
+        confidence: form.confidence / 100,
+        claims: lines(form.claims),
+        limitations: lines(form.limitations),
+        disclosures: lines(form.disclosures),
+        evidence: lines(form.evidence),
+        verifier: form.verifier.trim(),
+        accepted_by: form.acceptedBy.trim(),
+        next_action: form.nextAction.trim() || undefined,
+      }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -488,59 +471,53 @@ function CommissionDialog({ ledger, node, kind, onClose, onCreated }: {
       <form className="rl-dialog" onSubmit={event => void submit(event)}>
         <header>
           <div>
-            <span>{review ? 'STRATEGY → EVIDENCE LOOP' : 'LEDGER → MOTOR OUTPUT'}</span>
-            <h3>{review ? 'Commission strategic review' : 'Commission delivery'}</h3>
+            <span>HARNESS RETURN → HUMAN ACCEPTANCE</span>
+            <h3>Reconcile verified outcome</h3>
           </div>
           <button type="button" onClick={onClose}>×</button>
         </header>
-        <div className="rl-commission-record">
+        <div className="rl-reconcile-record">
           <code>{node.id}</code>
           <strong>{node.label}</strong>
-          <span>
-            {review
-              ? `${horizonMeta(node.horizon)?.label ?? 'Unclassified'} · ${node.assumptions?.length ?? 0} assumptions · review ${asDate(node.nextReviewAt)}`
-              : `Pinned to ledger revision ${ledger.revision} · source v${ledger.state.version}`}
-          </span>
+          <span>Pinned to ledger revision {ledger.revision} · source v{ledger.state.version}</span>
         </div>
-        <label>
-          <span>Worker profile</span>
-          <select required value={workerId} onChange={e => setWorkerId(Number(e.target.value))}>
-            <option value={0}>Select a worker…</option>
-            {workers.map(worker => <option key={worker.id} value={worker.id}>{worker.display_name} · {worker.model}/{worker.harness}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>Reward policy</span>
-          <select required value={policyId} onChange={e => setPolicyId(Number(e.target.value))}>
-            <option value={0}>Select a policy…</option>
-            {policies.map(policy => <option key={policy.id} value={policy.id}>{policy.name} v{policy.version} · {policy.status}</option>)}
-          </select>
-        </label>
         <div className="rl-form-grid two">
           <label>
-            <span>Task class</span>
-            <input disabled={review} value={taskClass} onChange={e => setTaskClass(e.target.value)} />
-          </label>
-          <label>
-            <span>Risk tier</span>
-            <select value={riskTier} onChange={e => setRiskTier(Number(e.target.value))}>
-              {[1, 2, 3, 4, 5].map(tier => <option key={tier} value={tier}>Tier {tier}</option>)}
+            <span>Disposition</span>
+            <select value={form.disposition} onChange={e => setForm({ ...form, disposition: e.target.value as typeof form.disposition })}>
+              <option value="complete">Complete</option>
+              <option value="partial">Partial</option>
+              <option value="failed">Failed</option>
+              <option value="blocked">Blocked</option>
             </select>
           </label>
+          <label>
+            <span>Confidence</span>
+            <input type="number" min={0} max={100} value={form.confidence} onChange={e => setForm({ ...form, confidence: Number(e.target.value) })} />
+          </label>
         </div>
-        <DetailBlock label={review ? 'Assumptions under review' : 'Acceptance contract'} value={review ? node.assumptions : node.verification} wide />
-        <p className="rl-commission-note">
-          {review
-            ? 'The worker returns current evidence and a recommendation. Accepting the verified review records the evidence cycle and schedules the next one; it does not complete or silently rewrite the roadmap item.'
-            : 'The worker receives a disposable contract and bounded project permissions. A verified delivery returns here for human closeout; it cannot silently mark the roadmap complete.'}
+        <label className="rl-check"><input type="checkbox" checked={form.verificationPassed} onChange={e => setForm({ ...form, verificationPassed: e.target.checked })} /><span>Independent verifier passed the recorded checklist</span></label>
+        <label><span>Result recap</span><textarea required className="tall" value={form.resultRecap} onChange={e => setForm({ ...form, resultRecap: e.target.value })} /></label>
+        <div className="rl-form-grid two">
+          <label><span>Verifier</span><input required value={form.verifier} onChange={e => setForm({ ...form, verifier: e.target.value })} placeholder="qa-agent / eval run / reviewer" /></label>
+          <label><span>Accepted by</span><input required value={form.acceptedBy} onChange={e => setForm({ ...form, acceptedBy: e.target.value })} /></label>
+        </div>
+        <div className="rl-form-grid two">
+          <label><span>Claims <small>one per line</small></span><textarea value={form.claims} onChange={e => setForm({ ...form, claims: e.target.value })} /></label>
+          <label><span>Evidence <small>one receipt per line</small></span><textarea required={form.verificationPassed && form.disposition === 'complete'} value={form.evidence} onChange={e => setForm({ ...form, evidence: e.target.value })} /></label>
+          <label><span>Limitations <small>one per line</small></span><textarea value={form.limitations} onChange={e => setForm({ ...form, limitations: e.target.value })} /></label>
+          <label><span>Disclosures <small>one per line</small></span><textarea value={form.disclosures} onChange={e => setForm({ ...form, disclosures: e.target.value })} /></label>
+        </div>
+        <label><span>Next action <small>optional</small></span><textarea value={form.nextAction} onChange={e => setForm({ ...form, nextAction: e.target.value })} /></label>
+        <DetailBlock label="Recorded verification checklist" value={node.verification} wide />
+        <p className="rl-reconcile-note">
+          The harness decides who acts and what permissions it receives. This receipt records only durable claims, evidence, limitations, independent verification, and human acceptance. A record closes only when disposition is complete and verification passed.
         </p>
-        {!workers.length && <p className="rl-form-error">No active worker profiles are commissioned in Agency Lab.</p>}
-        {!policies.length && <p className="rl-form-error">No Agency Lab reward policy exists yet.</p>}
         {error && <p className="rl-form-error">{error}</p>}
         <footer>
           <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy || !workerId || !policyId}>
-            {busy ? 'Commissioning…' : (review ? 'Issue review order' : 'Issue work order')}
+          <button className="primary" disabled={busy || !form.resultRecap.trim() || !form.verifier.trim() || !form.acceptedBy.trim()}>
+            {busy ? 'Reconciling…' : 'Accept receipt'}
           </button>
         </footer>
       </form>
@@ -582,15 +559,13 @@ export default function RoadmapLedgersPage() {
     () => localStorage.getItem('corvus-roadmap-ledger') ?? '',
   );
   const [ledger, setLedger] = useState<RoadmapLedger | null>(null);
-  const [workOrders, setWorkOrders] = useState<RoadmapWorkOrder[]>([]);
   const [admissions, setAdmissions] = useState<RoadmapAdmissionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dialog, setDialog] = useState<Dialog>(null);
   const [editing, setEditing] = useState<RoadmapNode | null>(null);
-  const [commissioning, setCommissioning] = useState<RoadmapNode | null>(null);
-  const [commissionKind, setCommissionKind] = useState<CommissionKind>('delivery');
+  const [reconciling, setReconciling] = useState<RoadmapNode | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<RoadmapStatus | 'all'>('all');
@@ -624,18 +599,15 @@ export default function RoadmapLedgersPage() {
     let cancelled = false;
     setLoading(true);
     setError('');
-    setWorkOrders([]);
     setAdmissions([]);
     localStorage.setItem('corvus-roadmap-ledger', selected);
     Promise.all([
       getRoadmapLedger(selected),
-      listRoadmapWorkOrders(selected),
       listRoadmapAdmissions(selected),
     ])
-      .then(([value, orders, admissionEvents]) => {
+      .then(([value, admissionEvents]) => {
         if (!cancelled) {
           setLedger(value);
-          setWorkOrders(orders);
           setAdmissions(admissionEvents);
         }
       })
@@ -654,16 +626,6 @@ export default function RoadmapLedgersPage() {
     () => new Map(ledger?.state.nodes.map(node => [node.id, node]) ?? []),
     [ledger],
   );
-  const ordersByNode = useMemo(() => {
-    const grouped = new Map<string, RoadmapWorkOrder[]>();
-    for (const order of workOrders) {
-      grouped.set(order.plan_node_id, [
-        ...(grouped.get(order.plan_node_id) ?? []),
-        order,
-      ]);
-    }
-    return grouped;
-  }, [workOrders]);
 
   const readinessFor = (node: RoadmapNode): Readiness => {
     if (node.status === 'done') return 'complete';
@@ -744,10 +706,9 @@ export default function RoadmapLedgersPage() {
     return next;
   });
 
-  const openCommission = (node: RoadmapNode, kind: CommissionKind) => {
-    setCommissioning(node);
-    setCommissionKind(kind);
-    setDialog('commission');
+  const openReconciliation = (node: RoadmapNode) => {
+    setReconciling(node);
+    setDialog('reconcile');
   };
 
   const created = (value: RoadmapLedger) => {
@@ -757,28 +718,11 @@ export default function RoadmapLedgersPage() {
     void loadList(value.slug);
   };
 
-  const workOrderCreated = (order: RoadmapWorkOrder) => {
+  const reconciliationSaved = (saved: RoadmapLedger) => {
     setDialog(null);
-    setCommissioning(null);
-    setWorkOrders(current => [order, ...current]);
-  };
-
-  const acceptDelivery = async (node: RoadmapNode, order: RoadmapWorkOrder) => {
-    if (!ledger || saving) return;
-    setSaving(true);
-    setError('');
-    try {
-      const saved = await acceptRoadmapDelivery(
-        ledger.slug, node.id, order.id, ledger.revision,
-      );
-      setLedger(saved);
-      await loadList(saved.slug);
-      setExpanded(current => new Set(current).add(node.id));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-    } finally {
-      setSaving(false);
-    }
+    setReconciling(null);
+    setLedger(saved);
+    void loadList(saved.slug);
   };
 
   const clearFilters = () => {
@@ -835,7 +779,7 @@ export default function RoadmapLedgersPage() {
               <div>
                 <p className="rl-kicker">PALLIUM / STRATEGY & EXECUTION REGISTER</p>
                 <h1>{ledger.name} <em>Ledger</em></h1>
-                <p>{ledger.description || 'Preserve direction, expose assumptions, and commission bounded evidence or delivery work without letting either silently rewrite the plan.'}</p>
+                <p>{ledger.description || 'Preserve direction, expose assumptions, and reconcile verified outcomes without letting execution silently rewrite the plan.'}</p>
                 {ledger.project_path && <code>{ledger.project_path}</code>}
               </div>
               <div className="rl-release">
@@ -853,7 +797,7 @@ export default function RoadmapLedgersPage() {
               </div>
               <div><strong>{ledger.summary.moving}</strong><span>In motion</span><small>Active or in progress</small></div>
               <div><strong>{ledger.state.nodes.filter(node => readinessFor(node) === 'ready').length}</strong><span>Ready now</span><small>No unmet prerequisites</small></div>
-              <div><strong>{workOrders.length}</strong><span>Agency orders</span><small>{workOrders.filter(order => order.kind === 'strategic-review').length} reviews · {workOrders.filter(order => order.kind !== 'strategic-review').length} deliveries</small></div>
+              <div><strong>{ledger.state.nodes.reduce((total, node) => total + (node.reconciliationHistory?.length ?? 0), 0)}</strong><span>Accepted receipts</span><small>Evidence reconciled into durable intent</small></div>
               <div><strong>{ledger.state.edges.length}</strong><span>Relations</span><small>Dependency paths retained</small></div>
             </section>
 
@@ -994,7 +938,7 @@ export default function RoadmapLedgersPage() {
               <div className="rl-table-shell">
                 <table className="rl-table strategic">
                   <thead>
-                    <tr><th>Record</th><th>Status</th><th>Work item</th><th>Horizon</th><th>Review</th><th>Readiness</th><th>Execution</th><th>Resolved</th><th /></tr>
+                    <tr><th>Record</th><th>Status</th><th>Work item</th><th>Horizon</th><th>Review</th><th>Readiness</th><th>Evidence</th><th>Resolved</th><th /></tr>
                   </thead>
                   <tbody>
                     {[...ledger.state.sections, {
@@ -1013,8 +957,8 @@ export default function RoadmapLedgersPage() {
                         ...nodes.flatMap(node => {
                           const open = expanded.has(node.id);
                           const prereqs = node.prereqs ?? [];
-                          const nodeOrders = ordersByNode.get(node.id) ?? [];
-                          const latestOrder = nodeOrders[0];
+                          const receipts = node.reconciliationHistory ?? [];
+                          const latestReceipt = receipts[receipts.length - 1];
                           const review = reviewSignal(node);
                           const strategicHorizon = horizonMeta(node.horizon);
                           const detailFields: Array<[string, unknown, boolean?]> = [
@@ -1029,6 +973,7 @@ export default function RoadmapLedgersPage() {
                             ['Result recap', node.resultRecap],
                             ['Latest strategic review', node.reviewResultRecap, true],
                             ['Review history', node.reviewHistory, true],
+                            ['Reconciliation history', node.reconciliationHistory, true],
                             ['Disposition', node.disposition],
                           ];
                           return [
@@ -1049,10 +994,10 @@ export default function RoadmapLedgersPage() {
                                 <span className={`rl-review ${review}`}><i />{review === 'due' ? `Due ${asDate(node.nextReviewAt)}` : review === 'upcoming' ? `Soon ${asDate(node.nextReviewAt)}` : review}</span>
                               </td>
                               <td data-label="Readiness"><span className={`rl-readiness ${readinessFor(node)}`}><i />{{ complete: 'Complete', ready: 'Ready', blocked: 'Gated', dropped: 'Dropped' }[readinessFor(node)]}</span></td>
-                              <td data-label="Execution">
-                                {latestOrder
-                                  ? <span className={`rl-work-state ${latestOrder.status}`}>{latestOrder.kind === 'strategic-review' ? 'review' : latestOrder.status}<small>{nodeOrders.length > 1 ? ` +${nodeOrders.length - 1}` : ''}</small></span>
-                                  : <span className="rl-work-none">Not commissioned</span>}
+                              <td data-label="Evidence">
+                                {latestReceipt
+                                  ? <span className={`rl-work-state ${latestReceipt.verificationPassed ? 'verified' : 'failed'}`}>{latestReceipt.disposition}<small>{receipts.length > 1 ? ` +${receipts.length - 1}` : ''}</small></span>
+                                  : <span className="rl-work-none">No receipt</span>}
                               </td>
                               <td data-label="Resolved">{asDate(node.completedAt)}</td>
                               <td><button type="button" aria-label={`${open ? 'Collapse' : 'Expand'} ${node.label}`} onClick={e => { e.stopPropagation(); toggle(node.id); }}>＋</button></td>
@@ -1068,11 +1013,8 @@ export default function RoadmapLedgersPage() {
                                         <small>{strategicHorizon ? `${strategicHorizon.short} · ${strategicHorizon.description}` : 'Planning horizon not yet classified'} · {node.reviewCadence ?? 'No'} review cadence · next {asDate(node.nextReviewAt)}</small>
                                       </div>
                                       <div>
-                                        {(node.assumptions?.length ?? 0) > 0 && review !== 'retired' && (
-                                          <button className={review === 'due' ? 'review-due' : ''} type="button" onClick={() => openCommission(node, 'strategic-review')}>Commission review</button>
-                                        )}
-                                        {readinessFor(node) === 'ready' && (
-                                          <button className="commission" type="button" disabled={!node.verification?.length} title={!node.verification?.length ? 'Add a verification checklist before commissioning' : 'Compile this record into a revision-pinned work order'} onClick={() => openCommission(node, 'delivery')}>Commission delivery</button>
+                                        {review !== 'retired' && (
+                                          <button className="reconcile" type="button" onClick={() => openReconciliation(node)}>Reconcile outcome</button>
                                         )}
                                         <button type="button" onClick={() => { setEditing(node); setDialog('record'); }}>Edit record</button>
                                         {typeof node.href === 'string' && <a href={node.href} target="_blank" rel="noreferrer">Open reference ↗</a>}
@@ -1082,30 +1024,24 @@ export default function RoadmapLedgersPage() {
 
                                     <AssumptionRegister assumptions={node.assumptions ?? []} />
 
-                                    {nodeOrders.length > 0 && (
+                                    {receipts.length > 0 && (
                                       <section className="rl-execution">
                                         <header>
-                                          <span>AGENCY EXECUTION / {nodeOrders.length} ORDER{nodeOrders.length === 1 ? '' : 'S'}</span>
-                                          <small>Evidence and delivery both return through independent verification and human acceptance.</small>
+                                          <span>RECONCILIATION / {receipts.length} RECEIPT{receipts.length === 1 ? '' : 'S'}</span>
+                                          <small>Harness output enters durable intent only through independent verification and human acceptance.</small>
                                         </header>
-                                        {nodeOrders.map(order => (
-                                          <article key={order.id}>
+                                        {[...receipts].reverse().map(receipt => (
+                                          <article key={`${receipt.acceptedAt}-${receipt.verifier}`}>
                                             <div>
-                                              <code>{order.id}</code>
-                                              <span className={`rl-order-kind ${order.kind ?? 'delivery'}`}>{order.kind === 'strategic-review' ? 'strategic review' : 'delivery'}</span>
-                                              <span className={`rl-work-state ${order.status}`}>{order.status}</span>
+                                              <code>r{receipt.ledgerRevision}</code>
+                                              <span className="rl-order-kind delivery">{receipt.disposition}</span>
+                                              <span className={`rl-work-state ${receipt.verificationPassed ? 'verified' : 'failed'}`}>{receipt.verificationPassed ? 'verified' : 'not passed'}</span>
                                               <small>
-                                                {order.worker ? `${order.worker.display_name} · ${order.worker.model} / ${order.worker.harness}` : `Worker ${order.worker_profile_id ?? 'unassigned'}`}
-                                                {order.policy && ` · ${order.policy.name} v${order.policy.version}`} · r{order.roadmap_revision} · T{order.risk_tier} · {asDate(order.created_at)}
+                                                verifier {receipt.verifier} · accepted by {receipt.acceptedBy} · {Math.round(receipt.confidence * 100)}% · {asDate(receipt.acceptedAt)}
                                               </small>
                                             </div>
                                             <div>
-                                              {order.status === 'verified' && (order.kind === 'strategic-review' || node.status !== 'done') && (
-                                                <button type="button" disabled={saving} onClick={() => void acceptDelivery(node, order)}>
-                                                  {order.kind === 'strategic-review' ? 'Accept review evidence' : 'Accept verified delivery'}
-                                                </button>
-                                              )}
-                                              <CopyButton value={order.contract} label="Copy contract" />
+                                              <CopyButton value={receipt} label="Copy receipt" />
                                             </div>
                                           </article>
                                         ))}
@@ -1148,8 +1084,8 @@ export default function RoadmapLedgersPage() {
       {dialog === 'record' && ledger && (
         <RecordDialog state={ledger.state} node={editing} onClose={() => { setDialog(null); setEditing(null); }} onSave={saveRecord} />
       )}
-      {dialog === 'commission' && ledger && commissioning && (
-        <CommissionDialog ledger={ledger} node={commissioning} kind={commissionKind} onClose={() => { setDialog(null); setCommissioning(null); }} onCreated={workOrderCreated} />
+      {dialog === 'reconcile' && ledger && reconciling && (
+        <ReconciliationDialog ledger={ledger} node={reconciling} onClose={() => { setDialog(null); setReconciling(null); }} onSaved={reconciliationSaved} />
       )}
     </div>
   );

@@ -67,15 +67,15 @@ export default function PerformancePage() {
     [data, trendStage],
   );
 
-  if (loading) return <div style={{ padding: 32, color: C.dim }}>Loading performance data…</div>;
-  if (err && !data) return <div style={{ padding: 32, color: C.red }}>{err}</div>;
+  if (loading) return <div className="perf-page" style={{ padding: 32, color: C.dim }}>Loading performance data…</div>;
+  if (err && !data) return <div className="perf-page" style={{ padding: 32, color: C.red }}>{err}</div>;
 
   const m = data?.meta;
   const smallN = (m?.queries_with_telemetry ?? 0) < 30;
   const maxBudget = Math.max(...byBudget.map(s => s.p50), 1);
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1080, position: 'relative' }} onMouseLeave={() => setTip(null)}>
+    <div className="perf-page" style={{ width: '100%', maxWidth: 1320, margin: '0 auto', padding: '24px 28px', position: 'relative' }} onMouseLeave={() => setTip(null)}>
       <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: '0 0 4px' }}>Performance</h2>
       <p style={{ color: C.dim, fontSize: 13, margin: '0 0 14px', maxWidth: 720 }}>
         Volume, cost, scoring health, spread activation, and per-stage pipeline latency — everything
@@ -84,7 +84,7 @@ export default function PerformancePage() {
 
       {/* Volume / cost / token tiles */}
       {stats && cost && (
-        <div style={tiles}>
+        <div className="perf-tiles" style={tiles}>
           <Tile value={cost.total_queries.toLocaleString()} label="Queries" />
           <Tile value={`$${cost.maintenance_cost_usd.toFixed(2)}`} label="Total cost (API est.)" />
           <Tile value={`$${cost.maintenance_per_query_usd.toFixed(6)}`} label="Maintenance / query" />
@@ -101,7 +101,7 @@ export default function PerformancePage() {
 
       {/* Hero: what Corvus costs per query, and where that time goes */}
       {m && dominant && cost && (
-        <div style={{ ...card, borderColor: C.accent, margin: '14px 0 20px' }}>
+        <div className="perf-section-card" style={{ ...card, borderColor: C.accent, margin: '14px 0 20px' }}>
           <div style={heroKicker}>Corvus overhead per query</div>
           <div style={{ color: C.text, fontSize: 15, lineHeight: 1.5 }}>
             The pipeline adds a median <strong>{fmtMs(m.pipeline_total_p50_ms)}</strong>, and the
@@ -294,7 +294,7 @@ export default function PerformancePage() {
 
 function Tile({ value, label }: { value: string | number; label: string }) {
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px' }}>
+    <div className="perf-tile" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '12px 14px' }}>
       <div style={{ color: C.text, fontFamily: 'var(--font-mono, monospace)', fontSize: 20, fontWeight: 600, lineHeight: 1.2 }}>{value}</div>
       <div style={{ color: C.dim, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 3 }}>{label}</div>
     </div>
@@ -344,11 +344,11 @@ function DriftChart({ points, onTip }: { points: { bucket: string; p50: number; 
 
 function Section({ title, subtitle, right, children }: { title: string; subtitle?: string; right?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div style={{ ...card, marginBottom: 20 }}>
+    <div className="perf-section-card" style={{ ...card, marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
         <div>
-          <div style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>{title}</div>
-          {subtitle && <div style={{ color: C.dim, fontSize: 12, marginTop: 2, maxWidth: 760 }}>{subtitle}</div>}
+          <div className="perf-section-title" style={{ color: C.text, fontSize: 14, fontWeight: 700 }}>{title}</div>
+          {subtitle && <div className="perf-section-subtitle" style={{ color: C.dim, fontSize: 12, marginTop: 2, maxWidth: 760 }}>{subtitle}</div>}
         </div>
         {right}
       </div>

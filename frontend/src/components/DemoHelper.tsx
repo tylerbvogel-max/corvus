@@ -45,7 +45,7 @@ const STEPS: TourStep[] = [
   },
   {
     title: 'The navigation menu',
-    body: 'CHAT opens the main conversation. Knowledge, Agency Lab, and Evaluate expand into their pages — each one opens as its own window. Numbers on items are pending proposals awaiting review.',
+    body: 'CHAT opens the main conversation. Knowledge, Plan, and Evaluate expand into their pages — each one opens as its own window. Numbers on items are pending proposals awaiting review.',
     find: q('.sidebar-nav'),
     open: { label: 'Expand the navigation', run: expandNav },
   },
@@ -111,7 +111,7 @@ const STEPS: TourStep[] = [
   },
   {
     title: 'That\'s the tour',
-    body: 'Good next taps: Knowledge → 3D Universe for the full graph in space, Agency Lab → Venture Graph for persistent work, and Evaluate → Pallium for system health. Reopen this walkthrough from the ? beside Settings.',
+    body: 'Good next taps: Knowledge → 3D Universe for the full graph in space, Plan → Roadmap Ledgers for durable intent, and Evaluate → Pallium for system health. Reopen this walkthrough from the ? beside Settings.',
   },
 ];
 

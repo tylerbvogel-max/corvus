@@ -4,29 +4,20 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import (
-    AgencyPlanRevision, AgencyPolicy, AgencyVenturePlan, AgencyWorkerProfile,
-    AgencyWorkOrder, RoadmapLedger,
-)
+from app.models import RoadmapLedger
 from app.routers.recall import require_memory_surface
-from app.services.agency_work_orders import (
-    add_event, canonical_digest, issue_work_order, validate_plan_graph,
-)
 from app.services.roadmap_admission import (
     admit_session, recent_admissions, refresh_cache,
 )
 from app.services.roadmap_ledger import (
-    SLUG_RE, advance_state, compile_review_node, compile_work_order_node,
-    empty_state, next_review_at, node_is_ready, slugify, state_summary,
-    validate_state,
+    SLUG_RE, advance_state, empty_state, reconcile_node, slugify,
+    state_summary, validate_state,
 )
 
 
@@ -59,22 +50,19 @@ class LedgerMetadataUpdate(BaseModel):
     project_path: str | None = Field(default=None, max_length=500)
 
 
-class CommissionCreate(BaseModel):
+class ReconciliationCreate(BaseModel):
     expected_revision: int = Field(ge=1)
-    worker_profile_id: int
-    policy_id: int
-    task_class: str = Field(default="coding", min_length=1, max_length=80)
-    risk_tier: int = Field(default=2, ge=1, le=5)
-    permissions: dict = Field(default_factory=lambda: {
-        "filesystem": "project",
-        "commands": ["read", "edit", "test"],
-        "network": False,
-    })
-    ttl_minutes: int = Field(default=240, ge=1, le=43200)
-
-
-class AcceptDelivery(BaseModel):
-    expected_revision: int = Field(ge=1)
+    disposition: str = Field(pattern=r"^(complete|partial|failed|blocked)$")
+    result_recap: str = Field(min_length=1, max_length=12000)
+    verification_passed: bool
+    confidence: float = Field(ge=0, le=1)
+    claims: list[str] = Field(default_factory=list, max_length=100)
+    limitations: list[str] = Field(default_factory=list, max_length=100)
+    disclosures: list[str] = Field(default_factory=list, max_length=100)
+    evidence: list[str] = Field(default_factory=list, max_length=200)
+    verifier: str = Field(min_length=1, max_length=200)
+    accepted_by: str = Field(min_length=1, max_length=200)
+    next_action: str | None = Field(default=None, max_length=4000)
 
 
 class AdmissionCreate(BaseModel):
@@ -107,118 +95,6 @@ def _detail(row: RoadmapLedger) -> dict:
         "created_at": row.created_at,
         "updated_at": row.updated_at,
     }
-
-
-def _work_order(
-    row: AgencyWorkOrder,
-    worker: AgencyWorkerProfile | None = None,
-    policy: AgencyPolicy | None = None,
-) -> dict:
-    return {
-        "id": row.id,
-        "plan_node_id": row.plan_node_id,
-        "status": row.status,
-        "worker_profile_id": row.worker_profile_id,
-        "worker": {
-            "id": worker.id,
-            "key": worker.key,
-            "display_name": worker.display_name,
-            "model": worker.model,
-            "harness": worker.harness,
-        } if worker is not None else None,
-        "policy": {
-            "id": policy.id,
-            "name": policy.name,
-            "version": policy.version,
-            "mode": policy.mode,
-        } if policy is not None else None,
-        "task_class": row.task_class,
-        "risk_tier": row.risk_tier,
-        "contract_digest": row.contract_digest,
-        "contract": row.contract,
-        "completion": row.locked_completion,
-        "audit": row.audit_state,
-        "roadmap_revision": row.specification.get("roadmap_ledger_revision"),
-        "kind": row.specification.get("roadmap_work_kind", "delivery"),
-        "created_at": row.created_at,
-        "completed_at": row.completed_at,
-    }
-
-
-def _venture_key(row: RoadmapLedger) -> str:
-    return f"roadmap-{row.id}-{row.slug}"[:120]
-
-
-async def _load_worker_policy(
-    db: AsyncSession, req: CommissionCreate,
-) -> tuple[AgencyWorkerProfile, AgencyPolicy]:
-    worker = await db.get(AgencyWorkerProfile, req.worker_profile_id)
-    policy = await db.get(AgencyPolicy, req.policy_id)
-    if worker is None or policy is None:
-        raise HTTPException(404, "worker or policy not found")
-    if worker.status != "active":
-        raise HTTPException(409, "worker is not active")
-    if req.risk_tier not in worker.risk_tiers:
-        raise HTTPException(409, "worker is not approved for this risk tier")
-    return worker, policy
-
-
-async def _issue_ledger_order(
-    db: AsyncSession,
-    *,
-    ledger: RoadmapLedger,
-    node_id: str,
-    contract_node: dict,
-    worker: AgencyWorkerProfile,
-    policy: AgencyPolicy,
-    req: CommissionCreate,
-    change_reason: str,
-) -> AgencyWorkOrder:
-    graph = validate_plan_graph({
-        "mission": ledger.description or ledger.name,
-        "constraints": ledger.state.get("constraints", [
-            "Preserve human-authored roadmap intent",
-            "Disclose uncertainty and limitations before submission",
-        ]),
-        "kill_criteria": ledger.state.get("killCriteria", [
-            "Unsupported completion claims",
-            "Unreviewed mutation of the roadmap ledger",
-        ]),
-        "nodes": [contract_node],
-        "edges": [],
-    })
-    key = _venture_key(ledger)
-    venture = await db.scalar(
-        select(AgencyVenturePlan).where(AgencyVenturePlan.key == key).with_for_update()
-    )
-    digest = canonical_digest(graph)
-    if venture is None:
-        venture = AgencyVenturePlan(
-            key=key, title=ledger.name, status="active",
-            current_revision=1, created_by="human:roadmap-ledger",
-        )
-        db.add(venture)
-        await db.flush()
-        revision_number = 1
-    else:
-        venture.title = ledger.name
-        venture.current_revision += 1
-        revision_number = venture.current_revision
-    revision = AgencyPlanRevision(
-        venture_plan_id=venture.id,
-        revision=revision_number,
-        graph=graph,
-        digest=digest,
-        change_reason=change_reason,
-        created_by="human:roadmap-ledger",
-    )
-    db.add(revision)
-    await db.flush()
-    return await issue_work_order(
-        db, venture=venture, revision=revision, node_id=node_id,
-        worker=worker, policy=policy, permissions=req.permissions,
-        ttl_minutes=req.ttl_minutes,
-    )
 
 
 @router.get("")
@@ -387,46 +263,9 @@ async def list_admissions(
     return recent_admissions(slug, limit=limit)
 
 
-@router.get("/{slug}/work-orders")
-async def list_ledger_work_orders(slug: str, db: AsyncSession = Depends(get_db)):
-    ledger = await db.scalar(select(RoadmapLedger).where(RoadmapLedger.slug == slug))
-    if ledger is None:
-        raise HTTPException(404, "roadmap ledger not found")
-    venture = await db.scalar(
-        select(AgencyVenturePlan).where(AgencyVenturePlan.key == _venture_key(ledger))
-    )
-    if venture is None:
-        return []
-    rows = (await db.execute(
-        select(AgencyWorkOrder).where(
-            AgencyWorkOrder.venture_plan_id == venture.id,
-        ).order_by(AgencyWorkOrder.created_at.desc())
-    )).scalars().all()
-    worker_ids = {row.worker_profile_id for row in rows if row.worker_profile_id is not None}
-    policy_ids = {row.policy_id for row in rows}
-    workers = {
-        row.id: row for row in (await db.execute(
-            select(AgencyWorkerProfile).where(AgencyWorkerProfile.id.in_(worker_ids))
-        )).scalars().all()
-    } if worker_ids else {}
-    policies = {
-        row.id: row for row in (await db.execute(
-            select(AgencyPolicy).where(AgencyPolicy.id.in_(policy_ids))
-        )).scalars().all()
-    } if policy_ids else {}
-    return [
-        _work_order(
-            row,
-            worker=workers.get(row.worker_profile_id),
-            policy=policies.get(row.policy_id),
-        )
-        for row in rows
-    ]
-
-
-@router.post("/{slug}/nodes/{node_id}/commission", status_code=201)
-async def commission_node(
-    slug: str, node_id: str, req: CommissionCreate,
+@router.post("/{slug}/nodes/{node_id}/reconcile")
+async def reconcile_roadmap_record(
+    slug: str, node_id: str, req: ReconciliationCreate,
     db: AsyncSession = Depends(get_db),
 ):
     ledger = await db.scalar(
@@ -436,149 +275,35 @@ async def commission_node(
         raise HTTPException(404, "roadmap ledger not found")
     if ledger.revision != req.expected_revision:
         raise HTTPException(409, f"ledger changed since it was opened (current revision {ledger.revision})")
-    node = next((item for item in ledger.state["nodes"] if item["id"] == node_id), None)
-    if node is None:
-        raise HTTPException(404, "roadmap record not found")
-    if not node_is_ready(ledger.state, node):
-        raise HTTPException(409, "only ready, in-scope records can be commissioned")
-
-    worker, policy = await _load_worker_policy(db, req)
-    try:
-        contract_node = compile_work_order_node(
-            ledger_slug=ledger.slug,
-            ledger_revision=ledger.revision,
-            source_version=ledger.state["version"],
-            node=node,
-            task_class=req.task_class,
-            risk_tier=req.risk_tier,
-        )
-        work_order = await _issue_ledger_order(
-            db, ledger=ledger, node_id=node_id, contract_node=contract_node,
-            worker=worker, policy=policy, req=req,
-            change_reason=(
-                f"Commission roadmap record {node_id} from ledger revision "
-                f"{ledger.revision}"
-            ),
-        )
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    return _work_order(work_order, worker=worker, policy=policy)
-
-
-@router.post("/{slug}/nodes/{node_id}/review", status_code=201)
-async def commission_strategic_review(
-    slug: str, node_id: str, req: CommissionCreate,
-    db: AsyncSession = Depends(get_db),
-):
-    ledger = await db.scalar(
-        select(RoadmapLedger).where(RoadmapLedger.slug == slug).with_for_update()
-    )
-    if ledger is None:
-        raise HTTPException(404, "roadmap ledger not found")
-    if ledger.revision != req.expected_revision:
-        raise HTTPException(
-            409,
-            f"ledger changed since it was opened (current revision {ledger.revision})",
-        )
-    node = next((item for item in ledger.state["nodes"] if item["id"] == node_id), None)
-    if node is None:
-        raise HTTPException(404, "roadmap record not found")
-    if node.get("status") in {"done", "deprioritized", "cancelled"}:
-        raise HTTPException(409, "retired records cannot enter strategic review")
-
-    worker, policy = await _load_worker_policy(db, req)
-    try:
-        contract_node = compile_review_node(
-            ledger_slug=ledger.slug,
-            ledger_revision=ledger.revision,
-            source_version=ledger.state["version"],
-            node=node,
-            risk_tier=req.risk_tier,
-        )
-        work_order = await _issue_ledger_order(
-            db, ledger=ledger, node_id=node_id, contract_node=contract_node,
-            worker=worker, policy=policy, req=req,
-            change_reason=(
-                f"Commission strategic review for {node_id} from ledger revision "
-                f"{ledger.revision}"
-            ),
-        )
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    return _work_order(work_order, worker=worker, policy=policy)
-
-
-@router.post("/{slug}/nodes/{node_id}/accept/{work_order_id}")
-async def accept_verified_delivery(
-    slug: str, node_id: str, work_order_id: str, req: AcceptDelivery,
-    db: AsyncSession = Depends(get_db),
-):
-    ledger = await db.scalar(
-        select(RoadmapLedger).where(RoadmapLedger.slug == slug).with_for_update()
-    )
-    if ledger is None:
-        raise HTTPException(404, "roadmap ledger not found")
-    if ledger.revision != req.expected_revision:
-        raise HTTPException(409, f"ledger changed since it was opened (current revision {ledger.revision})")
-    order = await db.get(AgencyWorkOrder, work_order_id)
-    if order is None:
-        raise HTTPException(404, "work order not found")
-    spec = order.specification
-    if spec.get("roadmap_ledger_slug") != slug or order.plan_node_id != node_id:
-        raise HTTPException(409, "work order does not belong to this roadmap record")
-    if order.status != "verified":
-        raise HTTPException(
-            409,
-            "only an independently verified work order can return to the roadmap",
-        )
 
     nodes = list(ledger.state["nodes"])
     index = next((i for i, item in enumerate(nodes) if item["id"] == node_id), None)
     if index is None:
         raise HTTPException(404, "roadmap record not found")
-    node = dict(nodes[index])
-    accepted_at = datetime.now(timezone.utc)
-    work_kind = spec.get("roadmap_work_kind", "delivery")
-    if work_kind == "strategic-review":
-        history = list(node.get("reviewHistory", []))
-        history.append({
-            "acceptedAt": accepted_at.isoformat(),
-            "workOrderId": order.id,
-            "ledgerRevision": spec.get("roadmap_ledger_revision"),
-            "completion": order.locked_completion,
-            "audit": order.audit_state,
-        })
-        node.update({
-            "lastReviewedAt": accepted_at.isoformat(),
-            "nextReviewAt": next_review_at(node, from_time=accepted_at),
-            "reviewHistory": history,
-            "reviewResultRecap": order.locked_completion,
-            "acceptedReviewWorkOrderId": order.id,
-        })
-        event_type = "roadmap_review_accepted"
-    else:
-        node.update({
-            "status": "done",
-            "completedAt": accepted_at.isoformat(),
-            "resultRecap": order.locked_completion,
-            "verificationResults": order.audit_state,
-            "acceptedWorkOrderId": order.id,
-        })
-        event_type = "roadmap_closeout_accepted"
-    nodes[index] = node
+    if nodes[index].get("status") in {"done", "deprioritized", "cancelled"}:
+        raise HTTPException(409, "retired records cannot accept new reconciliation receipts")
+    try:
+        nodes[index] = reconcile_node(
+            nodes[index],
+            ledger_revision=ledger.revision,
+            disposition=req.disposition,
+            result_recap=req.result_recap,
+            verification_passed=req.verification_passed,
+            confidence=req.confidence,
+            claims=req.claims,
+            limitations=req.limitations,
+            disclosures=req.disclosures,
+            evidence=req.evidence,
+            verifier=req.verifier,
+            accepted_by=req.accepted_by,
+            next_action=req.next_action,
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     ledger.state = advance_state(
         {**ledger.state, "nodes": nodes}, int(ledger.state.get("version", 1))
     )
     ledger.revision += 1
-    await add_event(
-        db, order.id, event_type, "human:roadmap-ledger",
-        {
-            "ledger_slug": slug,
-            "ledger_revision": ledger.revision,
-            "node_id": node_id,
-            "roadmap_work_kind": work_kind,
-        },
-    )
     await db.commit()
     await db.refresh(ledger)
     await _refresh_cache_safely(db)

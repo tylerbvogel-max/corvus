@@ -4,46 +4,48 @@
  *  #0ca30c / warning #fab219 / serious #ec835a; ink #fff / #c3c2b7. */
 
 export const MIND_CSS = `
-.mm-root { padding: 1.1rem 1.4rem; overflow-y: auto; height: 100%;
-  --mm-card: rgba(255,255,255,0.03); --mm-border: #383835;
-  --mm-ink: #ffffff; --mm-ink2: #c3c2b7; --mm-ink3: #8a897f;
+.mm-root { padding: clamp(1.3rem, 3vw, 2.4rem); overflow-y: auto; height: 100%;
+  --mm-card: color-mix(in srgb, var(--bg-card) 78%, var(--bg));
+  --mm-border: var(--border);
+  --mm-ink: var(--text); --mm-ink2: color-mix(in srgb, var(--text) 78%, var(--text-dim));
+  --mm-ink3: var(--text-dim);
   --mm-blue: #3987e5; --mm-aqua: #199e70; --mm-violet: #9085e9;
   --mm-good: #0ca30c; --mm-warn: #fab219; --mm-serious: #ec835a;
   color: var(--mm-ink); }
-.mm-root h2 { font-weight: 600; letter-spacing: -0.01em; margin: 0; }
-.mm-sub { color: var(--mm-ink3); font-size: 0.78rem; }
-.mm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 0.9rem; margin-top: 1rem; }
-.mm-card { background: var(--mm-card); border: 1px solid var(--mm-border); border-radius: 10px; padding: 0.9rem 1rem; min-width: 0; overflow: hidden; }
+.mm-root h2 { font-weight: 400; letter-spacing: -0.035em; margin: 0; }
+.mm-sub { color: var(--mm-ink3); font: 0.7rem/1.55 var(--ui-mono); margin-top: 0.25rem; }
+.mm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+.mm-card { background: var(--mm-card); border: 1px solid var(--mm-border); border-radius: 0; padding: 1rem 1.05rem; min-width: 0; overflow: hidden; }
 .mm-wide { grid-column: 1 / -1; }
 .mm-tablewrap { overflow-x: auto; }
-.mm-card h3 { margin: 0 0 0.6rem; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--mm-ink2); }
+.mm-card h3 { margin: 0 0 0.7rem; font: 650 0.62rem var(--ui-mono); text-transform: uppercase; letter-spacing: 0.11em; color: var(--accent-light); }
 .mm-card h4 { margin: 0.8rem 0 0.3rem; font-size: 0.72rem; font-weight: 600; color: var(--mm-ink3); text-transform: uppercase; letter-spacing: 0.06em; }
-.mm-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.9rem; margin-top: 1rem; }
-.mm-tile { background: var(--mm-card); border: 1px solid var(--mm-border); border-radius: 10px; padding: 0.8rem 1rem; }
-.mm-tile .v { font-family: 'JetBrains Mono', monospace; font-size: 1.7rem; font-weight: 500; line-height: 1.15; }
+.mm-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin-top: 1rem; border-top: 1px solid var(--mm-border); border-left: 1px solid var(--mm-border); }
+.mm-tile { background: var(--mm-card); border: 0; border-right: 1px solid var(--mm-border); border-bottom: 1px solid var(--mm-border); border-radius: 0; padding: 0.9rem 1rem; }
+.mm-tile .v { font-family: var(--ui-mono); font-size: 1.7rem; font-weight: 400; line-height: 1.15; color: var(--accent-light); }
 .mm-tile .k { font-size: 0.72rem; color: var(--mm-ink3); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 2px; }
-.mm-tile .s { font-size: 0.72rem; color: var(--mm-ink2); font-family: 'JetBrains Mono', monospace; }
+.mm-tile .s { font-size: 0.68rem; color: var(--mm-ink2); font-family: var(--ui-mono); }
 .mm-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .mm-table td, .mm-table th { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left; vertical-align: middle; }
-.mm-table th { color: var(--mm-ink3); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
-.mm-table td.num { font-family: 'JetBrains Mono', monospace; text-align: right; }
+.mm-table th { color: var(--mm-ink3); font: 550 0.61rem var(--ui-mono); text-transform: uppercase; letter-spacing: 0.08em; }
+.mm-table td.num { font-family: var(--ui-mono); text-align: right; }
 .mm-key { color: var(--mm-ink2); }
 .mm-bar-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 0.78rem; }
 .mm-bar-label { flex: 0 0 130px; color: var(--mm-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mm-bar-track { flex: 1; height: 8px; }
 .mm-bar-fill { height: 8px; border-radius: 0 4px 4px 0; background: var(--mm-blue); min-width: 2px; }
-.mm-bar-val { flex: 0 0 62px; text-align: right; font-family: 'JetBrains Mono', monospace; color: var(--mm-ink2); }
-.mm-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1px 7px; border-radius: 9px; border: 1px solid var(--mm-border); }
-.mm-chip { display: inline-block; font-size: 0.68rem; padding: 1px 7px; border-radius: 8px; background: rgba(144,133,233,0.14); color: var(--mm-violet); }
+.mm-bar-val { flex: 0 0 62px; text-align: right; font-family: var(--ui-mono); color: var(--mm-ink2); }
+.mm-badge { display: inline-block; font-family: var(--ui-mono); font-size: 0.7rem; padding: 1px 6px; border-radius: 0; border: 1px solid var(--mm-border); }
+.mm-chip { display: inline-block; font: 0.64rem var(--ui-mono); padding: 1px 6px; border-radius: 0; background: rgba(144,133,233,0.14); color: var(--mm-violet); }
 .mm-empty { color: var(--mm-ink3); font-size: 0.8rem; padding: 0.4rem 0; }
 .mm-meter-row { margin: 8px 0; font-size: 0.78rem; }
 .mm-meter-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 3px; }
 .mm-meter-label { color: var(--mm-ink2); }
-.mm-meter-val { font-family: 'JetBrains Mono', monospace; color: var(--mm-ink); }
-.mm-meter-track { display: block; height: 10px; border-radius: 5px; overflow: hidden; }
-.mm-meter-fill { display: block; height: 10px; border-radius: 0 5px 5px 0; min-width: 2px; }
-.mm-meter-sub { color: var(--mm-ink3); font-size: 0.7rem; margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
-.mm-pre { font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; white-space: pre-wrap; background: rgba(0,0,0,0.25); border: 1px solid var(--mm-border); border-radius: 8px; padding: 0.7rem; max-height: 420px; overflow: auto; color: var(--mm-ink2); }
+.mm-meter-val { font-family: var(--ui-mono); color: var(--mm-ink); }
+.mm-meter-track { display: block; height: 10px; border-radius: 0; overflow: hidden; }
+.mm-meter-fill { display: block; height: 10px; border-radius: 0; min-width: 2px; }
+.mm-meter-sub { color: var(--mm-ink3); font-size: 0.7rem; margin-top: 2px; font-family: var(--ui-mono); }
+.mm-pre { font-family: var(--ui-mono); font-size: 0.74rem; white-space: pre-wrap; background: color-mix(in srgb, var(--bg) 78%, black); border: 1px solid var(--mm-border); border-radius: 0; padding: 0.7rem; max-height: 420px; overflow: auto; color: var(--mm-ink2); }
 `;
 
 export function MindStyle() {

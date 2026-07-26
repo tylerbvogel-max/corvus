@@ -22,7 +22,8 @@ import sys
 import urllib.request
 from datetime import datetime, timezone
 
-BACKEND = "http://localhost:8005"
+BACKEND = os.environ.get("CORVUS_MIND_BACKEND", "http://localhost:8005")
+ACCESS_KEY = os.environ.get("CORVUS_ACCESS_KEY", "")
 EPISODE_DIR = os.path.expanduser("~/.corvus-mind/episodes")
 CONFIG_PATH = os.path.expanduser("~/.corvus-mind/config.json")
 INJECTABLE_TYPES = ("lesson", "tool-profile", "context-scope", "reference")
@@ -53,9 +54,11 @@ def _recall(query: str, top_k: int, source: str = "hook", project: str | None = 
         "query": query[:2000], "top_k": top_k, "include_content": True,
         "source": source, "project": project,
     }).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if ACCESS_KEY:
+        headers["Authorization"] = f"Bearer {ACCESS_KEY}"
     req = urllib.request.Request(
-        f"{BACKEND}/recall", data=body,
-        headers={"Content-Type": "application/json"}, method="POST",
+        f"{BACKEND}/recall", data=body, headers=headers, method="POST",
     )
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         data = json.loads(resp.read().decode("utf-8"))

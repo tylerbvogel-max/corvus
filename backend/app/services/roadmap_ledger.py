@@ -317,90 +317,73 @@ def node_is_ready(state: dict[str, Any], node: dict[str, Any]) -> bool:
                for prereq in node.get("prereqs", []))
 
 
-def compile_work_order_node(
-    *,
-    ledger_slug: str,
-    ledger_revision: int,
-    source_version: int,
+def reconcile_node(
     node: dict[str, Any],
-    task_class: str,
-    risk_tier: int,
-) -> dict[str, Any]:
-    """Compile one human roadmap record into an Agency Lab contract node."""
-    acceptance = node.get("verification", [])
-    if not isinstance(acceptance, list) or not acceptance:
-        raise ValueError("record needs a verification checklist before commissioning")
-    if not all(isinstance(item, str) and item.strip() for item in acceptance):
-        raise ValueError("verification checklist must contain non-empty text")
-    if not 1 <= risk_tier <= 5:
-        raise ValueError("risk tier must be between 1 and 5")
-    if not task_class.strip():
-        raise ValueError("task class is required")
-    return {
-        "id": node["id"],
-        "title": node["label"],
-        "outcome": node.get("summary") or f"Deliver {node['label']}",
-        "acceptance": acceptance,
-        "risk_tier": risk_tier,
-        "task_class": task_class.strip(),
-        "kickoff_prompt": node.get("prompt"),
-        "roadmap_ledger_slug": ledger_slug,
-        "roadmap_ledger_revision": ledger_revision,
-        "roadmap_source_version": source_version,
-        "roadmap_work_kind": "delivery",
-    }
-
-
-def compile_review_node(
     *,
-    ledger_slug: str,
     ledger_revision: int,
-    source_version: int,
-    node: dict[str, Any],
-    risk_tier: int,
+    disposition: str,
+    result_recap: str,
+    verification_passed: bool,
+    confidence: float,
+    claims: list[str],
+    limitations: list[str],
+    disclosures: list[str],
+    evidence: list[str],
+    verifier: str,
+    accepted_by: str,
+    next_action: str | None = None,
+    accepted_at: datetime | None = None,
 ) -> dict[str, Any]:
-    """Compile one strategic record into an evidence-gathering review contract."""
-    assumptions = node.get("assumptions", [])
-    if not assumptions:
-        raise ValueError("record needs at least one explicit assumption before review")
-    if not 1 <= risk_tier <= 5:
-        raise ValueError("risk tier must be between 1 and 5")
-    assumption_lines = "\n".join(
-        (
-            f"- [{item.get('status', 'standing')}; confidence "
-            f"{item.get('confidence', 50)}%] {item['statement']}\n"
-            f"  Invalidation trigger: {item.get('invalidationTrigger') or 'not recorded'}"
-        )
-        for item in assumptions
-    )
-    return {
-        "id": node["id"],
-        "title": f"Strategic review — {node['label']}",
-        "outcome": (
-            "Reassess the record's assumptions against current evidence and recommend "
-            "retain, revise, defer, or retire. Do not mutate the roadmap."
-        ),
-        "acceptance": [
-            "Every standing, supported, or challenged assumption is addressed",
-            "Supporting and contradicting evidence are separated and cited",
-            "Each invalidation trigger is explicitly evaluated",
-            "Recommendation is retain, revise, defer, or retire with limitations disclosed",
-        ],
-        "risk_tier": risk_tier,
-        "task_class": "strategic-review",
-        "kickoff_prompt": (
-            f"Review roadmap record {node['id']} — {node['label']}.\n"
-            f"Horizon: {node.get('horizon') or 'unclassified'}.\n"
-            f"Summary: {node.get('summary') or 'No summary recorded.'}\n\n"
-            f"ASSUMPTIONS\n{assumption_lines}\n\n"
-            "Return evidence and a recommendation only. Human acceptance controls any "
-            "durable strategic change."
-        ),
-        "roadmap_ledger_slug": ledger_slug,
-        "roadmap_ledger_revision": ledger_revision,
-        "roadmap_source_version": source_version,
-        "roadmap_work_kind": "strategic-review",
-        "roadmap_review_cadence": node.get("reviewCadence"),
-        "roadmap_next_review_at": node.get("nextReviewAt"),
-        "roadmap_assumptions": copy.deepcopy(assumptions),
+    """Attach a human-accepted verification receipt directly to one record.
+
+    Execution identity, permissions, and worker selection belong to the coding
+    harness.  The ledger keeps only the durable return contract: what was
+    claimed, what evidence supports it, what remains limited, who verified it,
+    and who accepted it into forward state.
+    """
+    if disposition not in {"complete", "partial", "failed", "blocked"}:
+        raise ValueError("unsupported reconciliation disposition")
+    if not result_recap.strip():
+        raise ValueError("result recap is required")
+    if not verifier.strip() or not accepted_by.strip():
+        raise ValueError("verifier and accepting human are required")
+    if verifier.strip().casefold() == accepted_by.strip().casefold():
+        raise ValueError("verifier must be independent from the accepting human")
+    if not 0 <= confidence <= 1:
+        raise ValueError("confidence must be between 0 and 1")
+    if verification_passed and disposition == "complete":
+        checklist = node.get("verification", [])
+        if not isinstance(checklist, list) or not checklist:
+            raise ValueError("verified completion requires a verification checklist")
+        if not evidence:
+            raise ValueError("verified completion requires evidence")
+
+    timestamp = accepted_at or datetime.now(timezone.utc)
+    receipt = {
+        "schema": "corvus.roadmap-reconciliation/v1",
+        "acceptedAt": timestamp.isoformat(),
+        "acceptedBy": accepted_by.strip(),
+        "verifier": verifier.strip(),
+        "ledgerRevision": ledger_revision,
+        "disposition": disposition,
+        "verificationPassed": verification_passed,
+        "confidence": confidence,
+        "claims": copy.deepcopy(claims),
+        "limitations": copy.deepcopy(limitations),
+        "disclosures": copy.deepcopy(disclosures),
+        "evidence": copy.deepcopy(evidence),
+        "nextAction": next_action.strip() if next_action and next_action.strip() else None,
     }
+    reconciled = copy.deepcopy(node)
+    history = list(reconciled.get("reconciliationHistory", []))
+    history.append(receipt)
+    reconciled.update({
+        "disposition": disposition,
+        "resultRecap": result_recap.strip(),
+        "verificationResults": receipt,
+        "reconciliationHistory": history,
+    })
+    if verification_passed and disposition == "complete":
+        reconciled["status"] = "done"
+        reconciled["completedAt"] = timestamp.isoformat()
+    return reconciled

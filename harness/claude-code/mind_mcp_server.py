@@ -15,13 +15,23 @@ an ad-hoc shell command.
 """
 
 import json
+import os
 import urllib.parse
 import urllib.request
 
 from mcp.server.fastmcp import FastMCP
 
-BACKEND = "http://localhost:8005"
+BACKEND = os.environ.get("CORVUS_MIND_BACKEND", "http://localhost:8005")
+ACCESS_KEY = os.environ.get("CORVUS_ACCESS_KEY", "")
 HTTP_TIMEOUT_S = 15
+
+
+def _headers(extra: dict | None = None) -> dict:
+    headers = dict(extra or {})
+    if ACCESS_KEY:
+        headers["Authorization"] = f"Bearer {ACCESS_KEY}"
+    return headers
+
 
 mcp = FastMCP("corvus-mind")
 
@@ -29,7 +39,7 @@ mcp = FastMCP("corvus-mind")
 def _post(path: str, body: dict) -> dict:
     req = urllib.request.Request(
         f"{BACKEND}{path}", data=json.dumps(body).encode("utf-8"),
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers=_headers({"Content-Type": "application/json"}), method="POST",
     )
     with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         return json.loads(resp.read().decode("utf-8"))
@@ -37,9 +47,8 @@ def _post(path: str, body: dict) -> dict:
 
 def _get(path: str, query: dict | None = None) -> dict:
     suffix = f"?{urllib.parse.urlencode(query)}" if query else ""
-    with urllib.request.urlopen(
-        f"{BACKEND}{path}{suffix}", timeout=HTTP_TIMEOUT_S,
-    ) as resp:
+    req = urllib.request.Request(f"{BACKEND}{path}{suffix}", headers=_headers())
+    with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 

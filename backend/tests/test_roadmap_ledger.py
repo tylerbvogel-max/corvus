@@ -2,9 +2,8 @@ import pytest
 from datetime import datetime, timezone
 
 from app.services.roadmap_ledger import (
-    advance_state, compile_review_node, compile_work_order_node, empty_state,
-    next_review_at, node_is_ready, review_status, slugify, state_summary,
-    validate_state,
+    advance_state, empty_state, next_review_at, node_is_ready, reconcile_node,
+    review_status, slugify, state_summary, validate_state,
 )
 
 
@@ -82,28 +81,54 @@ def test_empty_state_is_immediately_valid_and_slugify_is_stable():
         slugify("!!!")
 
 
-def test_ready_record_compiles_to_revision_pinned_agency_contract_node():
+def test_ready_record_accepts_independently_verified_reconciliation():
     state = _state()
     state["nodes"][1]["verification"] = ["test passes", "live round trip observed"]
     node = state["nodes"][1]
     assert node_is_ready(state, node) is True
-    compiled = compile_work_order_node(
-        ledger_slug="corvus-long-horizon", ledger_revision=4, source_version=57,
-        node=node, task_class="coding", risk_tier=2,
+    reconciled = reconcile_node(
+        node,
+        ledger_revision=4,
+        disposition="complete",
+        result_recap="Delivered and observed against the live API.",
+        verification_passed=True,
+        confidence=.93,
+        claims=["The implementation is live"],
+        limitations=["One browser verified"],
+        disclosures=[],
+        evidence=["pytest: 12 passed", "live API: HTTP 200"],
+        verifier="qa-agent",
+        accepted_by="tyler",
+        accepted_at=datetime(2026, 7, 26, tzinfo=timezone.utc),
     )
-    assert compiled["acceptance"] == ["test passes", "live round trip observed"]
-    assert compiled["roadmap_ledger_revision"] == 4
-    assert compiled["kickoff_prompt"] is None
+    assert reconciled["status"] == "done"
+    assert reconciled["verificationResults"]["ledgerRevision"] == 4
+    assert reconciled["verificationResults"]["verifier"] == "qa-agent"
+    assert reconciled["reconciliationHistory"][-1]["evidence"][0] == "pytest: 12 passed"
 
 
-def test_blocked_or_unverified_record_cannot_be_commissioned():
+def test_verified_completion_requires_checklist_evidence_and_independent_acceptance():
     state = _state()
-    state["nodes"][0]["status"] = "active"
-    assert node_is_ready(state, state["nodes"][1]) is False
+    common = dict(
+        ledger_revision=1,
+        disposition="complete",
+        result_recap="Done.",
+        verification_passed=True,
+        confidence=.8,
+        claims=["done"],
+        limitations=[],
+        disclosures=[],
+        evidence=["receipt"],
+        verifier="qa-agent",
+        accepted_by="tyler",
+    )
     with pytest.raises(ValueError, match="verification checklist"):
-        compile_work_order_node(
-            ledger_slug="test", ledger_revision=1, source_version=1,
-            node=state["nodes"][1], task_class="coding", risk_tier=2,
+        reconcile_node(state["nodes"][1], **common)
+    state["nodes"][1]["verification"] = ["live behavior observed"]
+    with pytest.raises(ValueError, match="independent"):
+        reconcile_node(
+            state["nodes"][1],
+            **{**common, "accepted_by": "qa-agent"},
         )
 
 
@@ -176,30 +201,23 @@ def test_review_schedule_uses_calendar_months_and_status_windows():
     ) == "upcoming"
 
 
-def test_review_compiles_assumptions_into_revision_pinned_agency_contract():
-    state = _state()
-    node = state["nodes"][1]
-    node.update({
-        "horizon": "thesis",
-        "reviewCadence": "annual",
-        "nextReviewAt": "2026-07-01",
-        "assumptions": [{
-            "id": "market",
-            "statement": "The target problem remains expensive.",
-            "status": "standing",
-            "confidence": 70,
-            "invalidationTrigger": "The workflow becomes fully commoditized",
-        }],
-    })
-    compiled = compile_review_node(
-        ledger_slug="long-horizon",
+def test_partial_reconciliation_records_evidence_without_closing_record():
+    node = _state()["nodes"][1]
+    reconciled = reconcile_node(
+        node,
         ledger_revision=8,
-        source_version=21,
-        node=node,
-        risk_tier=1,
+        disposition="partial",
+        result_recap="Behavior works, but outside-user evidence remains open.",
+        verification_passed=True,
+        confidence=.65,
+        claims=["Local behavior verified"],
+        limitations=["No outside-user cohort"],
+        disclosures=["Retention remains unknown"],
+        evidence=["consumer eval run 42"],
+        verifier="consumer-eval",
+        accepted_by="tyler",
+        next_action="Run the design-partner cohort.",
     )
-    assert compiled["task_class"] == "strategic-review"
-    assert compiled["roadmap_work_kind"] == "strategic-review"
-    assert compiled["roadmap_ledger_revision"] == 8
-    assert "fully commoditized" in compiled["kickoff_prompt"]
-    assert len(compiled["acceptance"]) == 4
+    assert reconciled["status"] == "active"
+    assert reconciled["verificationResults"]["disposition"] == "partial"
+    assert reconciled["verificationResults"]["nextAction"] == "Run the design-partner cohort."

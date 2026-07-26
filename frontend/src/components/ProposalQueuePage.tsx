@@ -355,7 +355,7 @@ export default function ProposalQueuePage({
   const pendingCount = stats?.proposed ?? 0;
 
   return (
-    <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 120px)' }}>
+    <div className="proposal-queue" style={{ display: 'flex', gap: 0, height: '100%', minHeight: 0 }}>
       {/* Left Panel — Collapsible Queue */}
       <div style={{
         width: queueCollapsed ? 40 : 360, flexShrink: 0,
@@ -1600,6 +1600,7 @@ function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void 
 
   return (
     <div
+      className="pq-modal-shade"
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
@@ -1608,6 +1609,7 @@ function DiffModal({ item, onClose }: { item: ProposalItem; onClose: () => void 
       }}
     >
       <div
+        className="pq-modal"
         onClick={e => e.stopPropagation()}
         style={{
           width: '90vw', maxWidth: 1200, height: '80vh',
@@ -1675,6 +1677,7 @@ function Cheatsheet({ onClose }: { onClose: () => void }) {
   ];
   return (
     <div
+      className="pq-modal-shade"
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
@@ -1683,6 +1686,7 @@ function Cheatsheet({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
+        className="pq-modal"
         onClick={e => e.stopPropagation()}
         style={{
           minWidth: 320, background: 'var(--bg-card)', border: '1px solid var(--border)',

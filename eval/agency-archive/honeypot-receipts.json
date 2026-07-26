@@ -1,0 +1,36 @@
+{
+  "schema": "corvus.agency-archive/v1",
+  "archived_at": "2026-07-26",
+  "source_commit": "186df8e",
+  "fixtures": [
+    {
+      "name": "failed intake invalidates downstream synthesis",
+      "venture": "live-intake-1784123780",
+      "contract_digest": "6b14770a378e1dbc9418ac3ee8509d8392dd37127843a01309d9ab3d0d3b479e",
+      "claims_digest": "eb13cab2ad496c2a2beb2d7412be33d369ddd0631293ae1bebd9a427e2e59ac2",
+      "verifier": "independent-live-critic",
+      "outcome": "failed",
+      "defect": "insufficient corpus",
+      "invalidated_downstream": "synthesis"
+    },
+    {
+      "name": "schema-constrained intake detects planted contradictions",
+      "venture": "haiku-intake-1784124155",
+      "runs": 3,
+      "confidence_range": [0.35, 0.58],
+      "schema_compliance": "3/3",
+      "risk_detection": "3/3",
+      "detected": [
+        "contradictory test counts",
+        "missing deployment-authority continuity",
+        "ambiguous recurring-cost budget scope",
+        "incomplete test execution"
+      ],
+      "claims_digests": [
+        "8e81a8d6bb9e0e869f14f25f48107a2fb56470e46e672dd06f26f31255d28793",
+        "06daac28967484f34d443361a65dd101b1bc8757efd09077d414b2f50c934587",
+        "62fd4f0c5a16ef144265314515e8f8c7035a0007b56999bef034627a81015099"
+      ]
+    }
+  ]
+}

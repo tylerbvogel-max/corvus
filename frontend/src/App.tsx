@@ -20,7 +20,6 @@ import MindMetricsPage from './components/MindMetricsPage'
 import MindSessionsPage from './components/MindSessionsPage'
 import MindInboxPage from './components/MindInboxPage'
 import MindSkillsPage from './components/MindSkillsPage'
-import AgencyLabPage from './components/AgencyLabPage'
 import EvaluationPage from './components/EvaluationPage'
 import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
@@ -80,7 +79,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'agency-missions' | 'agency-venture-graph' | 'agency-economy' | 'agency-workforce' | 'agency-experiments' | 'agency-outcomes';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -129,10 +128,9 @@ const IconNetwork = (
   </svg>
 );
 
-const IconClipboard = (
+const IconPulse = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-    <rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 14l2 2 4-4" />
+    <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
   </svg>
 );
 
@@ -154,48 +152,41 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
 
   groups.push(
     {
-      label: 'Knowledge',
+      label: 'Memory',
       landingKey: 'knowledge-landing',
-      description: 'Browse and visualize the neuron graph',
+      description: 'Inspect what Corvus knows and how it learned',
       icon: IconNetwork,
       items: [
-        { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve proposed graph changes' },
         { key: 'explorer', label: 'Explorer', description: 'Browse and edit individual neurons' },
         { key: 'engrams', label: 'Engrams', description: 'Source documents linked to the graph' },
-        { key: 'refinements', label: 'Refinements', description: 'History of neuron updates and changes' },
+        { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
         { key: 'synaptic-learning', label: 'Synaptic Learning', description: 'Learned patterns from query feedback' },
         { key: 'layer-heatmap', label: 'Layer Heatmap', description: 'Activity heatmap across graph layers' },
-        { key: 'agents', label: 'Agents', description: 'Autonomous maintenance agents that curate the graph' },
       ],
     },
     {
-      label: 'Agency Lab',
-      landingKey: 'agency-economy',
-      description: 'Design, fund, and evaluate persistent agent workforces',
+      label: 'Steer',
+      landingKey: 'proposal-queue',
+      description: 'Resolve judgment and preserve forward intent',
       icon: IconCompass,
       items: [
+        { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
+        { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve proposed graph changes' },
         { key: 'roadmap-ledgers', label: 'Roadmap Ledgers', description: 'Project-scoped long-horizon plans, gates, and durable kickoff context' },
-        { key: 'agency-missions', label: 'Missions', description: 'North-star venture registry and disposable agent work orders' },
-        { key: 'agency-venture-graph', label: 'Venture Graph', description: 'Live topology of north-star nodes, dependencies, workers, audits, and work orders' },
-        { key: 'agency-economy', label: 'Economy', description: 'Versioned reward contracts, audits, escrow, and capital policy' },
-        { key: 'agency-workforce', label: 'Workforce', description: 'Worker profiles, bank rolls, calibration, drawdown, and Kelly allocation' },
-        { key: 'agency-experiments', label: 'Experiments', description: 'Blocked causal tests across models, harnesses, tasks, and risk tiers' },
-        { key: 'agency-outcomes', label: 'Outcomes', description: 'Behavioral economy statistics, system outcomes, and failure diagnostics' },
+        { key: 'refinements', label: 'Refinements', description: 'History of neuron updates and changes' },
       ],
     },
     {
-      label: 'Evaluate',
+      label: 'Observe',
       landingKey: 'evaluate-landing',
-      description: 'System health, quality, and compliance metrics',
-      icon: IconClipboard,
+      description: 'Read the system’s health, behavior, and evidence',
+      icon: IconPulse,
       items: [
         { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost' },
         { key: 'mind-sessions', label: 'Sessions', description: "Episode logs: the memory's inputs and their distillation" },
-        { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
-        { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
+        { key: 'performance', label: 'Performance', description: 'Volume, cost, scoring health, spread activation, and per-stage pipeline latency' },
         { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics' },
         { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
-        { key: 'performance', label: 'Performance', description: 'Volume, cost, scoring health, spread activation, and per-stage pipeline latency' },
         { key: 'fairness', label: 'Fairness', description: 'Bias detection across departments and roles' },
         { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history' },
         { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query' },
@@ -208,14 +199,13 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
     // Performance + Pipeline Timing stay visible: recall queries carry full
     // stage telemetry, so per-step speed is real data on memory tenants too.
     const hidden = new Set(['autopilot', 'emergent-queue', 'document-ingest',
-      'engrams', 'layer-heatmap', 'agents', 'knowledge-governance', 'quality',
+      'engrams', 'layer-heatmap', 'knowledge-governance', 'quality',
       'fairness', 'evaluation', 'eval-runs',
       'integrity-dashboard', 'integrity-scan', 'integrity-findings']);
     for (const g of groups) g.items = g.items.filter(i => !hidden.has(i.key));
     return groups.filter(g => g.items.length > 0);
   }
-  const agencyKeys = new Set(['roadmap-ledgers', 'agency-missions', 'agency-venture-graph', 'agency-economy', 'agency-workforce', 'agency-experiments', 'agency-outcomes']);
-  for (const g of groups) g.items = g.items.filter(i => !agencyKeys.has(i.key));
+  for (const g of groups) g.items = g.items.filter(i => i.key !== 'roadmap-ledgers');
   return groups.filter(g => g.items.length > 0);
 }
 
@@ -283,9 +273,7 @@ export default function App() {
   // True while the current pointer interaction moved the panel — used to
   // suppress the click that fires after a drag ends on the same element.
   const navDragMovedRef = useRef(false);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set()
-  );
+  const [navFlyout, setNavFlyout] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -535,7 +523,7 @@ export default function App() {
       setNavWidth(navRef.current?.offsetWidth || 148);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [collapsed, expandedGroups, authStatus]);
+  }, [collapsed, authStatus]);
 
   useEffect(() => { setNavPos(p => clampNavPos(p)); }, [navHeight, graphControlsHeight, desktopGraphVisible, clampNavPos]);
 
@@ -551,19 +539,21 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize);
   }, [clampNavPos]);
 
-  // Content-driven width: expanding a group widens the panel, so re-clamp
-  // in case it now pokes past the right screen edge.
+  // Flyouts are contextual and transient. Escape or a click outside returns
+  // the Perch to its compact rail without changing any open windows.
   useEffect(() => {
-    setNavPos(p => clampNavPos(p));
-  }, [expandedGroups, clampNavPos]);
-
-  const toggleGroup = useCallback((label: string) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
-      return next;
-    });
+    const onPointerDown = (event: PointerEvent) => {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) setNavFlyout(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNavFlyout(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   // Build nav groups based on tenant (memoized — page-element identity
@@ -577,9 +567,9 @@ export default function App() {
     if (key === 'chat-graph') return 'Neuron Graph';
     if (key.startsWith('agent:')) return friendlyName(key.slice(6));
     for (const g of navGroups) {
-      if (g.landingKey === key) return g.label;
       const item = g.items.find(i => i.key === key);
       if (item) return item.label;
+      if (g.landingKey === key) return g.label;
     }
     return key;
   }, [displayName, navGroups]);
@@ -631,12 +621,6 @@ export default function App() {
       case 'mind-inbox': return <MindInboxPage />;
       case 'mind-skills': return <MindSkillsPage />;
       case 'roadmap-ledgers': return <RoadmapLedgersPage />;
-      case 'agency-economy': return <AgencyLabPage view="economy" />;
-      case 'agency-missions': return <AgencyLabPage view="missions" />;
-      case 'agency-venture-graph': return <AgencyLabPage view="venture-graph" />;
-      case 'agency-workforce': return <AgencyLabPage view="workforce" />;
-      case 'agency-experiments': return <AgencyLabPage view="experiments" />;
-      case 'agency-outcomes': return <AgencyLabPage view="outcomes" />;
       case 'knowledge-governance': return <KnowledgeGovernancePage />;
       default: {
         const group = navGroups.find(g => g.landingKey === key);
@@ -755,6 +739,7 @@ export default function App() {
         data-wake-obstacle
         data-wake-pad={collapsed ? '0' : undefined}
         data-wake-pulse={collapsed ? true : undefined}
+        onMouseLeave={() => setNavFlyout(null)}
       >
         {collapsed ? (
           /* Logo pill: drag to move, click to expand. Collapsed, the card
@@ -771,48 +756,79 @@ export default function App() {
           </button>
         ) : (
           <>
-        {/* Whole title bar collapses to the pill on click (drag still moves).
-            Home/chat navigation lives in the Chat nav entry below. */}
-        <div
-          className="sidebar-header"
-          onPointerDown={startNavDrag}
-          onClick={() => { if (!navDragMovedRef.current) setCollapsed(true); }}
-          title="Click to collapse \u00b7 drag to move"
-        >
-          <img src={corvusLogo128} alt="Corvus" className="sidebar-logo" draggable={false} />
-          <h1 className="app-title">{displayName}</h1>
-        </div>
-          <nav className="sidebar-nav">
-            {/* Chat: a direct top-level link (no sub-items) to the primary
-                chat page, peer to the expandable groups below.
-                Hidden on memorySurface tenants (corvus-mind) since all
-                interaction happens via Claude Code CLI, not direct chat. */}
+            {/* The logo is the Perch's physical handle: drag the rail from
+                here, or click it back down to the original breathing pebble. */}
+            <button
+              className="perch-handle"
+              onPointerDown={startNavDrag}
+              onClick={() => {
+                if (!navDragMovedRef.current) {
+                  setNavFlyout(null);
+                  setCollapsed(true);
+                }
+              }}
+              title={`${displayName} · click to collapse · drag to move`}
+              aria-label={`Collapse ${displayName} navigation; drag to move`}
+            >
+              <img src={corvusLogo128} alt="" className="sidebar-logo" draggable={false} />
+              <span aria-hidden="true">CORVUS</span>
+            </button>
+            <nav className="perch-nav" aria-label="Primary navigation">
+              {/* Chat remains a first-class direct action on knowledge
+                  tenants. Memory tenants work through their coding harness,
+                  so the rail begins with the memory itself. */}
             {!tenantConfig?.memory_surface && (
-              <div className={`sidebar-group${focusedKey === 'home' ? ' sidebar-group-active' : ''}`}>
+              <div className="perch-mode">
                 <button
-                  className="sidebar-group-header"
+                  className={`perch-mode-btn${focusedKey === 'home' ? ' active' : ''}${windows.home ? ' open' : ''}`}
                   onClick={() => { setQueueInitialOrigin(undefined); setTab('home'); }}
+                  title="Chat"
                 >
-                  <span className="sidebar-chevron">
+                  <span className="perch-mode-icon" aria-hidden="true">
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                     </svg>
                   </span>
-                  <span>Chat</span>
+                  <span className="perch-mode-label">Chat</span>
+                  {windows.home && <span className="perch-open-dot" aria-label="Open" />}
                 </button>
               </div>
             )}
             {navGroups.map(group => (
-              <div key={group.label} className={`sidebar-group${activeGroup === group.label ? ' sidebar-group-active' : ''}`}>
+              <div
+                key={group.label}
+                className="perch-mode"
+                onMouseEnter={() => setNavFlyout(group.label)}
+              >
                 <button
-                  className="sidebar-group-header"
-                  onClick={() => toggleGroup(group.label)}
+                  className={`perch-mode-btn${activeGroup === group.label ? ' active' : ''}${group.items.some(item => windows[item.key]) ? ' open' : ''}`}
+                  onClick={() => setNavFlyout(group.label)}
+                  aria-expanded={navFlyout === group.label}
+                  aria-controls={`perch-${group.label.toLowerCase()}-flyout`}
+                  title={group.label}
                 >
-                  <span className="sidebar-chevron">{expandedGroups.has(group.label) ? '\u25BE' : '\u25B8'}</span>
-                  <span>{group.label}</span>
+                  <span className="perch-mode-icon" aria-hidden="true">{group.icon}</span>
+                  <span className="perch-mode-label">{group.label}</span>
+                  {group.items.some(item => windows[item.key]) && <span className="perch-open-dot" aria-label="Contains open windows" />}
+                  {group.items.some(item => item.key === 'proposal-queue') && totalProposed > 0 && (
+                    <span className="perch-mode-badge" aria-label={`${totalProposed} pending proposals`}>{totalProposed}</span>
+                  )}
                 </button>
-                {expandedGroups.has(group.label) && (
-                  <div className="sidebar-group-items">
+                {navFlyout === group.label && (
+                  <section
+                    id={`perch-${group.label.toLowerCase()}-flyout`}
+                    className="perch-flyout"
+                    aria-label={`${group.label} pages`}
+                    data-wake-obstacle
+                  >
+                    <header className="perch-flyout-header">
+                      <span className="perch-flyout-icon" aria-hidden="true">{group.icon}</span>
+                      <span>
+                        <strong>{group.label}</strong>
+                        <small>{group.description}</small>
+                      </span>
+                    </header>
+                    <div className="perch-flyout-items">
                     {group.items.map(item => {
                       const originForTab = TAB_TO_ORIGIN[item.key];
                       const count = originForTab === 'all'
@@ -821,44 +837,37 @@ export default function App() {
                       return (
                         <button
                           key={item.key}
-                          className={`sidebar-item${focusedKey === item.key ? ' active' : ''}${windows[item.key] ? ' open' : ''}${item.className ? ' ' + item.className : ''}`}
+                          className={`perch-flyout-item${focusedKey === item.key ? ' active' : ''}${windows[item.key] ? ' open' : ''}${item.className ? ' ' + item.className : ''}`}
                           onClick={() => {
                             // Click body of nav item goes to the page itself. Badge
                             // has its own click handler (see below) that deep-links
                             // to the filtered Proposal Queue.
                             setQueueInitialOrigin(undefined);
                             setTab(item.key);
+                            setNavFlyout(null);
                           }}
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}
                         >
-                          <span style={{ color: item.labelColor }}>{item.label}</span>
+                          <span className="perch-item-state" aria-hidden="true" />
+                          <span className="perch-item-copy">
+                            <strong style={{ color: item.labelColor }}>{item.label}</strong>
+                            <small>{item.description}</small>
+                          </span>
                           {count > 0 && item.key !== 'proposal-queue' && originForTab && originForTab !== 'all' && (
                             <span
+                              className="perch-item-badge"
                               onClick={(ev) => {
                                 ev.stopPropagation();
                                 navigateToFilteredQueue(originForTab);
                               }}
                               title={`${count} pending in Proposal Queue — click to filter`}
-                              style={{
-                                fontSize: 10, fontWeight: 700,
-                                padding: '1px 6px', borderRadius: 10,
-                                background: 'var(--accent, #c87533)', color: '#fff',
-                                minWidth: 18, textAlign: 'center',
-                                cursor: 'pointer',
-                              }}
                             >
                               {count}
                             </span>
                           )}
                           {count > 0 && item.key === 'proposal-queue' && (
                             <span
+                              className="perch-item-badge"
                               title={`${count} pending proposals`}
-                              style={{
-                                fontSize: 10, fontWeight: 700,
-                                padding: '1px 6px', borderRadius: 10,
-                                background: 'var(--accent, #c87533)', color: '#fff',
-                                minWidth: 18, textAlign: 'center',
-                              }}
                             >
                               {count}
                             </span>
@@ -866,12 +875,13 @@ export default function App() {
                         </button>
                       );
                     })}
-                  </div>
+                    </div>
+                  </section>
                 )}
               </div>
             ))}
-          </nav>
-        {/* Settings — pinned to the bottom of the expanded panel */}
+            </nav>
+        {/* Utilities are deliberately subordinate to the four product jobs. */}
         <div className="sidebar-settings-area">
           <button
             className={`sidebar-settings-btn sidebar-graph-btn${desktopGraphVisible ? ' active' : ''}`}
