@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "_about": "Standalone Corvus roadmap-ledger record for the 'subagent graph-knowledge propagation' investigation, closed 2026-07-26 as won't-build. Import under its own slug, or merge the single node below into an existing ledger document. Do NOT --replace the main roadmap ledger with this one-node file.",
+  "updatedAt": "2026-07-26T00:00:00+00:00",
+  "sections": [
+    {"id": "roadmap", "label": "Roadmap", "color": "#3987e5"}
+  ],
+  "nodes": [
+    {
+      "id": "subagent-graph-knowledge-propagation",
+      "label": "Subagent graph-knowledge propagation",
+      "section": "roadmap",
+      "status": "done",
+      "horizon": "active",
+      "summary": "Evaluated whether Corvus should push graph knowledge (self-model capsule, charter, semantic recall) into spawned subagents the way it does for the main session. Resolved: no build required — the high-value path already exists and the residual gap has a zero-infrastructure answer.",
+      "verification": [
+        "Empirically confirmed (headless Claude Code 2.1.220 run) that PreToolUse fires for a subagent's Bash tool call — the high-confidence machine-gotcha warning channel already reaches subagents with no new code.",
+        "Confirmed SessionStart and UserPromptSubmit fire for the top-level session only, so the persona capsule, charter, and prompt/project recall never reach subagents.",
+        "Observed that subagent PreToolUse payloads carry agent_type and agent_id (absent on main-agent payloads), so subagents are cheaply detectable at hook time if ever needed.",
+        "Measured injection ceilings: self-capsule ~1k tokens (4000-char cap), charter ~1.5k tokens (6000-char render cap), full SessionStart mirror ~2.9-3k tokens. Subagents run on the full model window (~200k), so per-subagent window pressure is ~1.5%; the real cost is the fan-out multiplier plus recall latency, not the window."
+      ],
+      "resolution": "Closed as won't-build. (1) The best channel — machine gotchas warned at the moment a subagent runs a known-bad Bash command — already covers subagents via PreToolUse. (2) The persona capsule is undesirable in subagents, which carry their own role prompt. (3) Broad recall is low value without a subagent-scoped query event; mirroring it would inject the parent's stale query. (4) The one genuine gap — binding standing charter policy to mutating subagents — is better served by the orchestrator threading the relevant policy into the Task prompt at delegation time (zero new infrastructure) than by a new injection channel, which would violate the system's deliberately sparse-injection design.",
+      "evidence": "Test: headless `claude -p` with a logging PreToolUse/SessionStart/UserPromptSubmit hook. Main agent ran `echo MAIN_MARKER_7F3`; a general-purpose subagent ran `echo SUBAGENT_MARKER_7F3`. Both commands produced PreToolUse hook invocations (subagent's tagged agent_type=general-purpose); SessionStart and UserPromptSubmit each fired exactly once, for the main session only.",
+      "reopenIf": "Reopen only if (a) Claude Code stops firing PreToolUse inside subagents, or (b) subagent policy violations are observed in practice that orchestrator-side Task-prompt policy threading does not prevent.",
+      "decidedOn": "2026-07-26"
+    }
+  ],
+  "edges": [],
+  "milestones": []
+}
