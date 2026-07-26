@@ -83,7 +83,7 @@ def test_neighbor_vote_ignores_null_tags():
 def test_pipeline_uses_cheap_classify_stage():
     cheap = build_default_pipeline("cheap")
     assert isinstance(cheap[1], CheapClassifyStage)
-    assert len(cheap) == 9
+    assert len(cheap) == 10
 
 
 def test_pipeline_rejects_unknown_mode():

@@ -46,6 +46,13 @@ class PipelineState:
     scored: list[NeuronScoreBreakdown] = field(default_factory=list)
     scored_engrams: list[NeuronScoreBreakdown] = field(default_factory=list)
     candidates_considered: int = 0
+    # Lane name (embedding/keyword/entity/filter) → candidate neuron ids.
+    # Observe-only provenance for the retrieval_telemetry stage.
+    lane_hits: dict[str, list[int]] = field(default_factory=dict)
+    # Raw pre-RRF cosine per embedding-lane neuron. RRF rank normalization
+    # pins the fused top-1 score to a constant, so these magnitudes are the
+    # only usable retrieval-confidence signal downstream.
+    embedding_sims: dict[int, float] = field(default_factory=dict)
 
     # --- continuity boost stage ---
     continuity_boosted_count: int = 0
@@ -76,3 +83,6 @@ class PipelineState:
     oversized_first_neuron: bool = False
     token_estimator_version: str = ""
     memory_representations: dict[int, str] = field(default_factory=dict)
+
+    # --- retrieval telemetry stage (observe-only) ---
+    retrieval_telemetry: dict[str, Any] = field(default_factory=dict)

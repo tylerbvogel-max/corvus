@@ -151,24 +151,25 @@ async def _neighbor_vote_classify(
 
 async def _run_hybrid_lanes(
     db: AsyncSession, user_message: str | None,
-) -> list[dict[int, float]]:
+) -> list[tuple[str, dict[int, float]]]:
     """Hybrid-recall lanes (LLM-free, indexed SQL): keyword tsvector + entity
     match retrieve their own candidates so a named-thing memory can enter
-    the pool even when it loses the cosine race. Fused by RRF downstream."""
+    the pool even when it loses the cosine race. Fused by RRF downstream.
+    Returns (lane_name, hits) pairs so telemetry can attribute each hit."""
     if not user_message or not (
             settings.keyword_lane_enabled or settings.entity_lane_enabled):
         return []
     from app.services.recall_lanes import (
         entity_lane, extract_query_entities, keyword_lane,
     )
-    lanes: list[dict[int, float]] = []
+    lanes: list[tuple[str, dict[int, float]]] = []
     if settings.keyword_lane_enabled:
-        lanes.append(
-            await keyword_lane(db, user_message, settings.recall_lane_top_n))
+        lanes.append(("keyword",
+                      await keyword_lane(db, user_message, settings.recall_lane_top_n)))
     if settings.entity_lane_enabled:
-        lanes.append(await entity_lane(
-            db, extract_query_entities(user_message), settings.recall_lane_top_n))
-    return [lane for lane in lanes if lane]
+        lanes.append(("entity", await entity_lane(
+            db, extract_query_entities(user_message), settings.recall_lane_top_n)))
+    return [(name, lane) for name, lane in lanes if lane]
 
 
 async def _select_and_score_candidates(
@@ -181,8 +182,15 @@ async def _select_and_score_candidates(
     total_queries: int,
     requester=None,
     user_message: str | None = None,
-) -> tuple[list[NeuronScoreBreakdown], list[NeuronScoreBreakdown]]:
-    """Score neuron and engram candidates.  Returns (scored_neurons, scored_engrams).
+) -> tuple[list[NeuronScoreBreakdown], list[NeuronScoreBreakdown],
+           dict[str, list[int]], dict[int, float]]:
+    """Score neuron and engram candidates.
+    Returns (scored_neurons, scored_engrams, lane_hits, embedding_sims).
+    lane_hits maps lane name (embedding/keyword/entity/filter) → candidate
+    neuron ids; embedding_sims carries the raw pre-RRF cosine per neuron —
+    both observe-only, for retrieval telemetry. The raw cosine matters because
+    RRF rank normalization pins the top-1 fused score to a constant, so only
+    the pre-fusion magnitudes can express retrieval confidence.
 
     The requester's ACL scope filters candidates at load time (the semantic
     prefilter matrix is region-blind, so enforcement happens in SQL here).
@@ -192,12 +200,16 @@ async def _select_and_score_candidates(
 
     scored_engrams: list[NeuronScoreBreakdown] = []
     semantic_results: list[tuple[int, str, float]] | None = None
+    lane_hits: dict[str, list[int]] = {}
+    embedding_sims: dict[int, float] = {}
 
     if settings.semantic_prefilter_enabled and query_embedding is not None:
         from app.services.semantic_prefilter import semantic_prefilter
         semantic_results = await semantic_prefilter(db, query_embedding, top_n_override=effective_pool)
 
-    extra_lanes = await _run_hybrid_lanes(db, user_message)
+    named_lanes = await _run_hybrid_lanes(db, user_message)
+    extra_lanes = [lane for _name, lane in named_lanes]
+    lane_hits.update({name: list(lane) for name, lane in named_lanes})
 
     if semantic_results or extra_lanes:
         # Partition into neurons and engrams
@@ -207,6 +219,8 @@ async def _select_and_score_candidates(
 
         # Score neurons: union of embedding-lane and lexical/entity-lane hits
         sem_ids = list(neuron_sims.keys())
+        lane_hits["embedding"] = sem_ids
+        embedding_sims = dict(neuron_sims)
         lane_only_ids = [nid for lane in extra_lanes for nid in lane
                          if nid not in neuron_sims]
         all_ids = sem_ids + list(dict.fromkeys(lane_only_ids))
@@ -234,6 +248,7 @@ async def _select_and_score_candidates(
         candidates = await get_neurons_by_filter(db, departments, role_keys, keywords, requester)
         if not candidates:
             candidates = await get_neurons_by_filter(db, requester=requester)
+        lane_hits["filter"] = [c.id for c in candidates]
         scored = await score_candidates(
             db, candidates, total_queries, keywords, departments, role_keys,
             query_embedding=query_embedding,
@@ -244,7 +259,7 @@ async def _select_and_score_candidates(
         # then enforce one independently observable activation candidate pool.
         scored = scored[:effective_pool]
     assert isinstance(scored, list), "scored must be a list"
-    return scored, scored_engrams
+    return scored, scored_engrams, lane_hits, embedding_sims
 
 
 async def _apply_inhibition_and_boost(

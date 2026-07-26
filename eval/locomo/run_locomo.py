@@ -552,7 +552,7 @@ def gold_answer(qa: dict) -> str:
     return str(qa.get("answer", ""))
 
 
-async def recall_hits(db, question: str) -> list[str]:
+async def recall_hits(db, question: str) -> tuple[list[str], dict]:
     from app.services.executor import prepare_context
     ctx = await prepare_context(db, question, top_k=RECALL_TOP_K, recall_mode="cheap")
     out = []
@@ -560,7 +560,15 @@ async def recall_hits(db, question: str) -> list[str]:
         n = ctx.neuron_map.get(s["neuron_id"])
         if n is not None:
             out.append(f"- {n.label}: {(n.content or '').split('Evidence:')[0].strip()}")
-    return out
+    # Step 01 (mind-retrieval-telemetry): join retrieval quality to correctness
+    # offline without a rerun. Contains scores/lanes/coverage only — no
+    # question or answer text, so committed aggregates stay CC-BY-NC-clean.
+    retrieval = next(
+        (t.get("detail", {}) for t in (ctx.stage_telemetry or [])
+         if t.get("stage") == "retrieval_telemetry"),
+        {},
+    )
+    return out, retrieval
 
 
 async def answer_questions(conv_idx: int, conv: dict, condition: str,
@@ -582,7 +590,7 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
     async def one(qa: dict) -> dict:
         async with sem:
             async with async_session() as db:
-                hits = await recall_hits(db, qa["question"])
+                hits, retrieval = await recall_hits(db, qa["question"])
             mem = "\n".join(hits) if hits else "(no memories retrieved)"
             reply = await llm_retry(
                 workload="answer",
@@ -592,7 +600,8 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
             )
             pred = reply.get("text", "").strip()
             return {"question": qa["question"], "category": qa["category"],
-                    "gold": gold_answer(qa), "pred": pred, "n_hits": len(hits)}
+                    "gold": gold_answer(qa), "pred": pred, "n_hits": len(hits),
+                    "retrieval": retrieval}
 
     results = list(await asyncio.gather(*[one(q) for q in qas]))
     return results

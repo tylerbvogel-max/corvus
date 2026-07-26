@@ -11,7 +11,8 @@ class PrefilterScoreStage:
     """Narrow the candidate pool and compute 5-signal scores.
 
     Reads:  state.query_embedding, keywords, departments, role_keys, effective_pool
-    Writes: state.total_queries, state.scored, state.scored_engrams
+    Writes: state.total_queries, state.scored, state.scored_engrams,
+            state.lane_hits, state.embedding_sims
     """
 
     name = "prefilter_score"
@@ -20,7 +21,7 @@ class PrefilterScoreStage:
         from app.services.executor import _select_and_score_candidates
         system_state = await get_system_state(ctx.db)
         state.total_queries = system_state.total_queries
-        scored, scored_engrams = await _select_and_score_candidates(
+        scored, scored_engrams, lane_hits, embedding_sims = await _select_and_score_candidates(
             ctx.db,
             state.query_embedding,
             state.effective_pool,
@@ -34,6 +35,8 @@ class PrefilterScoreStage:
         state.scored = scored
         state.scored_engrams = scored_engrams
         state.candidates_considered = len(scored)
+        state.lane_hits = lane_hits
+        state.embedding_sims = embedding_sims
         return state
 
     def describe(self, out: PipelineState) -> dict[str, Any]:

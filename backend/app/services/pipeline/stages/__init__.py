@@ -16,6 +16,7 @@ from app.services.pipeline.stages.inhibitory_stage import InhibitoryStage
 from app.services.pipeline.stages.engram_edge_boost_stage import EngramEdgeBoostStage
 from app.services.pipeline.stages.regulatory_resolve_stage import RegulatoryResolveStage
 from app.services.pipeline.stages.assemble_stage import AssembleStage
+from app.services.pipeline.stages.retrieval_telemetry_stage import RetrievalTelemetryStage
 
 
 _CLASSIFY_STAGE_BY_MODE = MappingProxyType({
@@ -43,6 +44,7 @@ def build_default_pipeline(recall_mode: str = "cheap") -> list:
         EngramEdgeBoostStage(),
         RegulatoryResolveStage(),
         AssembleStage(),
+        RetrievalTelemetryStage(),
     ]
 
 
@@ -56,5 +58,6 @@ __all__ = [
     "EngramEdgeBoostStage",
     "RegulatoryResolveStage",
     "AssembleStage",
+    "RetrievalTelemetryStage",
     "build_default_pipeline",
 ]
