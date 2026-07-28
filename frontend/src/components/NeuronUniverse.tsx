@@ -1708,9 +1708,11 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
     ? {
       ...desktopPanel,
       ...controlPosition,
-      width: Math.max(264, controlPosition?.width || 0),
+      ...(panelOpen
+        ? { width: Math.max(264, controlPosition?.width || 0) }
+        : compactPanel),
     }
-    : panel;
+    : panelOpen ? panel : { ...panel, ...compactPanel };
   const openLens = (mode: LensMode) => {
     setLensMode(current => current === mode ? null : mode);
     if (mode !== 'recall') setSelectedTraceId(null);
@@ -1777,24 +1779,63 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
         data-wake-obstacle={transparent ? true : undefined}
         style={controlPanelStyle}>
         <div
+          data-testid="neuron-controls-toggle"
           onPointerDown={transparent ? onControlPointerDown : undefined}
           onClick={() => { if (!controlDragMoved?.()) setPanelOpen(o => !o); }}
-          style={{ cursor: transparent ? 'grab' : 'pointer', userSelect: 'none', touchAction: 'none' }}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setPanelOpen(open => !open);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-expanded={panelOpen}
+          aria-label={`${panelOpen ? 'Collapse' : 'Expand'} Neuron Universe controls`}
+          style={{
+            cursor: transparent ? 'grab' : 'pointer',
+            userSelect: 'none',
+            touchAction: 'none',
+            ...(panelOpen ? {} : compactPanelToggle),
+          }}
           title={transparent
             ? `Drag with navigation · click to ${panelOpen ? 'collapse' : 'expand'} controls`
             : (panelOpen ? 'Collapse controls' : 'Expand controls')}
         >
-          <div style={{ fontWeight: 700, color: '#e8edf7', fontSize: '0.95rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            Neuron Universe
-            <span style={{ color: '#8a93a6', fontSize: '0.7rem' }}>{panelOpen ? '▾' : '▸'}</span>
-          </div>
-          <div style={{ color: '#8a93a6', fontSize: '0.72rem', marginBottom: panelOpen ? 10 : 0 }}>
-            {layoutMode === 'zones'
-              ? selectedZone
-                ? `${selectedZone.neuronIds.length} neurons · ${selectedZoneStats?.internal || 0} internal synapses`
-                : `${zones.length} named assemblies · ${zoneCoverage}/${neurons.length} mapped`
-              : `${neurons.length.toLocaleString()} neurons · ${synapseCount.toLocaleString()} synapses`}
-          </div>
+          {panelOpen ? (<>
+            <div style={{ fontWeight: 700, color: '#e8edf7', fontSize: '0.95rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              Neuron Universe
+              <span style={{ color: '#8a93a6', fontSize: '0.7rem' }}>▾</span>
+            </div>
+            <div style={{ color: '#8a93a6', fontSize: '0.72rem', marginBottom: 10 }}>
+              {layoutMode === 'zones'
+                ? selectedZone
+                  ? `${selectedZone.neuronIds.length} neurons · ${selectedZoneStats?.internal || 0} internal synapses`
+                  : `${zones.length} named assemblies · ${zoneCoverage}/${neurons.length} mapped`
+                : `${neurons.length.toLocaleString()} neurons · ${synapseCount.toLocaleString()} synapses`}
+            </div>
+          </>) : (
+            <svg
+              aria-hidden="true"
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#9fb8ff"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7.5 7.5 12 4l4.5 3.5M7.5 7.5 5 13l4 5M16.5 7.5 19 13l-4 5M9 18h6M7.5 7.5l9 0M5 13h14" />
+              <circle cx="12" cy="4" r="1.5" fill="#9fb8ff" />
+              <circle cx="7.5" cy="7.5" r="1.5" fill="#9fb8ff" />
+              <circle cx="16.5" cy="7.5" r="1.5" fill="#9fb8ff" />
+              <circle cx="5" cy="13" r="1.5" fill="#9fb8ff" />
+              <circle cx="19" cy="13" r="1.5" fill="#9fb8ff" />
+              <circle cx="9" cy="18" r="1.5" fill="#9fb8ff" />
+              <circle cx="15" cy="18" r="1.5" fill="#9fb8ff" />
+            </svg>
+          )}
         </div>
         {panelOpen && (<>
         <div className="neuron-search" data-testid="neuron-search">
@@ -2165,10 +2206,25 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
 const overlayCenter: React.CSSProperties = { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 };
 const panel: React.CSSProperties = {
   position: 'absolute', top: 16, left: 16, zIndex: 40, width: 264, boxSizing: 'border-box',
-  background: 'rgba(14,18,26,0.82)', border: '1px solid #232c3c', borderRadius: 12,
+  background: 'rgba(14,18,26,0.82)', border: '1px solid #232c3c',
+  borderRadius: 'var(--ui-radius-frame, 1px)',
   padding: '14px 16px', backdropFilter: 'blur(8px)',
 };
 const desktopPanel: React.CSSProperties = { ...panel, left: 18, right: 'auto', top: 78 };
+const compactPanel: React.CSSProperties = {
+  width: 'var(--compact-control-size, 52px)',
+  height: 'var(--compact-control-size, 52px)',
+  padding: 0,
+  borderRadius: 'var(--ui-radius-frame, 1px)',
+  overflow: 'hidden',
+};
+const compactPanelToggle: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 const backBtn: React.CSSProperties = {
   marginTop: 12, width: '100%', background: '#1e3a5f', color: '#cfe0ff',
   border: '1px solid #2f5a8f', borderRadius: 6, padding: '7px 0', cursor: 'pointer', fontSize: '0.78rem',

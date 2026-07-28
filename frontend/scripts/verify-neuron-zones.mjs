@@ -138,6 +138,35 @@ try {
     throw new Error(`Radar control is undersized: ${JSON.stringify(radarBox)}`);
   }
 
+  const navLogo = page.locator('.sidebar-pill');
+  const [expandedRadius, navLogoRadius] = await Promise.all([
+    controls.evaluate(element => getComputedStyle(element).borderRadius),
+    navLogo.evaluate(element => getComputedStyle(element).borderRadius),
+  ]);
+  if (expandedRadius !== navLogoRadius) {
+    throw new Error(`Expanded control radius ${expandedRadius} does not match nav logo ${navLogoRadius}`);
+  }
+
+  // Collapsed universe controls share the nav logo's footprint and frame.
+  const controlsToggle = page.getByTestId('neuron-controls-toggle');
+  await controlsToggle.click();
+  const compactControlBox = await controls.boundingBox();
+  const navLogoBox = await navLogo.boundingBox();
+  const compactRadius = await controls.evaluate(element => getComputedStyle(element).borderRadius);
+  if (
+    !compactControlBox ||
+    !navLogoBox ||
+    compactControlBox.width !== navLogoBox.width ||
+    compactControlBox.height !== navLogoBox.height ||
+    compactRadius !== navLogoRadius
+  ) {
+    throw new Error(
+      `Collapsed controls do not match nav logo: controls=${JSON.stringify(compactControlBox)} radius=${compactRadius} nav=${JSON.stringify(navLogoBox)} radius=${navLogoRadius}`,
+    );
+  }
+  await controlsToggle.click();
+  await page.getByTestId('neuron-layout-toggle').waitFor({ state: 'visible' });
+
   // Keyboard: each radar handle remains an accessible range input.
   const neuronLightHandle = page.getByTestId('radar-handle-neuron-light');
   const neuronLightBefore = Number(await neuronLightHandle.getAttribute('aria-valuenow'));

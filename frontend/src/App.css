@@ -33,6 +33,7 @@
   --ui-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --ui-radius-frame: 1px;
   --ui-radius-control: 2px;
+  --compact-control-size: 52px;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1277,9 +1278,9 @@ body {
    glow pulse in sync-ish rhythm with the ripple ring it emits into the
    water (data-wake-pulse). Hover pops it so it reads as important. */
 .sidebar-pill {
-  width: 52px;
-  min-width: 52px;
-  height: 52px;
+  width: var(--compact-control-size);
+  min-width: var(--compact-control-size);
+  height: var(--compact-control-size);
   border-radius: 14px;
   background: var(--bg-card);
   border: 1.5px solid var(--text);
