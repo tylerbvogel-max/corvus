@@ -133,7 +133,7 @@ async def list_available_models():
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=10000)
-    model: str = Field("haiku")
+    model: str = Field("codex-luna")
     history: list[dict] = Field(default_factory=list)
     effort: str | None = None  # reasoning effort: low|medium|high
 
@@ -175,13 +175,12 @@ async def simple_chat(req: ChatRequest):
         raise HTTPException(status_code=400, detail=f"Invalid or unavailable model: {req.model}")
     effort_var.set(req.effort)
     result = await llm_chat(system_prompt, user_message, max_tokens=2048, model=req.model)
-    cost = estimate_cost(req.model, result["input_tokens"], result["output_tokens"])
     return ChatResponse(
         response=result["text"],
-        model=req.model,
+        model=result["served_by"],
         input_tokens=result["input_tokens"],
         output_tokens=result["output_tokens"],
-        cost_usd=cost,
+        cost_usd=result["cost_usd"],
     )
 
 

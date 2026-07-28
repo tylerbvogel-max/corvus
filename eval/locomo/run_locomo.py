@@ -600,7 +600,13 @@ def gold_answer(qa: dict) -> str:
     return str(qa.get("answer", ""))
 
 
-async def recall_hits(db, question: str) -> tuple[list[str], dict]:
+async def recall_hits_with_context(db, question: str) -> tuple[list[str], dict, object]:
+    """Return rendered hits, current telemetry, and their exact context.
+
+    Oracle Funnel needs the same PreparedContext that the answering model
+    saw. The public ``recall_hits`` wrapper below keeps the historical
+    two-value contract used by the existing forensics scripts.
+    """
     from app.services.executor import prepare_context
     ctx = await prepare_context(db, question, top_k=RECALL_TOP_K, recall_mode="cheap")
     out = []
@@ -616,7 +622,12 @@ async def recall_hits(db, question: str) -> tuple[list[str], dict]:
          if t.get("stage") == "retrieval_telemetry"),
         {},
     )
-    return out, retrieval
+    return out, retrieval, ctx
+
+
+async def recall_hits(db, question: str) -> tuple[list[str], dict]:
+    hits, retrieval, _ctx = await recall_hits_with_context(db, question)
+    return hits, retrieval
 
 
 def is_refusal_text(pred: str) -> bool:
@@ -657,7 +668,8 @@ async def verify_claim(question: str, mem: str, draft: str) -> dict:
 
 
 async def answer_questions(conv_idx: int, conv: dict, condition: str,
-                           max_questions: int | None) -> list[dict]:
+                           max_questions: int | None,
+                           oracle_funnel_enabled: bool = False) -> list[dict]:
     """condition: a key of ARM_CONFIG — 'memory' is the shipped hybrid+spread
     production pipeline; 'nospread' and 'embed-only' each flip one variable."""
     from app.config import settings
@@ -671,6 +683,15 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
     qas = select_questions(conv, max_questions)
     sem = asyncio.Semaphore(LLM_CONCURRENCY)
     results: list[dict] = []
+    oracle = None
+    if oracle_funnel_enabled:
+        import oracle_funnel
+        async with async_session() as db:
+            oracle = await oracle_funnel.OracleIndex.load(db)
+        print(
+            f"[carlos-lab:funnel] oracle index: {len(oracle.neurons)} neurons",
+            flush=True,
+        )
 
     # Verify-split: the drafter runs the iteration-1 SOFT rules — the
     # measured over-asserting policy — so the verifier is the only new
@@ -682,7 +703,15 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
     async def one(qa: dict) -> dict:
         async with sem:
             async with async_session() as db:
-                hits, retrieval = await recall_hits(db, qa["question"])
+                hits, retrieval, ctx = await recall_hits_with_context(
+                    db, qa["question"],
+                )
+                funnel_row = None
+                if oracle is not None:
+                    import oracle_funnel
+                    funnel_row = await oracle_funnel.probe(
+                        db, qa, conv, ctx, oracle, RECALL_TOP_K,
+                    )
             mem = "\n".join(hits) if hits else "(no memories retrieved)"
             reply = await llm_retry(
                 workload="answer",
@@ -694,6 +723,8 @@ async def answer_questions(conv_idx: int, conv: dict, condition: str,
             rec = {"question": qa["question"], "category": qa["category"],
                    "gold": gold_answer(qa), "pred": pred, "n_hits": len(hits),
                    "retrieval": retrieval}
+            if funnel_row is not None:
+                rec["funnel"] = funnel_row
             if VERIFY_ENABLED:
                 if is_refusal_text(pred):
                     # Nothing asserted, nothing to check — the drafter can
@@ -859,6 +890,14 @@ async def main() -> None:
                     help="modeled activity used to convert timers to session cadence")
     ap.add_argument("--eval-artifact-dir",
                     help="isolated episode/compiler output directory (unique by default)")
+    ap.add_argument(
+        "--oracle-funnel",
+        action="store_true",
+        help=(
+            "Carlos Lab: deterministic loss attribution over the exact "
+            "retrieval context; observes only and makes no extra LLM calls"
+        ),
+    )
     args = ap.parse_args()
 
     assert args.sessions_per_week >= JANITOR_RUNS_PER_WEEK, \
@@ -950,6 +989,10 @@ async def main() -> None:
         },
         "effective_flags": settings_snapshot(),
         "arm_config": ARM_CONFIG,
+        "carlos_lab": {
+            "oracle_funnel_enabled": args.oracle_funnel,
+            "observer_only": True,
+        },
     }
     summary["contract"]["dataset_conversations"] = len(dataset)
     summary["contract"]["dataset_sessions_total"] = sum(
@@ -972,11 +1015,24 @@ async def main() -> None:
             results = await answer_baseline(args.conv, conv, args.max_questions)
         else:
             results = await answer_questions(args.conv, conv, condition,
-                                             args.max_questions)
+                                             args.max_questions,
+                                             oracle_funnel_enabled=args.oracle_funnel)
         scores = await judge(results)
         payload = {"scores": scores,
                    "arm_flags": ARM_CONFIG.get(condition, "full-transcript"),
                    "effective_flags": settings_snapshot()}
+        if args.oracle_funnel and condition != "baseline":
+            import oracle_funnel
+            oracle_funnel.attribute_verdicts(results)
+            payload["funnel_ledger"] = oracle_funnel.ledger(results)
+            payload["funnel_rows_path"] = oracle_funnel.write_rows(
+                artifact_dir, condition, results,
+            )
+            print(
+                f"[carlos-lab:funnel:{condition}] "
+                f"{payload['funnel_ledger']['headline']}",
+                flush=True,
+            )
         if condition != "baseline":
             payload["corpus"] = await corpus_receipt()
         summary[condition] = {k: v for k, v in payload.items() if k != "results"}

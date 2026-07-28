@@ -464,7 +464,7 @@ export default function HomePage({ onNavigate: _onNavigate }: { onNavigate: (tab
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
-  const [model, setModel] = useState('haiku');
+  const [model, setModel] = useState('codex-luna');
   // AbortController handle + boolean paired state for the stop button.
   // Ref holds the callable (no re-render needed); state drives button visibility.
   const abortRef = useRef<(() => void) | null>(null);

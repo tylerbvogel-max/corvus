@@ -16,12 +16,12 @@ export function useModels() {
     fetchAvailableModels()
       .then(setModels)
       .catch(() => {
-        // Fallback to Anthropic models if endpoint unavailable
+        // Fallback to the active Codex-primary roster if the endpoint is unavailable.
         setModels([
           // Prices must track MODEL_REGISTRY in backend/app/services/llm_provider.py.
-          { display_name: 'haiku', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 1, output_price: 5, context_window_tokens: 200_000 },
-          { display_name: 'sonnet', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 3, output_price: 15, context_window_tokens: 200_000 },
-          { display_name: 'opus', provider: 'anthropic', api_id: '', tier: 'frontier', input_price: 5, output_price: 25, context_window_tokens: 200_000 },
+          { display_name: 'codex-luna', provider: 'openai_codex', api_id: '', tier: 'frontier', input_price: 1, output_price: 6, context_window_tokens: 272_000, effective_model: 'codex-luna', effective_provider: 'openai_codex', is_primary: true },
+          { display_name: 'codex-terra', provider: 'openai_codex', api_id: '', tier: 'frontier', input_price: 2.5, output_price: 15, context_window_tokens: 272_000, effective_model: 'codex-terra', effective_provider: 'openai_codex', is_primary: true },
+          { display_name: 'codex-sol', provider: 'openai_codex', api_id: '', tier: 'frontier', input_price: 5, output_price: 30, context_window_tokens: 272_000, effective_model: 'codex-sol', effective_provider: 'openai_codex', is_primary: true },
         ]);
       })
       .finally(() => setLoading(false));

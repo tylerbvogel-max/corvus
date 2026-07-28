@@ -37,6 +37,7 @@ unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT CLAUDE_CODE_SSE_PORT 2>/dev/null || true
 # run_locomo.py also sets this before importing app code; exported here as
 # defense in depth.
 export CODEX_PATH=/nonexistent/locomo-certificate-fallback-disabled
+export LLM_MODEL_ALIASES='{}'
 
 cd "$REPO/backend"
 exec "$REPO/backend/venv/bin/python" "$REPO/eval/locomo/run_locomo.py" "$@"

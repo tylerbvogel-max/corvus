@@ -43,6 +43,8 @@ import DocumentIngestPage from './components/DocumentIngestPage'
 import IntegrityPage from './components/IntegrityPage'
 import GroupLandingPage from './components/GroupLandingPage'
 import RoadmapLedgersPage from './components/RoadmapLedgersPage'
+import NexusLabPage from './components/NexusLabPage'
+import OracleFunnelLabPage from './components/OracleFunnelLabPage'
 
 import { fetchTenantConfig } from './config'
 import type { TenantConfig } from './config'
@@ -79,7 +81,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'carlos-lab' | 'nexus-lab' | 'oracle-funnel-lab';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -131,6 +133,13 @@ const IconNetwork = (
 const IconPulse = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 12h4l2.5-6 5 12 2.5-6h4" />
+  </svg>
+);
+
+const IconLab = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.75 3h10.5A2 2 0 0 0 19 18l-5-9V3" />
+    <path d="M7.5 15h9" />
   </svg>
 );
 
@@ -193,6 +202,29 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       ],
     },
   );
+
+  groups.push({
+    label: 'Carlos Lab',
+    landingKey: 'carlos-lab',
+    description: 'Imported experimental lenses, isolated from production surfaces',
+    icon: IconLab,
+    items: [
+      {
+        key: 'nexus-lab',
+        label: 'Nexus Graph',
+        description: 'Projected-shell alternate view of the active graph',
+        className: 'carlos-lab-nav-item',
+        labelColor: '#ff4fd8',
+      },
+      {
+        key: 'oracle-funnel-lab',
+        label: 'Oracle Funnel',
+        description: 'LoCoMo loss attribution from real eval artifacts',
+        className: 'carlos-lab-nav-item',
+        labelColor: '#45e6ff',
+      },
+    ],
+  });
 
   if (memorySurface) {
     // Memory tenants: hide chat-era and knowledge-tenant-only surfaces.
@@ -621,6 +653,8 @@ export default function App() {
       case 'mind-inbox': return <MindInboxPage />;
       case 'mind-skills': return <MindSkillsPage />;
       case 'roadmap-ledgers': return <RoadmapLedgersPage />;
+      case 'nexus-lab': return <NexusLabPage />;
+      case 'oracle-funnel-lab': return <OracleFunnelLabPage />;
       case 'knowledge-governance': return <KnowledgeGovernancePage />;
       default: {
         const group = navGroups.find(g => g.landingKey === key);

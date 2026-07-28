@@ -16,6 +16,7 @@ marked.setOptions({ breaks: true, gfm: true });
 
 // Provider color palette for dynamic mode coloring
 const PROVIDER_COLORS: Record<string, [string, string]> = {
+  openai_codex: ['#22d3ee', '#818cf8'],
   google: ['#34d399', '#6ee7b7'],
   groq: ['#fbbf24', '#fcd34d'],
   anthropic: ['#60a5fa', '#a78bfa'],
@@ -803,12 +804,12 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
 
   // Slot configurations
   const [slotConfigs, setSlotConfigs] = useState<EnhancedSlotConfig[]>([
-    { id: nextSlotId++, mode: 'haiku_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true, spreadHops: 'auto' as const, spreadFloor: 0.15 },
+    { id: nextSlotId++, mode: 'codex-luna_neuron', tokenBudget: 8000, maxOutputTokens: 4096, color: nextSlotColor(), isBaseline: false, effort: 'low', priming: true, spreadHops: 'auto' as const, spreadFloor: 0.15 },
   ]);
   const baselineSlotId = useMemo(() => resolveBaselineId(slotConfigs), [slotConfigs]);
   const baselineMode = useMemo(() => {
     const slot = slotConfigs.find(s => s.id === baselineSlotId);
-    return slot?.mode ?? 'haiku_neuron';
+    return slot?.mode ?? 'codex-luna_neuron';
   }, [slotConfigs, baselineSlotId]);
   // For backward compatibility: keep a mapping of slot results by ID
   const [slotResults, setSlotResults] = useState<Record<number, SlotResult | null>>({});
@@ -818,7 +819,7 @@ export default function QueryLab({ onNavigateToNeuron }: { onNavigateToNeuron?: 
   const [slotLoadingSet, setSlotLoadingSet] = useState<Set<number>>(new Set());
 
   const [evalLoading, setEvalLoading] = useState(false);
-  const [evalModel, setEvalModel] = useState<string>('sonnet');
+  const [evalModel, setEvalModel] = useState<string>('codex-terra');
   const [evalText, setEvalText] = useState<string | null>(null);
   const [evalMdl, setEvalMdl] = useState<string | null>(null);
   const [evalIn, setEvalIn] = useState(0);

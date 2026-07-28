@@ -1,6 +1,7 @@
 """Neuron inspection endpoints."""
 
 import json
+import random
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,7 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func as sa_func, text, or_, and_
 
 from app.database import get_db
-from app.models import Neuron, NeuronEdge, NeuronRefinement, Query as QueryModel
+from app.models import (
+    IntegrityFinding,
+    Neuron,
+    NeuronEdge,
+    NeuronFiring,
+    NeuronRefinement,
+    Query as QueryModel,
+)
 from app.schemas import NeuronDetail, NeuronScoreDetail, NeuronRefinementOut
 from app.services.neuron_service import (
     get_neuron,
@@ -168,11 +176,24 @@ async def _build_refinement_list(
 async def neuron_clusters(
     min_weight: float = 0.3,
     min_size: int = 3,
+    min_departments: int = 2,
+    resolution: float = 1.0,
     db: AsyncSession = Depends(get_db),
 ):
-    """Discover cross-department neuron clusters via label propagation on co-firing edges."""
+    """Discover deterministic Leiden communities over co-firing edges.
+
+    The cross-department default preserves the original discovery behavior.
+    Visual map clients can request ``min_departments=1`` to receive the full
+    associative territory map, including communities contained in one scope.
+    """
     from app.services.clustering import find_clusters
-    clusters = await find_clusters(db, min_weight=min_weight, min_size=min_size)
+    clusters = await find_clusters(
+        db,
+        min_weight=min_weight,
+        min_size=min_size,
+        min_departments=min_departments,
+        resolution=resolution,
+    )
     return {"cluster_count": len(clusters), "clusters": clusters}
 
 
@@ -718,21 +739,82 @@ async def _graph3d_nodes(db: AsyncSession) -> list[dict]:
             Neuron.id, Neuron.label, Neuron.department, Neuron.layer,
             Neuron.node_type, Neuron.abstraction_type, Neuron.role_key,
             Neuron.invocations, Neuron.avg_utility, Neuron.centrality,
-            Neuron.parent_id,
+            Neuron.parent_id, Neuron.summary, Neuron.entities,
+            Neuron.authority_level, Neuron.created_at, Neuron.last_verified,
         ).where(Neuron.is_active == True)
     )
-    return [
-        {
-            "id": r.id, "label": r.label, "department": r.department,
-            "layer": r.layer, "node_type": r.node_type,
-            "abstraction_type": r.abstraction_type, "role_key": r.role_key,
-            "invocations": r.invocations or 0,
-            "avg_utility": float(r.avg_utility or 0),
-            "centrality": float(r.centrality or 0),
-            "parent_id": r.parent_id,
-        }
-        for r in result.fetchall()
-    ]
+    rows = result.fetchall()
+    invocation_values = sorted(int(row.invocations or 0) for row in rows)
+    reinforced_floor = (
+        invocation_values[min(len(invocation_values) - 1, int(len(invocation_values) * 0.9))]
+        if invocation_values else 0
+    )
+
+    finding_rows = (await db.execute(
+        select(
+            IntegrityFinding.finding_type,
+            IntegrityFinding.neuron_ids_json,
+        ).where(
+            IntegrityFinding.status == "open",
+            IntegrityFinding.finding_type.in_((
+                "contradiction",
+                "stale_content",
+                "staleness_divergence",
+            )),
+        )
+    )).all()
+    contested_ids: set[int] = set()
+    stale_ids: set[int] = set()
+    for finding in finding_rows:
+        try:
+            ids = {int(value) for value in json.loads(finding.neuron_ids_json or "[]")}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if finding.finding_type == "contradiction":
+            contested_ids.update(ids)
+        else:
+            stale_ids.update(ids)
+
+    nodes: list[dict] = []
+    for row in rows:
+        invocations = int(row.invocations or 0)
+        utility = float(row.avg_utility or 0)
+        if row.id in contested_ids:
+            health_state = "contested"
+            health_reason = "Open contradiction finding"
+        elif row.id in stale_ids:
+            health_state = "stale"
+            health_reason = "Open integrity review for stale content"
+        elif utility < 0.4:
+            health_state = "low-confidence"
+            health_reason = f"Observed utility {utility:.2f}"
+        elif reinforced_floor and invocations >= reinforced_floor:
+            health_state = "reinforced"
+            health_reason = f"Top-decile recall: {invocations} firings"
+        elif invocations <= (invocation_values[len(invocation_values) // 4] if invocation_values else 0):
+            health_state = "quiet"
+            health_reason = f"Lightly traversed: {invocations} firings"
+        else:
+            health_state = "current"
+            health_reason = "No open integrity concern"
+
+        nodes.append({
+            "id": row.id, "label": row.label, "department": row.department,
+            "layer": row.layer, "node_type": row.node_type,
+            "abstraction_type": row.abstraction_type, "role_key": row.role_key,
+            "invocations": invocations,
+            "avg_utility": utility,
+            "centrality": float(row.centrality or 0),
+            "parent_id": row.parent_id,
+            "summary": row.summary,
+            "entities": row.entities or [],
+            "authority_level": row.authority_level,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "last_verified": row.last_verified.isoformat() if row.last_verified else None,
+            "health_state": health_state,
+            "health_reason": health_reason,
+        })
+    return nodes
 
 
 async def _graph3d_edges(
@@ -794,11 +876,309 @@ async def _graph3d_edges(
     return list(edge_set.values())
 
 
+def _apply_graph_activity(
+    edges: list[dict],
+    firing_rows: list[dict],
+    now: datetime,
+) -> None:
+    """Attach exact recent co-activation counts to retained graph edges."""
+    edge_by_pair = {
+        (min(int(edge["source"]), int(edge["target"])),
+         max(int(edge["source"]), int(edge["target"]))): edge
+        for edge in edges
+    }
+    adjacency: dict[int, set[int]] = {}
+    for source, target in edge_by_pair:
+        adjacency.setdefault(source, set()).add(target)
+        adjacency.setdefault(target, set()).add(source)
+    for edge in edges:
+        edge["activity_1d"] = 0
+        edge["activity_7d"] = 0
+        edge["activity_30d"] = 0
+        edge["activity_all"] = int(edge.get("co_fire_count") or 0)
+
+    by_query: dict[int, dict] = {}
+    for firing in firing_rows:
+        query_id = int(firing["query_id"])
+        item = by_query.setdefault(query_id, {
+            "created_at": firing.get("created_at"),
+            "neuron_ids": set(),
+        })
+        item["neuron_ids"].add(int(firing["neuron_id"]))
+
+    for item in by_query.values():
+        created_at = item["created_at"]
+        if not created_at:
+            continue
+        age_days = max(0.0, (now - created_at).total_seconds() / 86_400)
+        neuron_ids: set[int] = item["neuron_ids"]
+        for source in neuron_ids:
+            for target in adjacency.get(source, ()):
+                if source >= target or target not in neuron_ids:
+                    continue
+                edge = edge_by_pair.get((source, target))
+                if not edge:
+                    continue
+                if age_days <= 30:
+                    edge["activity_30d"] += 1
+                if age_days <= 7:
+                    edge["activity_7d"] += 1
+                if age_days <= 1:
+                    edge["activity_1d"] += 1
+
+
+async def _graph3d_activity(db: AsyncSession, edges: list[dict]) -> None:
+    """Measure recent retained-edge traffic from included historical firings."""
+    if not edges:
+        return
+    graph_ids = {
+        int(neuron_id)
+        for edge in edges
+        for neuron_id in (edge["source"], edge["target"])
+    }
+    now = datetime.utcnow()
+    rows = (await db.execute(
+        select(
+            NeuronFiring.query_id,
+            NeuronFiring.neuron_id,
+            QueryModel.created_at,
+        )
+        .join(QueryModel, QueryModel.id == NeuronFiring.query_id)
+        .where(
+            NeuronFiring.was_included.is_(True),
+            NeuronFiring.neuron_id.in_(graph_ids),
+            QueryModel.created_at >= now - timedelta(days=30),
+        )
+    )).all()
+    _apply_graph_activity(
+        edges,
+        [{
+            "query_id": row.query_id,
+            "neuron_id": row.neuron_id,
+            "created_at": row.created_at,
+        } for row in rows],
+        now,
+    )
+
+
+def _select_replay_segments(
+    firings: list[dict],
+    candidate_edges: list[dict],
+    max_segments: int = 10,
+) -> list[dict]:
+    """Build a compact maximum-strength forest over one historical retrieval.
+
+    Firings prove which neurons co-activated for the query. The old schema did
+    not retain the exact spread parent edge, so this deliberately reconstructs
+    topology from real retained synapses rather than claiming an exact route.
+    A forest avoids decorative cycles and gives the renderer a legible wave.
+    """
+    rank_by_id = {
+        int(firing["neuron_id"]): int(firing.get("rank") or 10_000)
+        for firing in firings
+    }
+    spread_ids = {
+        int(firing["neuron_id"])
+        for firing in firings
+        if float(firing.get("spread_boost") or 0) > 0
+    }
+    active_ids = set(rank_by_id)
+    eligible = [
+        edge for edge in candidate_edges
+        if int(edge["source"]) in active_ids and int(edge["target"]) in active_ids
+    ]
+    eligible.sort(key=lambda edge: (
+        max(rank_by_id[int(edge["source"])], rank_by_id[int(edge["target"])]),
+        -float(edge["weight"]),
+        min(int(edge["source"]), int(edge["target"])),
+        max(int(edge["source"]), int(edge["target"])),
+    ))
+
+    parent = {neuron_id: neuron_id for neuron_id in active_ids}
+
+    def find(neuron_id: int) -> int:
+        while parent[neuron_id] != neuron_id:
+            parent[neuron_id] = parent[parent[neuron_id]]
+            neuron_id = parent[neuron_id]
+        return neuron_id
+
+    selected: list[dict] = []
+    for edge in eligible:
+        source = int(edge["source"])
+        target = int(edge["target"])
+        source_root = find(source)
+        target_root = find(target)
+        if source_root == target_root:
+            continue
+        parent[target_root] = source_root
+        selected.append({
+            "source": source,
+            "target": target,
+            "weight": round(float(edge["weight"]), 4),
+            "kind": "spread" if source in spread_ids or target in spread_ids else "coactivation",
+            "source_rank": rank_by_id[source],
+            "target_rank": rank_by_id[target],
+        })
+        if len(selected) >= max_segments:
+            break
+    return selected
+
+
+def _is_conversational_recall(user_message: str | None) -> bool:
+    """Keep Recall Lens on human chat turns, not maintenance/tool traffic."""
+    message = (user_message or "").strip()
+    if not message:
+        return False
+    lowered = message.casefold()
+    if lowered.startswith("system instructions"):
+        return False
+    if lowered == "working knowledge, gotchas, tool profiles, and user preferences for this machine":
+        return False
+    command_prefixes = (
+        "/", "./", "awk ", "backend/", "cat ", "cd ", "chmod ", "chown ",
+        "command ",
+        "cp ", "curl ", "cut ", "df ", "docker ", "du ", "find ",
+        "frontend/", "git ", "grep ", "head ", "journalctl ", "ls ",
+        "mkdir ", "mv ", "node ", "npm ", "npx ", "ps ", "psql ",
+        "pytest ", "python ", "python3 ", "rg ", "rm ", "sed ", "sort ",
+        "source ", "ss ", "systemctl ", "tail ", "tenant_id=", "uniq ",
+        "venv/", "wc ",
+    )
+    return not lowered.startswith(command_prefixes)
+
+
+async def _graph3d_replays(
+    db: AsyncSession,
+    graph_edges: list[dict],
+    limit: int,
+) -> dict:
+    """Sample historical retrievals and project them onto visible graph edges."""
+    if limit <= 0 or not graph_edges:
+        return {
+            "basis": "historical co-activation; topology reconstructed from retained synapses",
+            "sampled_from": 0,
+            "traces": [],
+        }
+
+    pool_limit = min(1200, max(300, limit * 30))
+    query_rows = (await db.execute(
+        select(QueryModel.id, QueryModel.created_at, QueryModel.user_message)
+        .join(NeuronFiring, NeuronFiring.query_id == QueryModel.id)
+        .where(NeuronFiring.was_included.is_(True))
+        .group_by(QueryModel.id, QueryModel.created_at)
+        .having(sa_func.count(NeuronFiring.id) >= 2)
+        .order_by(QueryModel.created_at.desc())
+        .limit(pool_limit)
+    )).all()
+    query_rows = [
+        row for row in query_rows
+        if _is_conversational_recall(row.user_message)
+    ]
+    if not query_rows:
+        return {
+            "basis": "historical co-activation; topology reconstructed from retained synapses",
+            "sampled_from": 0,
+            "traces": [],
+        }
+
+    query_ids = [row.id for row in query_rows]
+    firing_rows = (await db.execute(
+        select(
+            NeuronFiring.query_id,
+            NeuronFiring.neuron_id,
+            NeuronFiring.rank,
+            NeuronFiring.combined_score,
+            NeuronFiring.spread_boost,
+        )
+        .where(
+            NeuronFiring.query_id.in_(query_ids),
+            NeuronFiring.was_included.is_(True),
+        )
+        .order_by(NeuronFiring.query_id, NeuronFiring.rank.nulls_last())
+    )).all()
+    firings_by_query: dict[int, list[dict]] = {}
+    for row in firing_rows:
+        firings_by_query.setdefault(row.query_id, []).append({
+            "neuron_id": row.neuron_id,
+            "rank": row.rank,
+            "combined_score": row.combined_score,
+            "spread_boost": row.spread_boost,
+        })
+
+    edges_by_neuron: dict[int, list[dict]] = {}
+    for edge in graph_edges:
+        edges_by_neuron.setdefault(int(edge["source"]), []).append(edge)
+        edges_by_neuron.setdefault(int(edge["target"]), []).append(edge)
+
+    # A fresh assortment per universe load, sampled from a bounded recent pool.
+    shuffled = list(query_rows)
+    random.SystemRandom().shuffle(shuffled)
+    spread_traces: list[dict] = []
+    coactivation_traces: list[dict] = []
+    for query in shuffled:
+        firings = firings_by_query.get(query.id, [])
+        active_ids = {int(firing["neuron_id"]) for firing in firings}
+        seen_edges: set[tuple[int, int]] = set()
+        candidates: list[dict] = []
+        for neuron_id in active_ids:
+            for edge in edges_by_neuron.get(neuron_id, []):
+                source = int(edge["source"])
+                target = int(edge["target"])
+                if source not in active_ids or target not in active_ids:
+                    continue
+                key = (min(source, target), max(source, target))
+                if key in seen_edges:
+                    continue
+                seen_edges.add(key)
+                candidates.append(edge)
+        segments = _select_replay_segments(firings, candidates)
+        if not segments:
+            continue
+        trace = {
+            "query_id": query.id,
+            "created_at": query.created_at.isoformat() if query.created_at else None,
+            "query_preview": (query.user_message or "").strip()[:280],
+            "neuron_count": len(active_ids),
+            "spread_derived": any(segment["kind"] == "spread" for segment in segments),
+            "firings": [
+                {
+                    "neuron_id": int(firing["neuron_id"]),
+                    "rank": int(firing.get("rank") or 10_000),
+                    "score": round(float(firing.get("combined_score") or 0), 4),
+                    "spread_boost": round(float(firing.get("spread_boost") or 0), 4),
+                }
+                for firing in sorted(
+                    firings,
+                    key=lambda item: int(item.get("rank") or 10_000),
+                )
+            ],
+            "segments": segments,
+        }
+        if trace["spread_derived"]:
+            spread_traces.append(trace)
+        else:
+            coactivation_traces.append(trace)
+
+    spread_quota = min(len(spread_traces), max(1, limit // 5))
+    traces = (
+        spread_traces[:spread_quota] +
+        coactivation_traces[:max(0, limit - spread_quota)]
+    )
+    random.SystemRandom().shuffle(traces)
+
+    return {
+        "basis": "historical co-activation; topology reconstructed from retained synapses",
+        "sampled_from": len(query_rows),
+        "traces": traces,
+    }
+
+
 @router.get("/graph-3d")
 async def graph_3d(
     min_weight: float = 0.25,
     max_edges: int = 12000,
     per_node: int = 3,
+    replay_limit: int = 0,
     db: AsyncSession = Depends(get_db),
 ):
     """Active neurons + coverage-first co-firing edges for the 3D universe.
@@ -810,9 +1190,12 @@ async def graph_3d(
     """
     assert 0.0 <= min_weight <= 1.0, "min_weight must be in [0, 1]"
     assert 1 <= per_node <= 12, "per_node must be in [1, 12]"
+    assert 0 <= replay_limit <= 64, "replay_limit must be in [0, 64]"
     neurons = await _graph3d_nodes(db)
     edges = await _graph3d_edges(db, min_weight, max_edges, per_node)
-    return {"neurons": neurons, "edges": edges}
+    await _graph3d_activity(db, edges)
+    replays = await _graph3d_replays(db, edges, replay_limit)
+    return {"neurons": neurons, "edges": edges, "replays": replays}
 
 
 @router.get("/{neuron_id}", response_model=NeuronDetail)

@@ -1,11 +1,13 @@
 """Multi-provider LLM abstraction layer.
 
-Unified interface for calling LLMs across providers: Anthropic, Google Gemini,
-Groq, and Azure OpenAI. All callers use display names from MODEL_REGISTRY.
+Unified interface for calling LLMs across providers: OpenAI via Codex CLI,
+Anthropic, Google Gemini, Groq, and Azure OpenAI. All callers use display
+names from MODEL_REGISTRY.
 Provider dispatch is automatic based on the model's registered provider.
 
 Model aliases (LLM_MODEL_ALIASES env var) allow environment-specific redirection
-without changing call sites — e.g. {"haiku":"azure-gpt4o-mini"} in GovCloud.
+without changing call sites. The default config maps the three Anthropic grade
+names to same-grade Codex models; one environment override reverses the cutover.
 
 Free-tier models are prioritized in the registry ordering for UI display.
 """
@@ -227,19 +229,21 @@ MODEL_REGISTRY: MappingProxyType[str, ModelInfo] = MappingProxyType({
 # No default — user must always select a model explicitly
 DEFAULT_MODEL: str | None = None
 
-# ── Cross-provider fallback (Anthropic-subscription-lapse insurance) ──
-# The Claude subscription can lapse while the OpenAI subscription persists
-# (decision 2026-07-17). Each Anthropic tier maps to the same-grade Codex
-# tier — matched on the provider's own positioning AND API-equivalent price,
-# not vibes: opus $5/$25 ↔ sol $5/$30 (frontier), sonnet $3/$15 ↔ terra
-# $2.50/$15 (balanced), haiku $1/$5 ↔ luna $1/$6 (fast). Effort levels map
-# 1:1 (both speak low/medium/high). A chain is consulted ONLY when the
-# primary provider is unavailable or fails with a lapse-shaped error —
-# normal operation never routes around Anthropic.
+# ── Cross-provider same-grade fallback ──
+# Codex is primary by default through LLM_MODEL_ALIASES; Anthropic remains the
+# reverse-role fallback while its subscription is available. The bidirectional
+# crosswalk also preserves the single-setting rollback: LLM_MODEL_ALIASES={}
+# makes Anthropic primary and Codex fallback again. Grades are matched on the
+# providers' positioning and API-equivalent price, not vibes:
+# opus $5/$25 ↔ sol $5/$30, sonnet $3/$15 ↔ terra $2.50/$15,
+# haiku $1/$5 ↔ luna $1/$6. Effort maps 1:1.
 FALLBACK_CHAINS: MappingProxyType[str, tuple[str, ...]] = MappingProxyType({
     "opus": ("codex-sol",),
     "sonnet": ("codex-terra",),
     "haiku": ("codex-luna",),
+    "codex-sol": ("opus",),
+    "codex-terra": ("sonnet",),
+    "codex-luna": ("haiku",),
 })
 
 # Error signatures that mean "the provider is lapsed/locked, not the request
@@ -278,6 +282,8 @@ def get_available_models() -> list[dict]:
     result = []
     for name, info in MODEL_REGISTRY.items():
         if _provider_available(info.provider):
+            effective = _resolve_alias(name)
+            effective_info = MODEL_REGISTRY.get(effective, info)
             result.append({
                 "display_name": info.display_name,
                 "provider": info.provider,
@@ -286,7 +292,15 @@ def get_available_models() -> list[dict]:
                 "input_price": info.input_price,
                 "output_price": info.output_price,
                 "context_window_tokens": info.context_window_tokens,
+                # Keep aliases observable: callers may still send a legacy
+                # grade name, but the roster must disclose what will serve it.
+                "effective_model": effective,
+                "effective_provider": effective_info.provider,
+                "is_primary": info.provider == "openai_codex",
             })
+    # Product surfaces select the first model as their fallback/default.
+    # Put the active primary provider first without mutating registry order.
+    result.sort(key=lambda row: (not row["is_primary"], row["display_name"]))
     assert isinstance(result, list), "result must be a list"
     return result
 
@@ -458,8 +472,9 @@ async def _codex_chat(
     flag, so the system prompt is framed into the stdin payload — Corvus
     system prompts are task protocols (judge/classify envelopes), and the
     framing survives them. NOTE: the codex base agent context costs ~13k
-    input tokens per call (measured 2026-07-17, mostly cache-served) — this
-    provider is the lapse fallback, not a cost-optimized primary."""
+    input tokens per call (measured 2026-07-17, mostly cache-served);
+    model-usage telemetry keeps that overhead visible now that this is the
+    primary provider."""
     assert len(user_message.strip()) > 0, "user_message must be non-empty"
 
     effort = effort_var.get() or settings.default_effort
@@ -782,10 +797,11 @@ async def llm_chat(
     this call only — the per-workload quality dial (e.g. the janitor's
     sonnet@low pair judge).
 
-    Fallback: if the model's provider is unavailable, cooling down after a
-    lapse-shaped failure, or fails THIS call with a lapse-shaped error
-    (auth/quota/billing), the same-grade FALLBACK_CHAINS entry is tried —
-    e.g. sonnet -> codex-terra on the OpenAI subscription. Request-shaped
+    Fallback: if the effective model's provider is unavailable, cooling down
+    after a lapse-shaped failure, or fails THIS call with a lapse-shaped error
+    (auth/quota/billing), the same-grade FALLBACK_CHAINS entry is tried.
+    With the default aliases that means codex-terra -> sonnet; with
+    LLM_MODEL_ALIASES={} it becomes sonnet -> codex-terra. Request-shaped
     errors re-raise immediately; they never hop providers.
     """
     assert model is not None, "model must be specified — no default model selection"

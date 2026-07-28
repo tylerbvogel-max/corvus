@@ -10,6 +10,8 @@
     "demo:capture": "node scripts/capture-demo-fixtures.mjs",
     "demo:check": "node scripts/check-demo.mjs",
     "demo:publish": "npm run demo:capture && npm run demo:check && npm run build:demo && playwright test",
+    "verify:carlos-lab": "node scripts/verify-carlos-lab.mjs",
+    "verify:neuron-zones": "node scripts/verify-neuron-zones.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

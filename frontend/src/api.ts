@@ -78,6 +78,9 @@ export interface ModelOption {
   input_price: number;
   output_price: number;
   context_window_tokens: number;
+  effective_model?: string;
+  effective_provider?: string;
+  is_primary?: boolean;
 }
 
 export function fetchAvailableModels(): Promise<ModelOption[]> {
@@ -452,17 +455,120 @@ export interface Graph3DNode {
   node_type: string; abstraction_type: string | null;
   role_key: string | null; invocations: number;
   avg_utility: number; centrality: number; parent_id: number | null;
+  summary: string | null;
+  entities: string[];
+  authority_level: string | null;
+  created_at: string | null;
+  last_verified: string | null;
+  health_state: 'contested' | 'stale' | 'low-confidence' | 'reinforced' | 'quiet' | 'current';
+  health_reason: string;
 }
 export interface Graph3DEdge {
   source: number; target: number; weight: number; co_fire_count: number;
   edge_type: string;
+  activity_1d: number;
+  activity_7d: number;
+  activity_30d: number;
+  activity_all: number;
 }
-export interface Graph3DResponse { neurons: Graph3DNode[]; edges: Graph3DEdge[]; }
+export interface Graph3DReplaySegment {
+  source: number;
+  target: number;
+  weight: number;
+  kind: 'coactivation' | 'spread';
+  source_rank: number;
+  target_rank: number;
+}
+export interface Graph3DReplayTrace {
+  query_id: number;
+  created_at: string | null;
+  query_preview: string;
+  neuron_count: number;
+  spread_derived: boolean;
+  firings: Array<{
+    neuron_id: number;
+    rank: number;
+    score: number;
+    spread_boost: number;
+  }>;
+  segments: Graph3DReplaySegment[];
+}
+export interface Graph3DReplayPayload {
+  basis: string;
+  sampled_from: number;
+  traces: Graph3DReplayTrace[];
+}
+export interface Graph3DResponse {
+  neurons: Graph3DNode[];
+  edges: Graph3DEdge[];
+  replays?: Graph3DReplayPayload;
+}
 
-export function fetchGraph3D(minWeight = 0.25, maxEdges = 12000, perNode = 3): Promise<Graph3DResponse> {
+export function fetchGraph3D(
+  minWeight = 0.25,
+  maxEdges = 12000,
+  perNode = 3,
+  replayLimit = 0,
+): Promise<Graph3DResponse> {
   return json<Graph3DResponse>(
-    `/neurons/graph-3d?min_weight=${minWeight}&max_edges=${maxEdges}&per_node=${perNode}`,
+    `/neurons/graph-3d?min_weight=${minWeight}&max_edges=${maxEdges}&per_node=${perNode}&replay_limit=${replayLimit}`,
   );
+}
+
+export interface SemanticCluster {
+  cluster_id: number;
+  neuron_ids: number[];
+  member_count?: number;
+  departments: string[];
+  avg_internal_weight: number;
+  suggested_label: string;
+  representative_labels?: string[];
+}
+
+export interface SemanticClustersResponse {
+  cluster_count: number;
+  clusters: SemanticCluster[];
+}
+
+export function fetchSemanticClusters(
+  minWeight = 0.3,
+  minSize = 3,
+  minDepartments = 2,
+  resolution = 1,
+): Promise<SemanticClustersResponse> {
+  return json<SemanticClustersResponse>(
+    `/neurons/clusters?min_weight=${minWeight}&min_size=${minSize}` +
+    `&min_departments=${minDepartments}&resolution=${resolution}`,
+  );
+}
+
+export interface OracleFunnelStage {
+  count: number;
+  pct: number;
+}
+
+export interface OracleFunnelLedger {
+  n_funneled: number;
+  stages: Record<string, OracleFunnelStage>;
+  per_category: Record<string, Record<string, number>>;
+  headline: string;
+}
+
+export interface OracleFunnelArtifact {
+  available: boolean;
+  artifact_root: string;
+  artifact_path?: string;
+  run?: string;
+  condition?: string;
+  modified_at?: number;
+  ledger?: OracleFunnelLedger;
+  sample_rows?: Array<Record<string, unknown>>;
+  row_count?: number;
+  note?: string;
+}
+
+export function fetchLatestOracleFunnel(): Promise<OracleFunnelArtifact> {
+  return json<OracleFunnelArtifact>('/admin/labs/oracle-funnel');
 }
 
 export function fetchCostReport(): Promise<CostReport> {

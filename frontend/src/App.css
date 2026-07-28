@@ -195,8 +195,465 @@ body {
   opacity: 0.76;
   mix-blend-mode: screen;
 }
-.desktop-neuron-layer .neuron-control-row input[type='range'] { width: 100%; }
-
+.neuron-radar-controls { display: grid; gap: 9px; }
+.neuron-search {
+  position: relative;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  min-height: 34px;
+  margin-bottom: 8px;
+  padding: 0 8px;
+  border: 1px solid rgba(126, 158, 202, 0.24);
+  border-radius: 9px;
+  background: rgba(4, 8, 15, 0.78);
+  color: #79efff;
+}
+.neuron-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e8edf7;
+  font: 600 11px/1.2 system-ui, sans-serif;
+}
+.neuron-search input::placeholder { color: #667286; }
+.neuron-search > button {
+  border: 0;
+  background: transparent;
+  color: #7f8a9e;
+  cursor: pointer;
+  font-size: 15px;
+}
+.neuron-search-results {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid rgba(121, 239, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(7, 12, 20, 0.98);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.42);
+}
+.neuron-search-results button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #dfe8f6;
+  text-align: left;
+  cursor: pointer;
+}
+.neuron-search-results button:hover,
+.neuron-search-results button:focus-visible {
+  outline: 0;
+  background: rgba(83, 216, 251, 0.11);
+}
+.neuron-search-results span {
+  overflow: hidden;
+  font: 650 11px/1.2 system-ui, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.neuron-search-results small,
+.neuron-search-empty {
+  color: #778397;
+  font: 600 9px/1.2 ui-monospace, monospace;
+  text-transform: capitalize;
+}
+.neuron-search-empty { padding: 10px 8px; text-align: center; }
+.neuron-lens-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  margin-bottom: 8px;
+}
+.neuron-lens-tabs button,
+.neuron-time-window button {
+  border: 1px solid rgba(126, 158, 202, 0.18);
+  border-radius: 7px;
+  padding: 6px 4px;
+  background: rgba(4, 8, 15, 0.58);
+  color: #758196;
+  cursor: pointer;
+  font: 700 9px/1 ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.neuron-lens-tabs button.active,
+.neuron-time-window button.active {
+  border-color: rgba(121, 239, 255, 0.4);
+  background: rgba(83, 216, 251, 0.13);
+  color: #e8faff;
+  box-shadow: 0 0 12px rgba(83, 216, 251, 0.08);
+}
+.neuron-lens-drawer {
+  display: grid;
+  gap: 8px;
+  max-height: 268px;
+  margin-bottom: 8px;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid rgba(126, 158, 202, 0.2);
+  border-radius: 10px;
+  background: rgba(5, 10, 18, 0.7);
+}
+.neuron-time-window {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+.neuron-lens-summary,
+.neuron-trace-detail time {
+  color: #7f8a9e;
+  font: 600 9px/1.35 ui-monospace, monospace;
+}
+.neuron-trace-list { display: grid; gap: 3px; }
+.neuron-trace-list > button {
+  display: grid;
+  gap: 3px;
+  padding: 7px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(83, 216, 251, 0.045);
+  color: #dce7f5;
+  text-align: left;
+  cursor: pointer;
+}
+.neuron-trace-list > button:hover { background: rgba(83, 216, 251, 0.11); }
+.neuron-trace-list > button span {
+  overflow: hidden;
+  font: 620 10px/1.25 system-ui, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.neuron-trace-list > button small {
+  color: #758196;
+  font: 600 9px/1.2 ui-monospace, monospace;
+}
+.neuron-lens-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #79efff;
+  font: 750 10px/1.2 ui-monospace, monospace;
+  text-transform: uppercase;
+}
+.neuron-lens-heading button {
+  border: 0;
+  background: transparent;
+  color: #7f8a9e;
+  cursor: pointer;
+}
+.neuron-trace-detail p,
+.neuron-heat-summary p,
+.neuron-health-legend p {
+  margin: 6px 0;
+  color: #aab5c7;
+  font: 500 10px/1.4 system-ui, sans-serif;
+}
+.neuron-trace-firings { display: grid; gap: 3px; margin-top: 7px; }
+.neuron-trace-firings button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #dce7f5;
+  text-align: left;
+  cursor: pointer;
+}
+.neuron-trace-firings button b { color: #79efff; font: 700 9px/1 monospace; }
+.neuron-trace-firings button span {
+  overflow: hidden;
+  font: 600 9px/1.2 system-ui, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.neuron-trace-firings button i {
+  color: #ffd166;
+  font: 700 8px/1 monospace;
+  text-transform: uppercase;
+}
+.neuron-heat-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.neuron-heat-summary > div {
+  display: grid;
+  gap: 2px;
+  padding: 7px;
+  border-radius: 6px;
+  background: rgba(83, 216, 251, 0.055);
+  color: #8491a5;
+  font: 650 8px/1.2 ui-monospace, monospace;
+  text-transform: uppercase;
+}
+.neuron-heat-summary strong { color: #e9faff; font-size: 13px; }
+.neuron-heat-summary p { grid-column: 1 / -1; }
+.neuron-health-legend { display: grid; gap: 5px; }
+.neuron-health-legend > div {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  color: #aab5c7;
+  font: 600 9px/1.2 system-ui, sans-serif;
+}
+.neuron-health-legend > div > span { width: 7px; height: 7px; border-radius: 50%; }
+.neuron-health-legend > div > b { font-weight: 600; }
+.neuron-health-legend > div > strong { color: #e8edf7; font: 700 9px/1 monospace; }
+.neuron-radar-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(126, 158, 202, 0.22);
+  border-radius: 9px;
+  background: rgba(4, 8, 15, 0.72);
+}
+.neuron-radar-mode button {
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 8px;
+  color: #7f8a9e;
+  background: transparent;
+  cursor: pointer;
+  font: 650 11px/1 system-ui, sans-serif;
+}
+.neuron-radar-mode button.active {
+  color: #eef4ff;
+  background: linear-gradient(135deg, rgba(83, 216, 251, 0.2), rgba(170, 145, 255, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(122, 191, 255, 0.32);
+}
+.neuron-radar-mode button:disabled { opacity: 0.38; cursor: not-allowed; }
+.neuron-radar-effects {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.neuron-radar-effects button {
+  position: relative;
+  padding: 7px 5px 7px 14px;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.neuron-radar-effects button::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #596477;
+  transform: translateY(-50%);
+}
+.neuron-radar-effects button.active::before {
+  background: #71dff5;
+  box-shadow: 0 0 8px rgba(83, 216, 251, 0.9);
+}
+.neuron-replay-status {
+  display: grid;
+  grid-template-columns: 7px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  color: #7f8a9e;
+  font: 650 9px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.neuron-replay-status.active { color: #c9f8ff; }
+.neuron-replay-status > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #596477;
+}
+.neuron-replay-status > span.live {
+  background: #79efff;
+  box-shadow: 0 0 8px rgba(121, 239, 255, 0.8);
+}
+.neuron-replay-status strong {
+  color: #aab5c7;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.neuron-radar-utility {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.neuron-fit-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid rgba(126, 158, 202, 0.24);
+  border-radius: 7px;
+  color: #aab5c7;
+  background: rgba(4, 8, 15, 0.68);
+  cursor: pointer;
+  font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+.neuron-fit-view:hover,
+.neuron-fit-view:focus-visible {
+  border-color: rgba(121, 239, 255, 0.52);
+  color: #dffaff;
+  background: rgba(83, 216, 251, 0.1);
+  outline: none;
+}
+.neuron-fit-view svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+.neuron-radar-frame {
+  overflow: hidden;
+  border: 1px solid rgba(126, 158, 202, 0.18);
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(42, 78, 119, 0.18), transparent 54%),
+    rgba(5, 10, 18, 0.56);
+}
+.neuron-radar {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  user-select: none;
+}
+.neuron-radar-grid {
+  fill: rgba(99, 133, 176, 0.018);
+  stroke: rgba(140, 166, 203, 0.19);
+  stroke-width: 0.8;
+}
+.neuron-radar-axis {
+  stroke: rgba(140, 166, 203, 0.2);
+  stroke-width: 0.8;
+}
+.neuron-radar-hit-axis { stroke: transparent; stroke-width: 18; cursor: pointer; }
+.neuron-radar-value {
+  fill: url("#neuron-radar-fill");
+  stroke: #71dff5;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  filter: url("#neuron-radar-glow");
+  pointer-events: none;
+}
+.neuron-radar-origin { fill: #91a4c1; opacity: 0.72; pointer-events: none; }
+.neuron-radar-label {
+  fill: #8491a5;
+  font: 650 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.neuron-radar-reading {
+  fill: #e8edf7;
+  font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
+}
+.neuron-radar-handle-halo {
+  fill: rgba(83, 216, 251, 0.1);
+  stroke: rgba(83, 216, 251, 0.16);
+  pointer-events: none;
+}
+.neuron-radar-handle {
+  fill: #dffaff;
+  stroke: #53d8fb;
+  stroke-width: 2;
+  cursor: grab;
+  outline: none;
+  filter: url("#neuron-radar-glow");
+}
+.neuron-radar-handle:active { cursor: grabbing; }
+.neuron-radar-handle:focus-visible {
+  stroke: #fff;
+  stroke-width: 3;
+}
+.neuron-health-chip {
+  margin-top: 8px;
+  padding: 5px 7px;
+  border: 1px solid rgba(120, 211, 248, 0.18);
+  border-radius: 6px;
+  color: #9aa8bb;
+  background: rgba(120, 211, 248, 0.045);
+  font: 650 9px/1.3 ui-monospace, monospace;
+  text-transform: capitalize;
+}
+.neuron-health-chip.contested { border-color: rgba(255, 92, 122, 0.35); color: #ff8ca1; }
+.neuron-health-chip.stale { border-color: rgba(255, 159, 67, 0.35); color: #ffb46f; }
+.neuron-health-chip.low-confidence { border-color: rgba(255, 209, 102, 0.35); color: #ffe19a; }
+.neuron-health-chip.reinforced { border-color: rgba(69, 223, 177, 0.35); color: #7cebc9; }
+.neuron-bridge-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid #2a3446;
+}
+.neuron-bridge-list > span {
+  color: #7f8a9e;
+  font: 700 8px/1.2 ui-monospace, monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.neuron-bridge-list button {
+  display: grid;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #dfe7f4;
+  cursor: pointer;
+  text-align: left;
+}
+.neuron-bridge-list button:hover { background: rgba(83, 216, 251, 0.1); }
+.neuron-bridge-list i { width: 6px; height: 6px; border-radius: 50%; }
+.neuron-bridge-list b {
+  overflow: hidden;
+  font: 600 9px/1.2 system-ui, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.neuron-bridge-list small {
+  color: #7f8a9e;
+  font: 650 8px/1 ui-monospace, monospace;
+  white-space: nowrap;
+}
 .desktop-brand {
   position: absolute;
   inset: 0;
@@ -7671,4 +8128,155 @@ details summary:hover { color: var(--text); }
   font-weight: 650 !important;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+}
+
+/* ── Carlos Lab: visually isolated imported experiments ─────────────── */
+.carlos-lab-nav-item {
+  border-left: 2px solid rgba(255, 79, 216, 0.68);
+  background: linear-gradient(90deg, rgba(255, 79, 216, 0.09), rgba(69, 230, 255, 0.025));
+}
+.carlos-lab {
+  --lab-magenta: #ff4fd8;
+  --lab-cyan: #45e6ff;
+  min-height: 100%;
+  color: var(--text);
+  background:
+    linear-gradient(135deg, rgba(255, 79, 216, 0.045), transparent 34%),
+    linear-gradient(315deg, rgba(69, 230, 255, 0.04), transparent 30%),
+    var(--bg);
+  border: 1px solid rgba(255, 79, 216, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(69, 230, 255, 0.08), inset 4px 0 0 rgba(255, 79, 216, 0.76);
+}
+.carlos-lab__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 18px 20px 16px 24px;
+  border-bottom: 1px solid rgba(69, 230, 255, 0.25);
+  background: repeating-linear-gradient(135deg, rgba(255, 79, 216, 0.035) 0, rgba(255, 79, 216, 0.035) 8px, transparent 8px, transparent 16px);
+}
+.carlos-lab__badge {
+  color: var(--lab-magenta);
+  font: 700 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.18em;
+}
+.carlos-lab__header h2 { margin: 5px 0 4px; font-size: 21px; letter-spacing: -0.02em; }
+.carlos-lab__header p { margin: 0; color: var(--text-dim); font-size: 12px; }
+.carlos-lab__chromosome { display: flex; gap: 5px; padding-top: 7px; }
+.carlos-lab__chromosome span {
+  width: 8px; height: 26px; border-radius: 999px; background: var(--lab-magenta);
+  box-shadow: 0 0 14px rgba(255, 79, 216, 0.65); transform: rotate(24deg);
+}
+.carlos-lab__chromosome span:nth-child(2) {
+  background: var(--lab-cyan); box-shadow: 0 0 14px rgba(69, 230, 255, 0.65); transform: rotate(-24deg);
+}
+.carlos-lab__body { padding: 16px 20px 20px 24px; }
+.carlos-lab__toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 12px; color: var(--text-dim); font-size: 11px;
+}
+.carlos-lab__toolbar button {
+  padding: 5px 9px; border: 1px solid rgba(69, 230, 255, 0.34); border-radius: 5px;
+  background: rgba(5, 11, 21, 0.72); color: var(--text); cursor: pointer; font-size: 10px;
+}
+.carlos-lab__toolbar button:hover,
+.carlos-lab__toolbar button.active {
+  border-color: var(--lab-magenta); color: #fff; box-shadow: 0 0 12px rgba(255, 79, 216, 0.18);
+}
+.carlos-lab__toolbar button.community { border-color: #a8ff60; color: #dfffbd; }
+.carlos-lab__readonly {
+  margin-right: auto; color: var(--lab-cyan);
+  font: 700 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em;
+}
+.carlos-lab__error {
+  margin: 10px 0; padding: 10px; color: #ff8ce7;
+  border: 1px solid rgba(255, 79, 216, 0.55); background: rgba(255, 79, 216, 0.08); border-radius: 6px;
+}
+.nexus-lab {
+  position: relative; min-height: 640px; overflow: hidden;
+  border: 1px solid rgba(69, 230, 255, 0.25); border-radius: 8px; background: #05070d;
+}
+.nexus-lab__canvas { position: absolute; inset: 0; display: block; cursor: grab; touch-action: none; }
+.nexus-lab__loading {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: var(--lab-cyan); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.nexus-lab__tooltip {
+  position: absolute; z-index: 2; display: grid; gap: 2px; max-width: 300px; padding: 7px 10px;
+  pointer-events: none; color: #f5f7ff; background: rgba(7, 10, 19, 0.94);
+  border: 1px solid var(--lab-magenta); border-radius: 7px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.58);
+  font-size: 11px;
+}
+.nexus-lab__tooltip span { color: #aebdd2; font-size: 9px; }
+.nexus-lab__stats {
+  display: flex; gap: 15px; flex-wrap: wrap; padding-top: 9px; color: var(--text-dim); font-size: 10px;
+}
+.nexus-lab__stats span::before { content: "●"; margin-right: 5px; color: var(--lab-cyan); }
+.nexus-detail {
+  position: fixed; z-index: 1200; inset: 0; display: grid; place-items: center;
+  padding: 20px; background: rgba(0, 0, 0, 0.68);
+}
+.nexus-detail article {
+  position: relative; width: min(660px, 100%); max-height: 80vh; overflow: auto; padding: 20px;
+  border: 1px solid var(--lab-magenta); border-radius: 9px; background: #0b101a;
+  box-shadow: 0 0 40px rgba(255, 79, 216, 0.18);
+}
+.nexus-detail article > button { float: right; }
+.nexus-detail h3 { margin: 5px 0 12px; }
+.nexus-detail small, .nexus-detail footer { color: var(--text-dim); }
+.nexus-detail__summary, .nexus-detail pre {
+  padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: rgba(69, 230, 255, 0.05); border: 1px solid rgba(69, 230, 255, 0.15); border-radius: 6px;
+}
+.funnel-empty {
+  display: grid; grid-template-columns: 70px 1fr; gap: 18px; align-items: start; padding: 24px;
+  border: 1px dashed rgba(69, 230, 255, 0.38); border-radius: 8px; background: rgba(69, 230, 255, 0.035);
+}
+.funnel-empty__mark { color: var(--lab-magenta); font: 56px/1 ui-monospace, monospace; }
+.funnel-empty h3 { margin: 0 0 6px; }
+.funnel-empty p { color: var(--text-dim); }
+.funnel-empty code {
+  display: block; padding: 9px; overflow-wrap: anywhere; color: var(--lab-cyan);
+  background: rgba(0, 0, 0, 0.32); border-radius: 5px;
+}
+.funnel-empty__honesty { margin-bottom: 0; font-size: 11px; }
+.funnel-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.funnel-meta > div {
+  display: grid; gap: 4px; padding: 10px; background: rgba(5, 11, 21, 0.66);
+  border: 1px solid rgba(69, 230, 255, 0.18); border-radius: 6px;
+}
+.funnel-meta span { color: var(--text-dim); font: 9px ui-monospace, monospace; letter-spacing: 0.1em; }
+.funnel-meta strong { overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.funnel-headline {
+  margin: 12px 0; padding: 12px; color: #fff; border-left: 3px solid var(--lab-magenta);
+  background: linear-gradient(90deg, rgba(255, 79, 216, 0.12), transparent); font-size: 13px;
+}
+.funnel-stages { display: grid; gap: 7px; }
+.funnel-stage {
+  display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 7px 14px; align-items: center;
+  padding: 9px 10px; border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(5, 11, 21, 0.54);
+}
+.funnel-stage__copy { display: grid; grid-template-columns: 82px 1fr; align-items: center; gap: 8px; }
+.funnel-stage__copy strong { font: 700 10px ui-monospace, monospace; letter-spacing: 0.07em; }
+.funnel-stage__copy span, .funnel-stage__number small { color: var(--text-dim); font-size: 10px; }
+.funnel-stage__number { font: 700 13px ui-monospace, monospace; }
+.funnel-stage__track {
+  grid-column: 1 / -1; height: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.06); border-radius: 99px;
+}
+.funnel-stage__track span { display: block; height: 100%; min-width: 0; }
+.funnel-rows { margin-top: 14px; border: 1px solid rgba(69, 230, 255, 0.18); border-radius: 6px; }
+.funnel-rows summary { padding: 10px; cursor: pointer; color: var(--lab-cyan); font-size: 11px; }
+.funnel-rows article {
+  display: grid; gap: 3px; padding: 8px 10px; border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.funnel-rows article div { display: flex; gap: 9px; }
+.funnel-rows article span {
+  color: var(--lab-magenta); font: 700 9px ui-monospace, monospace; text-transform: uppercase;
+}
+.funnel-rows article strong { font-size: 11px; }
+.funnel-rows article small { color: var(--text-dim); }
+@media (max-width: 760px) {
+  .funnel-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .funnel-stage__copy { grid-template-columns: 1fr; }
 }

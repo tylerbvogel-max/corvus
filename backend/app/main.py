@@ -826,6 +826,8 @@ from app.routers import v1
 app.include_router(v1.router)
 from app.routers import eval_runs as eval_runs_router
 app.include_router(eval_runs_router.router)
+from app.routers import labs as labs_router
+app.include_router(labs_router.router)
 # AIP Phase 4 Pattern #208: agent registry + run history surface.
 from app.routers import agents as agents_router
 app.include_router(agents_router.router)

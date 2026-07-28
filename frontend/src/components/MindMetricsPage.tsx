@@ -117,22 +117,7 @@ export default function MindMetricsPage() {
         </div>
 
         <div className="mm-card">
-          <h3>Claude subscription — live</h3>
-          {!usage ? <div className="mm-empty">loading…</div>
-            : !usage.available ? <div className="mm-empty">unavailable: {usage.reason}</div>
-            : <>
-                {usage.gauges.map((g: any) => (
-                  <UsageMeter key={g.kind} label={g.label} percent={g.percent}
-                    severity={g.severity} sub={`resets in ${resetsIn(g.resets_at)}`} />
-                ))}
-                <div className="mm-sub" style={{ marginTop: 6 }}>
-                  as of {usage.fetched_at}{usage.stale ? ' (stale)' : ''} · refreshes every 60s
-                </div>
-              </>}
-        </div>
-
-        <div className="mm-card">
-          <h3>Codex subscription — live</h3>
+          <h3>Codex subscription — primary</h3>
           {!codexUsage ? <div className="mm-empty">loading…</div>
             : !codexUsage.available ? <div className="mm-empty">unavailable: {codexUsage.reason}</div>
             : <>
@@ -148,6 +133,21 @@ export default function MindMetricsPage() {
                 <div className="mm-sub" style={{ marginTop: 6 }}>
                   {codexUsage.plan_type ?? 'unknown plan'} · {codexUsage.source} · as of {codexUsage.fetched_at}
                   {codexUsage.stale ? ' (stale)' : ''}
+                </div>
+              </>}
+        </div>
+
+        <div className="mm-card">
+          <h3>Claude subscription — fallback</h3>
+          {!usage ? <div className="mm-empty">loading…</div>
+            : !usage.available ? <div className="mm-empty">unavailable: {usage.reason}</div>
+            : <>
+                {usage.gauges.map((g: any) => (
+                  <UsageMeter key={g.kind} label={g.label} percent={g.percent}
+                    severity={g.severity} sub={`resets in ${resetsIn(g.resets_at)}`} />
+                ))}
+                <div className="mm-sub" style={{ marginTop: 6 }}>
+                  as of {usage.fetched_at}{usage.stale ? ' (stale)' : ''} · refreshes every 60s
                 </div>
               </>}
         </div>

@@ -21,8 +21,14 @@ class Settings(BaseSettings):
     azure_openai_deployment_gpt4o: str = ""
     azure_openai_deployment_gpt4o_mini: str = ""
     azure_openai_deployment_o1: str = ""
-    # Model alias map (JSON): e.g. {"haiku":"azure-gpt4o-mini","sonnet":"azure-gpt4o"}
-    llm_model_aliases: str = ""
+    # Model alias map (JSON). Codex is the default primary provider as of the
+    # 2026-07 provider swap-over; Anthropic remains the same-grade fallback
+    # while available. This is the single rollback dial: set
+    # LLM_MODEL_ALIASES={} to restore direct Anthropic routing, or replace it
+    # with an environment-specific map (for example GovCloud Azure).
+    llm_model_aliases: str = (
+        '{"haiku":"codex-luna","sonnet":"codex-terra","opus":"codex-sol"}'
+    )
     # RBAC (disabled by default for backward compat)
     rbac_mode: str = "disabled"  # "disabled" | "header" | "azure_ad"
     rbac_azure_tenant_id: str = ""
