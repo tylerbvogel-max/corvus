@@ -28,7 +28,7 @@ import re
 from datetime import datetime, timezone
 
 import numpy as np
-from sqlalchemy import select
+from sqlalchemy import func as sa_func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron
@@ -82,31 +82,63 @@ def _charter_line(n: Neuron) -> str:
     return f"- [{n.department or 'global'}] {n.label}: {summary[:180]}{verified}"
 
 
+def _apply_charter_entry(manifest: list[dict], charter: dict) -> list[dict]:
+    """Swap in the freshly compiled charter entry.
+
+    A skipped compile (no delivery verdicts yet) must LEAVE the existing
+    entry alone: dropping it would strip the capsule's source ids and
+    silently kill charter attribution while the capsule kept injecting
+    from disk."""
+    if charter.get("skipped"):
+        return manifest
+    rest = [m for m in manifest if m["name"] != CHARTER_NAME]
+    if not charter.get("path"):
+        return rest
+    return rest + [{
+        "name": CHARTER_NAME, "sources": charter["sources"],
+        "source_labels": charter.get("source_labels", []),
+        "designated": True, "path": charter["path"],
+        "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }]
+
+
 async def compile_charter(db: AsyncSession) -> dict:
-    """W1 presence layer: render every guidance+ lesson as a one-line rule
+    """W1 presence layer: render every STANDING lesson as a one-line rule
     into the designated mind-charter capsule, which the memory hook injects
     WHOLE at SessionStart. Policy is never retrieved — it is always present.
     (Native-memory parity: a MEMORY.md-style index, but membership is EARNED
-    via attribution-driven authority promotion and re-audited every cycle,
-    which a hand-written index cannot do.) Deterministic render, no LLM."""
+    via attribution-driven authority promotion plus a re-audited delivery
+    verdict, which a hand-written index cannot do.) Deterministic render,
+    no LLM — the delivery judgment happens in the janitor cycle, not here.
+
+    Charter-tier authority is now necessary but NOT sufficient: a fact can
+    be completely trusted and still belong in the retrieved channel (see
+    delivery_mode). Neurons that have never been judged are excluded — an
+    unreviewed fact must not buy unconditional injection by default."""
     # IDENTITY WALL (mind-reference-class): the charter is always-present
     # identity — reference-class (document-ingested) neurons are excluded
     # on every axis even if mislabeled or somehow holding charter-tier
     # authority. A PDF can never become standing policy without the
     # human-countersigned graduation path.
-    from app.services.reference_class import reference_exclusion_filters
+    from app.services.delivery_mode import STANDING, charter_eligible_filters
+    eligible = charter_eligible_filters()
     rows = (await db.execute(
         select(Neuron).where(
-            Neuron.is_active.is_(True),
-            Neuron.node_type.in_(LESSON_TYPES),
-            Neuron.superseded_by.is_(None),
-            Neuron.authority_level.in_(CHARTER_TIERS),
-            # Identity is delivered by the designated self-model capsule;
-            # rendering Assistant lessons here would double-inject them.
-            Neuron.department != "Assistant",
-            *reference_exclusion_filters(),
+            *eligible, Neuron.delivery_mode == STANDING,
         ).order_by(Neuron.avg_utility.desc(), Neuron.id)
     )).scalars().all()
+    # SAFETY: an empty verdict set means the classifier has not run (or
+    # failed) — that is not evidence that no policy exists, so leave the
+    # existing charter standing rather than shipping a blank one.
+    if not rows:
+        judged = (await db.execute(
+            select(sa_func.count(Neuron.id)).where(
+                *eligible, Neuron.delivery_mode.is_not(None))
+        )).scalar() or 0
+        if not judged:
+            _log_action("compiler.charter_unclassified", {"candidates": 0})
+            return {"included": 0, "candidates": 0, "path": None,
+                    "skipped": "no delivery verdicts yet"}
     lines: list[str] = []
     included: list[int] = []
     size = 0
@@ -446,14 +478,7 @@ async def refresh_projections_after_reconsolidation(
         (m for m in manifest if m.get("name") == CHARTER_NAME), None)
     if charter_entry is None or retired & set(charter_entry.get("sources", [])):
         charter = await compile_charter(db)
-        manifest = [m for m in manifest if m["name"] != CHARTER_NAME]
-        if charter.get("path"):
-            manifest.append({
-                "name": CHARTER_NAME, "sources": charter["sources"],
-                "source_labels": charter.get("source_labels", []),
-                "designated": True, "path": charter["path"],
-                "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            })
+        manifest = _apply_charter_entry(manifest, charter)
     _save_manifest(manifest)
     stale_left = [
         m["name"] for m in manifest
@@ -515,14 +540,7 @@ async def run_compile(db: AsyncSession) -> dict:
         _log_action("compiler.emit", {
             "skill": skill["name"], "sources": sorted(ids)})
     charter = await compile_charter(db)
-    manifest = [m for m in manifest if m["name"] != CHARTER_NAME]
-    if charter.get("path"):
-        manifest.append({
-            "name": CHARTER_NAME, "sources": charter["sources"],
-            "source_labels": charter["source_labels"],
-            "designated": True, "path": charter["path"],
-            "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        })
+    manifest = _apply_charter_entry(manifest, charter)
     await _self_model_growth_check(db, manifest)
     await db.commit()
     _save_manifest(manifest)

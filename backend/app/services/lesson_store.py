@@ -86,19 +86,71 @@ async def get_or_create_project_node(
     return node
 
 
+def _lesson_content(
+    *, lesson: str, evidence: str, node_type: str,
+    abstraction_type: str | None, entities: list[str] | None,
+    frame_fields: dict[str, str | None],
+) -> str:
+    """The neuron body: an evidence frame for durable memory classes.
+
+    mind-neuron-evidence-frame — a lesson used to be
+    "<prose>\\n\\nEvidence: <prose>", which is exactly the shape Step 06
+    found could be topically right and still unable to reconstruct an
+    answer. Durable classes now build the canonical nine-slot frame and
+    fail closed here, at the composer, rather than at the Action Bus:
+    a caller that cannot say why a fact will be needed or how it would be
+    asked for has not finished writing the memory.
+
+    `future_use` and `likely_queries` have no honest default and are
+    therefore genuinely required. `time_scope`, `context`, `confidence`
+    and `volatility` fall back to their conservative markers (unknown /
+    uncertain), which are truthful admissions rather than claims — an
+    unset volatility must never read as "stable", because the staleness
+    gate gives stable facts protection they would not have earned.
+    """
+    from app.services.evidence_frame import (
+        build_frame, enforcement_enabled, is_framed, requires_frame,
+    )
+    if not (requires_frame(node_type, abstraction_type)
+            and enforcement_enabled()):
+        return f"{lesson.strip()}\n\nEvidence: {evidence.strip()}"
+    # Already a frame (capsule import from a framed graph): keep the
+    # author's slots verbatim. Re-deriving them here would either nest a
+    # frame inside its own Claim slot or invent slots the source never
+    # asserted — both worse than transporting what was actually written.
+    if is_framed(lesson):
+        return lesson.strip()
+    return build_frame(
+        claim=lesson.strip(),
+        evidence=evidence.strip(),
+        entities=", ".join(entities) if entities else "none",
+        time_scope=frame_fields.get("time_scope") or "unknown",
+        context=frame_fields.get("context") or "unknown",
+        future_use=(frame_fields.get("future_use") or "").strip(),
+        likely_queries=(frame_fields.get("likely_queries") or "").strip(),
+        confidence=frame_fields.get("confidence") or "medium",
+        volatility=frame_fields.get("volatility") or "uncertain",
+    )
+
+
 def _lesson_spec(
     *, lesson: str, evidence: str, label: str, scope: str | None,
     node_type: str, abstraction_type: str | None, summary: str | None,
     authority_level: str, source_origin: str,
     parent_id: int | None, role_key: str | None, anchor_layer: int | None,
     entities: list[str] | None = None,
+    frame_fields: dict[str, str | None] | None = None,
 ) -> dict:
     """Neuron spec for a lesson; evidence rides content + citation."""
     from app.services.recall_lanes import normalize_entities
     assert lesson.strip(), "lesson must be non-empty"
     assert evidence.strip(), "evidence must be non-empty"
-    content = f"{lesson.strip()}\n\nEvidence: {evidence.strip()}"
     norm_entities = normalize_entities(entities)
+    content = _lesson_content(
+        lesson=lesson, evidence=evidence, node_type=node_type,
+        abstraction_type=abstraction_type, entities=norm_entities,
+        frame_fields=frame_fields or {},
+    )
     return {
         **({"entities": norm_entities} if norm_entities else {}),
         # layer = tree depth (anchor + 1); unanchored saves sit at 3
@@ -172,7 +224,15 @@ async def _nearest_active_lesson(db: AsyncSession, spec: dict) -> dict | None:
     from app.services.mind_lint import NEAR_MISS_SIM, lexical_high
     from app.services.reconsolidation.fingerprints import nominates
 
-    text = f"{spec['label']}. {spec.get('summary') or ''} {spec.get('content') or ''}"
+    # Must use the canonical recipe: _load_lessons returns vectors stored
+    # by embedding_input, and since that recipe became frame-aware a
+    # hand-rolled string here would embed the candidate's frame headings
+    # while comparing against boilerplate-free neighbours — a cosine
+    # comparison across two different spaces, silently mis-scoring the
+    # near-dup gate.
+    from app.services.reconsolidation.inheritance import embedding_input
+    text = embedding_input(
+        spec["label"], spec.get("summary"), spec.get("content"))
     loop = asyncio.get_running_loop()
     vec = np.array(await loop.run_in_executor(None, embed_text, text[:2000]),
                    dtype=np.float64)
@@ -244,8 +304,17 @@ async def save_lesson(
     authority_level: str = "informational", source_origin: str = "remember_api",
     gap_source: str = "remember_api", project: str | None = None,
     entities: list[str] | None = None,
+    time_scope: str | None = None, context: str | None = None,
+    future_use: str | None = None, likely_queries: str | None = None,
+    confidence: str | None = None, volatility: str | None = None,
 ) -> dict:
-    """Stage a lesson save and route it through the write gate. Commits."""
+    """Stage a lesson save and route it through the write gate. Commits.
+
+    The trailing six arguments are evidence-frame slots
+    (mind-neuron-evidence-frame). For durable memory classes they are not
+    decoration: `future_use` and `likely_queries` are required, and the
+    save raises EvidenceFrameError without them.
+    """
     # Scopes are region tags; casefold to the canonical spelling so
     # "assistant" and "Assistant" never split the corpus-by-scope counts.
     if scope:
@@ -272,6 +341,11 @@ async def save_lesson(
         summary=summary, authority_level=authority_level,
         source_origin=source_origin, parent_id=parent_id, role_key=role_key,
         anchor_layer=anchor_layer, entities=entities,
+        frame_fields={
+            "time_scope": time_scope, "context": context,
+            "future_use": future_use, "likely_queries": likely_queries,
+            "confidence": confidence, "volatility": volatility,
+        },
     )
     item = ProposalItem(
         proposal_id=proposal.id, action="create",

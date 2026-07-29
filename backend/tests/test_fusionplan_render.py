@@ -18,6 +18,8 @@ os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 import pytest
 
+from tests.golden_frames import GOLDEN_NVM_CONTENT, TWO_MEMBER_NVM_CONTENT
+
 from app.models import Neuron
 from app.services.reconsolidation import review as rv
 from app.services.reconsolidation.inheritance import (
@@ -78,13 +80,7 @@ def _golden_packet() -> dict:
         "proposed_summary": "Source ~/.config/nvm/nvm.sh and run `nvm use "
                             "22.22.0` before project Node tooling; machine "
                             "convention, not a repo-enforced pin.",
-        "proposed_content": "NVM lives at ~/.config/nvm/nvm.sh. Explicitly "
-                            "`source ~/.config/nvm/nvm.sh && nvm use "
-                            "22.22.0` before Node tooling for the corvus "
-                            "frontend, master-corvus, and "
-                            "Market-Analytics-Suite. This is a machine "
-                            "convention; repos may lack .nvmrc or engines "
-                            "enforcement.",
+        "proposed_content": GOLDEN_NVM_CONTENT,
         "proposed_scope": "Environment",
     }
 
@@ -285,8 +281,7 @@ class TestRetainCanonical:
                         "evidence_member_ids": [1, 2]}],
             "proposed_label": "nvm activation",
             "proposed_summary": "nvm use 22.22.0",
-            "proposed_content": "source ~/.config/nvm/nvm.sh && "
-                                "nvm use 22.22.0",
+            "proposed_content": TWO_MEMBER_NVM_CONTENT,
             "proposed_scope": "Environment",
         }
         plan = rv.assemble_plan([a, b], packet, None, None)

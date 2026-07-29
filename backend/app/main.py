@@ -123,6 +123,16 @@ async def _migrate_neuron_and_query_columns(engine):
                     "ALTER TABLE neurons ADD COLUMN authority_level VARCHAR(30)"
                 ))
                 print("Migrated: added neurons.authority_level")
+            for column, ddl in (
+                ("delivery_mode", "VARCHAR(20)"),
+                ("delivery_reason", "VARCHAR(400)"),
+                ("delivery_judged_at", "TIMESTAMP"),
+            ):
+                if not await _column_exists(conn, "neurons", column):
+                    await conn.execute(text(
+                        f"ALTER TABLE neurons ADD COLUMN {column} {ddl}"
+                    ))
+                    print(f"Migrated: added neurons.{column}")
             if not await _column_exists(conn, "neurons", "entities"):
                 await conn.execute(text(
                     "ALTER TABLE neurons ADD COLUMN entities JSONB"

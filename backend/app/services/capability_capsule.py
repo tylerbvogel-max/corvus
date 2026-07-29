@@ -242,6 +242,7 @@ async def import_capsule(db: AsyncSession, capsule: dict[str, Any], *,
     informational lessons and must earn or receive countersigned promotion by
     the existing janitor/review machinery.
     """
+    from app.services.evidence_frame import EvidenceFrameError
     from app.services.lesson_store import save_lesson
 
     existing = await local_memory_ids(db)
@@ -260,15 +261,26 @@ async def import_capsule(db: AsyncSession, capsule: dict[str, Any], *,
         if item.get("portability_scope") in ("machine", "harness"):
             applied.append({"memory_id": item.get("memory_id"), "status": "withheld-embodiment"})
             continue
-        result = await save_lesson(
-            db, lesson=(item.get("content") or item.get("summary") or "").strip(),
-            evidence=f"Capability Capsule {digest}; source neuron {item.get('source_neuron_id')}",
-            label=str(item.get("label") or "Imported memory")[:200],
-            scope=item.get("region"), node_type=item.get("kind") or "lesson",
-            abstraction_type="principle", summary=item.get("summary"),
-            authority_level="informational", project=item.get("project"),
-            source_origin="capability_capsule",
-        )
+        # EVIDENCE FRAME (mind-neuron-evidence-frame): a capsule from a
+        # framed graph transports its frames intact. A capsule from a
+        # legacy graph carries prose we cannot frame without inventing the
+        # slots the original author never wrote — so it is withheld and
+        # reported, never silently imported as an unframed durable memory.
+        try:
+            result = await save_lesson(
+                db, lesson=(item.get("content") or item.get("summary") or "").strip(),
+                evidence=f"Capability Capsule {digest}; source neuron {item.get('source_neuron_id')}",
+                label=str(item.get("label") or "Imported memory")[:200],
+                scope=item.get("region"), node_type=item.get("kind") or "lesson",
+                abstraction_type="principle", summary=item.get("summary"),
+                authority_level="informational", project=item.get("project"),
+                source_origin="capability_capsule",
+            )
+        except EvidenceFrameError as exc:
+            applied.append({"memory_id": item.get("memory_id"),
+                            "status": "withheld-unframed",
+                            "violations": exc.errors})
+            continue
         applied.append({"memory_id": item.get("memory_id"), "status": "gated", "result": result})
     plan["applied"] = applied
     return plan

@@ -66,9 +66,21 @@ async def handle_neuron_create(
     action_row: Action,
 ) -> dict[str, Any]:
     """Create a Neuron + NeuronRefinement(create), optionally back-fill ProposalItem."""
+    from app.services.evidence_frame import enforce as enforce_frame
     from app.services.reference_hooks import populate_external_references
 
     spec = payload.spec
+    # FAIL CLOSED (mind-neuron-evidence-frame): every durable memory enters
+    # the graph through this action, so this is the one place that has to
+    # hold. Structural scaffolding is exempt by classification inside
+    # enforce(); there is no per-write bypass.
+    node_type = spec.get("node_type", "knowledge")
+    enforce_frame(
+        spec.get("content"), node_type=node_type,
+        abstraction_type=spec.get("abstraction_type")
+        or ABSTRACTION_BY_NODE_TYPE.get(node_type),
+        where="neuron.create",
+    )
     neuron = _build_neuron_from_spec(spec, payload.item_id, payload.total_queries)
     populate_external_references(neuron)
     db.add(neuron)

@@ -166,6 +166,13 @@ class Settings(BaseSettings):
     # countersigns. Set false to restore silent auto-fusing (not recommended:
     # memory integrity outranks janitor throughput).
     mind_dedup_requires_approval: bool = True
+    # Durable memories must be written as evidence frames
+    # (mind-neuron-evidence-frame); malformed construction fails closed at
+    # the Action Bus. This switch exists to produce the LoCoMo control arm
+    # the record requires — old-style vs framed construction on a fixed
+    # subset. It is NOT an operator convenience: turning it off on a real
+    # tenant reopens the unstructured-content failure mode Step 06 traced.
+    mind_evidence_frame_enforced: bool = True
     genesis_mode: bool = True
     genesis_mature_corpus: int = 2000  # guessed constant — revisit with data
     genesis_floor: float = 0.5  # never loosen a gate below 50% of configured

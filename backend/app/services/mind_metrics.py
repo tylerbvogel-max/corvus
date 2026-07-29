@@ -204,10 +204,12 @@ async def injection_metrics() -> dict:
                             per_lesson[label] = per_lesson.get(label, 0) + 1
             except OSError:
                 continue
+    from app.services.injection_channel import standing_volume
     top = sorted(per_lesson.items(), key=lambda kv: -kv[1])[:TOP_N]
     return {"events": total, "sessions_with_injections": len(sessions_with),
             "distinct_lessons_injected": len(per_lesson),
-            "top_injected": [{"label": k, "count": v} for k, v in top]}
+            "top_injected": [{"label": k, "count": v} for k, v in top],
+            "volume_by_channel": standing_volume()}
 
 
 def sessions_report() -> list[dict]:

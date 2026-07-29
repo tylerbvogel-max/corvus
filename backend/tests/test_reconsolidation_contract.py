@@ -25,6 +25,8 @@ os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 import pytest
 
+from tests.golden_frames import framed
+
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "nvm_incident"
 CORE = {47, 51, 57, 177, 1151, 1161}
 CONDUCTING = {"pyramidal", "stellate"}
@@ -171,9 +173,19 @@ class TestClosedGaps:
         db.get = AsyncMock(return_value=neuron)
         db.flush = AsyncMock()
         db.add = MagicMock(side_effect=lambda obj: setattr(obj, "id", 999))
+        # The rewritten body must be a frame: neuron.refine enforces the
+        # touched-neuron rule (mind-neuron-evidence-frame), so a content
+        # rewrite that leaves the neuron unframed is refused outright.
         payload = NeuronRefineInput(
             target_neuron_id=57, field="content",
-            old_value="old fact", new_value="entirely rewritten canonical fact",
+            old_value="old fact",
+            new_value=framed(
+                "entirely rewritten canonical fact",
+                context="corrected — replaces the earlier imprecise statement.",
+                evidence="session:test-refine; canonical rewrite under #1099.",
+                future_use="A future agent needs the corrected fact, not the stale one.",
+                likely_queries="What is the canonical fact here?",
+            ),
         )
         cache = AsyncMock()
         embedding_module = ModuleType("app.services.embedding_service")
@@ -200,7 +212,7 @@ class TestClosedGaps:
             )
         assert result["audit"]["refinement_id"] == 999
         assert result["audit"]["embedding_regenerated"] is True
-        assert neuron.content == "entirely rewritten canonical fact"
+        assert "Claim: entirely rewritten canonical fact" in neuron.content
         assert neuron.embedding == json.dumps(fresh)  # new text, NEW vector
         # Regenerated from the FINAL text (label. summary content recipe).
         embedded_text = embedding_module.embed_text.call_args[0][0]

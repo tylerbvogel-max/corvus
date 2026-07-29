@@ -92,6 +92,17 @@ class Neuron(Base):
     embedding: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Denormalized from highest-authority linked source document
     authority_level: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # DELIVERY AXIS (mind-charter-composition), independent of authority.
+    # authority_level says how much the graph TRUSTS a claim; this says
+    # how it is DELIVERED. They are unrelated properties: "the DB is named
+    # corvus_mind" can be completely certain and still have no business
+    # being injected into every session forever. NULL = not yet judged;
+    # only an explicit "standing" verdict buys unconditional injection,
+    # so a newly promoted fact cannot silently join the charter.
+    delivery_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    delivery_reason: Mapped[str | None] = mapped_column(String(400), nullable=True)
+    delivery_judged_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime, nullable=True)
     # Reverse link to the proposal item that created this neuron (if any)
     proposal_item_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("proposal_items.id"), nullable=True)
 

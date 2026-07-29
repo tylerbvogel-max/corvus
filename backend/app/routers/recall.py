@@ -61,6 +61,18 @@ class RememberRequest(BaseModel):
     summary: str | None = Field(default=None, max_length=500)
     authority_level: str = Field(default="informational", max_length=30)
     project: str | None = Field(default=None, max_length=100)
+    entities: list[str] | None = Field(default=None, max_length=50)
+    # Evidence-frame slots (mind-neuron-evidence-frame). For durable memory
+    # classes future_use and likely_queries are REQUIRED — a save without
+    # them is rejected with the missing slots named, because a memory that
+    # cannot say why it will be needed or how it would be asked for is the
+    # exact shape Step 06 found unable to reconstruct an answer.
+    time_scope: str | None = Field(default=None, max_length=200)
+    context: str | None = Field(default=None, max_length=2000)
+    future_use: str | None = Field(default=None, max_length=1000)
+    likely_queries: str | None = Field(default=None, max_length=1000)
+    confidence: str | None = Field(default=None, max_length=30)
+    volatility: str | None = Field(default=None, max_length=30)
 
 
 async def _parent_projects(db: AsyncSession, ctx) -> dict:
@@ -266,10 +278,23 @@ async def remember(req: RememberRequest, db: AsyncSession = Depends(get_db)):
     """
     assert req.lesson.strip(), "lesson must be non-empty"
     assert req.evidence.strip(), "evidence must be non-empty"
-    return await save_lesson(
-        db, lesson=req.lesson, evidence=req.evidence, label=req.label,
-        scope=req.scope, node_type=req.node_type,
-        abstraction_type=req.abstraction_type, summary=req.summary,
-        authority_level=req.authority_level, project=req.project,
-        source_origin="remember_api", gap_source="remember_api",
-    )
+    from app.services.evidence_frame import EvidenceFrameError
+    try:
+        return await save_lesson(
+            db, lesson=req.lesson, evidence=req.evidence, label=req.label,
+            scope=req.scope, node_type=req.node_type,
+            abstraction_type=req.abstraction_type, summary=req.summary,
+            authority_level=req.authority_level, project=req.project,
+            source_origin="remember_api", gap_source="remember_api",
+            entities=req.entities,
+            time_scope=req.time_scope, context=req.context,
+            future_use=req.future_use, likely_queries=req.likely_queries,
+            confidence=req.confidence, volatility=req.volatility,
+        )
+    except EvidenceFrameError as exc:
+        # 422, not 500: the caller sent a well-formed request that the
+        # memory contract refuses. The response names every missing or
+        # malformed slot so the caller can repair it in one retry.
+        raise HTTPException(
+            422, {"error": "evidence_frame_contract", "violations": exc.errors},
+        ) from exc

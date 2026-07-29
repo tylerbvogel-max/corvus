@@ -27,12 +27,16 @@ decay auditing, and lint, and retirable in one query if it underperforms.
 """
 
 import json
+import logging
 import os
 import re
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.evidence_frame import EvidenceFrameError
 from app.services.lesson_store import label_exists, save_lesson
+
+logger = logging.getLogger(__name__)
 
 EPISODE_DIR = os.path.expanduser(
     os.environ.get("CORVUS_MIND_EPISODE_DIR", "~/.corvus-mind/episodes")
@@ -104,8 +108,16 @@ SECOND TASK — attribution: for each ALREADY-KNOWN (injected) lesson, judge fro
 - "unused": injected but nothing in the log engaged with it
 Base verdicts ONLY on observable events in the log; when in doubt, "unused".
 
+EVIDENCE FRAME: each lesson is a durable memory, so you must also fill the frame fields below. A future agent has to answer a question from the stored memory alone, without this log.
+- time_scope: one of {time_scopes}. Use dated-event for something that happened at a moment (add the date in parentheses if the log shows it), stable-preference for a fact that holds until revoked, current-plan for intent, expired-fact for something now untrue, unknown when the log does not say.
+- context: why this matters or how it came about — ONLY if the log states or strongly evidences it. Write "unknown" rather than inventing a motivation.
+- future_use: why a future agent would need this.
+- likely_queries: natural question phrasings someone might ask to retrieve this; at least one must end with "?".
+- confidence: one of {confidences}.
+- volatility: one of {volatilities}. "stable" = holds until explicitly revoked; "perishable" = state a later observation can legitimately overwrite (a running port, a current branch, an in-progress status); "uncertain" = you cannot tell. Never mark a perishable fact stable — downstream maintenance uses this to decide what recency is allowed to retire.
+
 Respond with ONLY a JSON object, no markdown fences, no prose:
-{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "origin": "<'log' normally; 'agent' when the lesson restates a conclusion the agent asserted>", "corroboration": "<agent-origin only: the exact tool event from the log that corroborates the claim — quote its command/error/value>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"]}],
+{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative, self-contained>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "origin": "<'log' normally; 'agent' when the lesson restates a conclusion the agent asserted>", "corroboration": "<agent-origin only: the exact tool event from the log that corroborates the claim — quote its command/error/value>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"], "time_scope": "<see above>", "context": "<see above>", "future_use": "<see above>", "likely_queries": "<see above>", "confidence": "<see above>", "volatility": "<see above>"}],
  "attributions": [{"label": "<the injected lesson's label>", "verdict": "load_bearing|contradicted|unused", "evidence": "<what in the log shows this>"}]}
 Use empty arrays when there is nothing to report."""
 
@@ -147,7 +159,12 @@ def find_ready_logs(
 def _load_log(path: str) -> tuple[list[dict], list[dict], str | None]:
     """Parse a log into (events, injections, transcript_path).
 
-    injections: [{label, neuron_id, query_id}] — the attribution targets."""
+    injections: [{label, neuron_id, query_id, trigger, channel}] — the
+    attribution targets. The channel is stamped here so a verdict records
+    which delivery path it judges; standing and retrieved injections
+    cannot share one load-bearing rate (see injection_channel)."""
+    from app.services.injection_channel import channel_for_trigger
+
     events: list[dict] = []
     injections: list[dict] = []
     transcript: str | None = None
@@ -160,11 +177,14 @@ def _load_log(path: str) -> tuple[list[dict], list[dict], str | None]:
             events.append(rec)
             if rec.get("event") == "Injection":
                 ids = rec.get("neuron_ids", [])
+                trigger = str(rec.get("trigger") or "unknown")
                 for idx, label in enumerate(rec.get("labels", [])):
                     injections.append({
                         "label": str(label),
                         "neuron_id": ids[idx] if idx < len(ids) else None,
                         "query_id": rec.get("query_id"),
+                        "trigger": trigger,
+                        "channel": channel_for_trigger(trigger),
                     })
             if rec.get("event") == "Stop" and rec.get("transcript_path"):
                 transcript = rec["transcript_path"]
@@ -327,7 +347,8 @@ async def _validate_and_save(
     gate. Agent-origin survivors carry source_origin="agent-derived"."""
     events = events or []
     counts = {"saved": 0, "usage_skipped": 0, "duplicate": 0, "flagged": 0,
-              "invalid": 0, "uncorroborated": 0, "agent_derived": 0}
+              "invalid": 0, "uncorroborated": 0, "agent_derived": 0,
+              "unframed": 0}
     saved_ids: list[int] = []
     injected_cf = [x.casefold() for x in injected]
     for c in candidates[:candidate_cap(len(events))]:
@@ -360,15 +381,31 @@ async def _validate_and_save(
             counts["duplicate"] += 1
             continue
         raw_entities = c.get("entities")
-        result = await save_lesson(
-            db, lesson=lesson, evidence=f"{evidence} [session:{session_id}]",
-            label=label, scope=scope, node_type=node_type,
-            entities=raw_entities if isinstance(raw_entities, list) else None,
-            authority_level=_SCOPE_AUTHORITY.get(scope, _DEFAULT_AUTHORITY),
-            source_origin="agent-derived" if agent_derived else "distiller",
-            gap_source="distiller",
-            project=project if scope == "Projects" else None,
-        )
+        # EVIDENCE FRAME (mind-neuron-evidence-frame): a candidate missing
+        # future_use/likely_queries cannot be framed, so save_lesson raises
+        # and the candidate is counted invalid rather than saved unframed.
+        # Failing one candidate must not abort the whole session's distill.
+        frame_fields = {
+            k: str(c.get(k, "")).strip() or None
+            for k in ("time_scope", "context", "future_use",
+                      "likely_queries", "confidence", "volatility")
+        }
+        try:
+            result = await save_lesson(
+                db, lesson=lesson, evidence=f"{evidence} [session:{session_id}]",
+                label=label, scope=scope, node_type=node_type,
+                entities=raw_entities if isinstance(raw_entities, list) else None,
+                **frame_fields,
+                authority_level=_SCOPE_AUTHORITY.get(scope, _DEFAULT_AUTHORITY),
+                source_origin="agent-derived" if agent_derived else "distiller",
+                gap_source="distiller",
+                project=project if scope == "Projects" else None,
+            )
+        except EvidenceFrameError as exc:
+            counts["unframed"] += 1
+            logger.warning("frame contract rejected candidate %r: %s",
+                           label[:60], exc)
+            continue
         counts["saved"] += 1
         if agent_derived:
             counts["agent_derived"] += 1
@@ -397,15 +434,32 @@ async def _apply_attributions(
     from app.models import Neuron, SynapticLearningEvent
     from app.services.mind_janitors import _log_action
 
-    by_label = {i["label"].casefold(): i for i in injections}
+    # One verdict per label per session, so repeat deliveries of a label
+    # collapse to a single attribution unit. Its channel is unambiguous
+    # only when every delivery of it used the same one — measured on the
+    # corpus, no neuron has ever crossed channels within a session.
+    by_label: dict[str, dict] = {}
+    for i in injections:
+        key = i["label"].casefold()
+        entry = by_label.setdefault(key, {**i, "channels": set()})
+        entry["channels"].add(i.get("channel"))
+    for entry in by_label.values():
+        entry["channel"] = (next(iter(entry["channels"]))
+                            if len(entry["channels"]) == 1 else "ambiguous")
+
     counts = {"rewarded": 0, "penalized": 0, "unused": 0}
+    by_channel: dict[str, dict] = {}
     for v in verdicts:
         verdict = str(v.get("verdict", "unused"))
         source = by_label.get(str(v.get("label", "")).casefold())
         if source is None or source.get("neuron_id") is None:
             continue
+        channel = str(source.get("channel") or "unknown")
+        tallies = by_channel.setdefault(
+            channel, {"rewarded": 0, "penalized": 0, "unused": 0})
         if verdict == "unused":
             counts["unused"] += 1
+            tallies["unused"] += 1
             continue
         neuron = await db.get(Neuron, source["neuron_id"])
         if neuron is None or not neuron.is_active:
@@ -414,10 +468,12 @@ async def _apply_attributions(
         if verdict == "load_bearing":
             neuron.avg_utility = min(ATTRIBUTION_CAP, old + ATTRIBUTION_REWARD)
             counts["rewarded"] += 1
+            tallies["rewarded"] += 1
             outcome, event_type = "win", "reward"
         elif verdict == "contradicted":
             neuron.avg_utility = max(ATTRIBUTION_FLOOR, old * ATTRIBUTION_PENALTY)
             counts["penalized"] += 1
+            tallies["penalized"] += 1
             outcome, event_type = "loss", "penalty"
         else:
             continue
@@ -436,8 +492,11 @@ async def _apply_attributions(
             "old_utility": round(old, 3),
             "new_utility": round(neuron.avg_utility, 3),
             "evidence": str(v.get("evidence", ""))[:200],
+            # Delivery provenance: makes the channel split readable
+            # straight from the log, with no marker-timestamp join.
+            "channel": channel, "trigger": source.get("trigger"),
         })
-    return counts
+    return {**counts, "by_channel": by_channel}
 
 
 async def distill_log(db: AsyncSession, path: str) -> dict:
@@ -454,8 +513,15 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     body = _condense(events, user_msgs, injected, assistant_msgs)
 
     # .replace, not .format — the prompt's JSON schema braces are literal
-    system_prompt = DISTILL_SYSTEM_PROMPT.replace(
-        "{max_candidates}", str(candidate_cap(len(events)))
+    from app.services.evidence_frame import (
+        CONFIDENCE_LEVELS, TIME_SCOPE_KINDS, VOLATILITY_LEVELS,
+    )
+    system_prompt = (
+        DISTILL_SYSTEM_PROMPT
+        .replace("{max_candidates}", str(candidate_cap(len(events))))
+        .replace("{time_scopes}", ", ".join(TIME_SCOPE_KINDS))
+        .replace("{confidences}", ", ".join(CONFIDENCE_LEVELS))
+        .replace("{volatilities}", ", ".join(VOLATILITY_LEVELS))
     )
     reply = await llm_chat(
         system_prompt=system_prompt,

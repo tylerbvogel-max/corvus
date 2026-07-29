@@ -34,6 +34,7 @@ from app.services.reconsolidation.plan import Disposition, Facet, FacetKind
 from app.services.reconsolidation.validators import (
     check_postconditions, preflight,
 )
+from tests.golden_frames import GOLDEN_NVM_CONTENT, TWO_MEMBER_NVM_CONTENT
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "nvm_incident"
 CORE = [47, 51, 57, 177, 1151, 1161]
@@ -88,13 +89,10 @@ def _golden_packet() -> dict:
         "proposed_summary": "Source ~/.config/nvm/nvm.sh and run `nvm use "
                             "22.22.0` before project Node tooling; machine "
                             "convention, not a repo-enforced pin.",
-        "proposed_content": "NVM lives at ~/.config/nvm/nvm.sh. Explicitly "
-                            "`source ~/.config/nvm/nvm.sh && nvm use "
-                            "22.22.0` before Node tooling for the corvus "
-                            "frontend, master-corvus, and "
-                            "Market-Analytics-Suite. This is a machine "
-                            "convention; repos may lack .nvmrc or engines "
-                            "enforcement.",
+        # Framed per mind-neuron-evidence-frame: an honest reviewer now
+        # produces the nine-slot frame. Same facts, same facet coverage,
+        # same no-invention property — only the construction syntax moved.
+        "proposed_content": GOLDEN_NVM_CONTENT,
         "proposed_scope": "Environment",
     }
 
@@ -583,8 +581,7 @@ class TestPlanAssembly:
                         "evidence_member_ids": [1, 2]}],
             "proposed_label": "nvm activation",
             "proposed_summary": "nvm use 22.22.0",
-            "proposed_content": "source ~/.config/nvm/nvm.sh && "
-                                "nvm use 22.22.0",
+            "proposed_content": TWO_MEMBER_NVM_CONTENT,
             "proposed_scope": "Environment",
         }
         plan = rv.assemble_plan([a, b], packet, None, None)

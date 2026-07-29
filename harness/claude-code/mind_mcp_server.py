@@ -72,22 +72,52 @@ def recall(query: str, top_k: int = 5) -> str:
 
 
 @mcp.tool()
-def remember(lesson: str, evidence: str, label: str, scope: str = "Projects") -> str:
-    """Save a lesson to institutional memory, gated by evidence.
+def remember(
+    lesson: str, evidence: str, label: str, future_use: str,
+    likely_queries: str, scope: str = "Projects", time_scope: str = "unknown",
+    context: str = "unknown", confidence: str = "medium",
+    volatility: str = "uncertain", entities: str = "",
+) -> str:
+    """Save a lesson to institutional memory as an evidence frame.
 
     Use for situated knowledge worth keeping across sessions: verified
     workarounds, tool gotchas, environment facts, user corrections.
-    evidence must cite something verifiable (exit code, session id,
-    file:line, user confirmation). scope is one of: Harness (how the
-    coding harness works), Environment (this machine), Projects (repo-
-    specific), User (preferences/corrections). Saves enter at
-    informational authority and decay if never reinforced.
+
+    A memory is stored so a FUTURE agent can answer from it alone, without
+    this transcript — so the frame slots are part of the memory, not
+    metadata:
+      lesson: the fact itself, declarative and self-contained.
+      evidence: something verifiable — exit code, session id, file:line,
+        user confirmation. A claim you cannot cite must not be saved.
+      future_use: why a future agent would need this. REQUIRED.
+      likely_queries: natural question phrasings someone would ask to
+        retrieve this; at least one must end with "?". REQUIRED.
+      time_scope: dated-event | stable-preference | current-plan |
+        expired-fact | unknown. Add a date in parentheses when known.
+      context: why it matters / how it came about. Write "unknown" rather
+        than inventing a motivation.
+      confidence: high | medium | low.
+      volatility: stable (holds until revoked) | perishable (a later
+        observation can legitimately overwrite it — running ports, current
+        branches, in-progress status) | uncertain. Never mark a perishable
+        fact stable: maintenance uses this to decide what recency may retire.
+      entities: comma-separated named things this is about.
+
+    scope is one of: Harness (how the coding harness works), Environment
+    (this machine), Projects (repo-specific), User (preferences/
+    corrections). Saves enter at informational authority and decay if
+    never reinforced.
     """
     try:
         data = _post("/remember", {
             "lesson": lesson, "evidence": evidence, "label": label,
             "scope": scope, "node_type": "lesson",
             "abstraction_type": "principle",
+            "future_use": future_use, "likely_queries": likely_queries,
+            "time_scope": time_scope, "context": context,
+            "confidence": confidence, "volatility": volatility,
+            "entities": [e.strip() for e in entities.split(",") if e.strip()]
+                        or None,
         })
     except OSError as exc:
         return json.dumps({"error": f"corvus-mind backend unreachable: {exc}"})

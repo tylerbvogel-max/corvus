@@ -1124,6 +1124,13 @@ async def run_janitors(
                                "evidence time is frozen, so decay is too"}
     if promotion:
         report["charter"] = await run_charter_promotion(db)
+        # Delivery is judged AFTER authority moves, so a lesson promoted
+        # this very run gets its standing/retrievable verdict in the same
+        # cycle instead of riding unclassified until the next one. This
+        # is also the re-audit: stale verdicts are re-argued here, which
+        # is what keeps charter membership earned rather than frozen.
+        from app.services.delivery_mode import classify_delivery
+        report["delivery"] = await classify_delivery(db)
         report["reference_promotion"] = await run_reference_promotion(db)
     if lint:
         report["scope_lint"] = await run_scope_lint(db)

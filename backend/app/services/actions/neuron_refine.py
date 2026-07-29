@@ -98,6 +98,31 @@ async def handle_neuron_refine(
     if payload.field not in _SUPPORTED_FIELDS:
         return _skipped_audit(payload, f"unsupported_field:{payload.field}")
 
+    # TOUCHED-NEURON RULE (mind-neuron-evidence-frame): legacy neurons are
+    # not bulk-backfilled, but anything this action REWRITES must exit
+    # framed. Two doors lead to an unframed durable memory and both are
+    # shut here:
+    #   content -> the incoming body must satisfy the contract;
+    #   node_type -> promoting a non-memory node (e.g. a document
+    #     reference) into a durable memory class must not launder unframed
+    #     prose into a lesson, so the body it will carry is checked too.
+    # Metadata-only refines (is_active, superseded_by, department, ...) are
+    # untouched: they do not rewrite the evidence body, and gating them
+    # would brick janitor lifecycle work over content it never authored.
+    from app.services.evidence_frame import enforce as enforce_frame
+    if payload.field == "content":
+        enforce_frame(
+            payload.new_value, node_type=neuron.node_type,
+            abstraction_type=neuron.abstraction_type,
+            where="neuron.refine:content",
+        )
+    elif payload.field == "node_type":
+        enforce_frame(
+            neuron.content, node_type=payload.new_value,
+            abstraction_type=neuron.abstraction_type,
+            where="neuron.refine:node_type-promotion",
+        )
+
     old_department = neuron.department
     text_changed = (payload.field in ("content", "summary", "label")
                     and payload.new_value != payload.old_value)

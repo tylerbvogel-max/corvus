@@ -33,6 +33,19 @@ async def mind_sessions():
     return {"sessions": rows}
 
 
+@router.get("/mind/injection-channels")
+async def mind_injection_channels():
+    """Load-bearing rate split by delivery channel (standing vs retrieved).
+
+    Standing content succeeds by being present and retrieved content by
+    being relevant, so the pooled rate judges neither. This is the
+    before/after instrument for any change to charter membership."""
+    from app.services.injection_channel import reconstruct_history
+    report = reconstruct_history()
+    assert isinstance(report, dict), "channel report must be a dict"
+    return report
+
+
 @router.get("/mind/trust")
 async def mind_trust(db: AsyncSession = Depends(get_db)):
     """Per-lesson trust trajectories (utility over time)."""

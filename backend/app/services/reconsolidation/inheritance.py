@@ -175,8 +175,24 @@ def embedding_input(label: str, summary: str | None,
                     content: str | None) -> str:
     """The canonical embed-text recipe — identical to creation-time
     embedding (lesson_store._embed_created) so refreshed vectors live in
-    the same space as everything else."""
-    return f"{label}. {summary or ''} {content or ''}"[:2000]
+    the same space as everything else.
+
+    FRAME-AWARE (mind-neuron-evidence-frame): when content is an evidence
+    frame, embed its SUBSTANCE slots only. Two reasons, both load-bearing:
+    (1) the nine headings are identical in every framed neuron, so
+    embedding them injects a constant into every vector and compresses the
+    spread of raw sim_* margins — and those margins are the only usable
+    confidence signal downstream (evidence-gated abstention and recall
+    depth both read them); (2) Evidence/Confidence/Volatility are audit
+    apparatus, not subject matter — a user's question is never *about* a
+    session id. Unframed content is embedded exactly as before, so legacy
+    vectors and framed vectors stay comparable in the same space.
+    """
+    from app.services.evidence_frame import is_framed, parse_frame
+    body = content or ""
+    if is_framed(body):
+        body = parse_frame(body).semantic_text()
+    return f"{label}. {summary or ''} {body}"[:2000]
 
 
 def embedding_sha256(embedding_json: str | None) -> str | None:

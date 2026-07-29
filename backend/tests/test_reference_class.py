@@ -73,16 +73,40 @@ def test_wall_sql_keeps_null_departments():
 
 
 def test_wall_is_wired_into_identity_queries():
-    """Charter promotion, charter render, cluster load, and self-model
-    growth must all call reference_exclusion_filters — grep-level proof
-    that the wall cannot be bypassed by editing one call site."""
+    """Charter promotion, cluster load, and self-model growth must all
+    call reference_exclusion_filters — grep-level proof that the wall
+    cannot be bypassed by editing one call site.
+
+    The charter's own render reaches the wall through
+    delivery_mode.charter_eligible_filters (mind-charter-composition
+    centralised the charter eligibility gate there so the delivery
+    classifier judges exactly the population the charter draws from), so
+    that indirection is asserted rather than counted."""
+    import app.services.delivery_mode as dm
     import app.services.mind_janitors as mj
     import app.services.skill_compiler as sc
-    for module, count in ((mj, 2), (sc, 2)):
+    for module, count in ((mj, 2), (sc, 1), (dm, 1)):
         with open(module.__file__, encoding="utf-8") as fh:
             src = fh.read()
         assert src.count("reference_exclusion_filters()") >= count, \
             f"{module.__name__} lost a reference wall call site"
+    with open(sc.__file__, encoding="utf-8") as fh:
+        assert "charter_eligible_filters()" in fh.read(), \
+            "charter render must reach the wall via the shared gate"
+
+
+def test_charter_eligibility_gate_carries_the_wall():
+    """Runtime proof, not grep: the charter's actual selection clause
+    excludes reference-class neurons on every axis it always has."""
+    from sqlalchemy import select
+
+    from app.models import Neuron
+    from app.services.delivery_mode import charter_eligible_filters
+
+    clause = str(select(Neuron.id).where(*charter_eligible_filters()))
+    wall = _compiled_wall_sql()
+    assert "neurons.source_origin != " in clause
+    assert "department IS NULL" in wall and "department IS NULL" in clause
 
 
 def test_authority_cap_is_informational():
