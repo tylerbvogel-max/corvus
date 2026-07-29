@@ -1362,7 +1362,13 @@ async def record_firing(
     neuron = await db.get(Neuron, neuron_id)
     if neuron:
         neuron.invocations = (neuron.invocations or 0) + 1
-        neuron.last_accessed_at = firing.created_at
+        # NeuronFiring.created_at is server_default only — it is None until the
+        # INSERT lands, so reading it here (as this line did until 2026-07-29)
+        # assigned None on every firing and left the column NULL for the whole
+        # graph. func.now() is the same clock the firing's server_default will
+        # use, so the neuron and its firing agree, which is what the original
+        # line meant. Found while building the read-only recall probe.
+        neuron.last_accessed_at = func.now()
 
     if settings.neuron_index_enabled:
         from app.services.neuron_index import index_on_firing
