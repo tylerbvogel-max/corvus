@@ -27,7 +27,7 @@ ACCESS_KEY = os.environ.get("CORVUS_ACCESS_KEY", "")
 EPISODE_DIR = os.path.expanduser("~/.corvus-mind/episodes")
 CONFIG_PATH = os.path.expanduser("~/.corvus-mind/config.json")
 INJECTABLE_TYPES = ("lesson", "tool-profile", "context-scope", "reference")
-SESSION_START_TOP_K = 5
+SESSION_START_TOP_K = 0  # retired 2026-07-29 (mind-sessionstart-recall) — see main()
 PROMPT_TOP_K = 6  # W2: summary one-liners are ~5x smaller than bodies — wider net, same budget
 PRE_TOOL_TOP_K = 2
 PRE_TOOL_MIN_SCORE = 1.12  # warn rarely: only strong matches interrupt a tool call
@@ -285,16 +285,30 @@ def main() -> int:
         session_id = "unknown"
 
     if event == "SessionStart":
-        project = _project_from_cwd(cwd)
-        query = (f"working knowledge, gotchas, tool profiles, and user "
-                 f"preferences for {project}")
-        hits, query_id, pointers = _safe_recall(
-            query, SESSION_START_TOP_K, source="hook_session_start",
-            project=_project_from_cwd(cwd),
-        )
-        # Identity arrives via the deterministic self-capsule below, not
-        # recall — persona must not depend on semantic luck (measured: only
-        # 1 of 5 Assistant lessons survived top-k competition).
+        # Ambient recall RETIRED 2026-07-29 (mind-sessionstart-recall).
+        # It asked "working knowledge, gotchas, tool profiles, and user
+        # preferences for {project}" — a query with no subject, fired
+        # before the session had one. Measured on 449 sessions:
+        #   notes    8/1,029 load-bearing (0.78%) vs 6.82% UserPromptSubmit
+        #                                          and 17.17% PreToolUse
+        #   pointers 0/331 converted (0.00%) vs 10.5% UserPromptSubmit
+        # Not an attribution blind spot: User-scope content earns 6.63%
+        # when a retrieved lane selects it and 0.39% here (p=7e-11), and
+        # the purest presence content in the system (the self-model
+        # capsule) earns 3.55% with 10/10 neurons rewarded. A confidence
+        # floor cannot rescue it — reward is ANTI-correlated with score,
+        # so any floor tight enough to cut volume deletes the value first.
+        # Re-aiming it at operational content would be worse still: the
+        # `seen` dedupe below means anything claimed here is barred from
+        # PreToolUse for the rest of the session, and the same neurons
+        # earn 0.20% delivered here against 8.77% delivered there.
+        #
+        # Nothing is retired from the graph — all 15 neurons keep their
+        # authority and stay reachable via both retrieved lanes and MCP
+        # recall. Cadence is unchanged; the capsules below are now the
+        # whole of session-open delivery. Identity was never recall-borne
+        # anyway (measured: only 1 of 5 Assistant lessons survived top-k).
+        hits, query_id, pointers = [], None, []
     elif event == "UserPromptSubmit":
         prompt = (payload.get("prompt") or "").strip()
         if len(prompt) < MIN_PROMPT_CHARS:
