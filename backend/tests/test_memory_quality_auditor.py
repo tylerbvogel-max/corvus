@@ -254,16 +254,44 @@ class TestVerdictValidation:
         assert any("invents concrete details" in x for x in out)
 
     def test_evidence_backed_rewrite_passes(self):
+        from app.services.evidence_frame import build_frame
+
         n = make_neuron(content="tests run with pytest")
         packet = make_packet(n, user_turns=[
             "remember: tests need TENANT_ID=corvus-mind set"])
+        content = build_frame(
+            claim="Tests run with pytest and require TENANT_ID=corvus-mind set.",
+            evidence="tests run with pytest; tests need TENANT_ID=corvus-mind set",
+            entities="pytest, TENANT_ID, corvus-mind",
+            context="The test invocation needs the tenant selected.",
+            future_use="Use this when running the Corvus backend test suite.",
+            likely_queries="How should Corvus backend tests be run?",
+            confidence="high",
+            volatility="stable",
+        )
         v = good_verdict(
             disposition="enrich",
             evidence_citations=["TENANT_ID=corvus-mind"],
             proposed={"label": n.label, "summary": None,
-                      "content": "tests run with pytest and require "
-                                 "TENANT_ID=corvus-mind set"})
+                      "content": content})
         assert mqa.validate_verdict(v, packet, n) == []
+
+    def test_plain_prose_rewrite_fails_evidence_frame_contract(self):
+        n = make_neuron(content="tests run with pytest")
+        packet = make_packet(n, user_turns=[
+            "remember: tests need TENANT_ID=corvus-mind set"])
+        v = good_verdict(
+            disposition="narrow",
+            evidence_citations=["TENANT_ID=corvus-mind"],
+            proposed={"label": n.label, "summary": None,
+                      "content": "Tests need TENANT_ID=corvus-mind set."})
+        out = mqa.validate_verdict(v, packet, n)
+        assert any("evidence-frame violation" in item for item in out)
+
+    def test_critic_prompt_contains_canonical_frame_contract(self):
+        from app.services.evidence_frame import FRAME_PROMPT_SPEC
+
+        assert FRAME_PROMPT_SPEC in mqa._CRITIC_SYSTEM_PROMPT
 
     def test_citation_must_exist_in_packet(self):
         n = make_neuron()

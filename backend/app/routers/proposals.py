@@ -344,15 +344,9 @@ async def dedup_clusters(
     return await compute_dedup_clusters(db, state=state, threshold=threshold)
 
 
-@router.get("/{proposal_id}", response_model=ProposalDetailOut)
-async def get_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
-    """Full proposal detail with evidence chain and items."""
-    p = await db.get(AutopilotProposal, proposal_id)
-    if not p:
-        raise HTTPException(404, "Proposal not found")
-    return await _attach_rendered_plans(db, p, _proposal_detail(p))
-
-
+# NOTE: declared before /{proposal_id} for the same reason as
+# /dedup-clusters above: FastAPI route matching is ordered, and a static
+# identity endpoint must not be parsed as an integer proposal id.
 @router.get("/whoami")
 async def whoami(identity: UserIdentity = Depends(resolve_identity)):
     """Return the resolved identity for the current request.
@@ -363,6 +357,15 @@ async def whoami(identity: UserIdentity = Depends(resolve_identity)):
     action-bus lineage. No divergence possible.
     """
     return {"user_id": identity.user_id, "role": identity.role, "source": identity.source}
+
+
+@router.get("/{proposal_id}", response_model=ProposalDetailOut)
+async def get_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
+    """Full proposal detail with evidence chain and items."""
+    p = await db.get(AutopilotProposal, proposal_id)
+    if not p:
+        raise HTTPException(404, "Proposal not found")
+    return await _attach_rendered_plans(db, p, _proposal_detail(p))
 
 
 @router.post("/{proposal_id}/review", response_model=ProposalDetailOut)

@@ -52,6 +52,9 @@ from app.models import (
 )
 from app.services.reconsolidation import fingerprints
 from app.services.redaction import redact, redact_obj
+from app.services.evidence_frame import (
+    FRAME_PROMPT_SPEC, enforcement_enabled, requires_frame, validate_frame,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -551,6 +554,12 @@ Rules:
 - A verbose entry is not defective for being verbose, nor a short one for being short.
 - State real uncertainty; confidence is your calibrated belief the disposition is right.
 
+For every enrich/narrow proposed.content and every split proposed_parts[].content,
+write the complete evidence frame below. Preserve evidence-backed slots from an
+existing frame when they remain accurate; never return partial-frame prose.
+
+__FRAME_PROMPT_SPEC__
+
 Respond with ONLY a JSON object:
 {"disposition": "...", "confidence": 0.0, "defect_classes": ["..."], "reasoning": "...",
  "evidence_citations": ["verbatim substring", "..."],
@@ -558,6 +567,9 @@ Respond with ONLY a JSON object:
  "proposed_parts": [{"label": "...", "summary": "...", "content": "..."}] | null,
  "merge_target_id": 123 | null,
  "blast_radius": "...", "uncertainty": "..."}"""
+_CRITIC_SYSTEM_PROMPT = _CRITIC_SYSTEM_PROMPT.replace(
+    "__FRAME_PROMPT_SPEC__", FRAME_PROMPT_SPEC,
+)
 
 
 async def critique_neuron(packet: dict) -> tuple[dict, dict]:
@@ -610,6 +622,32 @@ def _normalized(text: str) -> str:
     return _NORM_RE.sub("", (text or "").casefold())
 
 
+def _proposed_frame_violations(verdict: dict, neuron: Neuron) -> list[str]:
+    """Frame-contract errors for content the critic wants to rewrite."""
+    if not (requires_frame(neuron.node_type, neuron.abstraction_type)
+            and enforcement_enabled()):
+        return []
+    disposition = verdict.get("disposition")
+    proposed = verdict.get("proposed")
+    framed_contents: list[tuple[str, str]] = []
+    if disposition in REWRITE_DISPOSITIONS and isinstance(proposed, dict):
+        framed_contents.append((
+            "proposed.content", str(proposed.get("content") or ""),
+        ))
+    if disposition == "split":
+        for i, part in enumerate(verdict.get("proposed_parts") or []):
+            if isinstance(part, dict):
+                framed_contents.append((
+                    f"proposed_parts[{i}].content",
+                    str(part.get("content") or ""),
+                ))
+    return [
+        f"{location} evidence-frame violation: {error}"
+        for location, content in framed_contents
+        for error in validate_frame(content)
+    ]
+
+
 def validate_verdict(verdict, packet: dict, neuron: Neuron) -> list[str]:
     """Deterministic fail-closed checks. Empty list == pass.
 
@@ -653,6 +691,10 @@ def validate_verdict(verdict, packet: dict, neuron: Neuron) -> list[str]:
                 if not str((p or {}).get("content") or "").strip() or \
                         not str((p or {}).get("label") or "").strip():
                     violations.append(f"split part {i} lacks label/content")
+
+    # Reject malformed output before a human can countersign a proposal
+    # that the touched-neuron write gate is guaranteed to roll back.
+    violations.extend(_proposed_frame_violations(verdict, neuron))
     if disposition in ("merge", "supersede"):
         target = verdict.get("merge_target_id")
         neighbor_ids = {n["id"] for n in
