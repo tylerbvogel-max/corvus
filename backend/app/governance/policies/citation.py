@@ -14,7 +14,7 @@ Configured via tenant.yaml ``output_policies.citation``:
 
 from __future__ import annotations
 
-from app.governance.policies import (
+from app.governance.policies.base import (
     PolicyContext,
     ViolationDraft,
     _cfg_action,

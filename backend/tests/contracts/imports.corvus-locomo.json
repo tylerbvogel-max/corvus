@@ -1,5 +1,5 @@
 {
-  "app_module_count": 76,
+  "app_module_count": 77,
   "app_modules": [
     "app",
     "app.composition",
@@ -11,6 +11,7 @@
     "app.governance",
     "app.governance.output_guard",
     "app.governance.policies",
+    "app.governance.policies.base",
     "app.governance.policies.citation",
     "app.governance.policies.export_control",
     "app.governance.policies.pii",

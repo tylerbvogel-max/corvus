@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 362,
+    "modules": 363,
     "frontend_files": 72,
-    "units": 434,
-    "classified": 434,
+    "units": 435,
+    "classified": 435,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "90e535c04d365c95f05779bd313edf25dcd37c8027a9e1bfc4263988c91eb857",
-    "current_fingerprint": "90e535c04d365c95f05779bd313edf25dcd37c8027a9e1bfc4263988c91eb857",
-    "stored_files": 434,
-    "current_files": 434
+    "stored_fingerprint": "13e46211266c9ecf479afc9369da2f13b840dde97f9e4ef3e4c15b1de8f3a4d5",
+    "current_fingerprint": "13e46211266c9ecf479afc9369da2f13b840dde97f9e4ef3e4c15b1de8f3a4d5",
+    "stored_files": 435,
+    "current_files": 435
   },
   "manifest_problems": [],
   "boxes": [
@@ -217,14 +217,15 @@
       "tier": "hot",
       "purpose": "Guard input, prepare graph context, release DB capacity, execute one or more model slots, police citations/output, persist results, and learn from outcomes.",
       "confidence": "reviewed",
-      "module_count": 38,
+      "module_count": 39,
       "frontend_file_count": 0,
-      "loc": 9660,
+      "loc": 9700,
       "routes": 24,
       "modules": [
         "app.governance",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -632,7 +633,7 @@
       "confidence": "reviewed",
       "module_count": 95,
       "frontend_file_count": 0,
-      "loc": 19338,
+      "loc": 19340,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",

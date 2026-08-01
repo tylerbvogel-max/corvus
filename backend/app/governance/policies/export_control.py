@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import re
 
-from app.governance.policies import (
+from app.governance.policies.base import (
     PolicyContext,
     ViolationDraft,
     VALID_SEVERITIES,

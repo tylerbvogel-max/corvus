@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "90e535c04d365c95f05779bd313edf25dcd37c8027a9e1bfc4263988c91eb857",
-    "files": 434
+    "fingerprint": "13e46211266c9ecf479afc9369da2f13b840dde97f9e4ef3e4c15b1de8f3a4d5",
+    "files": 435
   },
   "frontend": {
     "available": true,
@@ -2743,10 +2743,10 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 362,
-    "loc": 83132,
+    "modules": 363,
+    "loc": 83174,
     "routes": 212,
-    "import_edges": 987,
+    "import_edges": 988,
     "call_edges": 658,
     "modules_touching_db": 111,
     "modules_touching_llm": 25,
@@ -5254,12 +5254,26 @@
     "app.governance.policies": {
       "path": "backend/app/governance/policies/__init__.py",
       "module": "app.governance.policies",
-      "loc": 79,
+      "loc": 48,
       "imports": [
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii"
       ],
+      "external_imports": [
+        "__future__"
+      ],
+      "functions": {},
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.governance.policies.base": {
+      "path": "backend/app/governance/policies/base.py",
+      "module": "app.governance.policies.base",
+      "loc": 71,
+      "imports": [],
       "external_imports": [
         "__future__",
         "dataclasses",
@@ -5268,14 +5282,14 @@
       "functions": {
         "_cfg_action": {
           "name": "_cfg_action",
-          "line": 46,
+          "line": 59,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_cfg_severity": {
           "name": "_cfg_severity",
-          "line": 53,
+          "line": 66,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -5290,7 +5304,7 @@
       "module": "app.governance.policies.citation",
       "loc": 55,
       "imports": [
-        "app.governance.policies"
+        "app.governance.policies.base"
       ],
       "external_imports": [
         "__future__"
@@ -5301,8 +5315,8 @@
           "line": 30,
           "is_async": false,
           "calls": [
-            "app.governance.policies::_cfg_action",
-            "app.governance.policies::_cfg_severity"
+            "app.governance.policies.base::_cfg_action",
+            "app.governance.policies.base::_cfg_severity"
           ],
           "is_route": false
         },
@@ -5311,7 +5325,7 @@
           "line": 36,
           "is_async": false,
           "calls": [
-            "app.governance.policies::ViolationDraft"
+            "app.governance.policies.base::ViolationDraft"
           ],
           "is_route": false
         }
@@ -5325,7 +5339,7 @@
       "module": "app.governance.policies.export_control",
       "loc": 122,
       "imports": [
-        "app.governance.policies"
+        "app.governance.policies.base"
       ],
       "external_imports": [
         "__future__",
@@ -5351,8 +5365,8 @@
           "line": 70,
           "is_async": false,
           "calls": [
-            "app.governance.policies::_cfg_action",
-            "app.governance.policies::_cfg_severity"
+            "app.governance.policies.base::_cfg_action",
+            "app.governance.policies.base::_cfg_severity"
           ],
           "is_route": false
         },
@@ -5361,7 +5375,7 @@
           "line": 97,
           "is_async": false,
           "calls": [
-            "app.governance.policies::ViolationDraft"
+            "app.governance.policies.base::ViolationDraft"
           ],
           "is_route": false
         }
@@ -5383,7 +5397,7 @@
       "module": "app.governance.policies.pii",
       "loc": 77,
       "imports": [
-        "app.governance.policies"
+        "app.governance.policies.base"
       ],
       "external_imports": [
         "__future__",
@@ -5403,8 +5417,8 @@
           "line": 56,
           "is_async": false,
           "calls": [
-            "app.governance.policies::_cfg_action",
-            "app.governance.policies::_cfg_severity"
+            "app.governance.policies.base::_cfg_action",
+            "app.governance.policies.base::_cfg_severity"
           ],
           "is_route": false
         },
@@ -5413,7 +5427,7 @@
           "line": 60,
           "is_async": false,
           "calls": [
-            "app.governance.policies::ViolationDraft"
+            "app.governance.policies.base::ViolationDraft"
           ],
           "is_route": false
         }
@@ -30449,7 +30463,7 @@
     "tests.test_architecture_cycles": {
       "path": "backend/tests/test_architecture_cycles.py",
       "module": "tests.test_architecture_cycles",
-      "loc": 143,
+      "loc": 145,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -30523,14 +30537,14 @@
         },
         "test_honeypot_a_stale_allowlist_entry_is_rejected": {
           "name": "test_honeypot_a_stale_allowlist_entry_is_rejected",
-          "line": 129,
+          "line": 131,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_cycle_comparison_ignores_member_order": {
           "name": "test_honeypot_cycle_comparison_ignores_member_order",
-          "line": 138,
+          "line": 140,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -42917,10 +42931,13 @@
     ],
     "app.governance.policies": [
       "app.governance.output_guard",
+      "tests.test_output_guard"
+    ],
+    "app.governance.policies.base": [
+      "app.governance.policies",
       "app.governance.policies.citation",
       "app.governance.policies.export_control",
-      "app.governance.policies.pii",
-      "tests.test_output_guard"
+      "app.governance.policies.pii"
     ],
     "app.governance.policies.citation": [
       "app.governance.policies",
@@ -44072,13 +44089,13 @@
       "app.services.action_bus"
     ],
     "app.governance.policies.citation": [
-      "app.governance.policies"
+      "app.governance.policies.base"
     ],
     "app.governance.policies.export_control": [
-      "app.governance.policies"
+      "app.governance.policies.base"
     ],
     "app.governance.policies.pii": [
-      "app.governance.policies"
+      "app.governance.policies.base"
     ],
     "app.mcp_http": [
       "app.middleware.rbac"
@@ -50283,6 +50300,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -50406,6 +50424,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -50529,6 +50548,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -50652,6 +50672,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55118,6 +55139,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55244,6 +55266,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55370,6 +55393,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55496,6 +55520,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55622,6 +55647,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55748,6 +55774,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -55874,6 +55901,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56000,6 +56028,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56126,6 +56155,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56252,6 +56282,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56378,6 +56409,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56504,6 +56536,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56630,6 +56663,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56756,6 +56790,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -56882,6 +56917,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -57008,6 +57044,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -58402,6 +58439,7 @@
         "app.database",
         "app.governance.output_guard",
         "app.governance.policies",
+        "app.governance.policies.base",
         "app.governance.policies.citation",
         "app.governance.policies.export_control",
         "app.governance.policies.pii",
@@ -59116,12 +59154,6 @@
     }
   ],
   "import_cycles": [
-    [
-      "app.governance.policies",
-      "app.governance.policies.citation",
-      "app.governance.policies.export_control",
-      "app.governance.policies.pii"
-    ],
     [
       "app.services.delivery_mode",
       "app.services.mind_janitors",

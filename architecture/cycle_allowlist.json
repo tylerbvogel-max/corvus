@@ -11,7 +11,7 @@
     "one-line diff in a file named for the debt it tracks, so review cannot miss it.",
     "Owned by roadmap record durability-modular-monolith (04)."
   ],
-  "budget": 3,
+  "budget": 2,
   "history": [
     {
       "date": "2026-08-01",
@@ -27,15 +27,14 @@
       "date": "2026-08-01",
       "budget": 3,
       "note": "Record 04 seam 2: broke neuron_index <-> neuron_service by extracting NeuronCandidate and FRESHNESS_SQL into app/services/neuron_candidate.py, a leaf module with no imports. neuron_index sits UNDER the service and was importing it back for two pieces of shared vocabulary; executor was reaching through the service's privacy for the same SQL. First cycle broken by decoupling rather than by deletion."
+    },
+    {
+      "date": "2026-08-01",
+      "budget": 2,
+      "note": "Record 04 seam 3: broke the app.governance.policies package-init cycle by extracting PolicyContext, ViolationDraft and the config helpers into policies/base.py. The __init__ defined the base types AND imported the three concrete policies to build POLICY_CLASSES, while each policy imported those types back; the `# noqa: E402` on the bottom imports was the confession. __init__ is now a pure facade, so every external importer is unchanged."
     }
   ],
   "cycles": [
-    [
-      "app.governance.policies",
-      "app.governance.policies.citation",
-      "app.governance.policies.export_control",
-      "app.governance.policies.pii"
-    ],
     [
       "app.services.delivery_mode",
       "app.services.mind_janitors",

@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from types import MappingProxyType
 
-from app.governance.policies import (
+from app.governance.policies.base import (
     PolicyContext,
     ViolationDraft,
     _cfg_action,

@@ -118,20 +118,22 @@ def test_allowlist_history_records_every_budget_change():
 
 @pytest.mark.hermetic
 def test_honeypot_a_planted_new_cycle_is_rejected():
-    planted = _actual() + [sorted(["app.services.honeypot_a", "app.services.honeypot_b"])]
+    bait = ["app.services.honeypot_a", "app.services.honeypot_b"]
+    planted = _actual() + [sorted(bait)]
     allowed = _normalize(_allowed()["cycles"])
     new = [c for c in planted if c not in allowed]
-    assert new, "a planted cycle was NOT detected as new; the gate does not bite"
-    assert new[0] == ["app.services.honeypot_a", "app.services.honeypot_b"]
+    # Membership, not position: asserting new[0] would couple this honeypot to
+    # whatever else happens to be failing, which is how it broke during seam 3.
+    assert sorted(bait) in new, "a planted cycle was NOT detected as new; the gate does not bite"
 
 
 @pytest.mark.hermetic
 def test_honeypot_a_stale_allowlist_entry_is_rejected():
+    bait = ["app.services.already_fixed"]
     actual = _actual()
-    planted = _normalize(_allowed()["cycles"]) + [["app.services.already_fixed"]]
+    planted = _normalize(_allowed()["cycles"]) + [bait]
     stale = [c for c in planted if c not in actual]
-    assert stale, "a stale allowlist entry was NOT detected; the ratchet can slip"
-    assert stale[0] == ["app.services.already_fixed"]
+    assert bait in stale, "a stale allowlist entry was NOT detected; the ratchet can slip"
 
 
 @pytest.mark.hermetic

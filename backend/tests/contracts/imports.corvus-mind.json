@@ -1,5 +1,5 @@
 {
-  "app_module_count": 118,
+  "app_module_count": 119,
   "app_modules": [
     "app",
     "app.agents",
@@ -19,6 +19,7 @@
     "app.governance",
     "app.governance.output_guard",
     "app.governance.policies",
+    "app.governance.policies.base",
     "app.governance.policies.citation",
     "app.governance.policies.export_control",
     "app.governance.policies.pii",
