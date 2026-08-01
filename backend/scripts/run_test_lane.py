@@ -58,6 +58,34 @@ LANES = {
         job_timeout_seconds=300,
         requirement="CORVUS_TEST_DATABASE_URL naming a disposable corvus_test_* database",
     ),
+    # The reconsolidation kernel's only end-to-end proof against real SQL,
+    # the real one-step lifecycle and the real action bus. It is NOT in the
+    # merge gate, and that is a deliberate decision recorded in
+    # kernel-replay-ungated (2026-08-01):
+    #
+    #   - It destroys and rebuilds a schema, and the database must be
+    #     created out of band (the yggdrasil role lacks CREATEDB), so it
+    #     cannot be made a self-provisioning PR job the way the `database`
+    #     lane's migration smoke test is.
+    #   - Folding it into the `database` lane would have coupled the merge
+    #     gate's cheapest DB job to a multi-minute full-kernel apply.
+    #   - What actually rotted was its INPUTS, not the kernel. That failure
+    #     mode is now covered on every PR, in milliseconds and with no
+    #     database, by tests/test_kernel_replay_fixture_guard.py — which
+    #     runs in the hermetic and required-backend lanes and fails with the
+    #     exact packet violation.
+    #
+    # So: the expensive proof stays opt-in and NAMED, while a cheap
+    # always-run guard defends the thing that was observed to break.
+    "kernel-replay": Lane(
+        marker="database",
+        targets=("tests/test_kernel_replay_endtoend.py",),
+        job_timeout_seconds=900,
+        requirement=(
+            "REPLAY_DB naming an existing disposable corvus_test_* database; "
+            "the schema is dropped and rebuilt"
+        ),
+    ),
     "evaluation": Lane(
         marker="evaluation",
         targets=(
@@ -91,6 +119,15 @@ def _preflight(name: str) -> None:
             raise SystemExit(
                 "database lane refuses non-disposable database name "
                 f"{database!r}; use corvus_test_* or corvus_migration_*"
+            )
+    if name == "kernel-replay":
+        replay_db = os.environ.get("REPLAY_DB", "")
+        if not replay_db:
+            raise SystemExit("kernel-replay lane requires REPLAY_DB")
+        if not replay_db.startswith(("corvus_test_", "corvus_migration_")):
+            raise SystemExit(
+                "kernel-replay lane refuses non-disposable database name "
+                f"{replay_db!r}; this lane DROPS the schema it runs against"
             )
     if name == "live-provider":
         if os.environ.get("CORVUS_RUN_LIVE_PROVIDER") != "1":

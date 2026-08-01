@@ -8,13 +8,27 @@ and asserts every postcondition against actual DB state. Then proves the
 two Phase 4 guarantees live: idempotent replay via the action-bus plan
 hash, and terminal supersession of a second proposal aimed at dead state.
 
-Run:
+Run (preferred — this is the `kernel-replay` lane):
   cd ~/Projects/corvus/backend && \
-  REPLAY_DB=corvus_mind_kernel_replay TENANT_ID=corvus-mind PYTHONPATH=. \
+  REPLAY_DB=corvus_test_kernel_replay TENANT_ID=corvus-mind \
+  venv/bin/python scripts/run_test_lane.py kernel-replay
+
+Or directly:
+  cd ~/Projects/corvus/backend && \
+  REPLAY_DB=corvus_test_kernel_replay TENANT_ID=corvus-mind PYTHONPATH=. \
   venv/bin/python tests/replay_nvm_throwaway.py
 
 The database named by REPLAY_DB is DROPPED and recreated. Never point it
-at corvus_mind.
+at corvus_mind. It must already exist (the yggdrasil role lacks CREATEDB):
+  sudo -u postgres psql -c \
+    'CREATE DATABASE corvus_test_kernel_replay OWNER yggdrasil'
+
+THE PACKETS THIS SCRIPT FEEDS THE KERNEL LIVE ELSEWHERE, ON PURPOSE:
+tests/kernel_matrix_fixtures.py. They are validated on every PR by
+tests/test_kernel_replay_fixture_guard.py, because this script is expensive,
+opt-in, and spent weeks silently broken when those packets went stale
+(kernel-replay-ungated). If this script fails on a packet violation, the
+fixture is stale and that guard should have said so first.
 """
 
 import asyncio
@@ -28,8 +42,18 @@ from types import SimpleNamespace
 
 REPLAY_DB = os.environ.get("REPLAY_DB", "corvus_mind_kernel_replay")
 assert REPLAY_DB != "corvus_mind", "refusing to run against the live database"
-os.environ["DATABASE_URL"] = \
-    f"postgresql+asyncpg://yggdrasil:yggdrasil@localhost/{REPLAY_DB}"
+# Connection parameters are overridable so this can run somewhere other than
+# one developer's laptop. The defaults are the local yggdrasil role, so the
+# documented command line is unchanged; CI supplies a postgres superuser
+# against a service container instead.
+REPLAY_DB_USER = os.environ.get("REPLAY_DB_USER", "yggdrasil")
+REPLAY_DB_PASSWORD = os.environ.get("REPLAY_DB_PASSWORD", "yggdrasil")
+REPLAY_DB_HOST = os.environ.get("REPLAY_DB_HOST", "localhost")
+REPLAY_DB_PORT = os.environ.get("REPLAY_DB_PORT", "5432")
+os.environ["DATABASE_URL"] = (
+    f"postgresql+asyncpg://{REPLAY_DB_USER}:{REPLAY_DB_PASSWORD}"
+    f"@{REPLAY_DB_HOST}:{REPLAY_DB_PORT}/{REPLAY_DB}"
+)
 os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "nvm_incident"
@@ -47,12 +71,13 @@ def _dt(v):
 
 async def _recreate_database() -> None:
     """Reset the throwaway DB's schema. The database itself must already
-    exist (yggdrasil lacks CREATEDB): create it once with
-    `sudo -u postgres psql -c 'CREATE DATABASE <name> OWNER yggdrasil'`."""
+    exist. Locally the yggdrasil role lacks CREATEDB, so create it once with
+    `sudo -u postgres psql -c 'CREATE DATABASE <name> OWNER yggdrasil'`; in CI
+    the postgres service container creates it from POSTGRES_DB."""
     import asyncpg
     conn = await asyncpg.connect(
-        user="yggdrasil", password="yggdrasil", database=REPLAY_DB,
-        host="localhost")
+        user=REPLAY_DB_USER, password=REPLAY_DB_PASSWORD, database=REPLAY_DB,
+        host=REPLAY_DB_HOST, port=int(REPLAY_DB_PORT))
     await conn.execute("DROP SCHEMA public CASCADE")
     await conn.execute("CREATE SCHEMA public")
     await conn.close()
@@ -149,16 +174,6 @@ async def _seed(db) -> None:
     await db.commit()
 
 
-def _matrix_neuron(nid: int, label: str, content: str, scope: str,
-                   invocations: int = 0, utility: float = 0.5):
-    from app.models import Neuron
-    return Neuron(
-        id=nid, layer=3, node_type="lesson", label=label, summary=content,
-        content=content, department=scope, invocations=invocations,
-        avg_utility=utility, authority_level="informational", is_active=True,
-    )
-
-
 async def _queue_with_packet(db, members, packet):
     """Exercise the real janitor queue boundary with only the LLM replaced."""
     from app.services.reconsolidation import review as rv
@@ -170,10 +185,19 @@ async def _queue_with_packet(db, members, packet):
     real_review = rv.review_component
     rv.review_component = _mock_review
     try:
-        return await _queue_component_proposal(
+        result = await _queue_component_proposal(
             db, members[0], members[1:], None, {})
     finally:
         rv.review_component = real_review
+    # The queue returns an outcome-shaped dict, so a rejected packet used to
+    # surface as `KeyError: 'disposition'` several lines later — a stale
+    # FIXTURE misreported as a broken kernel. Name it where it happens.
+    if result.get("outcome") == "review_failed":
+        raise AssertionError(
+            "packet was REFUSED by validate_packet before the kernel was "
+            "exercised — the fixture is stale, not the kernel: "
+            + "; ".join(result.get("violations") or ["<no violations given>"]))
+    return result
 
 
 async def _phase5_matrix(db, identity) -> dict:
@@ -183,23 +207,13 @@ async def _phase5_matrix(db, identity) -> dict:
     from app.services.proposal_apply_service import ProposalApplyError
     from app.services.reconsolidation.lifecycle import approve_and_apply
     from sqlalchemy import func, select
+    from tests.kernel_matrix_fixtures import build_neuron, case
 
-    strict = [
-        _matrix_neuron(5001, "Node runtime", "Use Node 22 for this machine.",
-                       "Environment", invocations=18, utility=0.7),
-        _matrix_neuron(5002, "Node runtime duplicate", "Use Node 22 for this machine.",
-                       "Environment", invocations=4, utility=0.5),
-    ]
+    strict_case = case("strict_pair_retain_canonical")
+    strict = [build_neuron(m) for m in strict_case.members]
     db.add_all(strict)
     await db.flush()
-    strict_packet = {
-        "facets": [{"kind": "invariant", "text": "Use Node 22 for this machine.",
-                    "evidence_member_ids": [5001, 5002]}],
-        "proposed_label": "Node runtime", "proposed_summary": "Use Node 22",
-        "proposed_content": "Use Node 22 for this machine.",
-        "proposed_scope": "Environment",
-    }
-    strict_result = await _queue_with_packet(db, strict, strict_packet)
+    strict_result = await _queue_with_packet(db, strict, strict_case.packet)
     assert strict_result["disposition"] == "retain-canonical"
     assert strict_result["proposal_id"]
     await db.commit()
@@ -212,73 +226,36 @@ async def _phase5_matrix(db, identity) -> dict:
     assert strict_a.is_active and strict_b.superseded_by == 5001 \
         and not strict_b.is_active
 
-    scoped = [
-        _matrix_neuron(5003, "Corvus preview port", "Corvus preview uses port 8004.",
-                       "Projects"),
-        _matrix_neuron(5004, "Harness preview port", "Harness preview uses port 8004.",
-                       "Harness"),
-    ]
+    scoped_case = case("scoped_truths_no_fuse")
+    scoped = [build_neuron(m) for m in scoped_case.members]
     db.add_all(scoped)
     await db.flush()
-    scoped_packet = {
-        "facets": [
-            {"kind": "exception", "text": "Corvus preview uses port 8004.",
-             "evidence_member_ids": [5003]},
-            {"kind": "exception", "text": "Harness preview uses port 8004.",
-             "evidence_member_ids": [5004]},
-        ],
-        "proposed_label": "Scoped preview ports",
-        "proposed_summary": "Port usage is contextual.",
-        "proposed_content": "Corvus preview uses port 8004; Harness preview uses port 8004.",
-        "proposed_scope": None,
-    }
     proposals_before = (await db.execute(
         select(func.count()).select_from(AutopilotProposal))).scalar_one()
-    scoped_result = await _queue_with_packet(db, scoped, scoped_packet)
+    scoped_result = await _queue_with_packet(db, scoped, scoped_case.packet)
     proposals_after = (await db.execute(
         select(func.count()).select_from(AutopilotProposal))).scalar_one()
     assert scoped_result["outcome"] == "abstain"
     assert proposals_after == proposals_before, "scoped truths must not queue fusion"
 
-    contradiction = [
-        _matrix_neuron(5005, "Runtime pin A", "The runtime pin is Node 20.",
-                       "Environment"),
-        _matrix_neuron(5006, "Runtime pin B", "The runtime pin is Node 22.",
-                       "Environment"),
-    ]
+    conflict_case = case("contradictory_members_abstain")
+    contradiction = [build_neuron(m) for m in conflict_case.members]
     db.add_all(contradiction)
     await db.flush()
-    conflict_packet = {
-        "facets": [{"kind": "conflict", "text": "Runtime pin is Node 20 versus Node 22.",
-                    "evidence_member_ids": [5005, 5006], "resolution": None}],
-        "proposed_label": "Conflicting runtime pin",
-        "proposed_summary": "Unresolved version conflict.",
-        "proposed_content": "Runtime pin is Node 20 versus Node 22.",
-        "proposed_scope": "Environment",
-    }
     proposals_before_conflict = proposals_after
-    conflict_result = await _queue_with_packet(db, contradiction, conflict_packet)
+    conflict_result = await _queue_with_packet(db, contradiction,
+                                               conflict_case.packet)
     proposals_after_conflict = (await db.execute(
         select(func.count()).select_from(AutopilotProposal))).scalar_one()
     assert conflict_result["outcome"] == "abstain"
     assert proposals_after_conflict == proposals_before_conflict
 
-    rollback_members = [
-        _matrix_neuron(5007, "Rollback A", "Rollback proof fact.", "Harness"),
-        _matrix_neuron(5008, "Rollback B", "Rollback proof fact.", "Harness"),
-        _matrix_neuron(5009, "Rollback C", "Rollback proof fact.", "Harness"),
-    ]
+    rollback_case = case("mid_transaction_rollback")
+    rollback_members = [build_neuron(m) for m in rollback_case.members]
     db.add_all(rollback_members)
     await db.flush()
-    rollback_packet = {
-        "facets": [{"kind": "invariant", "text": "Rollback proof fact.",
-                    "evidence_member_ids": [5007, 5008, 5009]}],
-        "proposed_label": "Rollback proof synthesis",
-        "proposed_summary": "Rollback proof fact.",
-        "proposed_content": "Rollback proof fact.",
-        "proposed_scope": "Harness",
-    }
-    rollback_result = await _queue_with_packet(db, rollback_members, rollback_packet)
+    rollback_result = await _queue_with_packet(db, rollback_members,
+                                               rollback_case.packet)
     assert rollback_result["disposition"] == "synthesize-new"
     await db.commit()
 

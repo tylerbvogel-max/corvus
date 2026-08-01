@@ -12,6 +12,7 @@ lanes. The source of truth is `backend/pytest.ini`, enforced by
 | Hermetic | `venv/bin/python scripts/run_test_lane.py hermetic` | No database, network, provider, or external service | Required |
 | Integration | `venv/bin/python scripts/run_test_lane.py integration` | In-process application only; external I/O replaced | Required |
 | Database | `CORVUS_TEST_DATABASE_URL=postgresql+asyncpg://.../corvus_test_ci venv/bin/python scripts/run_test_lane.py database` | Disposable PostgreSQL database whose name starts `corvus_test_` or `corvus_migration_` | Required migration smoke |
+| Kernel replay | `REPLAY_DB=corvus_test_kernel_replay venv/bin/python scripts/run_test_lane.py kernel-replay` | Existing disposable `corvus_test_*` database; the schema is dropped and rebuilt | Opt-in; inputs guarded on every PR |
 | Evaluation | `venv/bin/python scripts/run_test_lane.py evaluation` | Frozen local fixtures; no provider or database | Scheduled/opt-in |
 | Live provider | `CORVUS_RUN_LIVE_PROVIDER=1 CORVUS_LIVE_PROVIDER_MODEL=opus venv/bin/python scripts/run_test_lane.py live-provider` | Explicitly authorized model plus working credentials/authenticated CLI | Opt-in only |
 
@@ -19,6 +20,26 @@ The required workflow selects hermetic and integration tests in one collection
 with `venv/bin/python scripts/run_test_lane.py required-backend`. The composite
 selection avoids paying the roughly 16-second import/collection cost twice;
 the two primary lane markers remain separately runnable for diagnosis.
+
+## Expensive proofs, cheap guards
+
+The `kernel-replay` lane is the reconsolidation kernel's only end-to-end proof
+against real SQL, the real one-step lifecycle and the real action bus. It is
+deliberately NOT in the merge gate: it destroys and rebuilds a schema, its
+database must be created out of band, and it costs roughly 100 seconds.
+
+That exemption is only defensible because its INPUTS are guarded on every PR.
+`backend/tests/kernel_matrix_fixtures.py` holds the review packets the replay
+feeds the kernel, and `backend/tests/test_kernel_replay_fixture_guard.py`
+(hermetic, milliseconds, no database) asserts they still pass `validate_packet`
+and still imply the dispositions the replay asserts. It also keeps a
+pre-evidence-frame plain-text packet as a negative control, so a guard that
+stopped guarding fails instead of passing.
+
+This pattern exists because the replay silently rotted for weeks when evidence
+frames became mandatory and no lane ran it (`kernel-replay-ungated`,
+2026-08-01). If you add another expensive opt-in proof, guard its inputs the
+same way.
 
 The evaluation command above runs deterministic harness contract tests. It
 does not start LoCoMo, LoCoMo-Plus, or any scored benchmark. Benchmark entry
