@@ -7,7 +7,6 @@ import {
   fetchLearningAnalytics,
   fetchRefinementHistory,
   fetchAuditLogSummary,
-  fetchSnapshots,
   fetchComplianceAudit,
 } from '../api';
 import type {
@@ -16,7 +15,6 @@ import type {
   StaleProvenanceNeuron,
   ComplianceAuditResponse,
   AuditLogSummary,
-  ComplianceSnapshotSummary,
 } from '../api';
 import type { NeuronStats, LearningAnalytics, LearningEventOut, NeuronRefinementEntry } from '../types';
 
@@ -28,7 +26,6 @@ interface GovernanceData {
   learning: LearningAnalytics;
   refinements: NeuronRefinementEntry[];
   auditSummary: AuditLogSummary;
-  snapshots: ComplianceSnapshotSummary[];
   compliance: ComplianceAuditResponse;
 }
 
@@ -75,11 +72,10 @@ export default function KnowledgeGovernancePage() {
       fetchLearningAnalytics(),
       fetchRefinementHistory(),
       fetchAuditLogSummary(),
-      fetchSnapshots(10),
       fetchComplianceAudit(),
     ])
-      .then(([stats, sources, authority, stale, learning, refinements, auditSummary, snapshots, compliance]) => {
-        setData({ stats, sources, authority, stale, learning, refinements, auditSummary, snapshots, compliance });
+      .then(([stats, sources, authority, stale, learning, refinements, auditSummary, compliance]) => {
+        setData({ stats, sources, authority, stale, learning, refinements, auditSummary, compliance });
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -88,14 +84,14 @@ export default function KnowledgeGovernancePage() {
   if (error) return <div className="error-msg">{error}</div>;
   if (loading || !data) return <div className="loading">Loading governance data...</div>;
 
-  const { stats, sources, authority, stale, learning, refinements, auditSummary, snapshots, compliance } = data;
+  const { stats, sources, authority, stale, learning, refinements, auditSummary, compliance } = data;
   const prov = compliance.provenance_audit;
 
   return (
     <div className="security-page">
       <h2>Knowledge Governance</h2>
       <p className="security-intro">
-        Auditable provenance, learning transparency, and compliance posture for the neuron knowledge graph.
+        Auditable provenance, authority, and learning transparency for the neuron knowledge graph.
         Every knowledge source, every learning event, and every change is tracked and inspectable.
       </p>
 
@@ -112,10 +108,6 @@ export default function KnowledgeGovernancePage() {
         <div className="stat-card">
           <div className="card-value">{learning.total_events}</div>
           <div className="card-label">Learning Events</div>
-        </div>
-        <div className="stat-card">
-          <div className="card-value">{snapshots.length}</div>
-          <div className="card-label">Compliance Snapshots</div>
         </div>
         <div className="stat-card">
           <div className="card-value" style={{ color: prov.missing_citations_count > 0 ? '#ef4444' : '#22c55e' }}>
@@ -467,95 +459,6 @@ export default function KnowledgeGovernancePage() {
         </div>
       </section>
 
-      {/* Section 5: Compliance Posture */}
-      <section className="security-section">
-        <h3>Compliance Posture</h3>
-        <p className="security-section-desc">
-          Latest compliance snapshot and trend data. Snapshots capture the full audit state for historical tracking.
-        </p>
-
-        {/* Latest Snapshot */}
-        {snapshots.length > 0 && (() => {
-          const latest = snapshots[0];
-          return (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
-                Latest Snapshot ({formatDate(latest.snapshot_date)})
-              </div>
-              <div className="stat-cards">
-                <div className="stat-card">
-                  <div className="card-value" style={{ color: latest.pii_clean ? '#22c55e' : '#ef4444' }}>
-                    {latest.pii_clean ? 'Clean' : 'Findings'}
-                  </div>
-                  <div className="card-label">PII Status</div>
-                </div>
-                <div className="stat-card">
-                  <div className="card-value">{latest.coverage_cv.toFixed(3)}</div>
-                  <div className="card-label">Coverage CV</div>
-                </div>
-                <div className="stat-card">
-                  <div className="card-value" style={{ color: latest.fairness_pass ? '#22c55e' : '#ef4444' }}>
-                    {latest.fairness_pass ? 'Pass' : 'Fail'}
-                  </div>
-                  <div className="card-label">Fairness</div>
-                </div>
-                <div className="stat-card">
-                  <div className="card-value" style={{ color: latest.missing_citations_count > 0 ? '#fb923c' : '#22c55e' }}>
-                    {latest.missing_citations_count}
-                  </div>
-                  <div className="card-label">Missing Citations</div>
-                </div>
-                <div className="stat-card">
-                  <div className="card-value" style={{ color: latest.stale_neurons_count > 0 ? '#fb923c' : '#22c55e' }}>
-                    {latest.stale_neurons_count}
-                  </div>
-                  <div className="card-label">Stale Neurons</div>
-                </div>
-                <div className="stat-card">
-                  <div className="card-value">{latest.total_neurons}</div>
-                  <div className="card-label">Total Neurons</div>
-                </div>
-                <div className="stat-card">
-                  <div className="card-value">{latest.total_evals}</div>
-                  <div className="card-label">Total Evals</div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Snapshot Timeline */}
-        {snapshots.length > 0 && (
-          <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
-              Snapshot Timeline ({snapshots.length})
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {snapshots.map(s => (
-                <div key={s.id} style={{
-                  background: 'var(--bg-input)', borderRadius: 6, padding: '8px 12px',
-                  fontSize: '0.75rem', minWidth: 140,
-                }}>
-                  <div style={{ fontWeight: 600, color: '#60a5fa', marginBottom: 4 }}>
-                    {formatDate(s.snapshot_date)}
-                  </div>
-                  <div>Neurons: {s.total_neurons}</div>
-                  <div style={{ color: s.pii_clean ? '#22c55e' : '#ef4444' }}>
-                    PII: {s.pii_clean ? 'Clean' : 'Findings'}
-                  </div>
-                  <div>CV: {s.coverage_cv.toFixed(3)}</div>
-                  <div style={{ color: s.fairness_pass ? '#22c55e' : '#ef4444' }}>
-                    Fairness: {s.fairness_pass ? 'Pass' : 'Fail'}
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.65rem', marginTop: 2 }}>
-                    {s.trigger}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
     </div>
   );
 }

@@ -17,7 +17,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 from app.database import async_session
-from app.models import BatchJob, EvidenceMapping, Neuron
+from app.models import BatchJob, Neuron
 from app.tenant import tenant
 
 logger = logging.getLogger(__name__)
@@ -153,27 +153,6 @@ async def seed_engrams():
         embedded = await auto_embed_engrams(db)
         if embedded > 0:
             print(f"Auto-embedded {embedded} engrams")
-
-
-async def seed_compliance():
-    """Seed evidence mappings and take a compliance snapshot if due."""
-    # Auto-seed evidence mappings if table is empty
-    async with async_session() as db:
-        try:
-            ev_count = (await db.execute(select(func.count(EvidenceMapping.id)))).scalar() or 0
-            if ev_count == 0:
-                from app.routers.compliance import _seed_evidence_data
-                result = await _seed_evidence_data(db)
-                print(f"Auto-seeded evidence mappings: {result}")
-        except (SQLAlchemyError, ImportError) as e:
-            logger.warning("Evidence map seed skipped: %s", e)
-
-    # Auto-snapshot compliance if none exists or last is >7 days old
-    try:
-        from app.routers.compliance import maybe_auto_snapshot
-        await maybe_auto_snapshot()
-    except (SQLAlchemyError, ImportError) as e:
-        logger.warning("Auto-snapshot skipped: %s", e)
 
 
 def cleanup_llm_session_transcripts() -> None:

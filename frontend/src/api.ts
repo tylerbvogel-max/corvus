@@ -1091,9 +1091,6 @@ export interface ComplianceAuditResponse {
   };
 }
 
-export function fetchComplianceAudit(): Promise<ComplianceAuditResponse> {
-  return json<ComplianceAuditResponse>('/admin/compliance-audit');
-}
 
 // ── Governance Dashboard ──
 
@@ -1368,61 +1365,6 @@ export function applyIngestSource(body: {
 
 // ── Management Reviews ──
 
-export interface ManagementReviewOut {
-  id: number;
-  review_type: string;
-  reviewer: string;
-  review_date: string;
-  findings: string;
-  decisions: string;
-  action_items: { description: string; due_date?: string; completed?: boolean }[];
-  status: string;
-  compliance_snapshot_id: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-export interface ReviewCadenceItem {
-  review_type: string;
-  cadence_days: number;
-  last_review_date: string | null;
-  next_due_date: string | null;
-  is_overdue: boolean;
-  days_until_due: number | null;
-}
-
-export function fetchReviews(reviewType?: string): Promise<ManagementReviewOut[]> {
-  const params = reviewType ? `?review_type=${encodeURIComponent(reviewType)}` : '';
-  return json<ManagementReviewOut[]>(`/admin/reviews${params}`);
-}
-
-export function createReview(body: {
-  review_type: string;
-  reviewer: string;
-  review_date: string;
-  findings: string;
-  decisions: string;
-  action_items?: { description: string; due_date?: string; completed?: boolean }[];
-  status?: string;
-}): Promise<ManagementReviewOut> {
-  return json<ManagementReviewOut>('/admin/reviews', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
-
-export function updateReview(id: number, body: Record<string, unknown>): Promise<ManagementReviewOut> {
-  return json<ManagementReviewOut>(`/admin/reviews/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
-
-export function fetchReviewCadence(): Promise<ReviewCadenceItem[]> {
-  return json<ReviewCadenceItem[]>('/admin/reviews/cadence');
-}
 
 // ── Compliance Snapshots ──
 
@@ -1440,132 +1382,18 @@ export interface ComplianceSnapshotSummary {
   created_at: string | null;
 }
 
-export interface ComplianceSnapshotDetail extends ComplianceSnapshotSummary {
-  snapshot_data: ComplianceAuditResponse | null;
-  diff_summary: Record<string, { prev: unknown; current: unknown; delta?: number }> | null;
-}
-
-export function fetchSnapshots(limit = 50): Promise<ComplianceSnapshotSummary[]> {
-  return json<ComplianceSnapshotSummary[]>(`/admin/compliance-snapshots?limit=${limit}`);
-}
-
-export function createSnapshot(trigger = 'manual'): Promise<ComplianceSnapshotSummary> {
-  return json<ComplianceSnapshotSummary>(`/admin/compliance-snapshots?trigger=${trigger}`, { method: 'POST' });
-}
-
-export function fetchSnapshotDetail(id: number): Promise<ComplianceSnapshotDetail> {
-  return json<ComplianceSnapshotDetail>(`/admin/compliance-snapshots/${id}`);
-}
 
 // ── Evidence Mapping ──
 
-export interface EvidenceMappingOut {
-  id: number;
-  framework: string;
-  requirement_id: string;
-  requirement_name: string;
-  status: string;
-  evidence_type: string;
-  evidence_location: string;
-  verification_query: string | null;
-  last_verified: string | null;
-  last_verified_by: string | null;
-  notes: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
-
-export function fetchEvidenceMap(framework?: string): Promise<EvidenceMappingOut[]> {
-  const params = framework ? `?framework=${encodeURIComponent(framework)}` : '';
-  return json<EvidenceMappingOut[]>(`/admin/evidence-map${params}`);
-}
-
-export function updateEvidence(id: number, body: Record<string, unknown>): Promise<EvidenceMappingOut> {
-  return json<EvidenceMappingOut>(`/admin/evidence-map/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
-
-export function verifyAllEvidence(): Promise<{ passed: number; failed: number; total: number }> {
-  return json<{ passed: number; failed: number; total: number }>('/admin/evidence-map/verify-all', { method: 'POST' });
-}
-
-export function seedEvidenceMap(): Promise<{ status: string; count: number }> {
-  return json<{ status: string; count: number }>('/admin/evidence-map/seed', { method: 'POST' });
-}
 
 // ── Evidence Content Viewer ──
 
-export interface EvidenceContentResponse {
-  path: string;
-  language: string;
-  content: string;
-  size: number;
-}
-
-export function fetchEvidenceContent(path: string): Promise<EvidenceContentResponse> {
-  return json<EvidenceContentResponse>(`/admin/evidence-content?path=${encodeURIComponent(path)}`);
-}
 
 // ── Compliance Report ──
 
-export function fetchComplianceReport(framework?: string): Promise<unknown> {
-  const params = framework ? `?framework=${encodeURIComponent(framework)}` : '';
-  return json<unknown>(`/admin/compliance-report${params}`);
-}
 
 // ── Security Compliance Frameworks (FedRAMP, SOC 2, CMMC) ──
 
-export interface FrameworkSummary {
-  framework: string;
-  total_controls?: number;
-  total_criteria?: number;
-  total_practices?: number;
-  status_counts: Record<string, number>;
-  families?: { id: string; name: string; total: number; [key: string]: unknown }[];
-  categories?: Record<string, Record<string, number>>;
-}
-
-export interface FrameworkControl {
-  id: string;
-  family?: string;
-  family_name?: string;
-  category?: string;
-  title: string;
-  status: string;
-  detail: string;
-  points_of_focus?: string[];
-}
-
-export function fetchFrameworksSummary(): Promise<{ frameworks: FrameworkSummary[] }> {
-  return json<{ frameworks: FrameworkSummary[] }>('/admin/frameworks');
-}
-
-export function fetchFedRAMPControls(family?: string, status?: string): Promise<{ summary: FrameworkSummary; controls: FrameworkControl[] }> {
-  const params = new URLSearchParams();
-  if (family) params.set('family', family);
-  if (status) params.set('status', status);
-  const qs = params.toString();
-  return json(`/admin/frameworks/fedramp${qs ? '?' + qs : ''}`);
-}
-
-export function fetchSOC2Criteria(category?: string, status?: string): Promise<{ summary: FrameworkSummary; criteria: FrameworkControl[] }> {
-  const params = new URLSearchParams();
-  if (category) params.set('category', category);
-  if (status) params.set('status', status);
-  const qs = params.toString();
-  return json(`/admin/frameworks/soc2${qs ? '?' + qs : ''}`);
-}
-
-export function fetchCMMCPractices(family?: string, status?: string): Promise<{ summary: FrameworkSummary; practices: FrameworkControl[] }> {
-  const params = new URLSearchParams();
-  if (family) params.set('family', family);
-  if (status) params.set('status', status);
-  const qs = params.toString();
-  return json(`/admin/frameworks/cmmc${qs ? '?' + qs : ''}`);
-}
 
 // ── Audit Log ──
 
@@ -1655,6 +1483,15 @@ export function fetchProvenanceStale(): Promise<StaleProvenanceNeuron[]> {
   return json<StaleProvenanceNeuron[]>('/admin/provenance/stale');
 }
 
+// Named for compliance, owned by operator. /admin/compliance-audit is declared
+// in routers/admin.py, NOT in the compliance context record 04a retired on
+// 2026-08-01, so it survived that retirement along with the provenance data it
+// returns — missing citations, source-type distribution, stale neurons. The
+// name is the trap: match these on route ownership, not on the word.
+export function fetchComplianceAudit(): Promise<ComplianceAuditResponse> {
+  return json<ComplianceAuditResponse>('/admin/compliance-audit');
+}
+
 // ── System Use Banner (AC-8) ──
 
 export interface SystemBannerResponse {
@@ -1713,171 +1550,6 @@ export function rejectObservation(obsId: number): Promise<{ observation_id: numb
 }
 
 // ── Compliance Suite (Unified Audit) ──
-
-export interface ComplianceSuiteDashboardResponse {
-  frameworks: Record<string, {
-    total: number;
-    passed: number;
-    failed: number;
-    partial: number;
-    attested: number;
-    untested: number;
-    compliance_pct: number;
-  }>;
-  latest_run: {
-    id: number;
-    started_at: string;
-    passed: number;
-    failed: number;
-    skipped: number;
-    duration_ms: number;
-  } | null;
-  total_providers: number;
-  total_controls: number;
-  expiring_attestations: { provider_id: string; attested_by: string; re_attestation_due: string }[];
-}
-
-export interface ComplianceSuiteControl {
-  framework: string;
-  control_id: string;
-  title: string;
-  family: string;
-  description: string;
-  external_ref: string;
-  provider_count: number;
-  provider_ids: string[];
-  evidence_types: string[];
-}
-
-export interface ComplianceSuiteRunSummary {
-  id: number;
-  started_at: string | null;
-  completed_at: string | null;
-  framework_filter: string | null;
-  total_providers: number;
-  passed: number;
-  failed: number;
-  skipped: number;
-  duration_ms: number;
-  triggered_by: string;
-}
-
-export interface ControlDetailResponse {
-  control: {
-    framework: string;
-    control_id: string;
-    title: string;
-    family: string;
-    description: string;
-    external_ref: string;
-  };
-  providers: {
-    id: string;
-    title: string;
-    evidence_type: string;
-    code_refs: string[];
-    rationale: string | null;
-  }[];
-  history: {
-    provider_id: string;
-    passed: boolean;
-    detail: Record<string, unknown>;
-    duration_ms: number;
-    collected_at: string | null;
-    run_id: number;
-  }[];
-}
-
-export interface SuiteProgressEvent {
-  stage: string;
-  completed: number;
-  total: number;
-  count?: number;
-  run_id?: number;
-}
-
-export function fetchComplianceSuiteDashboard(): Promise<ComplianceSuiteDashboardResponse> {
-  return json<ComplianceSuiteDashboardResponse>('/admin/compliance/dashboard');
-}
-
-export function fetchComplianceSuiteControls(framework?: string): Promise<ComplianceSuiteControl[]> {
-  const params = framework ? `?framework=${encodeURIComponent(framework)}` : '';
-  return json<ComplianceSuiteControl[]>(`/admin/compliance/controls${params}`);
-}
-
-export function fetchComplianceSuiteRuns(limit = 50): Promise<ComplianceSuiteRunSummary[]> {
-  return json<ComplianceSuiteRunSummary[]>(`/admin/compliance/runs?limit=${limit}`);
-}
-
-export function fetchComplianceSuiteControlDetail(framework: string, controlId: string): Promise<ControlDetailResponse> {
-  return json<ControlDetailResponse>(`/admin/compliance/controls/${encodeURIComponent(framework)}/${encodeURIComponent(controlId)}`);
-}
-
-export function submitComplianceAttestation(providerId: string, attestedBy: string, notes = '', days = 90): Promise<{ status: string }> {
-  const params = new URLSearchParams({
-    provider_id: providerId,
-    attested_by: attestedBy,
-    notes,
-    re_attestation_days: String(days),
-  });
-  return json<{ status: string }>(`/admin/compliance/attest?${params}`, { method: 'POST' });
-}
-
-export function runComplianceSuite(
-  framework: string | undefined,
-  onProgress: (event: SuiteProgressEvent) => void,
-  providerIds?: string[],
-): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const params = framework ? `?framework=${encodeURIComponent(framework)}` : '';
-      const hasBody = providerIds && providerIds.length > 0;
-      const res = await fetch(`/admin/compliance/run-suite${params}`, {
-        method: 'POST',
-        headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
-        body: hasBody ? JSON.stringify({ provider_ids: providerIds }) : undefined,
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop()!;
-
-        for (const part of parts) {
-          if (!part.trim()) continue;
-          let eventType = '';
-          let dataStr = '';
-          for (const line of part.split('\n')) {
-            if (line.startsWith('event: ')) eventType = line.slice(7);
-            else if (line.startsWith('data: ')) dataStr = line.slice(6);
-          }
-          if (!eventType || !dataStr) continue;
-          const parsed = JSON.parse(dataStr);
-          if (eventType === 'progress') {
-            onProgress(parsed as SuiteProgressEvent);
-          } else if (eventType === 'result') {
-            resolve();
-            return;
-          } else if (eventType === 'error') {
-            reject(new Error(parsed.message));
-            return;
-          }
-        }
-      }
-      resolve();
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
 
 
 // ── Proposal Queue ──────────────────────────────────────────────────

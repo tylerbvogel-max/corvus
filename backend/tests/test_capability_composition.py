@@ -36,10 +36,13 @@ def _profile(*capabilities: Capability) -> CapabilityProfile:
     return CapabilityProfile(tenant_id="test", granted=frozenset(capabilities))
 
 
-# Real paths owned solely by COMPLIANCE, verified live against the running
-# service on 2026-07-31. Every test that asserts their absence also asserts
-# their presence in the full profile first.
-_COMPLIANCE_ONLY_PATHS = ("/admin/frameworks", "/admin/evidence-map")
+# Real paths owned solely by a single non-memory capability — ingestion and
+# evaluation respectively — so a memory-only profile must not serve them. These
+# were /admin/frameworks and /admin/evidence-map until record 04a retired the
+# compliance capability on 2026-08-01; the exemplar changed, the property did
+# not. Every test that asserts their absence also asserts their presence in the
+# full profile first, so none of them can pass vacuously.
+_GATED_ONLY_PATHS = ("/admin/documents/upload", "/admin/eval/runs")
 
 
 def _paths(app) -> set[str]:
@@ -81,12 +84,12 @@ def test_disabled_capability_routes_are_absent_from_openapi():
     # a path must be present in the full contract before its absence means
     # anything. (An earlier version of this test asserted a path that no
     # profile served, and passed for no reason.)
-    for compliance_path in _COMPLIANCE_ONLY_PATHS:
-        assert compliance_path in full_paths, (
-            f"{compliance_path} is not served by any profile; this assertion "
+    for gated_path in _GATED_ONLY_PATHS:
+        assert gated_path in full_paths, (
+            f"{gated_path} is not served by any profile; this assertion "
             f"would pass vacuously"
         )
-        assert compliance_path not in reduced_paths
+        assert gated_path not in reduced_paths
 
     assert reduced_paths < full_paths, "reduced profile did not shrink the contract"
     # And the memory surface it DOES have is genuinely published.
@@ -111,19 +114,19 @@ def test_disabled_capability_does_not_answer_with_a_later_authorization_failure(
     full = create_app(profile=_profile(*Capability), tenant=_FakeTenant())
     served_when_enabled = {r.path for r in full.routes if hasattr(r, "path")}
 
-    for compliance_path in _COMPLIANCE_ONLY_PATHS:
-        assert compliance_path in served_when_enabled, (
-            f"{compliance_path} is served by no profile; asserting its 404 "
+    for gated_path in _GATED_ONLY_PATHS:
+        assert gated_path in served_when_enabled, (
+            f"{gated_path} is served by no profile; asserting its 404 "
             f"would prove nothing"
         )
-        response = client.get(compliance_path)
+        response = client.get(gated_path)
         assert response.status_code == 404, (
-            f"{compliance_path} answered {response.status_code}; a disabled "
+            f"{gated_path} answered {response.status_code}; a disabled "
             f"capability must not resolve to a route at all"
         )
         # The SPA catch-all must not have swallowed it and returned the shell.
         assert "text/html" not in response.headers.get("content-type", ""), (
-            f"{compliance_path} returned the SPA shell instead of 404 — a "
+            f"{gated_path} returned the SPA shell instead of 404 — a "
             f"client would read that as the endpoint existing"
         )
 
@@ -139,15 +142,18 @@ def test_disabled_capability_does_not_answer_with_a_later_authorization_failure(
 
 @pytest.mark.hermetic
 def test_disabled_capability_startup_steps_do_not_run():
-    """Compliance off ⇒ its registry load and its seed are never scheduled."""
-    without = _profile(Capability.MEMORY).startup_steps()
-    names = {s.name for s in without}
+    """A capability off ⇒ the steps it requires are never scheduled.
 
-    assert "load_compliance_registry" not in names
-    assert "seed_compliance" not in names
-    # ...and on, they are.
-    with_compliance = {s.name for s in _profile(Capability.COMPLIANCE).startup_steps()}
-    assert {"load_compliance_registry", "seed_compliance"} <= with_compliance
+    This used to be demonstrated with compliance's registry load and seed.
+    Record 04a retired that capability on 2026-08-01, so the gate is shown
+    against operator's transcript cleanup instead. The property under test is
+    the gating itself, not the particular step.
+    """
+    names = {s.name for s in _profile(Capability.MEMORY).startup_steps()}
+    assert "cleanup_llm_session_transcripts" not in names
+    # ...and on, it is.
+    with_operator = {s.name for s in _profile(Capability.OPERATOR).startup_steps()}
+    assert "cleanup_llm_session_transcripts" in with_operator
 
 
 @pytest.mark.hermetic
@@ -207,7 +213,7 @@ def test_profile_is_published_for_the_frontend():
     payload = client.get("/tenant").json()
 
     assert payload["capabilities"] == ["memory"]
-    assert "compliance" in payload["disabled_capabilities"]
+    assert "ingestion" in payload["disabled_capabilities"]
     assert payload["memory_surface"] is True
 
 
@@ -272,7 +278,7 @@ def test_declared_jobs_belong_to_a_granted_capability():
     """Scheduled units are owned, so orphans are detectable."""
     memory = _profile(Capability.MEMORY)
     assert "corvus-mind-distill.timer" in memory.jobs()
-    assert _profile(Capability.COMPLIANCE).jobs() == ()
+    assert _profile(Capability.EXTERNAL_API).jobs() == ()
 
 
 # ── Carry-forward 1: the 404-dependency gate is gone ───────────────────────
@@ -366,3 +372,121 @@ def test_every_declared_job_targets_a_route_its_capability_mounts():
                 f"{capability.value} claims {unit} -> POST {path}, but does not "
                 f"mount that route; the timer would fire into a 404"
             )
+
+
+# ── Record 04, seam 1: operator surfaces leave the compliance context ──────
+#
+# routers/compliance.py owned /admin/system-banner and /admin/audit-log* on the
+# strength of a control citation (AC-8, AU-2/3/6/7) rather than of ownership.
+# The cost was measured, not theoretical: composing `compliance` away from
+# corvus-mind removed the system use notification, and because SystemUseBanner
+# fails soft on 404, it disappeared in silence. These tests hold the split.
+
+# Operator surfaces that used to be mounted by the compliance capability.
+_OPERATOR_SURFACES = (
+    "/admin/system-banner",
+    "/admin/audit-log",
+    "/admin/audit-log/summary",
+)
+
+# Where those routes are allowed to be declared, now that the context they came
+# from is gone. Record 04a retired compliance on 2026-08-01, so the old guard —
+# "compliance must not re-declare these" — has no file left to read. The durable
+# form is the inverse: exactly one module may declare them.
+_OPERATOR_SURFACE_OWNER = "app/operations/router.py"
+
+
+@pytest.mark.hermetic
+def test_operator_surfaces_are_owned_by_operator_alone():
+    """The gate record 04 names, in both directions.
+
+    This is the regression that blocked the drop for a full record cycle: the
+    system use notification vanished on profiles that did not grant compliance,
+    and because SystemUseBanner fails soft on 404, it disappeared in silence.
+    Operator alone must mount these, and no profile without operator may.
+    """
+    operator_only = create_app(profile=_profile(Capability.OPERATOR), tenant=_FakeTenant())
+    missing = [p for p in _OPERATOR_SURFACES if p not in _paths(operator_only)]
+    assert not missing, f"operator alone does not mount the surfaces it owns: {missing}"
+
+    without_operator = create_app(
+        profile=_profile(*(frozenset(Capability) - {Capability.OPERATOR})),
+        tenant=_FakeTenant(),
+    )
+    leaked = [p for p in _OPERATOR_SURFACES if p in _paths(without_operator)]
+    assert not leaked, (
+        f"{leaked} mounted on a profile without operator; some other capability "
+        f"has taken ownership of an operator surface again"
+    )
+
+
+@pytest.mark.hermetic
+def test_operator_routes_are_declared_in_exactly_one_module():
+    """Source-level guard: only app/operations/ may declare these paths.
+
+    The composition test above checks the mounted result, which a second
+    declaration elsewhere would still satisfy on a full profile. This reads the
+    route decorators directly across the whole app, so ownership drift fails
+    here first — the way it did when a control-family citation was mistaken for
+    ownership. See app/operations/__init__.py.
+    """
+    import ast
+    import pathlib
+
+    backend = pathlib.Path(__file__).resolve().parents[1]
+    offenders: list[str] = []
+    for source in sorted((backend / "app").rglob("*.py")):
+        rel = source.relative_to(backend).as_posix()
+        if rel == _OPERATOR_SURFACE_OWNER:
+            continue
+        tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for decorator in node.decorator_list:
+                # @router.get("/path"), @router.post("/path"), ...
+                if not isinstance(decorator, ast.Call):
+                    continue
+                if not isinstance(decorator.func, ast.Attribute):
+                    continue
+                if not decorator.args or not isinstance(decorator.args[0], ast.Constant):
+                    continue
+                declared = decorator.args[0].value
+                if not isinstance(declared, str) or not declared.strip("/"):
+                    # @router.get("") is the router's own root, not a surface.
+                    continue
+                # Routers carry prefix="/admin"; compare on the suffix.
+                if any(s.endswith(declared) for s in _OPERATOR_SURFACES):
+                    offenders.append(f"{rel}:{node.lineno} {declared}")
+
+    assert not offenders, (
+        f"operator routes declared outside {_OPERATOR_SURFACE_OWNER}: {offenders}. "
+        f"A control-family citation is not ownership."
+    )
+
+
+@pytest.mark.hermetic
+def test_audit_trail_is_readable_wherever_it_is_written():
+    """The reader must not be composable away while the writer is not.
+
+    AuditMiddleware is installed by the factory on every profile, including the
+    empty one, so every deployment accumulates audit rows. A profile that wrote
+    them and could not read them back would be audited and blind — which is
+    exactly what the old compliance ownership produced.
+    """
+    from app.middleware.audit import AuditMiddleware
+
+    empty = create_app(profile=_profile(), tenant=_FakeTenant())
+    installed = [m.cls for m in empty.user_middleware]
+    assert AuditMiddleware in installed, (
+        "AuditMiddleware is no longer unconditional; if audit writing became "
+        "capability-gated, the read surface's ownership must be revisited "
+        "alongside it rather than left behind."
+    )
+
+    operator = create_app(profile=_profile(Capability.OPERATOR), tenant=_FakeTenant())
+    mounted = _paths(operator)
+    assert "/admin/audit-log" in mounted, (
+        "audit rows are written on every profile, but the operator capability "
+        "cannot read them back"
+    )

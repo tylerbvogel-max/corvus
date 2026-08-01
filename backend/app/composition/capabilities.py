@@ -39,7 +39,6 @@ class Capability(str, Enum):
     INGESTION = "ingestion"
     GOVERNANCE = "governance"
     EVALUATION = "evaluation"
-    COMPLIANCE = "compliance"
     OPERATOR = "operator"
     EXTERNAL_API = "external_api"
 
@@ -168,19 +167,17 @@ CAPABILITIES: dict[Capability, CapabilitySpec] = {
             RouterSpec("app.routers.performance"),
         ),
     ),
-    Capability.COMPLIANCE: CapabilitySpec(
-        summary="Control frameworks, evidence mapping, and compliance "
-                "snapshots. Carries its own provider registry.",
-        routers=(
-            RouterSpec("app.routers.compliance"),
-            RouterSpec("app.compliance.router"),
-        ),
-    ),
     Capability.OPERATOR: CapabilitySpec(
         summary="Human-facing operation: admin console, architecture atlas, "
-                "chat sessions, and roadmap ledgers.",
+                "chat sessions, roadmap ledgers, the system use notification, "
+                "and the audit-trail read surface.",
         routers=(
             RouterSpec("app.routers.admin"),
+            # The banner and audit-log reads. Owned here because the writer —
+            # AuditMiddleware — is installed on every profile, and because the
+            # banner fails soft in the UI: gating it behind compliance made a
+            # control surface vanish with no error.
+            RouterSpec("app.operations.router"),
             RouterSpec("app.routers.architecture"),
             RouterSpec("app.routers.chat_sessions"),
             # Operator-facing, but ledger rows live in the memory graph.
@@ -203,12 +200,6 @@ STARTUP_STEPS: tuple[StartupStep, ...] = (
         name="validate_schema_authority",
         module="app.services.schema_authority",
         attr="validate_schema_authority",
-    ),
-    StartupStep(
-        name="load_compliance_registry",
-        module="app.compliance.registry",
-        attr="load_all",
-        required_by=frozenset({Capability.COMPLIANCE}),
     ),
     StartupStep(
         name="init_actions_registry",
@@ -239,13 +230,6 @@ STARTUP_STEPS: tuple[StartupStep, ...] = (
         # Engram embeddings are part of the recall prefilter cache, so memory
         # needs them even when the engram ROUTER is not mounted.
         required_by=frozenset({Capability.MEMORY, Capability.KNOWLEDGE_GRAPH}),
-        needs_canonical_lock=True,
-    ),
-    StartupStep(
-        name="seed_compliance",
-        module="app.composition.startup",
-        attr="seed_compliance",
-        required_by=frozenset({Capability.COMPLIANCE}),
         needs_canonical_lock=True,
     ),
     StartupStep(

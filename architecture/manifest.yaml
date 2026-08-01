@@ -1216,13 +1216,17 @@ boxes:
       - backend/app/routers/agents.py
 
   - id: provenance-compliance
-    name: Provenance, regions, intake, and compliance
-    purpose: Track source lineage, regional policy, observation intake, seeding, audit evidence, and framework control status.
+    name: Provenance, regions, intake, and lineage
+    purpose: Track source lineage, regional policy, observation intake, and seeding.
     tier: governance
     confidence: reviewed
+    # The compliance context this box was co-named for — app/compliance/** and
+    # app/routers/compliance.py, the control frameworks and evidence mapping —
+    # was retired by roadmap record durability-compliance-disposition on
+    # 2026-08-01 and is recoverable from ~/Projects/corvus-compliance-context
+    # (tag compliance-context-2026-08-01). The id is kept so atlas history and
+    # cross-references stay resolvable; the name and purpose are not.
     owns:
-      - backend/app/compliance/**
-      - backend/app/routers/compliance.py
       - backend/app/routers/provenance.py
       - backend/app/routers/lineage.py
       - backend/app/routers/regions.py
@@ -1256,7 +1260,7 @@ boxes:
 
   - id: platform-infra
     name: Tenant runtime and platform infrastructure
-    purpose: Select the tenant, configure/database the process, migrate and seed state, enforce middleware, and serve the application.
+    purpose: Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.
     tier: infra
     confidence: reviewed
     owns:
@@ -1270,6 +1274,11 @@ boxes:
       - backend/app/schemas.py
       - backend/app/tenant.py
       - backend/app/middleware/**
+      # Reader for two things this box already owns: the audit rows written by
+      # middleware/audit.py and the banner text carried in tenant.py. Moved out
+      # of provenance-compliance by roadmap record 04 — see
+      # backend/app/operations/__init__.py.
+      - backend/app/operations/**
       - backend/app/seed/**
       - backend/app/data/**
       - backend/app/services/bootstrap_service.py
@@ -1427,7 +1436,7 @@ processes:
           - backend/app/services/schema_authority.py::validate_schema_authority
       - actor: FastAPI lifespan
         component: runtime-composition
-        does: Load compliance/action registries and seed core, engram, and compliance data — each step only when a granted capability requires it.
+        does: Load the action registry and seed core and engram data — each step only when a granted capability requires it.
         state_change: Bootstrap rows converge to the current code contract without implicit schema mutation; steps required by no granted capability never import their module.
         guardrail: Alembic is the explicit schema authority; no startup step contains a CREATE, ALTER, or metadata.create_all path.
         evidence:

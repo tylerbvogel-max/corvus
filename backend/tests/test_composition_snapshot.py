@@ -24,6 +24,9 @@ from pathlib import Path
 
 import pytest
 
+from app.composition.capabilities import Capability
+from app.composition.factory import create_app
+from app.composition.profiles import CapabilityProfile
 from app.main import app
 from app.tenant import tenant
 from scripts.capability_snapshot import describe_surface
@@ -32,20 +35,33 @@ _CONTRACTS = Path(__file__).resolve().parent / "contracts"
 _TENANTS_DIR = Path(__file__).resolve().parent.parent / "tenants"
 
 # Captured 2026-07-31, pre-factory: every tenant received this same surface.
-# corvus-mind still measures exactly this after the capability factory landed —
-# byte-identical openapi.corvus-mind.json — which is how acceptance criterion 3
-# ("no enabled production route changes contract accidentally") is evidenced
-# rather than asserted.
+# corvus-mind measured exactly this through the whole of record 03 — the
+# factory changed composition, not contracts.
+#
+# Record 04 moves it on purpose, once: dropping the compliance capability from
+# corvus-mind after re-homing the three operator routes compliance.py owned.
+# The count below is therefore no longer corvus-mind's expected surface, but it
+# stays as the reference point that
+# test_production_surface_lost_exactly_the_compliance_capability measures the
+# delta against — the guarantee is still "nothing left except what we chose".
 _PREFACTORY_ROUTE_COUNT = 242
 
 # Post-factory, measured. corvus-locomo is a benchmark tenant whose only
 # consumer imports app.services.* in-process and never speaks HTTP, so its
 # operator, compliance, governance, ingestion, evaluation, and external
-# surfaces are composed away.
+# surfaces are composed away. corvus-mind dropped compliance on 2026-08-01.
 _EXPECTED_ROUTE_COUNTS = {
-    "corvus-mind": _PREFACTORY_ROUTE_COUNT,
+    "corvus-mind": 211,
     "corvus-locomo": 78,
 }
+
+# Re-homed out of routers/compliance.py into app/operations/ by record 04.
+# They must survive the capability drop; see app/operations/__init__.py.
+_REHOMED_OPERATOR_SURFACES = (
+    "/admin/system-banner",
+    "/admin/audit-log",
+    "/admin/audit-log/summary",
+)
 
 _ALL_TENANTS = sorted(
     d.name for d in _TENANTS_DIR.iterdir()
@@ -129,12 +145,45 @@ def test_tenant_surfaces_differ_by_profile():
 
 
 @pytest.mark.hermetic
-def test_production_contract_survived_the_factory():
-    """corvus-mind's contract is unchanged from the pre-factory capture."""
-    surface = _stored("surface", "corvus-mind")
-    assert surface["method_level_route_count"] == _PREFACTORY_ROUTE_COUNT, (
-        "the operator tenant's route count moved; the factory was supposed to "
-        "change composition, not contracts"
+def test_production_surface_is_exactly_the_full_grant():
+    """corvus-mind exposes the whole capability surface, and nothing more.
+
+    This test used to read "the full surface minus compliance". Record 04a
+    retired that capability on 2026-08-01, so corvus-mind now grants every
+    capability that exists and the subtraction has no subject left. The property
+    that survives is the one that always mattered: the stored snapshot and the
+    live capability model agree exactly, in both directions. Derived from the
+    live model, so it keeps holding as capabilities move.
+    """
+    everything = frozenset(Capability)
+    full = create_app(
+        profile=CapabilityProfile(tenant_id=tenant.tenant_id, granted=everything),
+        tenant=tenant,
+    )
+
+    def paths(app_):
+        # Documented paths only, via the same describer that wrote the stored
+        # snapshot. Raw app.routes would also carry /docs, /openapi.json, /mcp
+        # and the SPA catch-all, which the snapshot records separately.
+        return {r["path"] for r in describe_surface(app_, tenant.tenant_id)["surface"]["routes"]}
+
+    stored = {r["path"] for r in _stored("surface", "corvus-mind")["routes"]}
+
+    invented = stored - paths(full)
+    assert not invented, f"corvus-mind exposes routes no capability grants: {sorted(invented)}"
+
+    lost = paths(full) - stored
+    assert not lost, (
+        f"corvus-mind is missing routes its grants own: {sorted(lost)}. If a "
+        f"capability was dropped from the tenant, this snapshot needs refreshing "
+        f"as a reviewed contract change."
+    )
+
+    # The seam that made the drop possible in the first place.
+    missing = [p for p in _REHOMED_OPERATOR_SURFACES if p not in stored]
+    assert not missing, (
+        f"{missing} left corvus-mind with the compliance capability; the "
+        f"re-home into app/operations/ has regressed"
     )
 
 
@@ -150,8 +199,21 @@ def test_reduced_profile_actually_drops_modules():
         f"disabled capabilities are still being imported"
     )
     # The import-time-heavy ones specifically: FastMCP builds a server and
-    # registers every tool at import, and the compliance registry is a
-    # module-level singleton.
-    for module in ("app.mcp_server", "app.mcp_http", "app.compliance.registry"):
+    # registers every tool at import, and the agent registry is a module-level
+    # singleton that instantiates every declared agent.
+    for module in ("app.mcp_server", "app.mcp_http", "app.agents.registry"):
         assert module in mind
         assert module not in locomo, f"{module} still imported by the reduced profile"
+
+    # app.compliance.registry used to stand in this list. Record 04a retired the
+    # compliance context on 2026-08-01: the package left the tree entirely and is
+    # recoverable from ~/Projects/corvus-compliance-context (tag
+    # compliance-context-2026-08-01). This assertion is kept deliberately as a
+    # restore tripwire — if someone puts the bundle back, CI should say so out
+    # loud rather than let it drift in unreviewed.
+    for profile in (mind, locomo):
+        assert not any(m.startswith("app.compliance") for m in profile), (
+            "the retired compliance package is resident again. If the restore is "
+            "intended, re-open roadmap record durability-compliance-disposition "
+            "and re-review this expectation rather than deleting it."
+        )

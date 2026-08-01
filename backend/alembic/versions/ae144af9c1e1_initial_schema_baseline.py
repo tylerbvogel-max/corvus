@@ -9,12 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 
-from app.compliance.models import (  # noqa: F401
-    ComplianceAttestation,
-    ComplianceProviderResult,
-    ComplianceSuiteRun,
-)
-from app.models import Base
+from app.models import Base  # noqa: F401  (imports every table into the metadata)
 
 # revision identifiers, used by Alembic.
 revision: str = 'ae144af9c1e1'

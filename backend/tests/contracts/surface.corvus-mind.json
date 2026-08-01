@@ -1,6 +1,6 @@
 {
-  "documented_path_count": 224,
-  "method_level_route_count": 242,
+  "documented_path_count": 196,
+  "method_level_route_count": 211,
   "routes": [
     {
       "method": "GET",
@@ -51,18 +51,18 @@
       "method": "GET",
       "operation_id": "list_audit_log_admin_audit_log_get",
       "path": "/admin/audit-log",
-      "schema_fingerprint": "b160e0d32e91fdc3",
+      "schema_fingerprint": "badcb197ffb62ce1",
       "tags": [
-        "compliance"
+        "operations"
       ]
     },
     {
       "method": "GET",
       "operation_id": "audit_log_summary_admin_audit_log_summary_get",
       "path": "/admin/audit-log/summary",
-      "schema_fingerprint": "32cd532db0914f99",
+      "schema_fingerprint": "de54798da0d301e6",
       "tags": [
-        "compliance"
+        "operations"
       ]
     },
     {
@@ -103,155 +103,11 @@
     },
     {
       "method": "GET",
-      "operation_id": "code_review_checklist_admin_code_review_get",
-      "path": "/admin/code-review",
-      "schema_fingerprint": "f4968cf0aa38aade",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
       "operation_id": "compliance_audit_admin_compliance_audit_get",
       "path": "/admin/compliance-audit",
       "schema_fingerprint": "ba4ae4f63503872c",
       "tags": [
         "admin"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "compliance_report_admin_compliance_report_get",
-      "path": "/admin/compliance-report",
-      "schema_fingerprint": "8c358db0ac964958",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_snapshots_admin_compliance_snapshots_get",
-      "path": "/admin/compliance-snapshots",
-      "schema_fingerprint": "1354ffa1a65bd15f",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "create_snapshot_admin_compliance_snapshots_post",
-      "path": "/admin/compliance-snapshots",
-      "schema_fingerprint": "b6817b3120925977",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "get_snapshot_admin_compliance_snapshots__snapshot_id__get",
-      "path": "/admin/compliance-snapshots/{snapshot_id}",
-      "schema_fingerprint": "7c91f0feb9aaa61b",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "submit_attestation_admin_compliance_attest_post",
-      "path": "/admin/compliance/attest",
-      "schema_fingerprint": "20fe9f12c922792c",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_attestations_admin_compliance_attestations_get",
-      "path": "/admin/compliance/attestations",
-      "schema_fingerprint": "b13c0acc2bc10f87",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_controls_admin_compliance_controls_get",
-      "path": "/admin/compliance/controls",
-      "schema_fingerprint": "ec8533f37fa848f9",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "get_control_detail_admin_compliance_controls__framework___control_id__get",
-      "path": "/admin/compliance/controls/{framework}/{control_id}",
-      "schema_fingerprint": "6a954d72eb708ffe",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "dashboard_admin_compliance_dashboard_get",
-      "path": "/admin/compliance/dashboard",
-      "schema_fingerprint": "ffbebbe5865c2ad0",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_providers_admin_compliance_providers_get",
-      "path": "/admin/compliance/providers",
-      "schema_fingerprint": "a12355b827ca365a",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "get_provider_detail_admin_compliance_providers__provider_id__get",
-      "path": "/admin/compliance/providers/{provider_id}",
-      "schema_fingerprint": "f07063ae66e4a504",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "run_suite_admin_compliance_run_suite_post",
-      "path": "/admin/compliance/run-suite",
-      "schema_fingerprint": "800d0c02bc49773e",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_runs_admin_compliance_runs_get",
-      "path": "/admin/compliance/runs",
-      "schema_fingerprint": "0906d5c8c13c6098",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "get_run_admin_compliance_runs__run_id__get",
-      "path": "/admin/compliance/runs/{run_id}",
-      "schema_fingerprint": "6ad7f0be7a6e4dff",
-      "tags": [
-        "compliance-suite"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "get_run_report_admin_compliance_runs__run_id__report_get",
-      "path": "/admin/compliance/runs/{run_id}/report",
-      "schema_fingerprint": "81245ea56caf8123",
-      "tags": [
-        "compliance-suite"
       ]
     },
     {
@@ -426,102 +282,12 @@
       ]
     },
     {
-      "method": "GET",
-      "operation_id": "evidence_content_admin_evidence_content_get",
-      "path": "/admin/evidence-content",
-      "schema_fingerprint": "e2d32d982b10649a",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_evidence_admin_evidence_map_get",
-      "path": "/admin/evidence-map",
-      "schema_fingerprint": "aa540bacf460d588",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "seed_evidence_map_admin_evidence_map_seed_post",
-      "path": "/admin/evidence-map/seed",
-      "schema_fingerprint": "5d6f72edde6941ff",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "verify_all_evidence_admin_evidence_map_verify_all_post",
-      "path": "/admin/evidence-map/verify-all",
-      "schema_fingerprint": "c84b6758c60d27ee",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "PUT",
-      "operation_id": "update_evidence_admin_evidence_map__mapping_id__put",
-      "path": "/admin/evidence-map/{mapping_id}",
-      "schema_fingerprint": "7b494f774b4e7271",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
       "method": "POST",
       "operation_id": "extract_source_admin_extract_source_post",
       "path": "/admin/extract-source",
       "schema_fingerprint": "136eeab3f139da48",
       "tags": [
         "admin"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "list_frameworks_admin_frameworks_get",
-      "path": "/admin/frameworks",
-      "schema_fingerprint": "528413aa8c394a37",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "cmmc_practices_admin_frameworks_cmmc_get",
-      "path": "/admin/frameworks/cmmc",
-      "schema_fingerprint": "d5eb19061f7bf6e3",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "fedramp_controls_admin_frameworks_fedramp_get",
-      "path": "/admin/frameworks/fedramp",
-      "schema_fingerprint": "e5b9de4a35af3024",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "soc2_criteria_admin_frameworks_soc2_get",
-      "path": "/admin/frameworks/soc2",
-      "schema_fingerprint": "0225f748413797f3",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "unified_framework_view_admin_frameworks_unified_get",
-      "path": "/admin/frameworks/unified",
-      "schema_fingerprint": "1a0b2d42e2d5d396",
-      "tags": [
-        "compliance"
       ]
     },
     {
@@ -1056,51 +822,6 @@
       ]
     },
     {
-      "method": "GET",
-      "operation_id": "list_reviews_admin_reviews_get",
-      "path": "/admin/reviews",
-      "schema_fingerprint": "e90d46ce803acc3d",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "POST",
-      "operation_id": "create_review_admin_reviews_post",
-      "path": "/admin/reviews",
-      "schema_fingerprint": "809c80d9aca446e1",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "review_cadence_admin_reviews_cadence_get",
-      "path": "/admin/reviews/cadence",
-      "schema_fingerprint": "90d7bbc0b75d1f0f",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "GET",
-      "operation_id": "get_review_admin_reviews__review_id__get",
-      "path": "/admin/reviews/{review_id}",
-      "schema_fingerprint": "aeac4ad019e55f4f",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
-      "method": "PUT",
-      "operation_id": "update_review_admin_reviews__review_id__put",
-      "path": "/admin/reviews/{review_id}",
-      "schema_fingerprint": "439394b2d6573369",
-      "tags": [
-        "compliance"
-      ]
-    },
-    {
       "method": "POST",
       "operation_id": "scan_references_admin_scan_references_post",
       "path": "/admin/scan-references",
@@ -1221,9 +942,9 @@
       "method": "GET",
       "operation_id": "get_system_banner_admin_system_banner_get",
       "path": "/admin/system-banner",
-      "schema_fingerprint": "c54262bffe1ec2c6",
+      "schema_fingerprint": "8dbe2b45788c2e51",
       "tags": [
-        "compliance"
+        "operations"
       ]
     },
     {

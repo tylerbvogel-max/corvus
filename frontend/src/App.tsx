@@ -26,8 +26,6 @@ import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
 import CirclePacking from './components/CirclePacking'
 import SampleQueries from './components/SampleQueries'
-import QualityPage from './components/QualityPage'
-import FairnessPage from './components/FairnessPage'
 import PerformancePage from './components/PerformancePage'
 import EmergentQueuePage from './components/EmergentQueuePage'
 import SynapticLearningPage from './components/SynapticLearningPage'
@@ -81,7 +79,7 @@ const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'carlos-lab' | 'nexus-lab' | 'oracle-funnel-lab' | 'architecture';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'carlos-lab' | 'nexus-lab' | 'oracle-funnel-lab' | 'architecture';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -202,9 +200,7 @@ function buildNavGroups(
         { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost', requires: 'memory' },
         { key: 'mind-sessions', label: 'Sessions', description: "Episode logs: the memory's inputs and their distillation" },
         { key: 'performance', label: 'Performance', description: 'Volume, cost, scoring health, spread activation, and per-stage pipeline latency', requires: 'evaluation' },
-        { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics', requires: 'compliance' },
-        { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
-        { key: 'fairness', label: 'Fairness', description: 'Bias detection across departments and roles' },
+        { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge provenance, authority, and learning transparency', requires: 'governance' },
         { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history', requires: 'evaluation' },
         { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query', requires: 'evaluation' },
         { key: 'architecture', label: 'Architecture', description: "The system's own shape — boxes, drift, and the frontend/backend route join", requires: 'operator' },
@@ -257,20 +253,23 @@ function buildNavGroups(
     //                                   harness capture path /ingest/observations
     //   engrams, layer-heatmap       -> knowledge_graph, which recall depends on
     //   eval-runs, evaluation        -> evaluation, which also serves Performance
-    //   quality, fairness            -> no API client imports at all; inert pages
-    // knowledge-governance stays curated out rather than composed out. It is
-    // the one entry a capability could genuinely govern, but dropping
-    // `compliance` from corvus-mind also removes /admin/system-banner and
-    // /admin/audit-log*, which routers/compliance.py owns despite their being
-    // operator surfaces. See that tenant.yaml comment; the split belongs to
-    // roadmap record 04. Once compliance can be composed away cleanly, this
-    // key moves to `requires: 'compliance'` above and leaves this list.
+    //
+    // quality and fairness used to sit in this list, justified here as having
+    // "no API client imports at all; inert pages". That was simply false: each
+    // rendered nothing but the result of one useComplianceAudit() call. Record
+    // 04a retired the compliance context on 2026-08-01 and both pages went with
+    // it, so the wrong claim is gone rather than corrected.
+    //
+    // knowledge-governance is NOT in this list, and is no longer composed away
+    // either. Gating it on `compliance` had taken seven memory- and
+    // governance-native panels down with the two compliance ones; record 04a
+    // dropped those two and moved the page to `requires: 'governance'`, which
+    // corvus-mind grants. Curation still does not stand in for composition here.
     //
     // Performance stays visible: recall queries carry full stage telemetry, so
     // per-step speed is real data on memory tenants too.
     const curatedOut = new Set(['emergent-queue', 'document-ingest',
-      'engrams', 'layer-heatmap', 'knowledge-governance', 'quality',
-      'fairness', 'evaluation', 'eval-runs',
+      'engrams', 'layer-heatmap', 'evaluation', 'eval-runs',
       'integrity-dashboard', 'integrity-scan', 'integrity-findings']);
     for (const g of groups) g.items = g.items.filter(i => !curatedOut.has(i.key));
     return groups.filter(g => g.items.length > 0);
@@ -685,8 +684,6 @@ export default function App() {
       case 'integrity-scan': return <IntegrityPage panel="scan" />;
       case 'integrity-findings': return <IntegrityPage panel="findings" />;
       case 'synaptic-learning': return <SynapticLearningPage />;
-      case 'quality': return <QualityPage />;
-      case 'fairness': return <FairnessPage />;
       case 'performance': return <PerformancePage />;
       case 'mind-metrics': return <MindMetricsPage />;
       case 'architecture': return <ArchitecturePage />;

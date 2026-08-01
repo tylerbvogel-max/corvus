@@ -10,7 +10,6 @@ from alembic import context
 # App imports — gives us settings + model metadata
 from app.config import settings
 from app.models import Base
-from app.compliance.models import ComplianceSuiteRun, ComplianceProviderResult, ComplianceAttestation  # noqa: F401
 
 config = context.config
 
