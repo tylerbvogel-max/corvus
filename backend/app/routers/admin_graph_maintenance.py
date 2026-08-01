@@ -28,7 +28,7 @@ import asyncio
 import json
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select, text
+from sqlalchemy import bindparam, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -91,7 +91,14 @@ async def classify_edges(db: AsyncSession = Depends(get_db)):
     Looks up the department of each edge's source and target neurons.
     Same department = stellate (local processor), different = pyramidal (long-range).
     """
-    # Reclassify all edges except 'instantiates' (concept neuron edges are manually typed)
+    from app.services.mind_corpus import NON_CONDUCTING_EDGE_TYPES
+
+    # Reclassify conducting edges only. The exclusion is the shared
+    # non-conducting CLASS, not a hand-list: the original exclusion named
+    # instantiates alone, predating the memory-semantics types, and so
+    # overwrote 507 supersedes/evidence-link edges on the production graph
+    # on 2026-08-01 (record fix-classify-edges-taxonomy). Deriving from
+    # mind_corpus means a fifth non-conducting type cannot recreate that.
     result = await db.execute(text("""
         UPDATE neuron_edges e
         SET edge_type = CASE
@@ -100,9 +107,11 @@ async def classify_edges(db: AsyncSession = Depends(get_db)):
         END
         FROM neurons src, neurons tgt
         WHERE e.source_id = src.id AND e.target_id = tgt.id
-          AND (e.edge_type IS NULL OR e.edge_type != 'instantiates')
+          AND (e.edge_type IS NULL
+               OR e.edge_type NOT IN :non_conducting)
         RETURNING e.source_id, e.target_id, e.edge_type
-    """))
+    """).bindparams(bindparam("non_conducting", expanding=True)),
+        {"non_conducting": list(NON_CONDUCTING_EDGE_TYPES)})
     rows = result.all()
     await db.commit()
 

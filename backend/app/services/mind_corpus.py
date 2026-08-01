@@ -52,6 +52,18 @@ EPISODE_DIR = os.path.expanduser(
 )
 ACTIONS_LOG = os.path.join(EPISODE_DIR, "janitor-actions.jsonl")
 LESSON_TYPES = ("lesson", "tool-profile", "context-scope")
+
+# Edge taxonomy: the types that are RELATIONSHIPS, not activation conduits.
+# The three memory-semantics types carry provenance and temporal meaning;
+# 'instantiates' is a manually-typed concept link. None of them may be
+# overwritten by a bulk stellate/pyramidal reclassification — classify_edges
+# did exactly that to 507 production edges on 2026-08-01 because its
+# exclusion was a hand-list ('instantiates' alone) written before the memory
+# types existed (record fix-classify-edges-taxonomy). This tuple is the one
+# definition; adjacency_cache's CSR code map is checked against it by
+# test_maintenance_substrate so the two cannot drift apart silently.
+MEMORY_EDGE_TYPES = ("supersedes", "scoped-by", "evidence-link")
+NON_CONDUCTING_EDGE_TYPES = MEMORY_EDGE_TYPES + ("instantiates",)
 FUSE_SIM = 0.88          # >= : auto-fuse (same scope only)
 BORDERLINE_SIM = 0.75    # >= : report for review, never auto-fuse
                          # (calibrated on real pair 22/28 @ 0.778: complementary
@@ -138,7 +150,7 @@ async def _add_memory_edge(
     parties survive (e.g. a contradiction pair re-detected next run) —
     found 2026-07-12 crashing every staleness pass on neuron_edges_pkey,
     which killed the whole janitor run before decay/promotion could run."""
-    assert edge_type in ("supersedes", "scoped-by", "evidence-link"), \
+    assert edge_type in MEMORY_EDGE_TYPES, \
         f"not a memory edge type: {edge_type}"
     from sqlalchemy import select as sa_select
     from app.middleware.rbac import UserIdentity

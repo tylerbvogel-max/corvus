@@ -229,3 +229,50 @@ async def test_planted_ungoverned_edge_type_is_refused_by_the_substrate():
 
     with pytest.raises(AssertionError, match="not a memory edge type"):
         await _add_memory_edge(None, 9001, 9002, "pyramidal", "smuggled")
+
+
+# ── 3. the non-conducting class is one object, everywhere it is used ───────
+
+@pytest.mark.hermetic
+def test_non_conducting_class_is_the_single_definition():
+    """Record fix-classify-edges-taxonomy: classify_edges destroyed 507
+    memory-semantics edges because its exclusion was a hand-list written
+    before those types existed. The fix derives every consumer from
+    mind_corpus.NON_CONDUCTING_EDGE_TYPES; this pins the consumers that
+    still carry their own spelling so drift cannot reopen the hole.
+    """
+    from app.services.actions.edge_link import _AUTHORITATIVE_RELATIONSHIP_TYPES
+    from app.services.adjacency_cache import _ETYPE_CODE
+    from app.services.mind_corpus import (
+        MEMORY_EDGE_TYPES, NON_CONDUCTING_EDGE_TYPES,
+    )
+
+    assert set(NON_CONDUCTING_EDGE_TYPES) == set(MEMORY_EDGE_TYPES) | {"instantiates"}
+
+    # adjacency_cache's CSR map codes exactly this class as non-conducting
+    # (2 = instantiates, 3 = memory semantics; 1/0 conduct).
+    csr_non_conducting = {k for k, v in _ETYPE_CODE.items() if v in (2, 3)}
+    assert csr_non_conducting == set(NON_CONDUCTING_EDGE_TYPES), (
+        f"adjacency_cache codes {sorted(csr_non_conducting)} as non-conducting "
+        f"but the shared class says {sorted(NON_CONDUCTING_EDGE_TYPES)}"
+    )
+
+    # edge_link's authoritative-relationship set is the same class.
+    assert set(_AUTHORITATIVE_RELATIONSHIP_TYPES) == set(NON_CONDUCTING_EDGE_TYPES)
+
+
+@pytest.mark.hermetic
+def test_classify_edges_excludes_the_class_not_a_hand_list():
+    """The regression pin for the 2026-08-01 incident itself.
+
+    classify_edges' WHERE must reference the expanding :non_conducting
+    parameter — a literal exclusion (the old ``!= 'instantiates'``) is the
+    exact defect. And the source must take the class from mind_corpus, not
+    define a local copy that would rot the same way the original did.
+    """
+    src = (BACKEND / "app/routers/admin_graph_maintenance.py").read_text()
+    assert ":non_conducting" in src, "classify_edges lost the class parameter"
+    assert "!= 'instantiates'" not in src, "the hand-list exclusion is back"
+    assert "from app.services.mind_corpus import NON_CONDUCTING_EDGE_TYPES" in src, (
+        "the exclusion no longer derives from the shared definition"
+    )
