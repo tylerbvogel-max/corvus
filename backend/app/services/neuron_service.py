@@ -3,7 +3,6 @@
 import datetime
 import json
 import math
-from dataclasses import dataclass
 
 import numpy as np
 from sqlalchemy import select, func, and_, text, literal_column, case
@@ -11,41 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models import Neuron, NeuronFiring, NeuronScoreOverride, SystemState
+# NeuronCandidate and FRESHNESS_SQL moved to their own leaf module in record 04
+# seam 2: neuron_index sits UNDER this service and needed both, which made the
+# dependency circular. Re-exported here so existing importers keep working.
+from app.services.neuron_candidate import (  # noqa: F401
+    NeuronCandidate,
+    FRESHNESS_SQL,
+)
 from app.services.scoring_engine import (
     compute_score, calc_relevance, calc_rrf, NeuronScoreBreakdown,
     ColdstartInputs, apply_score_overrides,
     calc_burst_batch, calc_impact_batch, calc_precision_batch,
     calc_novelty_batch, calc_recency_batch, calc_coldstart_term_batch,
-)
-
-
-@dataclass
-class NeuronCandidate:
-    """Lightweight neuron representation for scoring (no content blob)."""
-    id: int
-    label: str
-    summary: str | None
-    department: str | None
-    role_key: str | None
-    avg_utility: float
-    invocations: int
-    created_at_query_count: int
-    keyword_hits: int = 0
-    # Cold-start prior inputs (authority + freshness + centrality)
-    authority_level: str | None = None
-    freshness_days: float | None = None
-    centrality: float = 0.0
-
-    @property
-    def region(self) -> str | None:
-        """Generic region vocabulary — silos are labeled regions."""
-        return self.department
-
-
-# SQL expression for days since the most authoritative provenance date.
-_FRESHNESS_SQL = (
-    "EXTRACT(EPOCH FROM (now() - COALESCE(last_verified, "
-    "effective_date::timestamp, created_at))) / 86400.0"
 )
 
 
@@ -121,7 +97,7 @@ def _build_candidate_sql(where_clause: str, kw_expr: str) -> str:
     return f"""
         SELECT id, label, summary, department, role_key, avg_utility,
                invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
-               authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
+               authority_level, ({FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
         WHERE {where_clause}
         ORDER BY keyword_hits DESC, avg_utility DESC

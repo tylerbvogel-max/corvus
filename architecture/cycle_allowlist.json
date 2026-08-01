@@ -1,0 +1,64 @@
+{
+  "_comment": [
+    "RATCHET. This file is the list of import cycles Corvus still carries, and it",
+    "may only get SHORTER. The fitness test in backend/tests/test_architecture_cycles.py",
+    "asserts this list matches the cycles in architecture/architecture.json exactly,",
+    "in both directions:",
+    "  - a cycle in the code that is NOT here fails the gate (no new cycles);",
+    "  - an entry here that is NO LONGER a cycle also fails (fix it, then delete the",
+    "    entry \u2014 stale entries would let the ratchet slip back up unnoticed).",
+    "Raising `budget` is the only way to admit a new cycle, and it is deliberately a",
+    "one-line diff in a file named for the debt it tracks, so review cannot miss it.",
+    "Owned by roadmap record durability-modular-monolith (04)."
+  ],
+  "budget": 3,
+  "history": [
+    {
+      "date": "2026-08-01",
+      "budget": 5,
+      "note": "Baseline at record 04 seam 1: compliance registry/frameworks/providers (20), governance policies (4), maintenance/reconsolidation cluster (12), executor/pipeline stages (8), neuron_index<->neuron_service (2)."
+    },
+    {
+      "date": "2026-08-01",
+      "budget": 4,
+      "note": "Record 04a retired the compliance context; its 20-module cycle left with it. Not a decoupling win \u2014 registry.py imported inside load_all(), so the extractor was counting a plugin registry it could not see through."
+    },
+    {
+      "date": "2026-08-01",
+      "budget": 3,
+      "note": "Record 04 seam 2: broke neuron_index <-> neuron_service by extracting NeuronCandidate and FRESHNESS_SQL into app/services/neuron_candidate.py, a leaf module with no imports. neuron_index sits UNDER the service and was importing it back for two pieces of shared vocabulary; executor was reaching through the service's privacy for the same SQL. First cycle broken by decoupling rather than by deletion."
+    }
+  ],
+  "cycles": [
+    [
+      "app.governance.policies",
+      "app.governance.policies.citation",
+      "app.governance.policies.export_control",
+      "app.governance.policies.pii"
+    ],
+    [
+      "app.services.delivery_mode",
+      "app.services.mind_janitors",
+      "app.services.mind_lint",
+      "app.services.proposal_apply_service",
+      "app.services.reconsolidation.apply",
+      "app.services.reconsolidation.inheritance",
+      "app.services.reconsolidation.lifecycle",
+      "app.services.reconsolidation.loaders",
+      "app.services.reconsolidation.plan",
+      "app.services.reconsolidation.review",
+      "app.services.reconsolidation.validators",
+      "app.services.skill_compiler"
+    ],
+    [
+      "app.services.executor",
+      "app.services.pipeline.stages",
+      "app.services.pipeline.stages.assemble_stage",
+      "app.services.pipeline.stages.classify_stage",
+      "app.services.pipeline.stages.inhibitory_stage",
+      "app.services.pipeline.stages.prefilter_score_stage",
+      "app.services.pipeline.stages.structural_resolve_stage",
+      "app.services.structural_resolver"
+    ]
+  ]
+}

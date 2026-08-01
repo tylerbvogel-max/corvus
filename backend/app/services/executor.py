@@ -1898,13 +1898,14 @@ async def _load_candidates_by_ids(
     kw_expr = " + ".join(kw_parts) if kw_parts else "0"
 
     # Use ANY(ARRAY[...]) for asyncpg compatibility with large ID lists
-    from app.services.neuron_service import _FRESHNESS_SQL, _acl_clause_for
+    from app.services.neuron_candidate import FRESHNESS_SQL
+    from app.services.neuron_service import _acl_clause_for
     acl_clause = await _acl_clause_for(db, requester, params)
     params["id_list"] = list(neuron_ids)
     sql = f"""
         SELECT id, label, summary, department, role_key, avg_utility,
                invocations, created_at_query_count, ({kw_expr}) AS keyword_hits,
-               authority_level, ({_FRESHNESS_SQL}) AS freshness_days, centrality
+               authority_level, ({FRESHNESS_SQL}) AS freshness_days, centrality
         FROM neurons
         WHERE id = ANY(:id_list) AND is_active = true AND {acl_clause}
         ORDER BY id

@@ -1122,6 +1122,10 @@ boxes:
       - backend/app/services/semantic_prefilter.py
       - backend/app/services/scoring_engine.py
       - backend/app/services/neuron_service.py
+      # Leaf vocabulary shared by the service, the index and the executor.
+      # Extracted from neuron_service by record 04 seam 2 to break the
+      # neuron_index <-> neuron_service cycle; imports nothing.
+      - backend/app/services/neuron_candidate.py
       - backend/app/services/neuron_index.py
       - backend/app/services/embedding_service.py
       - backend/app/services/adjacency_cache.py

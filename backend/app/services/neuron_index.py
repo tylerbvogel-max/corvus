@@ -202,7 +202,7 @@ class _NeuronIndex:
 
     def candidates(self, ids: list[int], keywords: list[str]):
         """Reproduce _load_candidates_by_ids for the default (unrestricted) requester."""
-        from app.services.neuron_service import NeuronCandidate
+        from app.services.neuron_candidate import NeuronCandidate
         kws = [k.lower() for k in keywords] if keywords else []
         with self._lock:
             elapsed_days = (datetime.datetime.utcnow() - self._built_at).total_seconds() / 86400.0
@@ -243,10 +243,10 @@ async def ensure_index_loaded(db) -> None:
     if _index.is_loaded:
         return
     from sqlalchemy import text
-    from app.services.neuron_service import _FRESHNESS_SQL
+    from app.services.neuron_candidate import FRESHNESS_SQL
     meta_result = await db.execute(text(
         "SELECT id, label, summary, department, role_key, avg_utility, invocations, "
-        f"created_at_query_count, authority_level, centrality, is_active, ({_FRESHNESS_SQL}) AS freshness_days "
+        f"created_at_query_count, authority_level, centrality, is_active, ({FRESHNESS_SQL}) AS freshness_days "
         "FROM neurons"
     ))
     meta_rows = [

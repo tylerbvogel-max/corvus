@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 360,
+    "modules": 362,
     "frontend_files": 72,
-    "units": 432,
-    "classified": 432,
+    "units": 434,
+    "classified": 434,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "5120f4eb2701e44ca64faaf1b594656f547b0a7435043783a850d0426ec59e0d",
-    "current_fingerprint": "5120f4eb2701e44ca64faaf1b594656f547b0a7435043783a850d0426ec59e0d",
-    "stored_files": 432,
-    "current_files": 432
+    "stored_fingerprint": "90e535c04d365c95f05779bd313edf25dcd37c8027a9e1bfc4263988c91eb857",
+    "current_fingerprint": "90e535c04d365c95f05779bd313edf25dcd37c8027a9e1bfc4263988c91eb857",
+    "stored_files": 434,
+    "current_files": 434
   },
   "manifest_problems": [],
   "boxes": [
@@ -219,7 +219,7 @@
       "confidence": "reviewed",
       "module_count": 38,
       "frontend_file_count": 0,
-      "loc": 9659,
+      "loc": 9660,
       "routes": 24,
       "modules": [
         "app.governance",
@@ -269,9 +269,9 @@
       "tier": "hot",
       "purpose": "Retrieve, score, spread, cool, assemble, and expose neurons/engrams without an LLM in the default recall path.",
       "confidence": "reviewed",
-      "module_count": 20,
+      "module_count": 21,
       "frontend_file_count": 0,
-      "loc": 7649,
+      "loc": 7675,
       "routes": 24,
       "modules": [
         "app.routers.engrams",
@@ -286,6 +286,7 @@
         "app.services.impact_service",
         "app.services.inhibitory_service",
         "app.services.memory_assembly",
+        "app.services.neuron_candidate",
         "app.services.neuron_index",
         "app.services.neuron_service",
         "app.services.project_cache",
@@ -629,9 +630,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 94,
+      "module_count": 95,
       "frontend_file_count": 0,
-      "loc": 19195,
+      "loc": 19338,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -653,6 +654,7 @@
         "tests.test_agents_runtime",
         "tests.test_agents_tool_base",
         "tests.test_architecture_atlas",
+        "tests.test_architecture_cycles",
         "tests.test_branch_stage",
         "tests.test_capability_capsule",
         "tests.test_capability_composition",

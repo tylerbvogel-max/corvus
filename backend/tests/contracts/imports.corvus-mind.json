@@ -1,5 +1,5 @@
 {
-  "app_module_count": 117,
+  "app_module_count": 118,
   "app_modules": [
     "app",
     "app.agents",
@@ -86,6 +86,7 @@
     "app.services.memory_quality_auditor",
     "app.services.mind_janitors",
     "app.services.mind_metrics",
+    "app.services.neuron_candidate",
     "app.services.neuron_service",
     "app.services.oracle_funnel_artifacts",
     "app.services.pipeline",

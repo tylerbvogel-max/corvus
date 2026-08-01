@@ -1,5 +1,5 @@
 {
-  "app_module_count": 75,
+  "app_module_count": 76,
   "app_modules": [
     "app",
     "app.composition",
@@ -52,6 +52,7 @@
     "app.services.memory_quality_auditor",
     "app.services.mind_janitors",
     "app.services.mind_metrics",
+    "app.services.neuron_candidate",
     "app.services.neuron_service",
     "app.services.pipeline",
     "app.services.pipeline.context",
