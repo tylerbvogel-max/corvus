@@ -173,6 +173,12 @@ CAPABILITIES: dict[Capability, CapabilitySpec] = {
                 "and the audit-trail read surface.",
         routers=(
             RouterSpec("app.routers.admin"),
+            # Split out of admin.py by record 04c. Same /admin prefix and the
+            # same operator capability: the graph-maintenance sweeps carry a
+            # governed DELETE path, so they mount exactly where they did.
+            RouterSpec("app.routers.admin_graph_maintenance"),
+            RouterSpec("app.routers.admin_compliance"),
+            RouterSpec("app.routers.admin_ingest"),
             # The banner and audit-log reads. Owned here because the writer —
             # AuditMiddleware — is installed on every profile, and because the
             # banner fails soft in the UI: gating it behind compliance made a

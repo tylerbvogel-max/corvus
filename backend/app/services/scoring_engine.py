@@ -49,6 +49,14 @@ AUTHORITY_PRIOR_MAP = MappingProxyType({
 })
 _AUTHORITY_PRIOR_DEFAULT = 0.4
 
+# The six per-signal scores this engine produces, in report order. Published
+# because record 04c split admin.py's scoring-health reporting from its
+# compliance reporting and both halves iterate this vocabulary; rather than
+# leave one copy behind in each, the list lives with the code that produces
+# the signals. `combined` is deliberately absent: it is the gated aggregate of
+# these six, not a seventh peer.
+SCORING_SIGNALS = ("burst", "impact", "precision", "novelty", "recency", "relevance")
+
 
 def coldstart_shrinkage(invocations: int | np.ndarray):
     """Weight of the prior vs the usage posterior: strength / (strength + n)."""
@@ -492,7 +500,7 @@ def apply_score_overrides(
     """
     if not overrides_by_neuron:
         return scores
-    signal_fields = ("burst", "impact", "precision", "novelty", "recency", "relevance")
+    signal_fields = SCORING_SIGNALS
     for score in scores:
         neuron_overrides = overrides_by_neuron.get(score.neuron_id)
         if not neuron_overrides:

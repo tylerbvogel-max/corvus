@@ -245,15 +245,40 @@ def test_honeypot_a_planted_lifecycle_update_is_caught():
 def test_honeypot_a_comparison_inside_case_is_not_an_assignment():
     """Regression pin for a real false positive found building this guard.
 
-    admin.py:2434 reads ``src.department = tgt.department`` inside a CASE to
-    choose an edge_type. A naive scan called that a write to `department` and
-    would have failed the absolute rule against a module doing nothing wrong.
+    ``classify_edges`` reads ``src.department = tgt.department`` inside a CASE
+    to choose an edge_type. A naive scan called that a write to `department`
+    and would have failed the absolute rule against a module doing nothing
+    wrong. It lived at admin.py:2434 when this guard was built and moved to
+    app/routers/admin_graph_maintenance.py under record
+    durability-file-size-seams (04c).
+
+    The pin is checked against the live source, not a remembered line number.
+    A docstring citing a stale line is not a regression pin — it is a comment.
     """
     sql = ("UPDATE neuron_edges SET edge_type = CASE WHEN src.department = "
            "tgt.department THEN 'stellate' ELSE 'pyramidal' END FROM x WHERE y")
     assigned = _set_assignments(sql)
     assert assigned == ["edge_type"], f"expected only edge_type, got {assigned}"
     assert "department" not in assigned
+
+    # The case this pins must still exist somewhere in app/, and the scan must
+    # still clear it. If classify_edges moves again, this fails and points at
+    # the move rather than silently guarding a shape nothing has anymore.
+    home = BACKEND / "app/routers/admin_graph_maintenance.py"
+    assert home.exists(), f"the pinned CASE's home is gone: {_rel(home)}"
+    tree = ast.parse(home.read_text(encoding="utf-8"))
+    cases = [n for n in _sql_literals(tree)
+             if "CASE" in n.value and "src.department = tgt.department" in n.value]
+    assert cases, (
+        f"{_rel(home)} no longer contains the department-comparison CASE this "
+        f"honeypot pins; re-aim the pin at wherever classify_edges now lives"
+    )
+    for node in cases:
+        live = _set_assignments(node.value)
+        assert live == ["edge_type"], (
+            f"the live CASE at {_rel(home)}:{node.lineno} now parses as "
+            f"assigning {live}; the false positive this pins has returned"
+        )
 
 
 @pytest.mark.hermetic

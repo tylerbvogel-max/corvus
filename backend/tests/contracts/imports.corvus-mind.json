@@ -1,5 +1,5 @@
 {
-  "app_module_count": 123,
+  "app_module_count": 126,
   "app_modules": [
     "app",
     "app.agents",
@@ -37,6 +37,9 @@
     "app.operations.router",
     "app.routers",
     "app.routers.admin",
+    "app.routers.admin_compliance",
+    "app.routers.admin_graph_maintenance",
+    "app.routers.admin_ingest",
     "app.routers.agents",
     "app.routers.architecture",
     "app.routers.auditor",

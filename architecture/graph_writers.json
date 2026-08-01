@@ -54,8 +54,8 @@
   ],
   "delete": [
     {
-      "module": "app/routers/admin.py",
-      "why": "operator maintenance: weak-edge pruning"
+      "module": "app/routers/admin_graph_maintenance.py",
+      "why": "operator maintenance: weak-edge pruning. Moved here whole from app/routers/admin.py by record durability-file-size-seams (04c); the stale admin.py entry was removed in the same change, because a stale entry reserves a slot a future writer could inherit unreviewed. Same endpoint, same SQL, same path /admin/prune-edges."
     },
     {
       "module": "app/seed/regulatory_seed.py",

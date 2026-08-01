@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 368,
+    "modules": 371,
     "frontend_files": 72,
-    "units": 440,
-    "classified": 440,
+    "units": 443,
+    "classified": 443,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "bdfba10ef7206e52809d67a151b721b30edbfbd8269123ad97af386ae01cdc9a",
-    "current_fingerprint": "bdfba10ef7206e52809d67a151b721b30edbfbd8269123ad97af386ae01cdc9a",
-    "stored_files": 440,
-    "current_files": 440
+    "stored_fingerprint": "2b93628a1a956777741ea6ebfba880a9b2d3286c88e9f5963ab744fa556f9954",
+    "current_fingerprint": "2b93628a1a956777741ea6ebfba880a9b2d3286c88e9f5963ab744fa556f9954",
+    "stored_files": 443,
+    "current_files": 443
   },
   "manifest_problems": [],
   "boxes": [
@@ -272,7 +272,7 @@
       "confidence": "reviewed",
       "module_count": 23,
       "frontend_file_count": 0,
-      "loc": 8223,
+      "loc": 8231,
       "routes": 24,
       "modules": [
         "app.routers.engrams",
@@ -326,11 +326,12 @@
       "tier": "background",
       "purpose": "Parse files, extract faithful artifacts/facts, place them, preserve provenance, cap authority, and support document-wide revocation.",
       "confidence": "reviewed",
-      "module_count": 8,
+      "module_count": 9,
       "frontend_file_count": 0,
-      "loc": 2759,
-      "routes": 9,
+      "loc": 3566,
+      "routes": 17,
       "modules": [
+        "app.routers.admin_ingest",
         "app.routers.document_ingest",
         "app.routers.reference",
         "app.services.document_extractor",
@@ -381,12 +382,14 @@
       "tier": "background",
       "purpose": "Detect duplication, staleness, conflict, low utility, scope drift, and delivery drift; propose or apply bounded repairs.",
       "confidence": "reviewed",
-      "module_count": 31,
+      "module_count": 33,
       "frontend_file_count": 0,
-      "loc": 11382,
-      "routes": 65,
+      "loc": 10692,
+      "routes": 57,
       "modules": [
         "app.routers.admin",
+        "app.routers.admin_compliance",
+        "app.routers.admin_graph_maintenance",
         "app.routers.auditor",
         "app.routers.integrity",
         "app.routers.janitor",
@@ -617,7 +620,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 928,
+      "loc": 934,
       "routes": 4,
       "modules": [
         "app.composition",
@@ -636,7 +639,7 @@
       "confidence": "reviewed",
       "module_count": 97,
       "frontend_file_count": 0,
-      "loc": 19870,
+      "loc": 19895,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",

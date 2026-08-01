@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "bdfba10ef7206e52809d67a151b721b30edbfbd8269123ad97af386ae01cdc9a",
-    "files": 440
+    "fingerprint": "2b93628a1a956777741ea6ebfba880a9b2d3286c88e9f5963ab744fa556f9954",
+    "files": 443
   },
   "frontend": {
     "available": true,
@@ -2743,12 +2743,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 368,
-    "loc": 83917,
+    "modules": 371,
+    "loc": 84073,
     "routes": 212,
-    "import_edges": 1014,
-    "call_edges": 672,
-    "modules_touching_db": 111,
+    "import_edges": 1025,
+    "call_edges": 675,
+    "modules_touching_db": 113,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -4544,7 +4544,7 @@
     "app.composition.capabilities": {
       "path": "backend/app/composition/capabilities.py",
       "module": "app.composition.capabilities",
-      "loc": 259,
+      "loc": 265,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -4575,7 +4575,7 @@
         },
         "capability_of": {
           "name": "capability_of",
-          "line": 250,
+          "line": 256,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -6032,48 +6032,37 @@
     "app.routers.admin": {
       "path": "backend/app/routers/admin.py",
       "module": "app.routers.admin",
-      "loc": 2600,
+      "loc": 1034,
       "imports": [
-        "app.config",
         "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
         "app.seed.loader",
-        "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
         "app.services.concept_service",
-        "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.reference_detector",
         "app.services.retention",
+        "app.services.scoring_engine",
         "app.services.semantic_prefilter"
       ],
       "external_imports": [
         "asyncio",
-        "concurrent",
         "datetime",
         "fastapi",
-        "fitz",
-        "httpx",
         "json",
         "math",
         "os",
-        "random",
-        "re",
         "sqlalchemy",
-        "tempfile",
-        "traceback",
-        "types",
-        "uuid"
+        "types"
       ],
       "functions": {
         "seed_database": {
           "name": "seed_database",
-          "line": 31,
+          "line": 43,
           "is_async": true,
           "calls": [
             "app.seed.loader::load_seed",
@@ -6083,7 +6072,7 @@
         },
         "reset_firings": {
           "name": "reset_firings",
-          "line": 38,
+          "line": 50,
           "is_async": true,
           "calls": [
             "app.services.adjacency_cache::invalidate_adjacency_cache",
@@ -6093,7 +6082,7 @@
         },
         "retention_purge_now": {
           "name": "retention_purge_now",
-          "line": 70,
+          "line": 82,
           "is_async": true,
           "calls": [
             "app.services.retention::run_retention_purge"
@@ -6102,7 +6091,7 @@
         },
         "create_checkpoint": {
           "name": "create_checkpoint",
-          "line": 82,
+          "line": 94,
           "is_async": true,
           "calls": [
             "app.schemas::CheckpointResponse"
@@ -6111,7 +6100,7 @@
         },
         "cost_report": {
           "name": "cost_report",
-          "line": 154,
+          "line": 166,
           "is_async": true,
           "calls": [
             "app.services.model_usage_ledger::maintenance_cost_breakdown",
@@ -6121,35 +6110,35 @@
         },
         "get_emergent_queue": {
           "name": "get_emergent_queue",
-          "line": 187,
+          "line": 199,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "dismiss_queue_entry": {
           "name": "dismiss_queue_entry",
-          "line": 222,
+          "line": 234,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_build_citation_lookup": {
           "name": "_build_citation_lookup",
-          "line": 237,
+          "line": 249,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_resolve_reference": {
           "name": "_resolve_reference",
-          "line": 245,
+          "line": 257,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_enqueue_unresolved_reference": {
           "name": "_enqueue_unresolved_reference",
-          "line": 252,
+          "line": 264,
           "is_async": true,
           "calls": [
             "app.models::EmergentQueue"
@@ -6158,305 +6147,79 @@
         },
         "_process_neuron_references": {
           "name": "_process_neuron_references",
-          "line": 280,
+          "line": 292,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "scan_references": {
           "name": "scan_references",
-          "line": 307,
+          "line": 319,
           "is_async": true,
           "calls": [
             "app.services.reference_detector::detect_neuron_references"
           ],
           "is_route": true
         },
-        "_extract_pdf_pages": {
-          "name": "_extract_pdf_pages",
-          "line": 359,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_extract_from_file": {
-          "name": "_extract_from_file",
-          "line": 380,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_extract_from_url": {
-          "name": "_extract_from_url",
-          "line": 398,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "extract_source": {
-          "name": "extract_source",
-          "line": 424,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "_validate_ingest_body": {
-          "name": "_validate_ingest_body",
-          "line": 453,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_find_parent_neuron": {
-          "name": "_find_parent_neuron",
-          "line": 471,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_build_parent_context": {
-          "name": "_build_parent_context",
-          "line": 486,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_build_ingest_prompts": {
-          "name": "_build_ingest_prompts",
-          "line": 504,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_parse_proposals": {
-          "name": "_parse_proposals",
-          "line": 547,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_enrich_proposals": {
-          "name": "_enrich_proposals",
-          "line": 563,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "ingest_source": {
-          "name": "ingest_source",
-          "line": 578,
-          "is_async": true,
-          "calls": [
-            "app.services.llm_provider::llm_chat"
-          ],
-          "is_route": true
-        },
-        "_validate_proposal_placements": {
-          "name": "_validate_proposal_placements",
-          "line": 631,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_create_neurons_from_proposals": {
-          "name": "_create_neurons_from_proposals",
-          "line": 651,
-          "is_async": true,
-          "calls": [
-            "app.services.action_bus::submit"
-          ],
-          "is_route": false
-        },
-        "_resolve_queue_entry": {
-          "name": "_resolve_queue_entry",
-          "line": 686,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_create_referencing_edges": {
-          "name": "_create_referencing_edges",
-          "line": 697,
-          "is_async": true,
-          "calls": [
-            "app.services.action_bus::submit"
-          ],
-          "is_route": false
-        },
-        "apply_ingest_source": {
-          "name": "apply_ingest_source",
-          "line": 736,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "_chunk_text": {
-          "name": "_chunk_text",
-          "line": 781,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_build_batch_system_prompt": {
-          "name": "_build_batch_system_prompt",
-          "line": 797,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_create_batch_job_record": {
-          "name": "_create_batch_job_record",
-          "line": 827,
-          "is_async": false,
-          "calls": [
-            "app.models::BatchJob"
-          ],
-          "is_route": false
-        },
-        "_update_batch_job": {
-          "name": "_update_batch_job",
-          "line": 863,
-          "is_async": true,
-          "calls": [
-            "app.database::async_session"
-          ],
-          "is_route": false
-        },
-        "_load_batch_job_state": {
-          "name": "_load_batch_job_state",
-          "line": 873,
-          "is_async": true,
-          "calls": [
-            "app.database::async_session"
-          ],
-          "is_route": false
-        },
-        "_build_batch_chunk_user_msg": {
-          "name": "_build_batch_chunk_user_msg",
-          "line": 897,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_enrich_batch_proposals": {
-          "name": "_enrich_batch_proposals",
-          "line": 918,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_run_batch_ingest": {
-          "name": "_run_batch_ingest",
-          "line": 929,
-          "is_async": true,
-          "calls": [
-            "app.services.llm_provider::llm_chat"
-          ],
-          "is_route": false
-        },
-        "start_batch_ingest": {
-          "name": "start_batch_ingest",
-          "line": 986,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "get_batch_ingest_status": {
-          "name": "get_batch_ingest_status",
-          "line": 1038,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "cancel_batch_ingest": {
-          "name": "cancel_batch_ingest",
-          "line": 1069,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "resume_batch_ingest": {
-          "name": "resume_batch_ingest",
-          "line": 1079,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "list_batch_jobs": {
-          "name": "list_batch_jobs",
-          "line": 1104,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "prune_edges": {
-          "name": "prune_edges",
-          "line": 1134,
-          "is_async": true,
-          "calls": [
-            "app.services.adjacency_cache::invalidate_adjacency_cache"
-          ],
-          "is_route": true
-        },
         "_stats": {
           "name": "_stats",
-          "line": 1183,
+          "line": 376,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_aggregate_signal": {
           "name": "_aggregate_signal",
-          "line": 1199,
+          "line": 392,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_query_means": {
           "name": "_query_means",
-          "line": 1207,
+          "line": 400,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_reference_neuron_ids": {
           "name": "_reference_neuron_ids",
-          "line": 1217,
+          "line": 410,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_parse_query_scores": {
           "name": "_parse_query_scores",
-          "line": 1235,
+          "line": 428,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_scoring_distribution": {
           "name": "_scoring_distribution",
-          "line": 1273,
+          "line": 466,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_scoring_timeline": {
           "name": "_scoring_timeline",
-          "line": 1329,
+          "line": 522,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "scoring_health": {
           "name": "scoring_health",
-          "line": 1343,
+          "line": 536,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_maybe_create_alert": {
           "name": "_maybe_create_alert",
-          "line": 1432,
+          "line": 625,
           "is_async": true,
           "calls": [
             "app.models::SystemAlert"
@@ -6465,212 +6228,63 @@
         },
         "_health_database": {
           "name": "_health_database",
-          "line": 1454,
+          "line": 647,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_health_pipeline": {
           "name": "_health_pipeline",
-          "line": 1495,
+          "line": 688,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_health_graph": {
           "name": "_health_graph",
-          "line": 1532,
+          "line": 725,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_fetch_active_alerts": {
           "name": "_fetch_active_alerts",
-          "line": 1547,
+          "line": 740,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "health_check": {
           "name": "health_check",
-          "line": 1564,
+          "line": 757,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "get_alerts": {
           "name": "get_alerts",
-          "line": 1616,
+          "line": 809,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "acknowledge_alert": {
           "name": "acknowledge_alert",
-          "line": 1641,
+          "line": 834,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "acknowledge_all_alerts": {
           "name": "acknowledge_all_alerts",
-          "line": 1653,
+          "line": 846,
           "is_async": true,
           "calls": [],
-          "is_route": true
-        },
-        "_is_false_positive": {
-          "name": "_is_false_positive",
-          "line": 1682,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_pii_exposure": {
-          "name": "_audit_pii_exposure",
-          "line": 1696,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_neuron_coverage": {
-          "name": "_audit_neuron_coverage",
-          "line": 1724,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_bias_assessment": {
-          "name": "_audit_bias_assessment",
-          "line": 1764,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_percentile": {
-          "name": "_percentile",
-          "line": 1795,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_scoring_baselines": {
-          "name": "_audit_scoring_baselines",
-          "line": 1808,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_provenance": {
-          "name": "_audit_provenance",
-          "line": 1862,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_ci95": {
-          "name": "_ci95",
-          "line": 1898,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_cross_validate_mode": {
-          "name": "_cross_validate_mode",
-          "line": 1914,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_validity_reliability": {
-          "name": "_audit_validity_reliability",
-          "line": 1943,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_dept_eval_quality": {
-          "name": "_audit_dept_eval_quality",
-          "line": 1984,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_remediation": {
-          "name": "_audit_remediation",
-          "line": 2014,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_audit_fairness": {
-          "name": "_audit_fairness",
-          "line": 2060,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "run_compliance_audit": {
-          "name": "run_compliance_audit",
-          "line": 2087,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "compliance_audit": {
-          "name": "compliance_audit",
-          "line": 2123,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "_governance_overview": {
-          "name": "_governance_overview",
-          "line": 2130,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_governance_cost_kpis": {
-          "name": "_governance_cost_kpis",
-          "line": 2165,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_governance_parity": {
-          "name": "_governance_parity",
-          "line": 2213,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_governance_compliance": {
-          "name": "_governance_compliance",
-          "line": 2237,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "governance_dashboard": {
-          "name": "governance_dashboard",
-          "line": 2300,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "embed_neurons": {
-          "name": "embed_neurons",
-          "line": 2337,
-          "is_async": true,
-          "calls": [
-            "app.services.semantic_prefilter::invalidate_cache"
-          ],
           "is_route": true
         },
         "seed_inhibitory_regulators_endpoint": {
           "name": "seed_inhibitory_regulators_endpoint",
-          "line": 2394,
+          "line": 861,
           "is_async": true,
           "calls": [
             "app.services.inhibitory_service::seed_inhibitory_regulators"
@@ -6679,21 +6293,14 @@
         },
         "list_inhibitory_regulators": {
           "name": "list_inhibitory_regulators",
-          "line": 2403,
-          "is_async": true,
-          "calls": [],
-          "is_route": true
-        },
-        "classify_edges": {
-          "name": "classify_edges",
-          "line": 2427,
+          "line": 870,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "list_concept_neurons": {
           "name": "list_concept_neurons",
-          "line": 2463,
+          "line": 897,
           "is_async": true,
           "calls": [
             "app.services.concept_service::get_concept_neurons"
@@ -6702,7 +6309,7 @@
         },
         "create_concept_neuron_endpoint": {
           "name": "create_concept_neuron_endpoint",
-          "line": 2470,
+          "line": 904,
           "is_async": true,
           "calls": [
             "app.middleware.rbac::require_role",
@@ -6713,7 +6320,7 @@
         },
         "link_concept_neuron": {
           "name": "link_concept_neuron",
-          "line": 2498,
+          "line": 932,
           "is_async": true,
           "calls": [
             "app.middleware.rbac::require_role",
@@ -6724,7 +6331,7 @@
         },
         "seed_three_horizons_endpoint": {
           "name": "seed_three_horizons_endpoint",
-          "line": 2530,
+          "line": 964,
           "is_async": true,
           "calls": [
             "app.services.concept_service::seed_three_horizons"
@@ -6733,7 +6340,7 @@
         },
         "seed_all_concepts_endpoint": {
           "name": "seed_all_concepts_endpoint",
-          "line": 2537,
+          "line": 971,
           "is_async": true,
           "calls": [
             "app.services.concept_service::seed_all_concepts"
@@ -6742,7 +6349,7 @@
         },
         "relink_concepts_endpoint": {
           "name": "relink_concepts_endpoint",
-          "line": 2544,
+          "line": 978,
           "is_async": true,
           "calls": [
             "app.services.concept_service::relink_existing_concepts"
@@ -6751,7 +6358,7 @@
         },
         "bootstrap_firings_endpoint": {
           "name": "bootstrap_firings_endpoint",
-          "line": 2555,
+          "line": 989,
           "is_async": true,
           "calls": [
             "app.services.bootstrap_service::bootstrap_firings"
@@ -6760,7 +6367,7 @@
         },
         "bootstrap_stats_endpoint": {
           "name": "bootstrap_stats_endpoint",
-          "line": 2566,
+          "line": 1000,
           "is_async": true,
           "calls": [
             "app.services.bootstrap_service::get_bootstrap_stats"
@@ -6769,7 +6376,7 @@
         },
         "purge_bootstrap_endpoint": {
           "name": "purge_bootstrap_endpoint",
-          "line": 2573,
+          "line": 1007,
           "is_async": true,
           "calls": [
             "app.services.bootstrap_service::purge_bootstrap"
@@ -6778,7 +6385,7 @@
         },
         "intra_department_bridge_endpoint": {
           "name": "intra_department_bridge_endpoint",
-          "line": 2583,
+          "line": 1017,
           "is_async": true,
           "calls": [
             "app.services.bootstrap_service::intra_department_bridge"
@@ -6794,7 +6401,7 @@
           "full_path": "/admin/seed",
           "mounted_on": "router",
           "handler": "seed_database",
-          "line": 31
+          "line": 43
         },
         {
           "method": "POST",
@@ -6803,7 +6410,7 @@
           "full_path": "/admin/reset",
           "mounted_on": "router",
           "handler": "reset_firings",
-          "line": 38
+          "line": 50
         },
         {
           "method": "POST",
@@ -6812,7 +6419,7 @@
           "full_path": "/admin/retention/purge",
           "mounted_on": "router",
           "handler": "retention_purge_now",
-          "line": 70
+          "line": 82
         },
         {
           "method": "POST",
@@ -6821,7 +6428,7 @@
           "full_path": "/admin/checkpoint",
           "mounted_on": "router",
           "handler": "create_checkpoint",
-          "line": 82
+          "line": 94
         },
         {
           "method": "GET",
@@ -6830,7 +6437,7 @@
           "full_path": "/admin/cost-report",
           "mounted_on": "router",
           "handler": "cost_report",
-          "line": 154
+          "line": 166
         },
         {
           "method": "GET",
@@ -6839,7 +6446,7 @@
           "full_path": "/admin/emergent-queue",
           "mounted_on": "router",
           "handler": "get_emergent_queue",
-          "line": 187
+          "line": 199
         },
         {
           "method": "POST",
@@ -6848,7 +6455,7 @@
           "full_path": "/admin/emergent-queue/{entry_id}/dismiss",
           "mounted_on": "router",
           "handler": "dismiss_queue_entry",
-          "line": 222
+          "line": 234
         },
         {
           "method": "POST",
@@ -6857,88 +6464,7 @@
           "full_path": "/admin/scan-references",
           "mounted_on": "router",
           "handler": "scan_references",
-          "line": 307
-        },
-        {
-          "method": "POST",
-          "path": "/extract-source",
-          "prefix": "/admin",
-          "full_path": "/admin/extract-source",
-          "mounted_on": "router",
-          "handler": "extract_source",
-          "line": 424
-        },
-        {
-          "method": "POST",
-          "path": "/ingest-source",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source",
-          "mounted_on": "router",
-          "handler": "ingest_source",
-          "line": 578
-        },
-        {
-          "method": "POST",
-          "path": "/ingest-source/apply",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source/apply",
-          "mounted_on": "router",
-          "handler": "apply_ingest_source",
-          "line": 736
-        },
-        {
-          "method": "POST",
-          "path": "/ingest-source/batch",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source/batch",
-          "mounted_on": "router",
-          "handler": "start_batch_ingest",
-          "line": 986
-        },
-        {
-          "method": "GET",
-          "path": "/ingest-source/batch/{job_id}",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source/batch/{job_id}",
-          "mounted_on": "router",
-          "handler": "get_batch_ingest_status",
-          "line": 1038
-        },
-        {
-          "method": "POST",
-          "path": "/ingest-source/batch/{job_id}/cancel",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source/batch/{job_id}/cancel",
-          "mounted_on": "router",
-          "handler": "cancel_batch_ingest",
-          "line": 1069
-        },
-        {
-          "method": "POST",
-          "path": "/ingest-source/batch/{job_id}/resume",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source/batch/{job_id}/resume",
-          "mounted_on": "router",
-          "handler": "resume_batch_ingest",
-          "line": 1079
-        },
-        {
-          "method": "GET",
-          "path": "/ingest-source/batch",
-          "prefix": "/admin",
-          "full_path": "/admin/ingest-source/batch",
-          "mounted_on": "router",
-          "handler": "list_batch_jobs",
-          "line": 1104
-        },
-        {
-          "method": "POST",
-          "path": "/prune-edges",
-          "prefix": "/admin",
-          "full_path": "/admin/prune-edges",
-          "mounted_on": "router",
-          "handler": "prune_edges",
-          "line": 1134
+          "line": 319
         },
         {
           "method": "GET",
@@ -6947,7 +6473,7 @@
           "full_path": "/admin/scoring-health",
           "mounted_on": "router",
           "handler": "scoring_health",
-          "line": 1343
+          "line": 536
         },
         {
           "method": "GET",
@@ -6956,7 +6482,7 @@
           "full_path": "/admin/health-check",
           "mounted_on": "router",
           "handler": "health_check",
-          "line": 1564
+          "line": 757
         },
         {
           "method": "GET",
@@ -6965,7 +6491,7 @@
           "full_path": "/admin/alerts",
           "mounted_on": "router",
           "handler": "get_alerts",
-          "line": 1616
+          "line": 809
         },
         {
           "method": "POST",
@@ -6974,7 +6500,7 @@
           "full_path": "/admin/alerts/{alert_id}/acknowledge",
           "mounted_on": "router",
           "handler": "acknowledge_alert",
-          "line": 1641
+          "line": 834
         },
         {
           "method": "POST",
@@ -6983,34 +6509,7 @@
           "full_path": "/admin/alerts/acknowledge-all",
           "mounted_on": "router",
           "handler": "acknowledge_all_alerts",
-          "line": 1653
-        },
-        {
-          "method": "GET",
-          "path": "/compliance-audit",
-          "prefix": "/admin",
-          "full_path": "/admin/compliance-audit",
-          "mounted_on": "router",
-          "handler": "compliance_audit",
-          "line": 2123
-        },
-        {
-          "method": "GET",
-          "path": "/governance-dashboard",
-          "prefix": "/admin",
-          "full_path": "/admin/governance-dashboard",
-          "mounted_on": "router",
-          "handler": "governance_dashboard",
-          "line": 2300
-        },
-        {
-          "method": "POST",
-          "path": "/embed-neurons",
-          "prefix": "/admin",
-          "full_path": "/admin/embed-neurons",
-          "mounted_on": "router",
-          "handler": "embed_neurons",
-          "line": 2337
+          "line": 846
         },
         {
           "method": "POST",
@@ -7019,7 +6518,7 @@
           "full_path": "/admin/seed-inhibitory-regulators",
           "mounted_on": "router",
           "handler": "seed_inhibitory_regulators_endpoint",
-          "line": 2394
+          "line": 861
         },
         {
           "method": "GET",
@@ -7028,16 +6527,7 @@
           "full_path": "/admin/inhibitory-regulators",
           "mounted_on": "router",
           "handler": "list_inhibitory_regulators",
-          "line": 2403
-        },
-        {
-          "method": "POST",
-          "path": "/classify-edges",
-          "prefix": "/admin",
-          "full_path": "/admin/classify-edges",
-          "mounted_on": "router",
-          "handler": "classify_edges",
-          "line": 2427
+          "line": 870
         },
         {
           "method": "GET",
@@ -7046,7 +6536,7 @@
           "full_path": "/admin/concept-neurons",
           "mounted_on": "router",
           "handler": "list_concept_neurons",
-          "line": 2463
+          "line": 897
         },
         {
           "method": "POST",
@@ -7055,7 +6545,7 @@
           "full_path": "/admin/concept-neurons",
           "mounted_on": "router",
           "handler": "create_concept_neuron_endpoint",
-          "line": 2470
+          "line": 904
         },
         {
           "method": "POST",
@@ -7064,7 +6554,7 @@
           "full_path": "/admin/concept-neurons/{concept_id}/link",
           "mounted_on": "router",
           "handler": "link_concept_neuron",
-          "line": 2498
+          "line": 932
         },
         {
           "method": "POST",
@@ -7073,7 +6563,7 @@
           "full_path": "/admin/concept-neurons/seed-three-horizons",
           "mounted_on": "router",
           "handler": "seed_three_horizons_endpoint",
-          "line": 2530
+          "line": 964
         },
         {
           "method": "POST",
@@ -7082,7 +6572,7 @@
           "full_path": "/admin/concept-neurons/seed-all",
           "mounted_on": "router",
           "handler": "seed_all_concepts_endpoint",
-          "line": 2537
+          "line": 971
         },
         {
           "method": "POST",
@@ -7091,7 +6581,7 @@
           "full_path": "/admin/concept-neurons/relink",
           "mounted_on": "router",
           "handler": "relink_concepts_endpoint",
-          "line": 2544
+          "line": 978
         },
         {
           "method": "POST",
@@ -7100,7 +6590,7 @@
           "full_path": "/admin/bootstrap-firings",
           "mounted_on": "router",
           "handler": "bootstrap_firings_endpoint",
-          "line": 2555
+          "line": 989
         },
         {
           "method": "GET",
@@ -7109,7 +6599,7 @@
           "full_path": "/admin/bootstrap-stats",
           "mounted_on": "router",
           "handler": "bootstrap_stats_endpoint",
-          "line": 2566
+          "line": 1000
         },
         {
           "method": "POST",
@@ -7118,7 +6608,7 @@
           "full_path": "/admin/purge-bootstrap",
           "mounted_on": "router",
           "handler": "purge_bootstrap_endpoint",
-          "line": 2573
+          "line": 1007
         },
         {
           "method": "POST",
@@ -7127,147 +6617,729 @@
           "full_path": "/admin/intra-department-bridge",
           "mounted_on": "router",
           "handler": "intra_department_bridge_endpoint",
-          "line": 2583
+          "line": 1017
         }
       ],
       "db_writes": [
         {
           "kind": "commit",
-          "line": 60,
+          "line": 72,
           "in": "reset_firings",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 233,
+          "line": 245,
           "in": "dismiss_queue_entry",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 270,
+          "line": 282,
           "in": "_enqueue_unresolved_reference",
           "target": "db",
           "model": "EmergentQueue"
         },
         {
           "kind": "commit",
-          "line": 341,
+          "line": 353,
           "in": "scan_references",
           "target": "db",
           "model": null
         },
         {
-          "kind": "flush",
-          "line": 366,
-          "in": "_extract_pdf_pages",
-          "target": "tmp",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 764,
-          "in": "apply_ingest_source",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 870,
-          "in": "_update_batch_job",
-          "target": "db",
-          "model": null
-        },
-        {
           "kind": "add",
-          "line": 1024,
-          "in": "start_batch_ingest",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 1025,
-          "in": "start_batch_ingest",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 1090,
-          "in": "resume_batch_ingest",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 1164,
-          "in": "prune_edges",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "add",
-          "line": 1447,
+          "line": 640,
           "in": "_maybe_create_alert",
           "target": "db",
           "model": "SystemAlert"
         },
         {
           "kind": "commit",
-          "line": 1595,
+          "line": 788,
           "in": "health_check",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 1648,
+          "line": 841,
           "in": "acknowledge_alert",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 1663,
+          "line": 856,
           "in": "acknowledge_all_alerts",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 2380,
-          "in": "embed_neurons",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 2398,
+          "line": 865,
           "in": "seed_inhibitory_regulators_endpoint",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 2446,
-          "in": "classify_edges",
-          "target": "db",
-          "model": null
-        },
-        {
-          "kind": "commit",
-          "line": 2485,
+          "line": 919,
           "in": "create_concept_neuron_endpoint",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 2518,
+          "line": 952,
           "in": "link_concept_neuron",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "app.routers.admin_compliance": {
+      "path": "backend/app/routers/admin_compliance.py",
+      "module": "app.routers.admin_compliance",
+      "loc": 701,
+      "imports": [
+        "app.database",
+        "app.models",
+        "app.services.scoring_engine"
+      ],
+      "external_imports": [
+        "datetime",
+        "fastapi",
+        "json",
+        "math",
+        "random",
+        "re",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "_is_false_positive": {
+          "name": "_is_false_positive",
+          "line": 49,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_pii_exposure": {
+          "name": "_audit_pii_exposure",
+          "line": 63,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_neuron_coverage": {
+          "name": "_audit_neuron_coverage",
+          "line": 91,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_bias_assessment": {
+          "name": "_audit_bias_assessment",
+          "line": 131,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_percentile": {
+          "name": "_percentile",
+          "line": 162,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_scoring_baselines": {
+          "name": "_audit_scoring_baselines",
+          "line": 175,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_provenance": {
+          "name": "_audit_provenance",
+          "line": 229,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_ci95": {
+          "name": "_ci95",
+          "line": 265,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_cross_validate_mode": {
+          "name": "_cross_validate_mode",
+          "line": 281,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_validity_reliability": {
+          "name": "_audit_validity_reliability",
+          "line": 310,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_dept_eval_quality": {
+          "name": "_audit_dept_eval_quality",
+          "line": 351,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_remediation": {
+          "name": "_audit_remediation",
+          "line": 381,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_audit_fairness": {
+          "name": "_audit_fairness",
+          "line": 427,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "run_compliance_audit": {
+          "name": "run_compliance_audit",
+          "line": 454,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "compliance_audit": {
+          "name": "compliance_audit",
+          "line": 490,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "_governance_overview": {
+          "name": "_governance_overview",
+          "line": 497,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_governance_cost_kpis": {
+          "name": "_governance_cost_kpis",
+          "line": 532,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_governance_parity": {
+          "name": "_governance_parity",
+          "line": 580,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_governance_compliance": {
+          "name": "_governance_compliance",
+          "line": 604,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "governance_dashboard": {
+          "name": "governance_dashboard",
+          "line": 667,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        }
+      },
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/compliance-audit",
+          "prefix": "/admin",
+          "full_path": "/admin/compliance-audit",
+          "mounted_on": "router",
+          "handler": "compliance_audit",
+          "line": 490
+        },
+        {
+          "method": "GET",
+          "path": "/governance-dashboard",
+          "prefix": "/admin",
+          "full_path": "/admin/governance-dashboard",
+          "mounted_on": "router",
+          "handler": "governance_dashboard",
+          "line": 667
+        }
+      ],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.routers.admin_graph_maintenance": {
+      "path": "backend/app/routers/admin_graph_maintenance.py",
+      "module": "app.routers.admin_graph_maintenance",
+      "loc": 175,
+      "imports": [
+        "app.config",
+        "app.database",
+        "app.models",
+        "app.services.adjacency_cache",
+        "app.services.embedding_service",
+        "app.services.semantic_prefilter"
+      ],
+      "external_imports": [
+        "asyncio",
+        "concurrent",
+        "fastapi",
+        "json",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "prune_edges": {
+          "name": "prune_edges",
+          "line": 41,
+          "is_async": true,
+          "calls": [
+            "app.services.adjacency_cache::invalidate_adjacency_cache"
+          ],
+          "is_route": true
+        },
+        "classify_edges": {
+          "name": "classify_edges",
+          "line": 88,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "embed_neurons": {
+          "name": "embed_neurons",
+          "line": 121,
+          "is_async": true,
+          "calls": [
+            "app.services.semantic_prefilter::invalidate_cache"
+          ],
+          "is_route": true
+        }
+      },
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/prune-edges",
+          "prefix": "/admin",
+          "full_path": "/admin/prune-edges",
+          "mounted_on": "router",
+          "handler": "prune_edges",
+          "line": 41
+        },
+        {
+          "method": "POST",
+          "path": "/classify-edges",
+          "prefix": "/admin",
+          "full_path": "/admin/classify-edges",
+          "mounted_on": "router",
+          "handler": "classify_edges",
+          "line": 88
+        },
+        {
+          "method": "POST",
+          "path": "/embed-neurons",
+          "prefix": "/admin",
+          "full_path": "/admin/embed-neurons",
+          "mounted_on": "router",
+          "handler": "embed_neurons",
+          "line": 121
+        }
+      ],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 71,
+          "in": "prune_edges",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 107,
+          "in": "classify_edges",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 164,
+          "in": "embed_neurons",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "app.routers.admin_ingest": {
+      "path": "backend/app/routers/admin_ingest.py",
+      "module": "app.routers.admin_ingest",
+      "loc": 807,
+      "imports": [
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider"
+      ],
+      "external_imports": [
+        "asyncio",
+        "datetime",
+        "fastapi",
+        "fitz",
+        "httpx",
+        "json",
+        "sqlalchemy",
+        "tempfile",
+        "traceback",
+        "uuid"
+      ],
+      "functions": {
+        "_extract_pdf_pages": {
+          "name": "_extract_pdf_pages",
+          "line": 35,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_extract_from_file": {
+          "name": "_extract_from_file",
+          "line": 56,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_extract_from_url": {
+          "name": "_extract_from_url",
+          "line": 74,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "extract_source": {
+          "name": "extract_source",
+          "line": 100,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "_validate_ingest_body": {
+          "name": "_validate_ingest_body",
+          "line": 129,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_find_parent_neuron": {
+          "name": "_find_parent_neuron",
+          "line": 147,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_build_parent_context": {
+          "name": "_build_parent_context",
+          "line": 162,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_build_ingest_prompts": {
+          "name": "_build_ingest_prompts",
+          "line": 180,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_parse_proposals": {
+          "name": "_parse_proposals",
+          "line": 223,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_enrich_proposals": {
+          "name": "_enrich_proposals",
+          "line": 239,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "ingest_source": {
+          "name": "ingest_source",
+          "line": 254,
+          "is_async": true,
+          "calls": [
+            "app.services.llm_provider::llm_chat"
+          ],
+          "is_route": true
+        },
+        "_validate_proposal_placements": {
+          "name": "_validate_proposal_placements",
+          "line": 307,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_create_neurons_from_proposals": {
+          "name": "_create_neurons_from_proposals",
+          "line": 327,
+          "is_async": true,
+          "calls": [
+            "app.services.action_bus::submit"
+          ],
+          "is_route": false
+        },
+        "_resolve_queue_entry": {
+          "name": "_resolve_queue_entry",
+          "line": 362,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_create_referencing_edges": {
+          "name": "_create_referencing_edges",
+          "line": 373,
+          "is_async": true,
+          "calls": [
+            "app.services.action_bus::submit"
+          ],
+          "is_route": false
+        },
+        "apply_ingest_source": {
+          "name": "apply_ingest_source",
+          "line": 412,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "_chunk_text": {
+          "name": "_chunk_text",
+          "line": 457,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_build_batch_system_prompt": {
+          "name": "_build_batch_system_prompt",
+          "line": 473,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_create_batch_job_record": {
+          "name": "_create_batch_job_record",
+          "line": 503,
+          "is_async": false,
+          "calls": [
+            "app.models::BatchJob"
+          ],
+          "is_route": false
+        },
+        "_update_batch_job": {
+          "name": "_update_batch_job",
+          "line": 539,
+          "is_async": true,
+          "calls": [
+            "app.database::async_session"
+          ],
+          "is_route": false
+        },
+        "_load_batch_job_state": {
+          "name": "_load_batch_job_state",
+          "line": 549,
+          "is_async": true,
+          "calls": [
+            "app.database::async_session"
+          ],
+          "is_route": false
+        },
+        "_build_batch_chunk_user_msg": {
+          "name": "_build_batch_chunk_user_msg",
+          "line": 573,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_enrich_batch_proposals": {
+          "name": "_enrich_batch_proposals",
+          "line": 594,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_run_batch_ingest": {
+          "name": "_run_batch_ingest",
+          "line": 605,
+          "is_async": true,
+          "calls": [
+            "app.services.llm_provider::llm_chat"
+          ],
+          "is_route": false
+        },
+        "start_batch_ingest": {
+          "name": "start_batch_ingest",
+          "line": 662,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "get_batch_ingest_status": {
+          "name": "get_batch_ingest_status",
+          "line": 714,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "cancel_batch_ingest": {
+          "name": "cancel_batch_ingest",
+          "line": 745,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "resume_batch_ingest": {
+          "name": "resume_batch_ingest",
+          "line": 755,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "list_batch_jobs": {
+          "name": "list_batch_jobs",
+          "line": 780,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        }
+      },
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/extract-source",
+          "prefix": "/admin",
+          "full_path": "/admin/extract-source",
+          "mounted_on": "router",
+          "handler": "extract_source",
+          "line": 100
+        },
+        {
+          "method": "POST",
+          "path": "/ingest-source",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source",
+          "mounted_on": "router",
+          "handler": "ingest_source",
+          "line": 254
+        },
+        {
+          "method": "POST",
+          "path": "/ingest-source/apply",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source/apply",
+          "mounted_on": "router",
+          "handler": "apply_ingest_source",
+          "line": 412
+        },
+        {
+          "method": "POST",
+          "path": "/ingest-source/batch",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source/batch",
+          "mounted_on": "router",
+          "handler": "start_batch_ingest",
+          "line": 662
+        },
+        {
+          "method": "GET",
+          "path": "/ingest-source/batch/{job_id}",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source/batch/{job_id}",
+          "mounted_on": "router",
+          "handler": "get_batch_ingest_status",
+          "line": 714
+        },
+        {
+          "method": "POST",
+          "path": "/ingest-source/batch/{job_id}/cancel",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source/batch/{job_id}/cancel",
+          "mounted_on": "router",
+          "handler": "cancel_batch_ingest",
+          "line": 745
+        },
+        {
+          "method": "POST",
+          "path": "/ingest-source/batch/{job_id}/resume",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source/batch/{job_id}/resume",
+          "mounted_on": "router",
+          "handler": "resume_batch_ingest",
+          "line": 755
+        },
+        {
+          "method": "GET",
+          "path": "/ingest-source/batch",
+          "prefix": "/admin",
+          "full_path": "/admin/ingest-source/batch",
+          "mounted_on": "router",
+          "handler": "list_batch_jobs",
+          "line": 780
+        }
+      ],
+      "db_writes": [
+        {
+          "kind": "flush",
+          "line": 42,
+          "in": "_extract_pdf_pages",
+          "target": "tmp",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 440,
+          "in": "apply_ingest_source",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 546,
+          "in": "_update_batch_job",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 700,
+          "in": "start_batch_ingest",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 701,
+          "in": "start_batch_ingest",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 766,
+          "in": "resume_batch_ingest",
           "target": "db",
           "model": null
         }
@@ -7275,12 +7347,12 @@
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 604,
+          "line": 280,
           "in": "ingest_source"
         },
         {
           "kind": "llm_chat",
-          "line": 959,
+          "line": 635,
           "in": "_run_batch_ingest"
         }
       ]
@@ -24211,7 +24283,7 @@
     "app.services.scoring_engine": {
       "path": "backend/app/services/scoring_engine.py",
       "module": "app.services.scoring_engine",
-      "loc": 530,
+      "loc": 538,
       "imports": [
         "app.config"
       ],
@@ -24224,175 +24296,175 @@
       "functions": {
         "coldstart_shrinkage": {
           "name": "coldstart_shrinkage",
-          "line": 53,
+          "line": 61,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_coldstart_prior": {
           "name": "calc_coldstart_prior",
-          "line": 59,
+          "line": 67,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_coldstart_term": {
           "name": "calc_coldstart_term",
-          "line": 87,
+          "line": 95,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_burst": {
           "name": "calc_burst",
-          "line": 103,
+          "line": 111,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_impact": {
           "name": "calc_impact",
-          "line": 111,
+          "line": 119,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_precision": {
           "name": "calc_precision",
-          "line": 118,
+          "line": 126,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_novelty": {
           "name": "calc_novelty",
-          "line": 128,
+          "line": 136,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_recency": {
           "name": "calc_recency",
-          "line": 135,
+          "line": 143,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_burst_batch": {
           "name": "calc_burst_batch",
-          "line": 149,
+          "line": 157,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_impact_batch": {
           "name": "calc_impact_batch",
-          "line": 154,
+          "line": 162,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_precision_batch": {
           "name": "calc_precision_batch",
-          "line": 159,
+          "line": 167,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_novelty_batch": {
           "name": "calc_novelty_batch",
-          "line": 171,
+          "line": 179,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_recency_batch": {
           "name": "calc_recency_batch",
-          "line": 176,
+          "line": 184,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_coldstart_term_batch": {
           "name": "calc_coldstart_term_batch",
-          "line": 182,
+          "line": 190,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "extract_keywords": {
           "name": "extract_keywords",
-          "line": 240,
+          "line": 248,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_relevance": {
           "name": "calc_relevance",
-          "line": 264,
+          "line": 272,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_rrf": {
           "name": "calc_rrf",
-          "line": 302,
+          "line": 310,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "calc_hybrid_relevance": {
           "name": "calc_hybrid_relevance",
-          "line": 337,
+          "line": 345,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_resolve_relevance": {
           "name": "_resolve_relevance",
-          "line": 346,
+          "line": 354,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_compute_gated_combined": {
           "name": "_compute_gated_combined",
-          "line": 360,
+          "line": 368,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_apply_classification_boost": {
           "name": "_apply_classification_boost",
-          "line": 397,
+          "line": 405,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "compute_score": {
           "name": "compute_score",
-          "line": 409,
+          "line": 417,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_apply_single_override": {
           "name": "_apply_single_override",
-          "line": 471,
+          "line": 479,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "apply_score_overrides": {
           "name": "apply_score_overrides",
-          "line": 484,
+          "line": 492,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "update_impact_ema": {
           "name": "update_impact_ema",
-          "line": 524,
+          "line": 532,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -24402,14 +24474,14 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 257,
+          "line": 265,
           "in": "extract_keywords",
           "target": "seen",
           "model": null
         },
         {
           "kind": "add",
-          "line": 290,
+          "line": 298,
           "in": "calc_relevance",
           "target": "tokens",
           "model": null
@@ -35233,7 +35305,7 @@
     "tests.test_graph_writers": {
       "path": "backend/tests/test_graph_writers.py",
       "module": "tests.test_graph_writers",
-      "loc": 285,
+      "loc": 310,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -35344,14 +35416,14 @@
         },
         "test_honeypot_sql_in_a_comment_is_not_a_write": {
           "name": "test_honeypot_sql_in_a_comment_is_not_a_write",
-          "line": 260,
+          "line": 285,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_derived_signal_columns_are_deliberately_unprotected": {
           "name": "test_derived_signal_columns_are_deliberately_unprotected",
-          "line": 274,
+          "line": 299,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -43134,7 +43206,7 @@
       "app.middleware.rbac",
       "app.middleware.security_headers",
       "app.operations.router",
-      "app.routers.admin",
+      "app.routers.admin_graph_maintenance",
       "app.routers.query",
       "app.routers.v1",
       "app.seed.regulatory_seed",
@@ -43216,6 +43288,9 @@
       "app.middleware.audit",
       "app.operations.router",
       "app.routers.admin",
+      "app.routers.admin_compliance",
+      "app.routers.admin_graph_maintenance",
+      "app.routers.admin_ingest",
       "app.routers.agents",
       "app.routers.auditor",
       "app.routers.capabilities",
@@ -43314,6 +43389,7 @@
       "app.governance.output_guard",
       "app.mcp_http",
       "app.routers.admin",
+      "app.routers.admin_ingest",
       "app.routers.agents",
       "app.routers.eval_runs",
       "app.routers.ingest",
@@ -43363,6 +43439,9 @@
       "app.middleware.audit",
       "app.operations.router",
       "app.routers.admin",
+      "app.routers.admin_compliance",
+      "app.routers.admin_graph_maintenance",
+      "app.routers.admin_ingest",
       "app.routers.agents",
       "app.routers.chat_sessions",
       "app.routers.document_ingest",
@@ -43548,7 +43627,7 @@
     ],
     "app.services.action_bus": [
       "app.governance.output_guard",
-      "app.routers.admin",
+      "app.routers.admin_ingest",
       "app.routers.ingest",
       "app.routers.proposals",
       "app.routers.query",
@@ -43610,6 +43689,7 @@
     "app.services.adjacency_cache": [
       "app.composition.startup",
       "app.routers.admin",
+      "app.routers.admin_graph_maintenance",
       "app.routers.proposals",
       "app.services.concept_service",
       "app.services.executor",
@@ -43713,7 +43793,7 @@
       "app.agents.tools.dedup_tools",
       "app.composition.startup",
       "app.mcp_server",
-      "app.routers.admin",
+      "app.routers.admin_graph_maintenance",
       "app.routers.ingest",
       "app.seed.engram_loader",
       "app.services.actions.neuron_refine",
@@ -43857,7 +43937,7 @@
     "app.services.llm_provider": [
       "app.agents.runtime",
       "app.agents.tools.dedup_tools",
-      "app.routers.admin",
+      "app.routers.admin_ingest",
       "app.routers.chat_sessions",
       "app.routers.ingest",
       "app.routers.performance",
@@ -44288,6 +44368,8 @@
       "tests.test_schema_authority"
     ],
     "app.services.scoring_engine": [
+      "app.routers.admin",
+      "app.routers.admin_compliance",
       "app.routers.query",
       "app.services.engram_service",
       "app.services.executor",
@@ -44326,6 +44408,7 @@
       "app.composition.startup",
       "app.mcp_server",
       "app.routers.admin",
+      "app.routers.admin_graph_maintenance",
       "app.services.actions.neuron_refine",
       "app.services.actions.neuron_stats_rebuild",
       "app.services.concept_service",
@@ -44484,21 +44567,28 @@
       "app.models"
     ],
     "app.routers.admin": [
-      "app.database",
       "app.middleware.rbac",
       "app.models",
       "app.schemas",
       "app.seed.loader",
-      "app.services.action_bus",
       "app.services.adjacency_cache",
       "app.services.bootstrap_service",
       "app.services.concept_service",
       "app.services.inhibitory_service",
-      "app.services.llm_provider",
       "app.services.model_usage_ledger",
       "app.services.reference_detector",
       "app.services.retention",
       "app.services.semantic_prefilter"
+    ],
+    "app.routers.admin_graph_maintenance": [
+      "app.services.adjacency_cache",
+      "app.services.semantic_prefilter"
+    ],
+    "app.routers.admin_ingest": [
+      "app.database",
+      "app.models",
+      "app.services.action_bus",
+      "app.services.llm_provider"
     ],
     "app.routers.agents": [
       "app.agents",
@@ -45963,7 +46053,7 @@
       "full_path": "/admin/alerts",
       "mounted_on": "router",
       "handler": "get_alerts",
-      "line": 1616,
+      "line": 809,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -45980,7 +46070,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -45993,7 +46082,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46005,7 +46093,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46024,7 +46111,7 @@
       "full_path": "/admin/alerts/acknowledge-all",
       "mounted_on": "router",
       "handler": "acknowledge_all_alerts",
-      "line": 1653,
+      "line": 846,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46041,7 +46128,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46054,7 +46140,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46066,7 +46151,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46085,7 +46169,7 @@
       "full_path": "/admin/alerts/{alert_id}/acknowledge",
       "mounted_on": "router",
       "handler": "acknowledge_alert",
-      "line": 1641,
+      "line": 834,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46102,7 +46186,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46115,7 +46198,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46127,7 +46209,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46146,7 +46227,7 @@
       "full_path": "/admin/bootstrap-firings",
       "mounted_on": "router",
       "handler": "bootstrap_firings_endpoint",
-      "line": 2555,
+      "line": 989,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46163,7 +46244,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46176,7 +46256,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46188,7 +46267,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46207,7 +46285,7 @@
       "full_path": "/admin/bootstrap-stats",
       "mounted_on": "router",
       "handler": "bootstrap_stats_endpoint",
-      "line": 2566,
+      "line": 1000,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46224,7 +46302,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46237,7 +46314,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46249,7 +46325,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46268,7 +46343,7 @@
       "full_path": "/admin/checkpoint",
       "mounted_on": "router",
       "handler": "create_checkpoint",
-      "line": 82,
+      "line": 94,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46285,7 +46360,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46298,7 +46372,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46310,129 +46383,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/classify-edges",
-      "prefix": "/admin",
-      "full_path": "/admin/classify-edges",
-      "mounted_on": "router",
-      "handler": "classify_edges",
-      "line": 2427,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/compliance-audit",
-      "prefix": "/admin",
-      "full_path": "/admin/compliance-audit",
-      "mounted_on": "router",
-      "handler": "compliance_audit",
-      "line": 2123,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46451,7 +46401,7 @@
       "full_path": "/admin/concept-neurons",
       "mounted_on": "router",
       "handler": "list_concept_neurons",
-      "line": 2463,
+      "line": 897,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46468,7 +46418,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46481,7 +46430,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46493,7 +46441,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46512,7 +46459,7 @@
       "full_path": "/admin/concept-neurons",
       "mounted_on": "router",
       "handler": "create_concept_neuron_endpoint",
-      "line": 2470,
+      "line": 904,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46529,7 +46476,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46542,7 +46488,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46554,7 +46499,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46573,7 +46517,7 @@
       "full_path": "/admin/concept-neurons/relink",
       "mounted_on": "router",
       "handler": "relink_concepts_endpoint",
-      "line": 2544,
+      "line": 978,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46590,7 +46534,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46603,7 +46546,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46615,7 +46557,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46634,7 +46575,7 @@
       "full_path": "/admin/concept-neurons/seed-all",
       "mounted_on": "router",
       "handler": "seed_all_concepts_endpoint",
-      "line": 2537,
+      "line": 971,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46651,7 +46592,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46664,7 +46604,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46676,7 +46615,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46695,7 +46633,7 @@
       "full_path": "/admin/concept-neurons/seed-three-horizons",
       "mounted_on": "router",
       "handler": "seed_three_horizons_endpoint",
-      "line": 2530,
+      "line": 964,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46712,7 +46650,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46725,7 +46662,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46737,7 +46673,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46756,7 +46691,7 @@
       "full_path": "/admin/concept-neurons/{concept_id}/link",
       "mounted_on": "router",
       "handler": "link_concept_neuron",
-      "line": 2498,
+      "line": 932,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46773,7 +46708,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46786,7 +46720,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46798,7 +46731,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46817,7 +46749,7 @@
       "full_path": "/admin/cost-report",
       "mounted_on": "router",
       "handler": "cost_report",
-      "line": 154,
+      "line": 166,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46834,7 +46766,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46847,7 +46778,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46859,68 +46789,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/embed-neurons",
-      "prefix": "/admin",
-      "full_path": "/admin/embed-neurons",
-      "mounted_on": "router",
-      "handler": "embed_neurons",
-      "line": 2337,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46939,7 +46807,7 @@
       "full_path": "/admin/emergent-queue",
       "mounted_on": "router",
       "handler": "get_emergent_queue",
-      "line": 187,
+      "line": 199,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -46956,7 +46824,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -46969,7 +46836,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -46981,7 +46847,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47000,7 +46865,7 @@
       "full_path": "/admin/emergent-queue/{entry_id}/dismiss",
       "mounted_on": "router",
       "handler": "dismiss_queue_entry",
-      "line": 222,
+      "line": 234,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47017,7 +46882,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47030,7 +46894,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -47042,129 +46905,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/extract-source",
-      "prefix": "/admin",
-      "full_path": "/admin/extract-source",
-      "mounted_on": "router",
-      "handler": "extract_source",
-      "line": 424,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/governance-dashboard",
-      "prefix": "/admin",
-      "full_path": "/admin/governance-dashboard",
-      "mounted_on": "router",
-      "handler": "governance_dashboard",
-      "line": 2300,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47183,7 +46923,7 @@
       "full_path": "/admin/health-check",
       "mounted_on": "router",
       "handler": "health_check",
-      "line": 1564,
+      "line": 757,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47200,7 +46940,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47213,7 +46952,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -47225,434 +46963,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/ingest-source",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source",
-      "mounted_on": "router",
-      "handler": "ingest_source",
-      "line": 578,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/ingest-source/apply",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source/apply",
-      "mounted_on": "router",
-      "handler": "apply_ingest_source",
-      "line": 736,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/ingest-source/batch",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source/batch",
-      "mounted_on": "router",
-      "handler": "start_batch_ingest",
-      "line": 986,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/ingest-source/batch",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source/batch",
-      "mounted_on": "router",
-      "handler": "list_batch_jobs",
-      "line": 1104,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/ingest-source/batch/{job_id}",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source/batch/{job_id}",
-      "mounted_on": "router",
-      "handler": "get_batch_ingest_status",
-      "line": 1038,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/ingest-source/batch/{job_id}/cancel",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source/batch/{job_id}/cancel",
-      "mounted_on": "router",
-      "handler": "cancel_batch_ingest",
-      "line": 1069,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/ingest-source/batch/{job_id}/resume",
-      "prefix": "/admin",
-      "full_path": "/admin/ingest-source/batch/{job_id}/resume",
-      "mounted_on": "router",
-      "handler": "resume_batch_ingest",
-      "line": 1079,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47671,7 +46981,7 @@
       "full_path": "/admin/inhibitory-regulators",
       "mounted_on": "router",
       "handler": "list_inhibitory_regulators",
-      "line": 2403,
+      "line": 870,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47688,7 +46998,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47701,7 +47010,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -47713,7 +47021,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47732,7 +47039,7 @@
       "full_path": "/admin/intra-department-bridge",
       "mounted_on": "router",
       "handler": "intra_department_bridge_endpoint",
-      "line": 2583,
+      "line": 1017,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47749,7 +47056,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47762,7 +47068,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -47774,68 +47079,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/prune-edges",
-      "prefix": "/admin",
-      "full_path": "/admin/prune-edges",
-      "mounted_on": "router",
-      "handler": "prune_edges",
-      "line": 1134,
-      "module": "app.routers.admin",
-      "file": "backend/app/routers/admin.py",
-      "imports_reachable": [
-        "app.config",
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
-        "app.services.model_usage_ledger",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
-        "app.services.neuron_service",
-        "app.services.reference_detector",
-        "app.services.region_policy",
-        "app.services.retention",
-        "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
-        "app.tenant"
-      ],
-      "calls_reachable": [
-        "app.database",
-        "app.middleware.rbac",
-        "app.models",
-        "app.schemas",
-        "app.seed.loader",
-        "app.services.action_bus",
-        "app.services.adjacency_cache",
-        "app.services.bootstrap_service",
-        "app.services.concept_service",
-        "app.services.edge_tier",
-        "app.services.embedding_service",
-        "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47854,7 +47097,7 @@
       "full_path": "/admin/purge-bootstrap",
       "mounted_on": "router",
       "handler": "purge_bootstrap_endpoint",
-      "line": 2573,
+      "line": 1007,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47871,7 +47114,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47884,7 +47126,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -47896,7 +47137,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47915,7 +47155,7 @@
       "full_path": "/admin/reset",
       "mounted_on": "router",
       "handler": "reset_firings",
-      "line": 38,
+      "line": 50,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47932,7 +47172,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47945,7 +47184,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -47957,7 +47195,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -47976,7 +47213,7 @@
       "full_path": "/admin/retention/purge",
       "mounted_on": "router",
       "handler": "retention_purge_now",
-      "line": 70,
+      "line": 82,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -47993,7 +47230,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48006,7 +47242,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -48018,7 +47253,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48037,7 +47271,7 @@
       "full_path": "/admin/scan-references",
       "mounted_on": "router",
       "handler": "scan_references",
-      "line": 307,
+      "line": 319,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -48054,7 +47288,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48067,7 +47300,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -48079,7 +47311,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48098,7 +47329,7 @@
       "full_path": "/admin/scoring-health",
       "mounted_on": "router",
       "handler": "scoring_health",
-      "line": 1343,
+      "line": 536,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -48115,7 +47346,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48128,7 +47358,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -48140,7 +47369,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48159,7 +47387,7 @@
       "full_path": "/admin/seed",
       "mounted_on": "router",
       "handler": "seed_database",
-      "line": 31,
+      "line": 43,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -48176,7 +47404,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48189,7 +47416,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -48201,7 +47427,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48220,7 +47445,7 @@
       "full_path": "/admin/seed-inhibitory-regulators",
       "mounted_on": "router",
       "handler": "seed_inhibitory_regulators_endpoint",
-      "line": 2394,
+      "line": 861,
       "module": "app.routers.admin",
       "file": "backend/app/routers/admin.py",
       "imports_reachable": [
@@ -48237,7 +47462,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48250,7 +47474,6 @@
         "app.tenant"
       ],
       "calls_reachable": [
-        "app.database",
         "app.middleware.rbac",
         "app.models",
         "app.schemas",
@@ -48262,7 +47485,6 @@
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.inhibitory_service",
-        "app.services.llm_provider",
         "app.services.model_usage_ledger",
         "app.services.neuron_candidate",
         "app.services.neuron_index",
@@ -48272,6 +47494,327 @@
         "app.services.retention",
         "app.services.scoring_engine",
         "app.services.semantic_prefilter"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance-audit",
+      "prefix": "/admin",
+      "full_path": "/admin/compliance-audit",
+      "mounted_on": "router",
+      "handler": "compliance_audit",
+      "line": 490,
+      "module": "app.routers.admin_compliance",
+      "file": "backend/app/routers/admin_compliance.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.models",
+        "app.services.scoring_engine"
+      ],
+      "calls_reachable": []
+    },
+    {
+      "method": "GET",
+      "path": "/governance-dashboard",
+      "prefix": "/admin",
+      "full_path": "/admin/governance-dashboard",
+      "mounted_on": "router",
+      "handler": "governance_dashboard",
+      "line": 667,
+      "module": "app.routers.admin_compliance",
+      "file": "backend/app/routers/admin_compliance.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.models",
+        "app.services.scoring_engine"
+      ],
+      "calls_reachable": []
+    },
+    {
+      "method": "POST",
+      "path": "/classify-edges",
+      "prefix": "/admin",
+      "full_path": "/admin/classify-edges",
+      "mounted_on": "router",
+      "handler": "classify_edges",
+      "line": 88,
+      "module": "app.routers.admin_graph_maintenance",
+      "file": "backend/app/routers/admin_graph_maintenance.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.models",
+        "app.services.adjacency_cache",
+        "app.services.embedding_service",
+        "app.services.semantic_prefilter"
+      ],
+      "calls_reachable": [
+        "app.services.adjacency_cache",
+        "app.services.semantic_prefilter"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/embed-neurons",
+      "prefix": "/admin",
+      "full_path": "/admin/embed-neurons",
+      "mounted_on": "router",
+      "handler": "embed_neurons",
+      "line": 121,
+      "module": "app.routers.admin_graph_maintenance",
+      "file": "backend/app/routers/admin_graph_maintenance.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.models",
+        "app.services.adjacency_cache",
+        "app.services.embedding_service",
+        "app.services.semantic_prefilter"
+      ],
+      "calls_reachable": [
+        "app.services.adjacency_cache",
+        "app.services.semantic_prefilter"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/prune-edges",
+      "prefix": "/admin",
+      "full_path": "/admin/prune-edges",
+      "mounted_on": "router",
+      "handler": "prune_edges",
+      "line": 41,
+      "module": "app.routers.admin_graph_maintenance",
+      "file": "backend/app/routers/admin_graph_maintenance.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.models",
+        "app.services.adjacency_cache",
+        "app.services.embedding_service",
+        "app.services.semantic_prefilter"
+      ],
+      "calls_reachable": [
+        "app.services.adjacency_cache",
+        "app.services.semantic_prefilter"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/extract-source",
+      "prefix": "/admin",
+      "full_path": "/admin/extract-source",
+      "mounted_on": "router",
+      "handler": "extract_source",
+      "line": 100,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ingest-source",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source",
+      "mounted_on": "router",
+      "handler": "ingest_source",
+      "line": 254,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ingest-source/apply",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source/apply",
+      "mounted_on": "router",
+      "handler": "apply_ingest_source",
+      "line": 412,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ingest-source/batch",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source/batch",
+      "mounted_on": "router",
+      "handler": "start_batch_ingest",
+      "line": 662,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/ingest-source/batch",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source/batch",
+      "mounted_on": "router",
+      "handler": "list_batch_jobs",
+      "line": 780,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/ingest-source/batch/{job_id}",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source/batch/{job_id}",
+      "mounted_on": "router",
+      "handler": "get_batch_ingest_status",
+      "line": 714,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ingest-source/batch/{job_id}/cancel",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source/batch/{job_id}/cancel",
+      "mounted_on": "router",
+      "handler": "cancel_batch_ingest",
+      "line": 745,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/ingest-source/batch/{job_id}/resume",
+      "prefix": "/admin",
+      "full_path": "/admin/ingest-source/batch/{job_id}/resume",
+      "mounted_on": "router",
+      "handler": "resume_batch_ingest",
+      "line": 755,
+      "module": "app.routers.admin_ingest",
+      "file": "backend/app/routers/admin_ingest.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
+      ],
+      "calls_reachable": [
+        "app.database",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.llm_provider",
+        "app.services.model_usage_ledger"
       ]
     },
     {
