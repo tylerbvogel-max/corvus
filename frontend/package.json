@@ -10,8 +10,11 @@
     "demo:capture": "node scripts/capture-demo-fixtures.mjs",
     "demo:check": "node scripts/check-demo.mjs",
     "demo:publish": "npm run demo:capture && npm run demo:check && npm run build:demo && playwright test",
+    "gen:contracts": "node scripts/generate-contracts.mjs",
+    "check:contracts": "node scripts/generate-contracts.mjs --check",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "verify:capability-nav": "node scripts/verify_capability_nav.mjs",
-    "verify:carlos-lab":"node scripts/verify-carlos-lab.mjs",
+    "verify:carlos-lab": "node scripts/verify-carlos-lab.mjs",
     "verify:neuron-zones": "node scripts/verify-neuron-zones.mjs",
     "verify:neuron-firings": "node scripts/verify-neuron-firings.mjs",
     "preview": "vite preview"
@@ -39,6 +42,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^5.1.1",
+    "openapi-typescript": "^7.13.0",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"
   }

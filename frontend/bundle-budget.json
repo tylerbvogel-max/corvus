@@ -1,0 +1,47 @@
+{
+  "$comment": [
+    "Bundle budget for durability-frontend-contracts (record 05).",
+    "Every number here is a MEASURED baseline plus a stated headroom, never an",
+    "aspiration. Ratcheting these down is allowed only with a build report that",
+    "shows the new figure; raising one requires saying why in the same commit.",
+    "Sizes are gzip BYTES, because that is what a browser actually downloads.",
+    "Both the baseline and the current figures were produced by the same tool",
+    "(scripts/check-bundle-budget.mjs, node zlib gzipSync) so they are directly",
+    "comparable. Vite's own console report prints identical byte counts in",
+    "decimal kB; the script matches that divisor for the same reason."
+  ],
+  "measuredOn": "2026-08-01",
+  "measuredAt": "worktree wt/frontend-contracts, branched from main e3f9e37",
+  "baseline": {
+    "$comment": "Pre-split build, re-measured with gzipSync on a stashed tree so the reduction below is not a mix of two measurement methods.",
+    "initialRouteGzip": 499159,
+    "initialJsGzip": 472628,
+    "initialCssGzip": 26531,
+    "chunkCount": 1,
+    "note": "One undivided chunk: 1,676.03 kB raw / 472.63 kB gzip JS plus 150.99 kB raw / 26.53 kB gzip CSS. Initial route fell 499,159 -> 106,972 bytes, a 78.6% reduction."
+  },
+  "budgets": {
+    "initialRouteGzip": {
+      "limit": 126000,
+      "measured": 106972,
+      "headroomPct": 17.8,
+      "rationale": "Entry chunk plus every stylesheet and JS module the entry STATICALLY imports — what a cold visitor downloads before anything renders. Measured 106,972 bytes after the lazy split, down from 499,159. The headroom absorbs ordinary feature work without a budget edit; anything larger should arrive as a lazy leaf, not as entry growth."
+    },
+    "maxChunkGzip": {
+      "limit": 190000,
+      "measured": 162283,
+      "headroomPct": 17.1,
+      "rationale": "Largest single lazy chunk, currently NeuronUniverse at 162,283 bytes — effectively the cost of `three`, which exactly one file in src/ imports. A deliberate ceiling on any ONE surface, not a total. If a second chunk approaches it, the right response is usually another lazy boundary."
+    },
+    "totalJsGzip": {
+      "limit": 600000,
+      "measured": 488368,
+      "headroomPct": 22.9,
+      "rationale": "Sum across all JS chunks. Guards the failure mode the initial-route budget cannot see: shipping ever more code that merely happens to be deferred. Looser headroom than the other two because new lazy surfaces are the expected, healthy way for this number to grow."
+    }
+  },
+  "notes": [
+    "Not budgeted: dist/assets/corvus-logo-*.png (259.92 kB). It is an image, it is cached, and folding it in would let an unrelated art change break the JS gate.",
+    "The >500 kB raw-size warning Vite still prints applies to NeuronUniverse's chunk only. That is expected and is covered by maxChunkGzip; the pre-split warning covered the ENTIRE application."
+  ]
+}

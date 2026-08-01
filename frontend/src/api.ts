@@ -30,9 +30,14 @@ import type {
   IntegrityBulkResolveResult,
   IntegrityProposeResult,
 } from './types';
+// Statically imported. auth.ts is 60 lines of side-effect-free localStorage
+// accessors, so it can never be split into its own chunk anyway: App.tsx and
+// ProposalQueuePage.tsx both import it statically. Importing it dynamically
+// here bought nothing and cost a dynamic-import round trip on EVERY request,
+// while producing the build's mixed static/dynamic warning.
+import { getAuthHeaders } from './auth';
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
-  const { getAuthHeaders } = await import('./auth');
   const authHeaders = getAuthHeaders();
   const mergedInit: RequestInit = {
     ...init,
@@ -1842,7 +1847,6 @@ export async function uploadDocument(
     model?: string;
   },
 ): Promise<DocumentIngestJob> {
-  const { getAuthHeaders } = await import('./auth');
   const authHeaders = getAuthHeaders();
 
   const form = new FormData();
