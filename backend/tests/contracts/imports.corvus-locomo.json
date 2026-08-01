@@ -1,5 +1,5 @@
 {
-  "app_module_count": 77,
+  "app_module_count": 79,
   "app_modules": [
     "app",
     "app.composition",
@@ -59,8 +59,10 @@
     "app.services.pipeline.context",
     "app.services.pipeline.runner",
     "app.services.pipeline.stage",
+    "app.services.prepared_context",
     "app.services.prompt_assembler",
     "app.services.propagation",
+    "app.services.recall_primitives",
     "app.services.reconsolidation",
     "app.services.reconsolidation.apply",
     "app.services.reconsolidation.fingerprints",

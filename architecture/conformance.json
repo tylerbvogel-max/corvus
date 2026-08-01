@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 363,
+    "modules": 365,
     "frontend_files": 72,
-    "units": 435,
-    "classified": 435,
+    "units": 437,
+    "classified": 437,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "13e46211266c9ecf479afc9369da2f13b840dde97f9e4ef3e4c15b1de8f3a4d5",
-    "current_fingerprint": "13e46211266c9ecf479afc9369da2f13b840dde97f9e4ef3e4c15b1de8f3a4d5",
-    "stored_files": 435,
-    "current_files": 435
+    "stored_fingerprint": "0c7e457b4e93675cfe27678dc3f5e3c8ad42fc0fe6ff0ccc56a77504f595cd00",
+    "current_fingerprint": "0c7e457b4e93675cfe27678dc3f5e3c8ad42fc0fe6ff0ccc56a77504f595cd00",
+    "stored_files": 437,
+    "current_files": 437
   },
   "manifest_problems": [],
   "boxes": [
@@ -219,7 +219,7 @@
       "confidence": "reviewed",
       "module_count": 39,
       "frontend_file_count": 0,
-      "loc": 9700,
+      "loc": 9247,
       "routes": 24,
       "modules": [
         "app.governance",
@@ -270,9 +270,9 @@
       "tier": "hot",
       "purpose": "Retrieve, score, spread, cool, assemble, and expose neurons/engrams without an LLM in the default recall path.",
       "confidence": "reviewed",
-      "module_count": 21,
+      "module_count": 23,
       "frontend_file_count": 0,
-      "loc": 7675,
+      "loc": 8223,
       "routes": 24,
       "modules": [
         "app.routers.engrams",
@@ -290,9 +290,11 @@
         "app.services.neuron_candidate",
         "app.services.neuron_index",
         "app.services.neuron_service",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.scoring_engine",
         "app.services.semantic_prefilter",
         "app.services.synaptic_learning"

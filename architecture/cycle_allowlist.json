@@ -11,7 +11,7 @@
     "one-line diff in a file named for the debt it tracks, so review cannot miss it.",
     "Owned by roadmap record durability-modular-monolith (04)."
   ],
-  "budget": 2,
+  "budget": 1,
   "history": [
     {
       "date": "2026-08-01",
@@ -32,6 +32,11 @@
       "date": "2026-08-01",
       "budget": 2,
       "note": "Record 04 seam 3: broke the app.governance.policies package-init cycle by extracting PolicyContext, ViolationDraft and the config helpers into policies/base.py. The __init__ defined the base types AND imported the three concrete policies to build POLICY_CLASSES, while each policy imported those types back; the `# noqa: E402` on the bottom imports was the confession. __init__ is now a pure facade, so every external importer is unchanged."
+    },
+    {
+      "date": "2026-08-01",
+      "budget": 1,
+      "note": "Record 04 seam 4: broke executor <-> pipeline.stages <-> structural_resolver. Two loops were braided into one 8-module cycle. executor was doing two jobs \u2014 holding the recall algorithms AND building/running the pipeline that calls them \u2014 so the thin stage wrappers imported it back; separately structural_resolver constructs PreparedContext, which also lived in executor. Extracted recall_primitives.py (9 functions, 427 lines) and prepared_context.py. executor 2087 -> 1633 lines and now imports both one-way."
     }
   ],
   "cycles": [
@@ -48,16 +53,6 @@
       "app.services.reconsolidation.review",
       "app.services.reconsolidation.validators",
       "app.services.skill_compiler"
-    ],
-    [
-      "app.services.executor",
-      "app.services.pipeline.stages",
-      "app.services.pipeline.stages.assemble_stage",
-      "app.services.pipeline.stages.classify_stage",
-      "app.services.pipeline.stages.inhibitory_stage",
-      "app.services.pipeline.stages.prefilter_score_stage",
-      "app.services.pipeline.stages.structural_resolve_stage",
-      "app.services.structural_resolver"
     ]
   ]
 }

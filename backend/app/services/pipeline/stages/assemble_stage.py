@@ -18,7 +18,7 @@ class AssembleStage:
     name = "assemble_prompt"
 
     async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
-        from app.services.executor import _assemble_top_slice
+        from app.services.recall_primitives import _assemble_top_slice
         top_slice, neuron_map, system_prompt, hop_map, telemetry = await _assemble_top_slice(
             ctx.db,
             state.all_scored,

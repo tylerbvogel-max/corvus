@@ -96,10 +96,10 @@ def test_pipeline_rejects_unknown_mode():
 @pytest.mark.asyncio
 async def test_cheap_stage_zero_cost_and_tags():
     with patch(
-        "app.services.executor._embed_query_async",
+        "app.services.recall_primitives._embed_query_async",
         new=AsyncMock(return_value=[0.1] * 384),
     ), patch(
-        "app.services.executor._neighbor_vote_classify",
+        "app.services.recall_primitives._neighbor_vote_classify",
         new=AsyncMock(return_value=(["Engineering"], ["mech_eng"], 0.72)),
     ):
         state = await CheapClassifyStage().run(_state(), _Ctx())
@@ -118,7 +118,7 @@ async def test_cheap_stage_zero_cost_and_tags():
 @pytest.mark.asyncio
 async def test_cheap_stage_survives_embedding_failure():
     with patch(
-        "app.services.executor._embed_query_async",
+        "app.services.recall_primitives._embed_query_async",
         new=AsyncMock(side_effect=RuntimeError("model load failed")),
     ):
         state = await CheapClassifyStage().run(_state(), _Ctx())

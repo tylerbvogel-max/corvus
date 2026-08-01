@@ -1,5 +1,5 @@
 {
-  "app_module_count": 119,
+  "app_module_count": 121,
   "app_modules": [
     "app",
     "app.agents",
@@ -94,9 +94,11 @@
     "app.services.pipeline.context",
     "app.services.pipeline.runner",
     "app.services.pipeline.stage",
+    "app.services.prepared_context",
     "app.services.prompt_assembler",
     "app.services.propagation",
     "app.services.provenance_service",
+    "app.services.recall_primitives",
     "app.services.reconsolidation",
     "app.services.reconsolidation.apply",
     "app.services.reconsolidation.fingerprints",

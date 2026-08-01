@@ -18,7 +18,7 @@ class PrefilterScoreStage:
     name = "prefilter_score"
 
     async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
-        from app.services.executor import _select_and_score_candidates
+        from app.services.recall_primitives import _select_and_score_candidates
         system_state = await get_system_state(ctx.db)
         state.total_queries = system_state.total_queries
         scored, scored_engrams, lane_hits, embedding_sims = await _select_and_score_candidates(

@@ -1122,6 +1122,11 @@ boxes:
       - backend/app/services/semantic_prefilter.py
       - backend/app/services/scoring_engine.py
       - backend/app/services/neuron_service.py
+      # Record 04 seam 4: the recall algorithms and the prepared-result shape,
+      # lifted out of executor so the pipeline stages and structural_resolver
+      # could stop importing it back. Both are below executor, never above.
+      - backend/app/services/recall_primitives.py
+      - backend/app/services/prepared_context.py
       # Leaf vocabulary shared by the service, the index and the executor.
       # Extracted from neuron_service by record 04 seam 2 to break the
       # neuron_index <-> neuron_service cycle; imports nothing.

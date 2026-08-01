@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "13e46211266c9ecf479afc9369da2f13b840dde97f9e4ef3e4c15b1de8f3a4d5",
-    "files": 435
+    "fingerprint": "0c7e457b4e93675cfe27678dc3f5e3c8ad42fc0fe6ff0ccc56a77504f595cd00",
+    "files": 437
   },
   "frontend": {
     "available": true,
@@ -2743,11 +2743,11 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 363,
-    "loc": 83174,
+    "modules": 365,
+    "loc": 83269,
     "routes": 212,
-    "import_edges": 988,
-    "call_edges": 658,
+    "import_edges": 1001,
+    "call_edges": 665,
     "modules_touching_db": 111,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -16380,7 +16380,7 @@
     "app.services.executor": {
       "path": "backend/app/services/executor.py",
       "module": "app.services.executor",
-      "loc": 2087,
+      "loc": 1634,
       "imports": [
         "app.config",
         "app.database",
@@ -16390,33 +16390,26 @@
         "app.services.citation_relevance",
         "app.services.concept_service",
         "app.services.edge_tier",
-        "app.services.embedding_service",
         "app.services.engram_service",
-        "app.services.inhibitory_service",
         "app.services.llm_provider",
-        "app.services.memory_assembly",
-        "app.services.neuron_candidate",
-        "app.services.neuron_index",
         "app.services.neuron_service",
         "app.services.pipeline",
         "app.services.pipeline.stages",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
-        "app.services.recall_lanes",
-        "app.services.region_policy",
+        "app.services.recall_primitives",
         "app.services.regulatory_coverage",
         "app.services.regulatory_resolve",
         "app.services.scoring_engine",
-        "app.services.semantic_prefilter",
         "app.services.tier_routing",
         "app.tenant"
       ],
       "external_imports": [
         "asyncio",
         "collections",
-        "concurrent",
         "copy",
         "dataclasses",
         "json",
@@ -16427,93 +16420,16 @@
         "uuid"
       ],
       "functions": {
-        "_embed_query_async": {
-          "name": "_embed_query_async",
-          "line": 85,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "_tally_neighbor_votes": {
-          "name": "_tally_neighbor_votes",
-          "line": 93,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_tally_neighbor_votes._winners": {
-          "name": "_tally_neighbor_votes._winners",
-          "line": 118,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_neighbor_vote_classify": {
-          "name": "_neighbor_vote_classify",
-          "line": 125,
-          "is_async": true,
-          "calls": [
-            "app.services.semantic_prefilter::semantic_prefilter"
-          ],
-          "is_route": false
-        },
-        "_run_hybrid_lanes": {
-          "name": "_run_hybrid_lanes",
-          "line": 153,
-          "is_async": true,
-          "calls": [
-            "app.services.recall_lanes::keyword_lane",
-            "app.services.recall_lanes::entity_lane",
-            "app.services.recall_lanes::extract_query_entities"
-          ],
-          "is_route": false
-        },
-        "_select_and_score_candidates": {
-          "name": "_select_and_score_candidates",
-          "line": 176,
-          "is_async": true,
-          "calls": [
-            "app.services.semantic_prefilter::semantic_prefilter",
-            "app.services.neuron_service::score_candidates",
-            "app.services.engram_service::get_engram_candidates",
-            "app.services.engram_service::score_engram_candidates",
-            "app.services.neuron_service::get_neurons_by_filter"
-          ],
-          "is_route": false
-        },
-        "_apply_inhibition_and_boost": {
-          "name": "_apply_inhibition_and_boost",
-          "line": 266,
-          "is_async": true,
-          "calls": [
-            "app.services.inhibitory_service::apply_token_bounded_redundancy",
-            "app.services.inhibitory_service::apply_inhibition",
-            "app.services.neuron_service::apply_diversity_floor",
-            "app.services.project_cache::get_project_boost"
-          ],
-          "is_route": false
-        },
-        "_load_neuron_map": {
-          "name": "_load_neuron_map",
-          "line": 303,
-          "is_async": true,
-          "calls": [
-            "app.services.region_policy::restricted_regions",
-            "app.services.region_policy::get_region_policies",
-            "app.services.region_policy::requester_can_see"
-          ],
-          "is_route": false
-        },
         "_build_neuron_score_dicts": {
           "name": "_build_neuron_score_dicts",
-          "line": 618,
+          "line": 243,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_resolve_fired_engrams": {
           "name": "_resolve_fired_engrams",
-          "line": 347,
+          "line": 92,
           "is_async": true,
           "calls": [
             "app.services.regulatory_resolve::resolve_engrams"
@@ -16522,7 +16438,7 @@
         },
         "prepare_context": {
           "name": "prepare_context",
-          "line": 372,
+          "line": 117,
           "is_async": true,
           "calls": [
             "app.services.pipeline.state::PipelineState",
@@ -16535,35 +16451,23 @@
         },
         "_state_to_prepared_context": {
           "name": "_state_to_prepared_context",
-          "line": 442,
+          "line": 187,
           "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_assemble_top_slice": {
-          "name": "_assemble_top_slice",
-          "line": 481,
-          "is_async": true,
           "calls": [
-            "app.services.memory_assembly::assemble_memory_packet",
-            "app.services.neuron_service::select_with_hierarchy",
-            "app.services.citation_hopping::mint_hop_map",
-            "app.services.memory_assembly::render_memory_entry",
-            "app.services.memory_assembly::estimate_memory_tokens",
-            "app.services.prompt_assembler::assemble_prompt"
+            "app.services.prepared_context::PreparedContext"
           ],
           "is_route": false
         },
         "_build_model_map": {
           "name": "_build_model_map",
-          "line": 606,
+          "line": 231,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_prepare_contexts_forked": {
           "name": "_prepare_contexts_forked",
-          "line": 644,
+          "line": 269,
           "is_async": true,
           "calls": [
             "app.services.pipeline.stages::build_default_pipeline",
@@ -16575,21 +16479,21 @@
         },
         "_slot_spread_cfg": {
           "name": "_slot_spread_cfg",
-          "line": 716,
+          "line": 341,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_prepare_slot_contexts": {
           "name": "_prepare_slot_contexts",
-          "line": 735,
+          "line": 360,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_create_query_record": {
           "name": "_create_query_record",
-          "line": 779,
+          "line": 404,
           "is_async": false,
           "calls": [
             "app.models::Query"
@@ -16598,42 +16502,42 @@
         },
         "_packed_ids": {
           "name": "_packed_ids",
-          "line": 823,
+          "line": 448,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_remember_session_context": {
           "name": "_remember_session_context",
-          "line": 827,
+          "line": 452,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_apply_drift_gate": {
           "name": "_apply_drift_gate",
-          "line": 837,
+          "line": 462,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_update_session_context": {
           "name": "_update_session_context",
-          "line": 870,
+          "line": 495,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_session_call_payload": {
           "name": "_session_call_payload",
-          "line": 899,
+          "line": 524,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_run_direct_call": {
           "name": "_run_direct_call",
-          "line": 923,
+          "line": 548,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::llm_chat"
@@ -16642,28 +16546,28 @@
         },
         "_populate_query_from_results": {
           "name": "_populate_query_from_results",
-          "line": 1000,
+          "line": 625,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_citation_map": {
           "name": "_build_citation_map",
-          "line": 1041,
+          "line": 666,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_response": {
           "name": "_build_response",
-          "line": 1059,
+          "line": 684,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_update_counters_and_fire": {
           "name": "_update_counters_and_fire",
-          "line": 1114,
+          "line": 739,
           "is_async": true,
           "calls": [
             "app.services.neuron_service::get_system_state",
@@ -16677,7 +16581,7 @@
         },
         "_apply_primary_overrides": {
           "name": "_apply_primary_overrides",
-          "line": 1173,
+          "line": 798,
           "is_async": false,
           "calls": [
             "app.services.llm_provider::get",
@@ -16688,7 +16592,7 @@
         },
         "_primed_ctx": {
           "name": "_primed_ctx",
-          "line": 1205,
+          "line": 830,
           "is_async": false,
           "calls": [
             "app.services.prompt_assembler::build_priming_line"
@@ -16697,7 +16601,7 @@
         },
         "_apply_slot_overrides": {
           "name": "_apply_slot_overrides",
-          "line": 1230,
+          "line": 855,
           "is_async": false,
           "calls": [
             "app.services.llm_provider::set"
@@ -16706,7 +16610,7 @@
         },
         "_slot_grounding_guards": {
           "name": "_slot_grounding_guards",
-          "line": 1261,
+          "line": 886,
           "is_async": true,
           "calls": [
             "app.services.regulatory_coverage::list_ungrounded_refs",
@@ -16717,14 +16621,14 @@
         },
         "_format_slot_result_dict": {
           "name": "_format_slot_result_dict",
-          "line": 1307,
+          "line": 932,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_execute_slot": {
           "name": "_execute_slot",
-          "line": 1351,
+          "line": 976,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::get"
@@ -16733,7 +16637,7 @@
         },
         "_execute_slot_llm": {
           "name": "_execute_slot_llm",
-          "line": 1446,
+          "line": 1071,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::llm_chat"
@@ -16742,21 +16646,21 @@
         },
         "_build_error_slot_result": {
           "name": "_build_error_slot_result",
-          "line": 1499,
+          "line": 1124,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_eval_slot_label": {
           "name": "_eval_slot_label",
-          "line": 1529,
+          "line": 1154,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_repair_citations": {
           "name": "_repair_citations",
-          "line": 1537,
+          "line": 1162,
           "is_async": true,
           "calls": [
             "app.services.citation_hopping::repair_instruction",
@@ -16768,7 +16672,7 @@
         },
         "_clean_answer_citations": {
           "name": "_clean_answer_citations",
-          "line": 1558,
+          "line": 1183,
           "is_async": true,
           "calls": [
             "app.services.citation_hopping::verify_citations",
@@ -16779,7 +16683,7 @@
         },
         "_apply_citation_hop_exit": {
           "name": "_apply_citation_hop_exit",
-          "line": 1586,
+          "line": 1211,
           "is_async": true,
           "calls": [
             "app.services.citation_hopping::extract_citation_tokens",
@@ -16792,7 +16696,7 @@
         },
         "_finalize_query_results": {
           "name": "_finalize_query_results",
-          "line": 1627,
+          "line": 1252,
           "is_async": true,
           "calls": [
             "app.services.regulatory_coverage::record_regulatory_coverage_gaps"
@@ -16801,14 +16705,14 @@
         },
         "_acquire_query_contexts": {
           "name": "_acquire_query_contexts",
-          "line": 1686,
+          "line": 1311,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_decide_primary_tier": {
           "name": "_decide_primary_tier",
-          "line": 1713,
+          "line": 1338,
           "is_async": false,
           "calls": [
             "app.services.tier_routing::decide_tier_escalation"
@@ -16817,49 +16721,37 @@
         },
         "_build_slot_tasks": {
           "name": "_build_slot_tasks",
-          "line": 1730,
+          "line": 1355,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "execute_query": {
           "name": "execute_query",
-          "line": 1758,
+          "line": 1383,
           "is_async": true,
           "calls": [
             "app.database::release_connection_before_external_io"
           ],
           "is_route": false
         },
-        "_load_candidates_by_ids": {
-          "name": "_load_candidates_by_ids",
-          "line": 1855,
-          "is_async": true,
-          "calls": [
-            "app.services.neuron_index::ensure_index_loaded",
-            "app.services.neuron_index::get_index",
-            "app.services.neuron_service::_acl_clause_for",
-            "app.services.neuron_service::NeuronCandidate"
-          ],
-          "is_route": false
-        },
         "_fetch_regions_for": {
           "name": "_fetch_regions_for",
-          "line": 1935,
+          "line": 1482,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_derive_edge_type": {
           "name": "_derive_edge_type",
-          "line": 1947,
+          "line": 1494,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_batch_update_edges": {
           "name": "_batch_update_edges",
-          "line": 1958,
+          "line": 1505,
           "is_async": true,
           "calls": [
             "app.services.adjacency_cache::is_adjacency_loaded",
@@ -16869,21 +16761,21 @@
         },
         "_find_promoted_pairs": {
           "name": "_find_promoted_pairs",
-          "line": 2006,
+          "line": 1553,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_cofire_promoted": {
           "name": "_cofire_promoted",
-          "line": 2022,
+          "line": 1569,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_cofire_weak": {
           "name": "_cofire_weak",
-          "line": 2052,
+          "line": 1599,
           "is_async": true,
           "calls": [
             "app.services.edge_tier::get_weak_edge",
@@ -16897,35 +16789,35 @@
       "db_writes": [
         {
           "kind": "commit",
-          "line": 1167,
+          "line": 792,
           "in": "_update_counters_and_fire",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 1667,
+          "line": 1292,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 1668,
+          "line": 1293,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 1670,
+          "line": 1295,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 1671,
+          "line": 1296,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
@@ -16934,27 +16826,27 @@
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 949,
+          "line": 574,
           "in": "_run_direct_call"
         },
         {
           "kind": "llm_chat",
-          "line": 960,
+          "line": 585,
           "in": "_run_direct_call"
         },
         {
           "kind": "llm_chat",
-          "line": 965,
+          "line": 590,
           "in": "_run_direct_call"
         },
         {
           "kind": "llm_chat",
-          "line": 1480,
+          "line": 1105,
           "in": "_execute_slot_llm"
         },
         {
           "kind": "llm_chat",
-          "line": 1544,
+          "line": 1169,
           "in": "_repair_citations"
         }
       ]
@@ -21042,9 +20934,9 @@
       "loc": 65,
       "imports": [
         "app.config",
-        "app.services.executor",
         "app.services.pipeline.context",
-        "app.services.pipeline.state"
+        "app.services.pipeline.state",
+        "app.services.recall_primitives"
       ],
       "external_imports": [
         "typing"
@@ -21055,7 +20947,7 @@
           "line": 20,
           "is_async": true,
           "calls": [
-            "app.services.executor::_assemble_top_slice"
+            "app.services.recall_primitives::_assemble_top_slice"
           ],
           "is_route": false
         },
@@ -21076,9 +20968,9 @@
       "module": "app.services.pipeline.stages.classify_stage",
       "loc": 74,
       "imports": [
-        "app.services.executor",
         "app.services.pipeline.context",
         "app.services.pipeline.state",
+        "app.services.recall_primitives",
         "app.services.scoring_engine"
       ],
       "external_imports": [
@@ -21090,8 +20982,8 @@
           "line": 28,
           "is_async": true,
           "calls": [
-            "app.services.executor::_embed_query_async",
-            "app.services.executor::_neighbor_vote_classify",
+            "app.services.recall_primitives::_embed_query_async",
+            "app.services.recall_primitives::_neighbor_vote_classify",
             "app.services.scoring_engine::extract_keywords"
           ],
           "is_route": false
@@ -21182,9 +21074,9 @@
       "loc": 37,
       "imports": [
         "app.config",
-        "app.services.executor",
         "app.services.pipeline.context",
-        "app.services.pipeline.state"
+        "app.services.pipeline.state",
+        "app.services.recall_primitives"
       ],
       "external_imports": [
         "typing"
@@ -21195,7 +21087,7 @@
           "line": 19,
           "is_async": true,
           "calls": [
-            "app.services.executor::_apply_inhibition_and_boost"
+            "app.services.recall_primitives::_apply_inhibition_and_boost"
           ],
           "is_route": false
         },
@@ -21216,10 +21108,10 @@
       "module": "app.services.pipeline.stages.prefilter_score_stage",
       "loc": 47,
       "imports": [
-        "app.services.executor",
         "app.services.neuron_service",
         "app.services.pipeline.context",
-        "app.services.pipeline.state"
+        "app.services.pipeline.state",
+        "app.services.recall_primitives"
       ],
       "external_imports": [
         "typing"
@@ -21231,7 +21123,7 @@
           "is_async": true,
           "calls": [
             "app.services.neuron_service::get_system_state",
-            "app.services.executor::_select_and_score_candidates"
+            "app.services.recall_primitives::_select_and_score_candidates"
           ],
           "is_route": false
         },
@@ -21419,6 +21311,23 @@
       "external_imports": [
         "dataclasses",
         "typing"
+      ],
+      "functions": {},
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.services.prepared_context": {
+      "path": "backend/app/services/prepared_context.py",
+      "module": "app.services.prepared_context",
+      "loc": 62,
+      "imports": [
+        "app.models",
+        "app.services.citation_hopping",
+        "app.services.scoring_engine"
+      ],
+      "external_imports": [
+        "dataclasses"
       ],
       "functions": {},
       "routes": [],
@@ -22224,6 +22133,142 @@
           "model": null
         }
       ],
+      "llm_sites": []
+    },
+    "app.services.recall_primitives": {
+      "path": "backend/app/services/recall_primitives.py",
+      "module": "app.services.recall_primitives",
+      "loc": 486,
+      "imports": [
+        "app.config",
+        "app.models",
+        "app.services.citation_hopping",
+        "app.services.embedding_service",
+        "app.services.engram_service",
+        "app.services.inhibitory_service",
+        "app.services.memory_assembly",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.project_cache",
+        "app.services.prompt_assembler",
+        "app.services.recall_lanes",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.semantic_prefilter"
+      ],
+      "external_imports": [
+        "asyncio",
+        "concurrent",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "_embed_query_async": {
+          "name": "_embed_query_async",
+          "line": 43,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_tally_neighbor_votes": {
+          "name": "_tally_neighbor_votes",
+          "line": 51,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_tally_neighbor_votes._winners": {
+          "name": "_tally_neighbor_votes._winners",
+          "line": 76,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_neighbor_vote_classify": {
+          "name": "_neighbor_vote_classify",
+          "line": 83,
+          "is_async": true,
+          "calls": [
+            "app.services.semantic_prefilter::semantic_prefilter"
+          ],
+          "is_route": false
+        },
+        "_run_hybrid_lanes": {
+          "name": "_run_hybrid_lanes",
+          "line": 111,
+          "is_async": true,
+          "calls": [
+            "app.services.recall_lanes::keyword_lane",
+            "app.services.recall_lanes::entity_lane",
+            "app.services.recall_lanes::extract_query_entities"
+          ],
+          "is_route": false
+        },
+        "_select_and_score_candidates": {
+          "name": "_select_and_score_candidates",
+          "line": 134,
+          "is_async": true,
+          "calls": [
+            "app.services.semantic_prefilter::semantic_prefilter",
+            "app.services.neuron_service::score_candidates",
+            "app.services.engram_service::get_engram_candidates",
+            "app.services.engram_service::score_engram_candidates",
+            "app.services.neuron_service::get_neurons_by_filter"
+          ],
+          "is_route": false
+        },
+        "_apply_inhibition_and_boost": {
+          "name": "_apply_inhibition_and_boost",
+          "line": 224,
+          "is_async": true,
+          "calls": [
+            "app.services.inhibitory_service::apply_token_bounded_redundancy",
+            "app.services.inhibitory_service::apply_inhibition",
+            "app.services.neuron_service::apply_diversity_floor",
+            "app.services.project_cache::get_project_boost"
+          ],
+          "is_route": false
+        },
+        "_load_neuron_map": {
+          "name": "_load_neuron_map",
+          "line": 261,
+          "is_async": true,
+          "calls": [
+            "app.services.region_policy::restricted_regions",
+            "app.services.region_policy::get_region_policies",
+            "app.services.region_policy::requester_can_see"
+          ],
+          "is_route": false
+        },
+        "_assemble_top_slice": {
+          "name": "_assemble_top_slice",
+          "line": 286,
+          "is_async": true,
+          "calls": [
+            "app.services.memory_assembly::assemble_memory_packet",
+            "app.services.neuron_service::select_with_hierarchy",
+            "app.services.citation_hopping::mint_hop_map",
+            "app.services.memory_assembly::render_memory_entry",
+            "app.services.memory_assembly::estimate_memory_tokens",
+            "app.services.prompt_assembler::assemble_prompt"
+          ],
+          "is_route": false
+        },
+        "_load_candidates_by_ids": {
+          "name": "_load_candidates_by_ids",
+          "line": 408,
+          "is_async": true,
+          "calls": [
+            "app.services.neuron_index::ensure_index_loaded",
+            "app.services.neuron_index::get_index",
+            "app.services.neuron_service::_acl_clause_for",
+            "app.services.neuron_candidate::NeuronCandidate"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
       "llm_sites": []
     },
     "app.services.reconsolidation": {
@@ -24897,7 +24942,7 @@
       "imports": [
         "app.models",
         "app.services.embedding_service",
-        "app.services.executor",
+        "app.services.prepared_context",
         "app.services.semantic_prefilter"
       ],
       "external_imports": [
@@ -24919,7 +24964,7 @@
           "line": 48,
           "is_async": true,
           "calls": [
-            "app.services.executor::PreparedContext"
+            "app.services.prepared_context::PreparedContext"
           ],
           "is_route": false
         },
@@ -24928,7 +24973,7 @@
           "line": 75,
           "is_async": true,
           "calls": [
-            "app.services.executor::PreparedContext"
+            "app.services.prepared_context::PreparedContext"
           ],
           "is_route": false
         },
@@ -24937,7 +24982,7 @@
           "line": 118,
           "is_async": true,
           "calls": [
-            "app.services.executor::PreparedContext"
+            "app.services.prepared_context::PreparedContext"
           ],
           "is_route": false
         },
@@ -24946,7 +24991,7 @@
           "line": 177,
           "is_async": true,
           "calls": [
-            "app.services.executor::PreparedContext"
+            "app.services.prepared_context::PreparedContext"
           ],
           "is_route": false
         },
@@ -24956,7 +25001,7 @@
           "is_async": true,
           "calls": [
             "app.services.semantic_prefilter::semantic_prefilter",
-            "app.services.executor::PreparedContext"
+            "app.services.prepared_context::PreparedContext"
           ],
           "is_route": false
         }
@@ -42839,6 +42884,7 @@
       "app.services.project_cache",
       "app.services.prompt_assembler",
       "app.services.propagation",
+      "app.services.recall_primitives",
       "app.services.reconsolidation.apply",
       "app.services.reconsolidation.inheritance",
       "app.services.reference_ingest",
@@ -43089,6 +43135,7 @@
       "app.services.pipeline.stages.regulatory_resolve_stage",
       "app.services.pipeline.stages.retrieval_telemetry_stage",
       "app.services.pipeline.state",
+      "app.services.prepared_context",
       "app.services.project_cache",
       "app.services.prompt_assembler",
       "app.services.propagation",
@@ -43096,6 +43143,7 @@
       "app.services.proposal_dedup",
       "app.services.provenance_service",
       "app.services.query_dossier",
+      "app.services.recall_primitives",
       "app.services.reconsolidation.apply",
       "app.services.reconsolidation.lifecycle",
       "app.services.reconsolidation.loaders",
@@ -43295,6 +43343,8 @@
       "app.routers.query",
       "app.services.entailment_check",
       "app.services.executor",
+      "app.services.prepared_context",
+      "app.services.recall_primitives",
       "tests.test_citation_hopping",
       "tests.test_citation_relevance",
       "tests.test_entailment_check",
@@ -43377,10 +43427,10 @@
       "app.services.citation_relevance",
       "app.services.concept_service",
       "app.services.document_extractor",
-      "app.services.executor",
       "app.services.lesson_store",
       "app.services.neuron_service",
       "app.services.proposal_dedup",
+      "app.services.recall_primitives",
       "app.services.structural_resolver",
       "eval.locomo.analysis.step04_live_janitor_probe",
       "eval.locomo.analysis.step04_live_janitor_probe2",
@@ -43389,6 +43439,7 @@
     "app.services.engram_service": [
       "app.routers.engrams",
       "app.services.executor",
+      "app.services.recall_primitives",
       "tests.test_engram_association"
     ],
     "app.services.entailment_check": [
@@ -43421,11 +43472,6 @@
       "app.routers.recall",
       "app.routers.v1",
       "app.services.eval_runs",
-      "app.services.pipeline.stages.assemble_stage",
-      "app.services.pipeline.stages.classify_stage",
-      "app.services.pipeline.stages.inhibitory_stage",
-      "app.services.pipeline.stages.prefilter_score_stage",
-      "app.services.structural_resolver",
       "eval.locomo.oracle_funnel",
       "eval.locomo.run_locomo",
       "tests.benchmarks.eval_token_assembly_triangle",
@@ -43444,7 +43490,7 @@
     ],
     "app.services.inhibitory_service": [
       "app.routers.admin",
-      "app.services.executor",
+      "app.services.recall_primitives",
       "tests.test_token_bounded_pipeline"
     ],
     "app.services.injection_channel": [
@@ -43553,7 +43599,7 @@
       "app.routers.mind_metrics"
     ],
     "app.services.memory_assembly": [
-      "app.services.executor",
+      "app.services.recall_primitives",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.test_memory_assembly",
       "tests.test_token_bounded_pipeline"
@@ -43605,16 +43651,16 @@
       "tests.test_model_usage_ledger"
     ],
     "app.services.neuron_candidate": [
-      "app.services.executor",
       "app.services.neuron_index",
-      "app.services.neuron_service"
+      "app.services.neuron_service",
+      "app.services.recall_primitives"
     ],
     "app.services.neuron_index": [
       "app.services.actions.neuron_create",
       "app.services.actions.neuron_refine",
       "app.services.consolidation",
-      "app.services.executor",
       "app.services.neuron_service",
+      "app.services.recall_primitives",
       "app.services.reference_ingest",
       "app.services.seeding_service",
       "tests.replay_auditor_honeypot",
@@ -43630,6 +43676,7 @@
       "app.services.pipeline.stages.prefilter_score_stage",
       "app.services.pipeline.stages.spread_stage",
       "app.services.proposal_apply_service",
+      "app.services.recall_primitives",
       "app.services.synaptic_learning",
       "tests.test_horizontal_scaling",
       "tests.test_region_policy",
@@ -43724,12 +43771,18 @@
       "tests.test_engram_association",
       "tests.test_retrieval_telemetry"
     ],
+    "app.services.prepared_context": [
+      "app.services.executor",
+      "app.services.structural_resolver"
+    ],
     "app.services.project_cache": [
-      "app.services.executor"
+      "app.services.executor",
+      "app.services.recall_primitives"
     ],
     "app.services.prompt_assembler": [
       "app.services.executor",
       "app.services.memory_assembly",
+      "app.services.recall_primitives",
       "tests.test_citation_hopping",
       "tests.test_primary_answer_overrides",
       "tests.test_prompt_assembler"
@@ -43755,11 +43808,18 @@
       "tests.test_query_dossier"
     ],
     "app.services.recall_lanes": [
-      "app.services.executor",
       "app.services.lesson_store",
       "app.services.pipeline.stages.retrieval_telemetry_stage",
+      "app.services.recall_primitives",
       "app.services.reference_ingest",
       "tests.test_recall_lanes"
+    ],
+    "app.services.recall_primitives": [
+      "app.services.executor",
+      "app.services.pipeline.stages.assemble_stage",
+      "app.services.pipeline.stages.classify_stage",
+      "app.services.pipeline.stages.inhibitory_stage",
+      "app.services.pipeline.stages.prefilter_score_stage"
     ],
     "app.services.reconsolidation": [
       "tests.test_fusion_plan"
@@ -43881,8 +43941,8 @@
     "app.services.region_policy": [
       "app.mcp_server",
       "app.routers.regions",
-      "app.services.executor",
       "app.services.neuron_service",
+      "app.services.recall_primitives",
       "app.services.reference_ingest",
       "app.services.write_gate",
       "tests.test_region_policy"
@@ -43929,9 +43989,11 @@
       "app.services.pipeline.stages.classify_stage",
       "app.services.pipeline.stages.retrieval_telemetry_stage",
       "app.services.pipeline.state",
+      "app.services.prepared_context",
       "app.services.project_cache",
       "app.services.prompt_assembler",
       "app.services.recall_lanes",
+      "app.services.recall_primitives",
       "tests.test_cheap_recall",
       "tests.test_citation_hopping",
       "tests.test_engram_association",
@@ -43959,8 +44021,8 @@
       "app.services.actions.neuron_refine",
       "app.services.actions.neuron_stats_rebuild",
       "app.services.concept_service",
-      "app.services.executor",
       "app.services.lesson_store",
+      "app.services.recall_primitives",
       "app.services.reference_ingest",
       "app.services.structural_resolver",
       "tests.replay_auditor_honeypot",
@@ -44396,22 +44458,17 @@
       "app.services.concept_service",
       "app.services.edge_tier",
       "app.services.engram_service",
-      "app.services.inhibitory_service",
       "app.services.llm_provider",
-      "app.services.memory_assembly",
-      "app.services.neuron_index",
       "app.services.neuron_service",
       "app.services.pipeline",
       "app.services.pipeline.stages",
       "app.services.pipeline.state",
+      "app.services.prepared_context",
       "app.services.project_cache",
       "app.services.prompt_assembler",
       "app.services.propagation",
-      "app.services.recall_lanes",
-      "app.services.region_policy",
       "app.services.regulatory_coverage",
       "app.services.regulatory_resolve",
-      "app.services.semantic_prefilter",
       "app.services.tier_routing"
     ],
     "app.services.inhibitory_service": [
@@ -44530,21 +44587,21 @@
       "app.services.pipeline.stages.structural_resolve_stage"
     ],
     "app.services.pipeline.stages.assemble_stage": [
-      "app.services.executor"
+      "app.services.recall_primitives"
     ],
     "app.services.pipeline.stages.classify_stage": [
-      "app.services.executor",
+      "app.services.recall_primitives",
       "app.services.scoring_engine"
     ],
     "app.services.pipeline.stages.engram_edge_boost_stage": [
       "app.services.adjacency_cache"
     ],
     "app.services.pipeline.stages.inhibitory_stage": [
-      "app.services.executor"
+      "app.services.recall_primitives"
     ],
     "app.services.pipeline.stages.prefilter_score_stage": [
-      "app.services.executor",
-      "app.services.neuron_service"
+      "app.services.neuron_service",
+      "app.services.recall_primitives"
     ],
     "app.services.pipeline.stages.regulatory_resolve_stage": [
       "app.services.regulatory_resolve"
@@ -44579,6 +44636,20 @@
     ],
     "app.services.recall_lanes": [
       "app.services.scoring_engine"
+    ],
+    "app.services.recall_primitives": [
+      "app.services.citation_hopping",
+      "app.services.engram_service",
+      "app.services.inhibitory_service",
+      "app.services.memory_assembly",
+      "app.services.neuron_candidate",
+      "app.services.neuron_index",
+      "app.services.neuron_service",
+      "app.services.project_cache",
+      "app.services.prompt_assembler",
+      "app.services.recall_lanes",
+      "app.services.region_policy",
+      "app.services.semantic_prefilter"
     ],
     "app.services.reconsolidation.apply": [
       "app.services.action_bus",
@@ -44665,7 +44736,7 @@
       "app.services.skill_projection"
     ],
     "app.services.structural_resolver": [
-      "app.services.executor",
+      "app.services.prepared_context",
       "app.services.semantic_prefilter"
     ],
     "app.services.synaptic_learning": [
@@ -45199,10 +45270,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -45291,10 +45364,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -45383,10 +45458,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -45475,10 +45552,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50342,10 +50421,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50395,10 +50476,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50466,10 +50549,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50519,10 +50604,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50590,10 +50677,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50643,10 +50732,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50714,10 +50805,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -50767,10 +50860,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55181,11 +55276,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55235,11 +55332,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55308,11 +55407,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55362,11 +55463,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55435,11 +55538,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55489,11 +55594,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55562,11 +55669,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55616,11 +55725,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55689,11 +55800,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55743,11 +55856,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55816,11 +55931,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55870,11 +55987,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55943,11 +56062,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -55997,11 +56118,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56070,11 +56193,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56124,11 +56249,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56197,11 +56324,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56251,11 +56380,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56324,11 +56455,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56378,11 +56511,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56451,11 +56586,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56505,11 +56642,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56578,11 +56717,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56632,11 +56773,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56705,11 +56848,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56759,11 +56904,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56832,11 +56979,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56886,11 +57035,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -56959,11 +57110,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -57013,11 +57166,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -57086,11 +57241,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -57140,11 +57297,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.query_dossier",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -57217,11 +57376,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.proposal_apply_service",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reconsolidation.apply",
         "app.services.reconsolidation.fingerprints",
         "app.services.reconsolidation.inheritance",
@@ -57296,11 +57457,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.proposal_apply_service",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reconsolidation.apply",
         "app.services.reconsolidation.fingerprints",
         "app.services.reconsolidation.inheritance",
@@ -57387,11 +57550,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.proposal_apply_service",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reconsolidation.apply",
         "app.services.reconsolidation.fingerprints",
         "app.services.reconsolidation.inheritance",
@@ -57466,11 +57631,13 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.proposal_apply_service",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reconsolidation.apply",
         "app.services.reconsolidation.fingerprints",
         "app.services.reconsolidation.inheritance",
@@ -58481,10 +58648,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -58533,10 +58702,12 @@
         "app.services.pipeline.stages.spread_stage",
         "app.services.pipeline.stages.structural_resolve_stage",
         "app.services.pipeline.state",
+        "app.services.prepared_context",
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
         "app.services.recall_lanes",
+        "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
@@ -59167,16 +59338,6 @@
       "app.services.reconsolidation.review",
       "app.services.reconsolidation.validators",
       "app.services.skill_compiler"
-    ],
-    [
-      "app.services.executor",
-      "app.services.pipeline.stages",
-      "app.services.pipeline.stages.assemble_stage",
-      "app.services.pipeline.stages.classify_stage",
-      "app.services.pipeline.stages.inhibitory_stage",
-      "app.services.pipeline.stages.prefilter_score_stage",
-      "app.services.pipeline.stages.structural_resolve_stage",
-      "app.services.structural_resolver"
     ]
   ],
   "parse_errors": []

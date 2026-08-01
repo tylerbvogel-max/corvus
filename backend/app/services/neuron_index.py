@@ -8,7 +8,7 @@ Its accessors are equivalent to the live queries they replace:
   - burst_counts   == _fetch_burst_counts       (count of firing rows in the window)
   - fire_stats     == _fetch_neuron_fire_stats  (distinct query_id count + max offset)
   - dept_totals    == _fetch_dept_fire_totals   (per-dept distinct query_id count)
-  - candidates     == _load_candidates_by_ids   (metadata + in-memory keyword_hits/freshness)
+  - candidates     == recall_primitives._load_candidates_by_ids  (metadata + in-memory keyword_hits/freshness)
 
 Distinctness is keyed on query_id (matching the DB), while the firing offset drives
 the burst window and last-fire. Freshness is anchored to the DB's own computation at

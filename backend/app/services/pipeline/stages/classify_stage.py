@@ -26,7 +26,7 @@ class CheapClassifyStage:
     name = "classify"
 
     async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
-        from app.services.executor import _embed_query_async, _neighbor_vote_classify
+        from app.services.recall_primitives import _embed_query_async, _neighbor_vote_classify
         from app.services.scoring_engine import extract_keywords
 
         query_embedding = None

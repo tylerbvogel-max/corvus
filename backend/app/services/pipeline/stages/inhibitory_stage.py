@@ -17,7 +17,7 @@ class InhibitoryStage:
     name = "inhibitory"
 
     async def run(self, state: PipelineState, ctx: PipelineContext) -> PipelineState:
-        from app.services.executor import _apply_inhibition_and_boost
+        from app.services.recall_primitives import _apply_inhibition_and_boost
         all_scored, new_top_k, redundancy_suppressed = await _apply_inhibition_and_boost(
             ctx.db, state.scored, state.effective_top_k, state.project_path,
         )

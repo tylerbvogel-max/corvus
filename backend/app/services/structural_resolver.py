@@ -47,7 +47,7 @@ async def try_structural_resolve(db: AsyncSession, user_message: str):
 
 async def _handle_departments(db: AsyncSession, match: re.Match):
     """List all departments with neuron counts."""
-    from app.services.executor import PreparedContext
+    from app.services.prepared_context import PreparedContext
 
     result = await db.execute(
         select(Neuron.department, func.count(Neuron.id))
@@ -74,7 +74,7 @@ async def _handle_departments(db: AsyncSession, match: re.Match):
 
 async def _handle_roles_in_dept(db: AsyncSession, match: re.Match):
     """List roles and neuron counts within a department."""
-    from app.services.executor import PreparedContext
+    from app.services.prepared_context import PreparedContext
 
     dept_query = match.group(1).strip()
 
@@ -117,7 +117,7 @@ async def _handle_roles_in_dept(db: AsyncSession, match: re.Match):
 
 async def _handle_graph_stats(db: AsyncSession, match: re.Match):
     """Return graph statistics."""
-    from app.services.executor import PreparedContext
+    from app.services.prepared_context import PreparedContext
 
     total = (await db.execute(
         select(func.count(Neuron.id)).where(Neuron.is_active == True)
@@ -176,7 +176,7 @@ async def _handle_graph_stats(db: AsyncSession, match: re.Match):
 
 async def _handle_connections(db: AsyncSession, match: re.Match):
     """Load co-firing edges for a specific neuron."""
-    from app.services.executor import PreparedContext
+    from app.services.prepared_context import PreparedContext
 
     neuron_id = int(match.group(1))
     neuron = await db.get(Neuron, neuron_id)
@@ -225,7 +225,7 @@ async def _handle_connections(db: AsyncSession, match: re.Match):
 
 async def _handle_topic_search(db: AsyncSession, match: re.Match):
     """Embed topic and find top neurons by semantic similarity."""
-    from app.services.executor import PreparedContext
+    from app.services.prepared_context import PreparedContext
 
     topic = match.group(1).strip().rstrip("?.")
     if len(topic) < 3:
