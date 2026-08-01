@@ -42,8 +42,18 @@ from types import SimpleNamespace
 
 REPLAY_DB = os.environ.get("REPLAY_DB", "corvus_mind_kernel_replay")
 assert REPLAY_DB != "corvus_mind", "refusing to run against the live database"
-os.environ["DATABASE_URL"] = \
-    f"postgresql+asyncpg://yggdrasil:yggdrasil@localhost/{REPLAY_DB}"
+# Connection parameters are overridable so this can run somewhere other than
+# one developer's laptop. The defaults are the local yggdrasil role, so the
+# documented command line is unchanged; CI supplies a postgres superuser
+# against a service container instead.
+REPLAY_DB_USER = os.environ.get("REPLAY_DB_USER", "yggdrasil")
+REPLAY_DB_PASSWORD = os.environ.get("REPLAY_DB_PASSWORD", "yggdrasil")
+REPLAY_DB_HOST = os.environ.get("REPLAY_DB_HOST", "localhost")
+REPLAY_DB_PORT = os.environ.get("REPLAY_DB_PORT", "5432")
+os.environ["DATABASE_URL"] = (
+    f"postgresql+asyncpg://{REPLAY_DB_USER}:{REPLAY_DB_PASSWORD}"
+    f"@{REPLAY_DB_HOST}:{REPLAY_DB_PORT}/{REPLAY_DB}"
+)
 os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "nvm_incident"
@@ -61,12 +71,13 @@ def _dt(v):
 
 async def _recreate_database() -> None:
     """Reset the throwaway DB's schema. The database itself must already
-    exist (yggdrasil lacks CREATEDB): create it once with
-    `sudo -u postgres psql -c 'CREATE DATABASE <name> OWNER yggdrasil'`."""
+    exist. Locally the yggdrasil role lacks CREATEDB, so create it once with
+    `sudo -u postgres psql -c 'CREATE DATABASE <name> OWNER yggdrasil'`; in CI
+    the postgres service container creates it from POSTGRES_DB."""
     import asyncpg
     conn = await asyncpg.connect(
-        user="yggdrasil", password="yggdrasil", database=REPLAY_DB,
-        host="localhost")
+        user=REPLAY_DB_USER, password=REPLAY_DB_PASSWORD, database=REPLAY_DB,
+        host=REPLAY_DB_HOST, port=int(REPLAY_DB_PORT))
     await conn.execute("DROP SCHEMA public CASCADE")
     await conn.execute("CREATE SCHEMA public")
     await conn.close()
