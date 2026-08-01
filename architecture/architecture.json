@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "0c7e457b4e93675cfe27678dc3f5e3c8ad42fc0fe6ff0ccc56a77504f595cd00",
-    "files": 437
+    "fingerprint": "c5fb53036577f79a36dc8f6d72c5726be5d735e55638c90a6ba3b21a8630cf90",
+    "files": 438
   },
   "frontend": {
     "available": true,
@@ -2743,8 +2743,8 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 365,
-    "loc": 83269,
+    "modules": 366,
+    "loc": 83554,
     "routes": 212,
     "import_edges": 1001,
     "call_edges": 665,
@@ -35181,6 +35181,137 @@
           "calls": [
             "app.routers.neurons::_is_conversational_recall"
           ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_graph_writers": {
+      "path": "backend/tests/test_graph_writers.py",
+      "module": "tests.test_graph_writers",
+      "loc": 285,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "ast",
+        "json",
+        "pathlib",
+        "pytest",
+        "re"
+      ],
+      "functions": {
+        "_register": {
+          "name": "_register",
+          "line": 49,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_modules": {
+          "name": "_modules",
+          "line": 53,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_rel": {
+          "name": "_rel",
+          "line": 57,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_sql_literals": {
+          "name": "_sql_literals",
+          "line": 61,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_set_assignments": {
+          "name": "_set_assignments",
+          "line": 73,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "scan": {
+          "name": "scan",
+          "line": 123,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_allowed": {
+          "name": "_allowed",
+          "line": 154,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_only_allowlisted_modules_create_graph_rows": {
+          "name": "test_only_allowlisted_modules_create_graph_rows",
+          "line": 161,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_only_allowlisted_modules_delete_graph_rows": {
+          "name": "test_only_allowlisted_modules_delete_graph_rows",
+          "line": 174,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_no_raw_sql_assigns_authored_content_or_lifecycle": {
+          "name": "test_no_raw_sql_assigns_authored_content_or_lifecycle",
+          "line": 184,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_register_has_no_stale_entries": {
+          "name": "test_register_has_no_stale_entries",
+          "line": 205,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_planted_ungoverned_writer_is_caught": {
+          "name": "test_honeypot_a_planted_ungoverned_writer_is_caught",
+          "line": 222,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_planted_lifecycle_update_is_caught": {
+          "name": "test_honeypot_a_planted_lifecycle_update_is_caught",
+          "line": 235,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_comparison_inside_case_is_not_an_assignment": {
+          "name": "test_honeypot_a_comparison_inside_case_is_not_an_assignment",
+          "line": 245,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_sql_in_a_comment_is_not_a_write": {
+          "name": "test_honeypot_sql_in_a_comment_is_not_a_write",
+          "line": 260,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_derived_signal_columns_are_deliberately_unprotected": {
+          "name": "test_derived_signal_columns_are_deliberately_unprotected",
+          "line": 274,
+          "is_async": false,
+          "calls": [],
           "is_route": false
         }
       },

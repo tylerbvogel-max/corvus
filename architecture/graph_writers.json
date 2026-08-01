@@ -1,0 +1,86 @@
+{
+  "_comment": [
+    "SOLE-WRITER REGISTER for the neuron graph. Enforced by",
+    "backend/tests/test_graph_writers.py, which record 04 owes:",
+    "'a source/behavior test proves no new ungoverned writer was introduced'.",
+    "",
+    "This is a DEBT REGISTER, not a blessing. It records which modules write to",
+    "neurons/neuron_edges TODAY so that a NEW writer cannot appear unnoticed. An",
+    "entry here is not an endorsement \u2014 several of these predate the action bus",
+    "and are candidates for routing through it later. Like cycle_allowlist.json,",
+    "the list may only get SHORTER: a module that stops writing must be removed,",
+    "or the stale entry would let a future writer inherit its slot.",
+    "",
+    "The third rule this file backs is the strongest and is NOT a list: raw SQL",
+    "may never assign an authored-content or lifecycle column. That is true of",
+    "the codebase today and nothing enforced it before now. Content, authority,",
+    "scope and the supersession lifecycle change only through the ORM and the",
+    "action bus, which is where the evidence gates and countersign path live.",
+    "Owned by roadmap record durability-modular-monolith (04)."
+  ],
+  "create": [
+    {
+      "module": "app/services/actions/neuron_create.py",
+      "why": "the governed action-bus writer for new neurons"
+    },
+    {
+      "module": "app/services/actions/edge_link.py",
+      "why": "governed action-bus edge creation"
+    },
+    {
+      "module": "app/services/actions/edge_rewire.py",
+      "why": "governed action-bus edge rewiring; the reconsolidation apply path"
+    },
+    {
+      "module": "app/services/lesson_store.py",
+      "why": "distiller lesson write path; predates the action bus, candidate for routing through it"
+    },
+    {
+      "module": "app/services/edge_tier.py",
+      "why": "materializes weak/strong edge tiers from derived signal"
+    },
+    {
+      "module": "app/seed/loader.py",
+      "why": "seed-time only, before any tenant traffic"
+    },
+    {
+      "module": "app/seed/regulatory_seed.py",
+      "why": "seed-time only, before any tenant traffic"
+    },
+    {
+      "module": "app/services/bootstrap_service.py",
+      "why": "bootstrap-time edge materialization"
+    }
+  ],
+  "delete": [
+    {
+      "module": "app/routers/admin.py",
+      "why": "operator maintenance: weak-edge pruning"
+    },
+    {
+      "module": "app/seed/regulatory_seed.py",
+      "why": "seed-time reseed"
+    },
+    {
+      "module": "app/services/bootstrap_service.py",
+      "why": "bootstrap-time rebuild"
+    },
+    {
+      "module": "app/services/edge_tier.py",
+      "why": "demotes an edge out of the strong tier"
+    }
+  ],
+  "protected_columns": [
+    "content",
+    "label",
+    "summary",
+    "authority_level",
+    "scope",
+    "node_type",
+    "abstraction_type",
+    "is_active",
+    "superseded_by",
+    "department",
+    "embedding"
+  ]
+}
