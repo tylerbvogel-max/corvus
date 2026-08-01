@@ -399,7 +399,10 @@ async def score_candidates(
     candidate_ids = [n.id for n in candidates]
     query_window = max(0, total_queries - settings.burst_window_queries)
 
-    if settings.neuron_index_enabled:
+    if (
+        settings.neuron_index_enabled
+        and settings.cache_coherence_mode == "process-local"
+    ):
         from app.services.neuron_index import ensure_index_loaded, get_index
         await ensure_index_loaded(db)
         idx = get_index()
@@ -673,12 +676,13 @@ def _compute_edge_activation(
     edge_weight: float,
     edge_type: str,
     min_activation: float | None = None,
+    genesis_multiplier: float | None = None,
 ) -> float | None:
     """Return activation for an edge, or None if the edge should be skipped.
 
     The settings-default gates scale by genesis_scale(); an explicit
     min_activation (per-slot override) is honored unscaled."""
-    g = genesis_scale()
+    g = genesis_scale() if genesis_multiplier is None else genesis_multiplier
     floor = settings.spread_min_activation * g if min_activation is None else min_activation
     if edge_type in ("supersedes", "scoped-by", "evidence-link"):
         return None  # memory-semantics edges carry provenance, not activation
@@ -705,13 +709,16 @@ def _propagate_frontier(
     visited: set[int],
     neighbor_activation: dict[int, float],
     min_activation: float | None = None,
+    genesis_multiplier: float | None = None,
 ) -> dict[int, float]:
     """Propagate activation from frontier through adjacency, return next frontier."""
     next_frontier: dict[int, float] = {}
     for source_id, source_act in frontier.items():
         for neighbor_id, edge_weight, edge_type in adjacency.get(source_id, []):
             activation = _compute_edge_activation(
-                source_act, edge_weight, edge_type, min_activation)
+                source_act, edge_weight, edge_type, min_activation,
+                genesis_multiplier,
+            )
             if activation is None:
                 continue
             if neighbor_id in top_k_ids:
@@ -731,6 +738,44 @@ def _fetch_frontier_neighbors_cached(
     from app.services.adjacency_cache import get_cached_neighbors
     return get_cached_neighbors(
         frontier_ids, settings.spread_min_edge_weight * genesis_scale())
+
+
+def _limit_frontier(
+    frontier: dict[int, float],
+    traversal_metrics: dict | None = None,
+) -> dict[int, float]:
+    """Bound a BFS frontier by strongest activation, deterministically."""
+    limit = settings.spread_frontier_max_nodes
+    assert limit > 0, "spread_frontier_max_nodes must be positive"
+    if len(frontier) <= limit:
+        return frontier
+    if traversal_metrics is not None:
+        traversal_metrics["frontier_cap_hits"] = (
+            traversal_metrics.get("frontier_cap_hits", 0) + 1
+        )
+        traversal_metrics["frontier_nodes_dropped"] = (
+            traversal_metrics.get("frontier_nodes_dropped", 0)
+            + len(frontier) - limit
+        )
+    strongest = sorted(
+        frontier.items(), key=lambda item: (-item[1], item[0]),
+    )[:limit]
+    return dict(strongest)
+
+
+async def _database_genesis_scale(db: AsyncSession) -> float:
+    """Canonical corpus-size gate for database-backed graph traversal."""
+    if not settings.genesis_mode:
+        return 1.0
+    result = await db.execute(text(
+        "SELECT count(*) FROM neurons WHERE is_active = true"
+    ))
+    n = int(result.scalar_one())
+    if n < 2:
+        return 1.0
+    assert settings.genesis_mature_corpus >= 2, "mature corpus must be >= 2"
+    scale = math.log(n) / math.log(settings.genesis_mature_corpus)
+    return min(1.0, max(settings.genesis_floor, scale))
 
 
 def _build_promoted_scores(
@@ -894,6 +939,75 @@ def _spread_neighbors_python(
     return neighbor_activation
 
 
+async def _spread_neighbors_database(
+    db: AsyncSession,
+    scored: list[NeuronScoreBreakdown],
+    top_k_count: int,
+    max_hops: int | None = None,
+    min_activation: float | None = None,
+    traversal_metrics: dict | None = None,
+) -> dict[int, float]:
+    """Bounded frontier BFS over canonical PostgreSQL graph state."""
+    from app.services.adjacency_cache import get_graph_neighbors
+
+    metrics = traversal_metrics if traversal_metrics is not None else {}
+    hop_cap = _effective_hop_cap(max_hops)
+    metrics.update({
+        "backend": "database",
+        "hop_cap": hop_cap,
+        "frontier_limit": settings.spread_frontier_max_nodes,
+        "edge_limit_per_hop": settings.spread_edges_max_per_hop,
+        "hops_queried": 0,
+        "edge_rows": 0,
+        "max_edge_rows_per_hop": 0,
+        "edge_limit_saturated_hops": 0,
+        "frontier_cap_hits": 0,
+        "frontier_nodes_dropped": 0,
+        "max_frontier_nodes": 0,
+    })
+    genesis_multiplier = await _database_genesis_scale(db)
+    top_k = scored[:top_k_count]
+    top_k_ids = {s.neuron_id for s in top_k}
+    neighbor_activation: dict[int, float] = {}
+    frontier: dict[int, float] = _limit_frontier(
+        {s.neuron_id: s.combined for s in top_k}, metrics,
+    )
+    visited: set[int] = set(top_k_ids)
+    for _hop in range(hop_cap):
+        if not frontier:
+            break
+        metrics["hops_queried"] += 1
+        metrics["max_frontier_nodes"] = max(
+            metrics["max_frontier_nodes"], len(frontier),
+        )
+        adjacency = await get_graph_neighbors(
+            db,
+            set(frontier),
+            settings.spread_min_edge_weight * genesis_multiplier,
+            metrics,
+        )
+        if not adjacency:
+            break
+        next_frontier = _propagate_frontier(
+            frontier,
+            adjacency,
+            top_k_ids,
+            visited,
+            neighbor_activation,
+            min_activation,
+            genesis_multiplier,
+        )
+        if not next_frontier:
+            break
+        visited.update(next_frontier)
+        frontier = _limit_frontier(next_frontier, metrics)
+        if _spread_should_stop(
+            neighbor_activation.values(), max(frontier.values()),
+        ):
+            break
+    return neighbor_activation
+
+
 def _spread_edge_gates(csr: dict) -> tuple:
     """Static per-edge decay array + weight-OK mask (mirrors _compute_edge_activation).
 
@@ -1006,6 +1120,7 @@ async def spread_activation(
     requester=None,
     max_hops: int | None = None,
     min_activation: float | None = None,
+    traversal_metrics: dict | None = None,
 ) -> list[NeuronScoreBreakdown]:
     """Multi-hop spread activation through NeuronEdge co-firing graph.
 
@@ -1033,7 +1148,12 @@ async def spread_activation(
     # Multi-hop neighbor discovery (3+ hops, max-across-paths). The vectorized
     # path is the numpy scatter-max reimplementation of the same BFS; the Python
     # path is the reference. Both return {node_id: max activation}.
-    if settings.spread_vectorized:
+    if settings.cache_coherence_mode == "database":
+        neighbor_activation = await _spread_neighbors_database(
+            db, scored, top_k_count, max_hops, min_activation,
+            traversal_metrics,
+        )
+    elif settings.spread_vectorized:
         neighbor_activation = _spread_neighbors_vectorized(
             scored, top_k_count, max_hops, min_activation)
     else:
@@ -1370,7 +1490,10 @@ async def record_firing(
         # line meant. Found while building the read-only recall probe.
         neuron.last_accessed_at = func.now()
 
-    if settings.neuron_index_enabled:
+    if (
+        settings.neuron_index_enabled
+        and settings.cache_coherence_mode == "process-local"
+    ):
         from app.services.neuron_index import index_on_firing
         index_on_firing(neuron_id, query_id, global_query_offset)
 

@@ -4,7 +4,7 @@ import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, func as sa_func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -82,6 +82,8 @@ class ReviewRequest(BaseModel):
 
 
 class SourceDocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     canonical_id: str
     family: str
@@ -95,15 +97,13 @@ class SourceDocumentOut(BaseModel):
     superseded_by_id: Optional[int]
     created_at: Optional[datetime.datetime]
 
-    class Config:
-        from_attributes = True
-
-
 class SourceDocumentDetail(SourceDocumentOut):
     linked_neurons_count: int = 0
 
 
 class NeuronSourceLinkOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     neuron_id: int
     source_document_id: int
@@ -115,10 +115,6 @@ class NeuronSourceLinkOut(BaseModel):
     reviewed_by: Optional[str]
     link_origin: str
     created_at: Optional[datetime.datetime]
-
-    class Config:
-        from_attributes = True
-
 
 class AuthoritySummaryItem(BaseModel):
     authority_level: Optional[str]

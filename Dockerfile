@@ -25,6 +25,7 @@ COPY backend/app/ ./app/
 COPY backend/tenants/ ./tenants/
 COPY backend/alembic/ ./alembic/
 COPY backend/alembic.ini ./
+COPY backend/scripts/start_backend.sh ./scripts/start_backend.sh
 
 # Built frontend (conditional)
 ARG INCLUDE_FRONTEND=true
@@ -37,6 +38,7 @@ USER corvus
 # Default env (overridden by docker-compose)
 ENV PORT=8005
 ENV TENANT_ID=corvus-mind
+ENV CORVUS_BIND_HOST=0.0.0.0
 ENV CLAUDE_CLI_PATH=/root/.config/nvm/versions/node/v20.20.0/bin/claude
 
 EXPOSE ${PORT}
@@ -44,4 +46,4 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -sf http://localhost:${PORT}/health || exit 1
 
-CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+CMD ["/bin/bash", "./scripts/start_backend.sh"]

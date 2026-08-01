@@ -30,6 +30,13 @@ BATCH_SIZE = 1000
 
 def upgrade() -> None:
     # 1. Add the JSONB column
+    conn = op.get_bind()
+    weak_edges_exists = conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name = 'neurons' AND column_name = 'weak_edges'"
+    )).scalar() is not None
+    if weak_edges_exists:
+        return
     op.add_column("neurons", sa.Column("weak_edges", JSONB, nullable=True))
 
     # 2. Demote weak edges into JSONB in batches
@@ -128,4 +135,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Weak edges stored in JSONB are lost on downgrade (acceptable:
     # they were below the useful threshold for spread activation)
-    op.drop_column("neurons", "weak_edges")
+    conn = op.get_bind()
+    if conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name = 'neurons' AND column_name = 'weak_edges'"
+    )).scalar() is not None:
+        op.drop_column("neurons", "weak_edges")

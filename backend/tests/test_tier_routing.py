@@ -7,8 +7,10 @@ decision as an upgrade-only swap. The audit-grade action (opus@low) bypasses
 routing and the effort floor entirely — explicit beats adaptive.
 """
 import contextvars
+import re
 from types import SimpleNamespace
 
+import app.services.reference_detector as reference_detector
 from app.config import settings
 from app.services.executor import PreparedContext, _apply_primary_overrides, _apply_slot_overrides
 from app.services.llm_provider import effort_var
@@ -82,6 +84,9 @@ def test_spread_dense_pack_escalates(monkeypatch):
 
 def test_explicit_regulatory_citation_escalates(monkeypatch):
     _calibrated(monkeypatch)
+    monkeypatch.setattr(reference_detector, "REGULATORY_PATTERNS", [
+        ("FAR", re.compile(r"\bFAR\s+\d+(?:\.\d+)*(?:-\d+)?\b", re.I)),
+    ])
     ctx = _ctx([0.95, 0.93, 0.92, 0.90, 0.90], [False] * 5)
     d = decide_tier_escalation(ctx, "Does FAR 31.205-6 allow bonus costs?")
     assert d.escalate and d.reasons == ("regulatory",)

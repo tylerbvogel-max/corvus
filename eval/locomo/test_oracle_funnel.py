@@ -4,6 +4,11 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = [pytest.mark.evaluation, pytest.mark.timeout(120)]
+
 sys.path.insert(0, str(Path(__file__).parent))
 
 import oracle_funnel

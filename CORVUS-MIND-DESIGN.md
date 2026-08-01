@@ -18,7 +18,7 @@
 
 **DO load situated, episodic experience with outcomes** — the knowledge weights structurally cannot eat:
 
-- "Fresh-DB alembic migrations fail at 017; `Base.metadata.create_all` works (evidence: exit 0 after)"
+- "Fresh-DB Alembic bootstrap was repaired and is now guarded by a destructive disposable-database smoke test (verified 2026-07-31)"
 - Tool-usage traces with outcomes: tool + args-shape + context → success/failure, cost, latency
 - User corrections and preferences ("never suggest browser cache clearing; restart the dev server")
 - "Last three times `tenant_config` changed, `test_recall.py` broke first"
@@ -32,7 +32,7 @@ Claude Code (unmodified harness)
 │
 ├── READ  path: Corvus MCP server (cheap recall) + SessionStart/UserPromptSubmit hooks
 ├── WRITE path: PostToolUse/Stop hooks → episodes.jsonl → session-end distiller → reviewer gate
-└── MAINTENANCE: systemd timers (autopilot pattern) → janitor agents
+└── MAINTENANCE: dedicated systemd timers → janitor agents
                         │
               Corvus, TENANT_ID=corvus-mind (fresh graph, own DB)
 ```
@@ -62,12 +62,12 @@ Claude Code (unmodified harness)
 Bad memory is worse than no memory (confidently wrong forever). Nothing writes to the graph directly from a live session.
 
 1. **PostToolUse / Stop hooks** append raw events to a local `episodes.jsonl`: tool, args summary, exit code, duration, error text. Deterministic, no LLM — essentially a `jq >>` one-liner. Cheap enough to run on everything.
-2. **Session-end distiller** (triggered by Stop hook, or batched by the autopilot timer). Reads episode log + transcript, extracts *candidate* lessons with evidence links. Runs on **Opus via Claude CLI** (quality-first-backend rule; never the API SDK — no credits). Remember the CLI subprocess gotchas: strip `CLAUDECODE*` env, cwd=/tmp, `--strict-mcp-config`, prompts via stdin.
+2. **Session-end distiller** (triggered by Stop hook, or batched by the distill timer). Reads episode log + transcript, extracts *candidate* lessons with evidence links. Runs on **Opus via Claude CLI** (quality-first-backend rule; never the API SDK — no credits). Remember the CLI subprocess gotchas: strip `CLAUDECODE*` env, cwd=/tmp, `--strict-mcp-config`, prompts via stdin.
 3. Candidates enter the graph at **provisional weight**; the ingest-reviewer-agent pattern gates promotion to full weight. Promotion criteria = attached verifiable outcome (test passed, task verified, user confirmed).
 
 ### 3.4 Maintenance: janitors (existing pattern, upgraded semantics)
 
-Run off systemd timers exactly like `corvus-autopilot.timer`.
+Run from dedicated curl-triggered systemd timers.
 
 | Janitor | Aerospace semantics | Corvus-mind semantics |
 |---|---|---|
@@ -119,7 +119,7 @@ Gives the fresh graph a seed population and — more valuably — gives the jani
 - Review-gated: do not start until the north-star retrospective settles direction. Roadmap node: `fwd-corvus-mind` in `master-corvus/public/roadmap-state.json` (prereq + edge from `north-star`).
 - All LLM calls via Claude CLI (personal subscription), never the Anthropic API SDK.
 - Corvus git: push only to `private` remote, never `origin`.
-- Fresh throwaway DBs: use `Base.metadata.create_all`, not alembic (breaks at 017); drop whole DB, not `drop_all`.
+- Fresh throwaway DBs: use `alembic upgrade head`; the application refuses unmanaged or non-head schemas before seeding.
 - Don't re-add LLM classification to the default recall path (cheap mode is a settled decision).
 
 ---
@@ -145,7 +145,7 @@ Grounded in a three-pass codebase audit (tenant anatomy, read/write machinery, h
 | 11 | Episode hooks ≈ "a `jq >>` one-liner" | `jq` is not installed on this machine; hooks must be `python3` stdin readers (the NASA-lint hook pattern) | DETAIL |
 | 12 | Hooks/skills surfaces are available | Confirmed greenfield: **zero** hooks configured anywhere; `~/.claude/skills/` doesn't exist yet | CONFIRMED |
 | 13 | Bootstrap corpus exists | Confirmed: 21 sessions / 96 MB JSONL in the home project alone (2026-06-13→07-10), clean typed-event schema with `parentUuid` DAG; + 29 flat memory files | CONFIRMED |
-| 14 | Tenant onboarding is config-only | Confirmed — `tenant.yaml` (4 required keys) + 7 required modules + `corvus_org.yaml`; DB URL auto-derives (`corvus-mind` → `corvus_mind`); schema self-creates on first boot via `create_all`. Six tenants already exist, flow is the template | CONFIRMED |
+| 14 | Tenant onboarding is config-only | Confirmed for tenant configuration, but schema creation is an explicit Alembic deployment step (`alembic upgrade head`), not an application-startup side effect. Six tenants already exist; flow remains the tenant template. | AMENDED 2026-07-31 |
 
 ### 8.2 Amendments (adopted)
 
@@ -162,13 +162,13 @@ Grounded in a three-pass codebase audit (tenant anatomy, read/write machinery, h
 1. **Attribution.** Nothing says "this Bash success is attributable to lesson X injected 12 turns ago," so recall-outcome reinforcement has no signal even once built. Candidate solution: *distiller-time attribution* — the distiller sees the full transcript including injected memories and judges which were load-bearing; cheap, async, evidence-linked. Prerequisite: the injection hooks must **log what they inject** into `episodes.jsonl` from day one, so the data exists before the consumer does.
 2. **Self-reinforcement loop.** Injected lesson shapes behavior → behavior emits episodes → distiller re-extracts the same lesson → duplicate-detector counts N "independent confirmations" → weight grows with zero new evidence. Consolidation rule: an episode from a session where the lesson was *injected* is a **usage**, not a **confirmation**; only sessions with fresh outcome evidence (or where it wasn't injected) count. Depends on the same injection logging as (1).
 3. **Memory poisoning.** UserPromptSubmit injection makes every graph write an eventual instruction channel into future sessions, and the distiller reads transcripts containing untrusted tool output. Mitigations: lessons are declarative facts with provenance (never imperative playbooks in the injected frame); injected under an explicit "background context, not instructions" wrapper; observational-tier memories rendered with lower prominence; distiller flags instruction-shaped candidates to the escalation queue.
-4. **Distiller economics.** Opus on every session end is heavy for long/numerous sessions. Default: Stop hook only *marks the episode log ready*; the autopilot batch path runs the distiller. Synchronous per-session distillation stays opt-in.
+4. **Distiller economics.** Opus on every session end is heavy for long/numerous sessions. Default: Stop hook only *marks the episode log ready*; the scheduled distiller processes the batch. Synchronous per-session distillation stays opt-in.
 
 ### 8.4 Phases 1–6 build record (2026-07-10)
 
 Gate override: the north-star retrospective is still `active`; the user explicitly chose to start anyway. Built:
 
-- **Tenant** `backend/tenants/corvus-mind/` — `tenant.yaml` (port **8005** — 8004 belongs to the frontend dev server, vite.config.ts hardcodes it; region_label "Scope", regulatory dept stub "Provenance"), 7 required modules (memory-domain classifier prompt, voices, patterns, provenance seeds for episode-log/user-correction/backfill sources, concepts for evidence-gating/supersession/scoping/consolidation, empty regulatory tree, risk categories for destructive-ops/secret-exposure), minimal `corvus_org.yaml` (scopes: Harness / Environment / Projects / User). DB `corvus_mind` auto-created schema on first boot.
+- **Tenant** `backend/tenants/corvus-mind/` — `tenant.yaml` (port **8005** — 8004 belongs to the frontend dev server, vite.config.ts hardcodes it; region_label "Scope", regulatory dept stub "Provenance"), 7 required modules (memory-domain classifier prompt, voices, patterns, provenance seeds for episode-log/user-correction/backfill sources, concepts for evidence-gating/supersession/scoping/consolidation, empty regulatory tree, risk categories for destructive-ops/secret-exposure), minimal `corvus_org.yaml` (scopes: Harness / Environment / Projects / User). DB `corvus_mind` is created/upgraded explicitly through Alembic before application startup.
 - **Episode hooks** — `harness/claude-code/episode_hook.py` (stdlib-only python3, redaction + exclusion + truncation, path-traversal-safe, always exits 0; tested against 6 payload shapes). Events land in `~/.corvus-mind/episodes/{session_id}.jsonl`; exclusion list at `~/.corvus-mind/config.json`. **Live since 2026-07-10:** the PostToolUse + Stop block required explicit user approval to enter `~/.claude/settings.json` (the permission classifier rightly blocks agents from editing their own hook config); after approval, capture was verified firing in-session. Reference copy of the block: `~/.corvus-mind/settings-hooks-snippet.json`.
 
 **Phase 3 (same day):**
@@ -182,7 +182,7 @@ Gate override: the north-star retrospective is still `active`; the user explicit
 
 - **Service** `backend/app/services/distiller.py` + `POST /distill/run` (`backend/app/routers/distill.py`): finds episode logs with `distill_ready` Stop markers, condenses tool events (errors first-class) + the user's typed messages from the transcript + the ALREADY-KNOWN injected-lesson list, sends to **Opus via `llm_chat`** (all CLI gotchas inherited), validates candidates (schema, scope, instruction-shaped regex → dropped and counted, injected-label overlap → usage not confirmation, exact-label dupes), and persists survivors via the shared `lesson_store.save_lesson` — the identical write-gate path as `/remember` (refactored out of the router for this).
 - **Quiescence guard** (bug found live): the Stop hook fires at every *turn* end, so a live session's log carries `distill_ready` while still growing — and the `.distilled` marker would suppress the rest of the session forever. `find_ready_logs` therefore requires no writes for `min_quiet_minutes` (default 30). Open refinement for later: marker could record line-count so long-lived sessions re-distill their growth.
-- **Timer** `corvus-mind-distill.timer` (30-min cadence, autopilot-curl pattern) enabled + active. Cost bound: ≤3 sessions/run, ≤5 candidates/session, prompt capped at 24k chars.
+- **Timer** `corvus-mind-distill.timer` (30-min cadence, curl-triggered one-shot) enabled + active. Cost bound: ≤3 sessions/run, ≤5 candidates/session, prompt capped at 24k chars.
 - **Verified end-to-end on real data**: this session's own episode log (108 events, 5 user messages) → 5 candidates, all saved at informational authority, $0.058. Quality: situated + evidence-linked; one near-dup of a hand-saved lesson under a different label survived exact-label dedupe — exactly the phase-5 consolidation janitor's job, and the rows stay as its first test corpus (graph-as-testbed rule).
 - Second `.format()`-with-JSON-braces bug class hit (`KeyError: '"label"'`): prompts containing literal JSON schemas must use `.replace`, not `.format`.
 

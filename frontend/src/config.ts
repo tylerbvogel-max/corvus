@@ -5,6 +5,17 @@ export interface SeedPrompt {
   text: string;
 }
 
+/** Backend capability names — mirrors app/composition/capabilities.py. */
+export type Capability =
+  | 'memory'
+  | 'knowledge_graph'
+  | 'ingestion'
+  | 'governance'
+  | 'evaluation'
+  | 'compliance'
+  | 'operator'
+  | 'external_api';
+
 export interface TenantConfig {
   tenant_id: string;
   display_name: string;
@@ -13,6 +24,12 @@ export interface TenantConfig {
   /** True on memory tenants (corvus-mind): enables the Memory metrics
    *  page and hides the chat/Query Lab surfaces (no human chat there). */
   memory_surface?: boolean;
+  /** Capabilities the backend actually composed for this tenant. The UI must
+   *  not advertise navigation whose routes this process never mounted — a
+   *  disabled capability 404s, so a visible link would be a dead end. Absent
+   *  on an older backend, which the nav treats as "no filtering". */
+  capabilities?: Capability[];
+  disabled_capabilities?: Capability[];
 }
 
 export interface TenantSummary {

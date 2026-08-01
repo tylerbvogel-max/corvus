@@ -48,12 +48,10 @@ _WATCHER_TABLES: tuple[str, ...] = (
 
 
 def upgrade() -> None:
-    for table in _WATCHER_TABLES:
-        op.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE')
+    # Historical watcher tables are retained for provenance and backup/restore
+    # drills. Upgrade no longer drops them automatically.
+    pass
 
 
 def downgrade() -> None:
-    raise RuntimeError(
-        "017_drop_corvus_tables is irreversible — the watcher ORM models "
-        "were deleted with the subsystem. Restore from a DB backup instead."
-    )
+    pass

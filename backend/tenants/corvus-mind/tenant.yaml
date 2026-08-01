@@ -13,6 +13,23 @@ semantic_prefilter_enabled: true
 # Enables /recall, /remember, /distill, /janitor, /compile on this tenant
 # (they 404 on knowledge tenants — see tenant.py memory_surface_enabled).
 memory_surface: true
+# Runtime composition (app/composition/capabilities.py). Fail-closed: a tenant
+# with no capabilities block refuses to start. This tenant is the operator-
+# facing deployment, and the frontend measurably calls every surface below
+# (/admin/compliance, /admin/documents, /admin/eval, /admin/labs, /v1/agents,
+# /admin/integrity — audited from src/api.ts on 2026-07-31), so the operator
+# profile is full. Reductions here must be driven by frontend evidence, not by
+# how dormant a surface looks from the backend.
+capabilities:
+  - memory
+  - knowledge_graph
+  - ingestion
+  - governance
+  - evaluation
+  - compliance
+  - operator
+  - external_api
+
 regulatory_department_name: "Provenance"
 region_label: "Scope"
 reseed_threshold: 10

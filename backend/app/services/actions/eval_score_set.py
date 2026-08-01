@@ -2,7 +2,7 @@
 
 First action wired through the action bus (AIP governance roadmap, Phase 1,
 pattern #1, Step 1). Both the user-driven `evaluate_query` endpoint and the
-autopilot eval helper now go through this handler.
+automated evaluation helpers now go through this handler.
 
 Input shape mirrors what the previous _save_eval_scores helper accepted:
 a query_id, the evaluator model name, the parsed per-answer score rows, and

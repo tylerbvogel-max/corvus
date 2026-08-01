@@ -105,11 +105,14 @@ def test_transfer_health_exposes_dimensions(monkeypatch):
         "tool_coverage", "lifecycle_coverage"}
 
 
-def test_opencode_reports_missing_pre_tool_lifecycle(monkeypatch):
+def test_opencode_reports_full_lifecycle_with_semantic_limitations(monkeypatch):
     monkeypatch.setenv(cc.HMAC_ENV, "test-key")
     health = cc.transfer_health(_capsule(), "opencode")
-    assert health["status"] == "degraded"
-    assert health["dimensions"]["lifecycle_coverage"] == 0.8
+    profile = cc.load_harness_profiles()["opencode"]
+    assert health["status"] == "full"
+    assert health["dimensions"]["lifecycle_coverage"] == 1.0
+    assert "ask_user" not in profile["semantic_capabilities"]
+    assert "pre-tool supports blocking but not advisory context" in profile["limitations"]
 
 
 def test_skill_projects_to_every_harness(monkeypatch, tmp_path):

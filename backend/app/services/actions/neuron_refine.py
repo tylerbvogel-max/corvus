@@ -3,7 +3,7 @@
 Used by:
   - Proposal apply (with proposal_id + item_id for ProposalItem back-fill)
   - User-driven apply_refinements endpoint
-  - Autopilot _apply_single_update
+  - Retained legacy automated-refinement receipts
   - Corvus observation update/merge paths
 
 Supported fields include identity text, lifecycle/scope fields, and

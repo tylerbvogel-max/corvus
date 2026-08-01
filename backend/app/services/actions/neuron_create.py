@@ -3,7 +3,7 @@
 Used by:
   - Proposal apply (with proposal_id + item_id for ProposalItem back-fill)
   - User-driven apply_refinements endpoint (manual creation)
-  - Autopilot direct creates (_create_neuron_from_spec)
+  - Retained legacy automated-create receipts
   - Corvus observation new-neuron promotion
   - Admin bulk ingest
 """

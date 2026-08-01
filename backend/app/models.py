@@ -1,7 +1,7 @@
 import datetime
 from types import MappingProxyType
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, synonym
 
@@ -338,6 +338,15 @@ class SystemState(Base):
     global_token_counter: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_consolidation_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
     total_queries: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
+class CacheVersion(Base):
+    """Shared invalidation clocks for bounded process-local replicas."""
+
+    __tablename__ = "cache_versions"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=1, server_default="1")
 
 
 class IntentNeuronMap(Base):

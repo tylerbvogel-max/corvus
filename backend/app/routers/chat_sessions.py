@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.database import get_db
+from app.database import get_db, release_connection_before_external_io
 from app.models import ChatSession, ChatSessionMessage
 from app.services.llm_provider import llm_chat, estimate_cost
 
@@ -344,7 +344,10 @@ def _clean_generated_title(raw: str) -> str:
 
 
 @router.post("/sessions/{session_id}/generate-title")
-async def generate_title(session_id: int, db: AsyncSession = Depends(get_db)):
+async def generate_title(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+):
     """Use Haiku to generate a 3-6 word title from the first exchange."""
     stmt = (
         select(ChatSession)
@@ -360,6 +363,10 @@ async def generate_title(session_id: int, db: AsyncSession = Depends(get_db)):
     first_user_msg = next((m for m in session.messages if m.role == "user"), None)
     if not first_user_msg:
         raise HTTPException(status_code=400, detail="No user message to generate title from")
+
+    # The session and its first message are fully loaded. Return the read
+    # transaction's connection before the title-model subprocess runs.
+    await release_connection_before_external_io(db)
 
     try:
         # max_tokens=40 (not 20) so occasional preamble doesn't truncate the

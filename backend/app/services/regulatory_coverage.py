@@ -4,7 +4,7 @@ When an answer cites a CFR reference that was NOT resolved from an engram this
 query, that reference is un-grounded — the model reached for a regulation we
 have no coverage for. This module extracts cited CFR refs, diffs them against
 the resolved set, and queues the gaps into EmergentQueue (domain='regulatory',
-priority 0.9 in the gap detector) so a controller (or autopilot) can create an
+priority 0.9 in the review queue) so an operator can create an
 engram for them. Purely a detection/queue signal — nothing is auto-applied; the
 write gate governs any resolution.
 """

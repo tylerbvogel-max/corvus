@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.database import release_connection_before_external_io
 from app.models import CitationHopSession, Engram, Neuron, Query
 from app.services.citation_hopping import (
     HopMap, deserialize_hop_map, extract_citation_tokens, strip_hallucinated,
@@ -191,6 +192,10 @@ async def run_entailment_check(db: AsyncSession, response_text: str, query_id: i
             pairs.append((claim, resolved))
     if not pairs:
         return {"checked": 0, "status": "no_resolvable_sources"}
+
+    # Source hydration is complete. Return its pooled connection before the
+    # optional judge subprocess waits; this function performs no DB writes.
+    await release_connection_before_external_io(db)
 
     try:
         llm_result = await llm_chat(

@@ -15,6 +15,7 @@ from sqlalchemy import func as sa_func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron, Query, SynapticLearningEvent
+from app.config import settings
 from app.services.mind_janitors import ACTIONS_LOG, EPISODE_DIR, LESSON_TYPES
 from app.services.skill_compiler import CHARTER_NAME, MANIFEST_PATH, RETIRED_DIR
 
@@ -50,6 +51,12 @@ async def recall_metrics(db: AsyncSession) -> dict:
     )).all()
     latencies: list[float] = []
     stage_sums: dict[str, list[float]] = {}
+    spread_samples = 0
+    spread_cap_hit_queries = 0
+    frontier_cap_hits = 0
+    edge_limit_saturated_hops = 0
+    max_frontier_observed = 0
+    max_edge_rows_observed = 0
     for model_version, results_json, telemetry, _created in rows:
         try:
             latencies.append(float(json.loads(results_json or "[]")[0]["latency_ms"]))
@@ -60,6 +67,22 @@ async def recall_metrics(db: AsyncSession) -> dict:
             dur = stage.get("duration_ms")
             if name and isinstance(dur, (int, float)):
                 stage_sums.setdefault(name, []).append(float(dur))
+            bounds = stage.get("detail", {}).get("bounds", {})
+            if name == "spread_activation" and bounds.get("backend") == "database":
+                spread_samples += 1
+                frontier_hits = int(bounds.get("frontier_cap_hits", 0) or 0)
+                edge_hits = int(bounds.get("edge_limit_saturated_hops", 0) or 0)
+                frontier_cap_hits += frontier_hits
+                edge_limit_saturated_hops += edge_hits
+                spread_cap_hit_queries += int(frontier_hits > 0 or edge_hits > 0)
+                max_frontier_observed = max(
+                    max_frontier_observed,
+                    int(bounds.get("max_frontier_nodes", 0) or 0),
+                )
+                max_edge_rows_observed = max(
+                    max_edge_rows_observed,
+                    int(bounds.get("max_edge_rows_per_hop", 0) or 0),
+                )
     latencies.sort()
     return {
         "total": total,
@@ -70,6 +93,20 @@ async def recall_metrics(db: AsyncSession) -> dict:
                        "max": latencies[-1] if latencies else None},
         "stage_mean_ms": {name: round(sum(vals) / len(vals), 1)
                           for name, vals in sorted(stage_sums.items())},
+        "spread_bounds": {
+            "samples": spread_samples,
+            "cap_hit_queries": spread_cap_hit_queries,
+            "cap_hit_rate": (
+                round(spread_cap_hit_queries / spread_samples, 4)
+                if spread_samples else None
+            ),
+            "frontier_cap_hits": frontier_cap_hits,
+            "edge_limit_saturated_hops": edge_limit_saturated_hops,
+            "max_frontier_observed": max_frontier_observed,
+            "max_edge_rows_per_hop_observed": max_edge_rows_observed,
+            "configured_frontier_limit": settings.spread_frontier_max_nodes,
+            "configured_edge_limit_per_hop": settings.spread_edges_max_per_hop,
+        },
     }
 
 

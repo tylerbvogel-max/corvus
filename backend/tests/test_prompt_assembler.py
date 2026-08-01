@@ -2,6 +2,7 @@
 
 from app.models import Neuron
 from app.services.scoring_engine import NeuronScoreBreakdown
+import app.services.prompt_assembler as prompt_assembler
 from app.services.prompt_assembler import assemble_prompt, _estimate_tokens, _get_voice
 
 
@@ -24,7 +25,11 @@ def _make_score(neuron_id, combined=0.5):
     )
 
 
-def test_assemble_basic():
+def test_assemble_basic(monkeypatch):
+    monkeypatch.setattr(prompt_assembler, "INTENT_VOICE_MAP", {
+        "engineering": "You are an aerospace engineer.",
+        "general_query": "You are a general assistant.",
+    })
     neurons = {
         1: _make_neuron(1, "Stress Analysis", content="Run FEA for load cases.", summary="Stress analysis"),
     }
@@ -47,7 +52,13 @@ def test_respects_budget():
     assert long_content not in prompt
 
 
-def test_voice_mapping():
+def test_voice_mapping(monkeypatch):
+    monkeypatch.setattr(prompt_assembler, "INTENT_VOICE_MAP", {
+        "compliance": "You are a compliance specialist.",
+        "engineering": "You are an engineer.",
+        "finance": "You are a financial analyst.",
+        "general_query": "You are a general assistant.",
+    })
     assert "compliance" in _get_voice("compliance_risk_review").lower()
     assert "engineer" in _get_voice("engineering_analysis").lower()
     assert "financial" in _get_voice("finance_reporting").lower()

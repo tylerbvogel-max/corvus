@@ -90,7 +90,7 @@ def register_tool(
     Example:
         @register_tool(
             "list_pending_proposals",
-            description="List autopilot proposals in 'proposed' state.",
+            description="List pending proposals in 'proposed' state.",
             input_schema={"type": "object", "properties": {"limit": {"type": "integer"}}},
             is_mutating=False,
         )

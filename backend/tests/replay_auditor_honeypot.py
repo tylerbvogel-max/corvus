@@ -131,7 +131,7 @@ def _specimens() -> list[dict]:
             "last_verified": now,
             "episode_events": [
                 {"event": "ToolCall", "tool": "Bash",
-                 "input": "TENANT_ID=corvus-aero venv/bin/pytest tests/",
+                 "input": "TENANT_ID=corvus-mind venv/bin/pytest tests/",
                  "ok": True},
             ],
             "user_turns": [

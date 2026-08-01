@@ -19,6 +19,23 @@ engine = create_async_engine(
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
+async def release_connection_before_external_io(db: AsyncSession) -> None:
+    """Finish the current DB phase before waiting on slow external work.
+
+    ``AsyncSession`` autobegins on the first query and keeps that transaction's
+    pooled connection until commit/rollback.  Request-scoped sessions therefore
+    must cross an explicit phase boundary before a provider subprocess or
+    network judge can wait for seconds or minutes.
+
+    Callers own the semantic boundary: any pending writes are committed.  The
+    session remains reusable and, because the sessionmaker disables expiration
+    on commit, already-loaded ORM state remains safe to read while the external
+    operation runs.  A later DB operation transparently checks out a connection
+    for the persistence phase.
+    """
+    await db.commit()
+
+
 async def get_db() -> AsyncSession:
     async with async_session() as session:
         yield session

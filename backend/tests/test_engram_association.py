@@ -61,9 +61,10 @@ def test_boost_lifts_linked_engram_and_resorts(monkeypatch):
     monkeypatch.setattr(settings, "engram_edge_boost_scale", 0.3)
     st = _state()
     # neuron 100 (score 0.9) links to engram 5 (adjacency key -5) at weight 0.8
-    with patch("app.services.adjacency_cache.ensure_adjacency_loaded", new=AsyncMock()), \
-         patch("app.services.adjacency_cache.get_cached_neighbors",
-               return_value={100: [(-5, 0.8, "regulatory")], 101: []}):
+    with patch(
+        "app.services.adjacency_cache.get_graph_neighbors",
+        new=AsyncMock(return_value={100: [(-5, 0.8, "regulatory")], 101: []}),
+    ):
         out = asyncio.run(EngramEdgeBoostStage().run(st, PipelineContext(db=AsyncMock())))
     by_id = {s.neuron_id: s for s in out.scored_engrams}
     assert by_id[5].combined == round(0.2 + 0.8 * 0.9 * 0.3, 4)  # 0.416

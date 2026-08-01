@@ -8,11 +8,13 @@ of their department assignment.
 Cache architecture:
 - On first query, loads all ~2K neuron embeddings (~3MB as float32 matrix)
 - Subsequent queries do a single matrix multiply (~1ms) to rank all neurons
-- Cache invalidates when new neurons are embedded (via invalidate())
+- In database coherence mode, every worker checks a shared O(1) revision before
+  use and reloads only after an embedding/active-set write.
 
 Feature-flagged via settings.semantic_prefilter_enabled.
 """
 
+import asyncio
 import json
 import threading
 import numpy as np
@@ -29,23 +31,35 @@ class _EmbeddingCache:
         self._entity_types: list[str] = []  # "neuron" or "engram" per entry
         self._matrix: np.ndarray | None = None  # shape (N, 384), float32
         self._loaded = False
+        self._revision: int | None = None
 
     @property
     def is_loaded(self) -> bool:
         return self._loaded
+
+    @property
+    def revision(self) -> int | None:
+        return self._revision
 
     # Legacy alias for backward compatibility
     @property
     def _neuron_ids(self) -> list[int]:
         return self._entity_ids
 
-    def load(self, entity_ids: list[int], entity_types: list[str], embeddings: list[list[float]]):
+    def load(
+        self,
+        entity_ids: list[int],
+        entity_types: list[str],
+        embeddings: list[list[float]],
+        revision: int | None = None,
+    ):
         """Load embedding matrix from DB results. Called once at startup or on invalidate."""
         assert len(entity_ids) == len(entity_types) == len(embeddings)
         with self._lock:
             self._entity_ids = entity_ids
             self._entity_types = entity_types
             self._matrix = np.array(embeddings, dtype=np.float32) if embeddings else None
+            self._revision = revision
             self._loaded = True
 
     def invalidate(self):
@@ -55,6 +69,7 @@ class _EmbeddingCache:
             self._matrix = None
             self._entity_ids = []
             self._entity_types = []
+            self._revision = None
 
     def update_neurons(
         self, neuron_ids: list[int], embeddings: list[list[float]],
@@ -143,11 +158,36 @@ class _EmbeddingCache:
 
 # Module-level singleton
 _cache = _EmbeddingCache()
+_load_lock = asyncio.Lock()
 
 
-async def ensure_cache_loaded(db):
+async def _shared_semantic_revision(db) -> int:
+    """Return the PostgreSQL-owned embedding-set revision.
+
+    The row is maintained by statement-level triggers on neuron/engram
+    embedding and active-set writes. Missing schema is a hard failure in
+    database coherence mode: silently serving a stale matrix would violate the
+    mode's contract.
+    """
+    from sqlalchemy import text
+
+    result = await db.execute(text(
+        "SELECT revision FROM cache_versions WHERE key = 'semantic_embeddings'"
+    ))
+    revision = result.scalar_one_or_none()
+    if revision is None:
+        raise RuntimeError("semantic_embeddings cache revision is not initialized")
+    return int(revision)
+
+
+async def _ensure_cache_loaded_unlocked(db):
     """Load the embedding cache from DB if not already loaded (neurons + engrams)."""
-    if _cache.is_loaded:
+    shared_revision: int | None = None
+    if settings.cache_coherence_mode == "database":
+        shared_revision = await _shared_semantic_revision(db)
+        if _cache.is_loaded and _cache.revision == shared_revision:
+            return
+    elif _cache.is_loaded:
         return
 
     from sqlalchemy import text
@@ -190,11 +230,37 @@ async def ensure_cache_loaded(db):
     engram_count = len(entity_ids) - neuron_count
 
     if entity_ids:
-        _cache.load(entity_ids, entity_types, embeddings)
+        _cache.load(
+            entity_ids, entity_types, embeddings, revision=shared_revision,
+        )
         size_kb = _cache._matrix.nbytes / 1024 if _cache._matrix is not None else 0
-        print(f"Semantic cache loaded: {neuron_count} neurons + {engram_count} engrams ({size_kb:.0f} KB)")
+        revision_detail = (
+            f", revision {shared_revision}" if shared_revision is not None else ""
+        )
+        print(
+            f"Semantic cache loaded: {neuron_count} neurons + "
+            f"{engram_count} engrams ({size_kb:.0f} KB{revision_detail})"
+        )
     else:
+        # An empty active set is still a valid, revision-bearing replica. Mark
+        # it loaded so every query does not repeat the full table reads.
+        _cache.load([], [], [], revision=shared_revision)
         print("Semantic cache: no embeddings found")
+
+
+async def ensure_cache_loaded(db):
+    """Ensure one coherent matrix, collapsing concurrent stale-cache reloads."""
+    if settings.cache_coherence_mode == "database":
+        shared_revision = await _shared_semantic_revision(db)
+        if _cache.is_loaded and _cache.revision == shared_revision:
+            return
+    elif _cache.is_loaded:
+        return
+
+    # Only stale/missing contenders serialize. The winner reloads; waiters
+    # recheck inside the helper and return without duplicating table reads.
+    async with _load_lock:
+        await _ensure_cache_loaded_unlocked(db)
 
 
 def invalidate_cache():

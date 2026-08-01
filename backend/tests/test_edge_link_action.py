@@ -64,3 +64,69 @@ async def test_memory_assertion_retypes_existing_activation_edge():
     assert existing.context == "consolidation provenance"
     assert result["audit"]["existing"] is True
     assert result["audit"]["retyped"] is True
+
+
+@pytest.mark.asyncio
+async def test_authoritative_topology_forces_promoted_storage_below_threshold():
+    db = _db(existing=None)
+    delete_weak = AsyncMock()
+    with patch("app.services.edge_tier.delete_weak_edge", delete_weak):
+        result = await handle_edge_link(
+            EdgeLinkInput(
+                source_id=7,
+                target_id=11,
+                weight=0.01,
+                co_fire_count=0,
+                edge_type="instantiates",
+                source="concept_seed",
+                storage_tier="promoted",
+            ),
+            MagicMock(),
+            db,
+            MagicMock(),
+        )
+
+    db.add.assert_called_once()
+    edge = db.add.call_args.args[0]
+    assert edge.source_id == 7
+    assert edge.target_id == 11
+    assert edge.edge_type == "instantiates"
+    assert result["audit"]["promoted"] is True
+    assert result["audit"]["storage_tier"] == "promoted"
+    delete_weak.assert_awaited_once_with(db, 7, 11)
+
+
+@pytest.mark.asyncio
+async def test_concept_assertion_retypes_edge_without_lowering_stronger_weight():
+    existing = MagicMock(
+        edge_type="pyramidal",
+        weight=0.8,
+        co_fire_count=5,
+        context="organic",
+        source="organic",
+        last_updated_query=44,
+    )
+    db = _db(existing)
+    delete_weak = AsyncMock()
+    with patch("app.services.edge_tier.delete_weak_edge", delete_weak):
+        result = await handle_edge_link(
+            EdgeLinkInput(
+                source_id=7,
+                target_id=11,
+                weight=0.3,
+                co_fire_count=1,
+                edge_type="instantiates",
+                source="concept_seed",
+                context="instantiates concept: Flow",
+                storage_tier="promoted",
+            ),
+            MagicMock(),
+            db,
+            MagicMock(),
+        )
+
+    assert existing.edge_type == "instantiates"
+    assert existing.weight == 0.8
+    assert existing.co_fire_count == 5
+    assert existing.source == "concept_seed"
+    assert result["audit"]["retyped"] is True

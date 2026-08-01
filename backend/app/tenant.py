@@ -71,6 +71,16 @@ class TenantConfig:
         return self._yaml.get("semantic_prefilter_enabled", False)
 
     @property
+    def declared_capabilities(self):
+        """Raw ``capabilities:`` block, unvalidated and unnormalized.
+
+        Returned as-is (including ``None`` when the key is absent) so
+        app.composition.profiles owns every validation decision and can fail
+        closed with one actionable message. Do not read this anywhere else.
+        """
+        return self._yaml.get("capabilities")
+
+    @property
     def memory_surface_enabled(self) -> bool:
         """Gate for the harness-memory endpoints (/recall, /remember,
         /distill, /janitor, /compile). Off by default: on a knowledge

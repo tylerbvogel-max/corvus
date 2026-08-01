@@ -31,15 +31,14 @@ class EngramEdgeBoostStage:
             return state
 
         from app.services.adjacency_cache import (
-            ensure_adjacency_loaded, get_cached_neighbors,
+            get_graph_neighbors,
             is_engram_key, key_to_engram_id,
         )
-        await ensure_adjacency_loaded(ctx.db)
 
         top_neurons = state.all_scored[:settings.top_k_neurons]
         score_by_neuron = {s.neuron_id: s.combined for s in top_neurons}
-        neighbors = get_cached_neighbors(
-            set(score_by_neuron.keys()), settings.spread_min_edge_weight,
+        neighbors = await get_graph_neighbors(
+            ctx.db, set(score_by_neuron.keys()), settings.spread_min_edge_weight,
         )
 
         # engram_id -> strongest boost across its links to fired neurons

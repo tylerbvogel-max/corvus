@@ -15,7 +15,7 @@ import json
 import os
 from typing import Any
 
-os.environ.setdefault("TENANT_ID", "corvus-aero")
+os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 import pytest
 

@@ -1,7 +1,7 @@
 """Distillation trigger endpoint.
 
 POST /distill/run is the batch entry point for the episode distiller —
-hit by the corvus-mind-distill systemd timer (autopilot-curl pattern) or
+hit by the corvus-mind-distill systemd timer (curl-triggered one-shot) or
 manually. Per-run session cap bounds Opus spend; failed logs keep no
 marker and retry on the next run.
 """

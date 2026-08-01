@@ -1,14 +1,13 @@
-"""In-memory adjacency cache for spread activation — eliminates DB round trips.
+"""Graph-neighbor access for spread activation.
 
 Biological analogue: pre-synaptic vesicle pools. Instead of synthesizing
 neurotransmitters on demand (DB query per hop), the cell maintains a ready
 pool of vesicles (in-memory adjacency dict) that can release instantly.
 
-Cache architecture:
-- On first spread activation, loads all edges above min_weight (~80MB at 1M edges)
-- Subsequent spread activations do pure in-memory dict lookups (~microseconds)
-- Incremental update after co-firing edge writes (no full reload needed)
-- Invalidate on edge pruning or bulk edge operations
+Two explicit operating modes:
+- process-local: full adjacency + CSR replica for single-worker latency
+- database: bounded frontier reads from canonical PostgreSQL for horizontal
+  correctness; no worker owns a graph-sized replica
 
 Feature-flagged via settings.spread_enabled (if spread is off, cache is never loaded).
 """
@@ -17,6 +16,8 @@ import math
 import threading
 
 import numpy as np
+
+from app.config import settings
 
 # Edge-type codes for the vectorized CSR view (must match _compute_edge_activation).
 # Code 3 = memory-semantics edges (supersedes / scoped-by / evidence-link):
@@ -224,6 +225,13 @@ async def ensure_adjacency_loaded(db) -> None:
     in the shared adjacency dict.  Callers use engram_id_to_key() / key_to_engram_id()
     to convert.
     """
+    if settings.cache_coherence_mode == "database":
+        # High-churn co-fire edges change on nearly every query. A whole-graph
+        # replica cannot be made horizontally coherent without reloading nearly
+        # every query, so database mode deliberately keeps this cache empty.
+        if _cache.is_loaded:
+            _cache.invalidate()
+        return
     if _cache.is_loaded:
         return
 
@@ -304,6 +312,82 @@ def get_cached_neighbors(
 ) -> dict[int, list[tuple[int, float, str]]]:
     """Return cached neighbor lists for spread activation."""
     return _cache.get_neighbors(neuron_ids, min_weight)
+
+
+async def get_graph_neighbors(
+    db,
+    node_ids: set[int],
+    min_weight: float,
+    traversal_metrics: dict | None = None,
+) -> dict[int, list[tuple[int, float, str]]]:
+    """Return neighbors from the configured graph-read backend.
+
+    Database mode is response-bounded and reads both directions of neuron and
+    engram edges from canonical state. Engram keys remain negative so callers
+    observe the same representation as the local adjacency cache.
+    """
+    assert isinstance(node_ids, set), "node_ids must be a set"
+    if not node_ids:
+        return {}
+    if settings.cache_coherence_mode == "process-local":
+        await ensure_adjacency_loaded(db)
+        return get_cached_neighbors(node_ids, min_weight)
+
+    from sqlalchemy import text
+
+    result = await db.execute(
+        text("""
+            SELECT root_id, neighbor_id, weight, edge_type
+            FROM (
+                SELECT source_id AS root_id, target_id AS neighbor_id,
+                       weight, COALESCE(edge_type, 'pyramidal') AS edge_type
+                FROM neuron_edges
+                WHERE source_id = ANY(:node_ids)
+                UNION ALL
+                SELECT target_id AS root_id, source_id AS neighbor_id,
+                       weight, COALESCE(edge_type, 'pyramidal') AS edge_type
+                FROM neuron_edges
+                WHERE target_id = ANY(:node_ids)
+                UNION ALL
+                SELECT neuron_id AS root_id, -engram_id AS neighbor_id,
+                       weight, COALESCE(edge_type, 'regulatory') AS edge_type
+                FROM engram_edges
+                WHERE neuron_id = ANY(:node_ids)
+                UNION ALL
+                SELECT -engram_id AS root_id, neuron_id AS neighbor_id,
+                       weight, COALESCE(edge_type, 'regulatory') AS edge_type
+                FROM engram_edges
+                WHERE -engram_id = ANY(:node_ids)
+            ) AS graph_edges
+            WHERE weight >= :min_weight
+            ORDER BY weight DESC, root_id, neighbor_id
+            LIMIT :edge_limit
+        """),
+        {
+            "node_ids": list(node_ids),
+            "min_weight": float(min_weight),
+            "edge_limit": settings.spread_edges_max_per_hop,
+        },
+    )
+    rows = result.all()
+    if traversal_metrics is not None:
+        edge_limit = settings.spread_edges_max_per_hop
+        traversal_metrics["edge_rows"] = (
+            traversal_metrics.get("edge_rows", 0) + len(rows)
+        )
+        traversal_metrics["max_edge_rows_per_hop"] = max(
+            traversal_metrics.get("max_edge_rows_per_hop", 0), len(rows),
+        )
+        if len(rows) >= edge_limit:
+            traversal_metrics["edge_limit_saturated_hops"] = (
+                traversal_metrics.get("edge_limit_saturated_hops", 0) + 1
+            )
+    adjacency: dict[int, list[tuple[int, float, str]]] = {}
+    for root_id, neighbor_id, weight, edge_type in rows:
+        adjacency.setdefault(int(root_id), []).append(
+            (int(neighbor_id), float(weight), edge_type)
+        )
+    return adjacency
 
 
 def get_adjacency_csr() -> dict | None:

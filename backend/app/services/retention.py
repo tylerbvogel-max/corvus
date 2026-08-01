@@ -10,9 +10,8 @@ without destroying audit evidence; eval runs additionally stay immutable
 (Pattern #3), so their case rows lose only the query link.
 
 Disabled by default (query_retention_days = 0): purging history is a
-tenant-policy decision, not a default. When enabled it rides the autopilot
-/tick heartbeat (see routers/autopilot._run_retention_if_due) and can be
-invoked manually via POST /admin/retention/purge.
+tenant-policy decision, not a default. It can be invoked explicitly via
+POST /admin/retention/purge.
 
 Failure behavior: work is batched (retention_purge_batch) with a hard
 iteration cap per pass (JPL-2) and committed per batch — an interrupted pass

@@ -22,12 +22,26 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    op.add_column(
-        "queries",
-        sa.Column("citation_relevance_json", JSONB, nullable=True),
+def _column_exists(table_name: str, column_name: str) -> bool:
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = :t AND column_name = :c"
+        ),
+        {"t": table_name, "c": column_name},
     )
+    return result.scalar() is not None
+
+
+def upgrade() -> None:
+    if not _column_exists("queries", "citation_relevance_json"):
+        op.add_column(
+            "queries",
+            sa.Column("citation_relevance_json", JSONB, nullable=True),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("queries", "citation_relevance_json")
+    if _column_exists("queries", "citation_relevance_json"):
+        op.drop_column("queries", "citation_relevance_json")

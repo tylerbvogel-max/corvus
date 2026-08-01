@@ -18,23 +18,36 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    op.create_table(
-        "memory_change_log",
-        sa.Column("id", sa.Integer(), autoincrement=True, primary_key=True),
-        sa.Column("neuron_id", sa.Integer(), sa.ForeignKey("neurons.id"), nullable=False),
-        sa.Column("field", sa.String(length=50), nullable=False),
-        sa.Column("old_value", sa.Text(), nullable=True),
-        sa.Column("new_value", sa.Text(), nullable=True),
-        sa.Column("reason", sa.String(length=300), nullable=True),
-        sa.Column("actor", sa.String(length=50), nullable=False, server_default="mind_janitor"),
-        sa.Column("changed_at", sa.DateTime(), server_default=sa.func.now()),
+def _table_exists(table_name: str) -> bool:
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = :t"
+        ),
+        {"t": table_name},
     )
-    op.create_index("ix_memory_change_log_neuron_id", "memory_change_log", ["neuron_id"])
-    op.create_index("ix_memory_change_log_changed_at", "memory_change_log", ["changed_at"])
+    return result.scalar() is not None
+
+
+def upgrade() -> None:
+    if not _table_exists("memory_change_log"):
+        op.create_table(
+            "memory_change_log",
+            sa.Column("id", sa.Integer(), autoincrement=True, primary_key=True),
+            sa.Column("neuron_id", sa.Integer(), sa.ForeignKey("neurons.id"), nullable=False),
+            sa.Column("field", sa.String(length=50), nullable=False),
+            sa.Column("old_value", sa.Text(), nullable=True),
+            sa.Column("new_value", sa.Text(), nullable=True),
+            sa.Column("reason", sa.String(length=300), nullable=True),
+            sa.Column("actor", sa.String(length=50), nullable=False, server_default="mind_janitor"),
+            sa.Column("changed_at", sa.DateTime(), server_default=sa.func.now()),
+        )
+        op.create_index("ix_memory_change_log_neuron_id", "memory_change_log", ["neuron_id"])
+        op.create_index("ix_memory_change_log_changed_at", "memory_change_log", ["changed_at"])
 
 
 def downgrade() -> None:
-    op.drop_index("ix_memory_change_log_changed_at", table_name="memory_change_log")
-    op.drop_index("ix_memory_change_log_neuron_id", table_name="memory_change_log")
-    op.drop_table("memory_change_log")
+    if _table_exists("memory_change_log"):
+        op.drop_index("ix_memory_change_log_changed_at", table_name="memory_change_log")
+        op.drop_index("ix_memory_change_log_neuron_id", table_name="memory_change_log")
+        op.drop_table("memory_change_log")

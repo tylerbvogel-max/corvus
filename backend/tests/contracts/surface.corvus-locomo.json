@@ -1,0 +1,716 @@
+{
+  "documented_path_count": 76,
+  "method_level_route_count": 78,
+  "routes": [
+    {
+      "method": "GET",
+      "operation_id": "list_regions_admin_regions_get",
+      "path": "/admin/regions",
+      "schema_fingerprint": "2e9ddb5b13022b39",
+      "tags": [
+        "regions"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_region_admin_regions__region__get",
+      "path": "/admin/regions/{region}",
+      "schema_fingerprint": "c70aaffca4789054",
+      "tags": [
+        "regions"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "upsert_region_admin_regions__region__put",
+      "path": "/admin/regions/{region}",
+      "schema_fingerprint": "86b0154e794aee21",
+      "tags": [
+        "regions"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "audit_one_auditor_audit__neuron_id__post",
+      "path": "/auditor/audit/{neuron_id}",
+      "schema_fingerprint": "924edc49999aa58f",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "auditor_candidates_auditor_candidates_get",
+      "path": "/auditor/candidates",
+      "schema_fingerprint": "6a2dc4bc939343cd",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "auditor_run_auditor_run_post",
+      "path": "/auditor/run",
+      "schema_fingerprint": "0c16f54e76d043b7",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "auditor_status_auditor_status_get",
+      "path": "/auditor/status",
+      "schema_fingerprint": "a835de42c08dc675",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "capsule_capabilities_capsule_get",
+      "path": "/capabilities/capsule",
+      "schema_fingerprint": "2ad02af926820e0a",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "capsule_health_capabilities_health_post",
+      "path": "/capabilities/health",
+      "schema_fingerprint": "ed84fd663f508657",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "reconcile_capsule_capabilities_reconcile_post",
+      "path": "/capabilities/reconcile",
+      "schema_fingerprint": "07a84a02c1e4d68d",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "verify_capsule_capabilities_verify_post",
+      "path": "/capabilities/verify",
+      "schema_fingerprint": "40e3184ef298b172",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "simple_chat_chat_post",
+      "path": "/chat",
+      "schema_fingerprint": "f59709bfed4cfbf0",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "compile_run_compile_run_post",
+      "path": "/compile/run",
+      "schema_fingerprint": "4fa4a5763e19a3f1",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "compile_status_compile_status_get",
+      "path": "/compile/status",
+      "schema_fingerprint": "d6c7e834fd9a9f99",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "get_context_context_post",
+      "path": "/context",
+      "schema_fingerprint": "e2711524a7681052",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "distill_run_distill_run_post",
+      "path": "/distill/run",
+      "schema_fingerprint": "a12a91efbdb10f10",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "distill_status_distill_status_get",
+      "path": "/distill/status",
+      "schema_fingerprint": "8dd037b87b7d0971",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_all_engrams_engrams__get",
+      "path": "/engrams/",
+      "schema_fingerprint": "3174c09fafdfd331",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "coverage_gaps_engrams_coverage_gaps_get",
+      "path": "/engrams/coverage/gaps",
+      "schema_fingerprint": "f30941c5e5ace508",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_engram_engrams_create_post",
+      "path": "/engrams/create",
+      "schema_fingerprint": "96dcfa4048e1aa41",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "embed_engrams_engrams_embed_post",
+      "path": "/engrams/embed",
+      "schema_fingerprint": "58526bf7be872656",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_engrams_engrams_seed_post",
+      "path": "/engrams/seed",
+      "schema_fingerprint": "2ebce301ad5e2849",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "engram_stats_engrams_stats_summary_get",
+      "path": "/engrams/stats/summary",
+      "schema_fingerprint": "c9844040a0a32118",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_engram_detail_engrams__engram_id__get",
+      "path": "/engrams/{engram_id}",
+      "schema_fingerprint": "c928921ac5fbfdb4",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "resolve_engram_engrams__engram_id__resolve_post",
+      "path": "/engrams/{engram_id}/resolve",
+      "schema_fingerprint": "50807bc8346d924a",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_eval_scores_eval_scores_get",
+      "path": "/eval-scores",
+      "schema_fingerprint": "c11bf8630039736f",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "health_health_get",
+      "path": "/health",
+      "schema_fingerprint": "066eb22fb9901773",
+      "tags": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "memory_as_of_janitor_as_of__neuron_id__get",
+      "path": "/janitor/as-of/{neuron_id}",
+      "schema_fingerprint": "9314b6da88245aa8",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "corpus_health_report_janitor_corpus_health_get",
+      "path": "/janitor/corpus-health",
+      "schema_fingerprint": "3f8d065c572c1f8c",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "memory_history_janitor_history__neuron_id__get",
+      "path": "/janitor/history/{neuron_id}",
+      "schema_fingerprint": "98dcce4a5b87d276",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "janitor_run_janitor_run_post",
+      "path": "/janitor/run",
+      "schema_fingerprint": "dafb2d1eb49f4563",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "janitor_status_janitor_status_get",
+      "path": "/janitor/status",
+      "schema_fingerprint": "3fd0820aea3d2c46",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_learning_analytics_learning_analytics_get",
+      "path": "/learning-analytics",
+      "schema_fingerprint": "e31f0d3ec4e1ee43",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_forward_lineage_lineage_neuron__neuron_id__forward_get",
+      "path": "/lineage/neuron/{neuron_id}/forward",
+      "schema_fingerprint": "9d86a979daa6d144",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_overrides_lineage_neuron__neuron_id__overrides_get",
+      "path": "/lineage/neuron/{neuron_id}/overrides",
+      "schema_fingerprint": "24022b142f284835",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_override_lineage_neuron__neuron_id__overrides_post",
+      "path": "/lineage/neuron/{neuron_id}/overrides",
+      "schema_fingerprint": "c2433c8cd8dc1671",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "delete_override_lineage_overrides__override_id__delete",
+      "path": "/lineage/overrides/{override_id}",
+      "schema_fingerprint": "6a3f03d111a5a0ef",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "query_trace_lineage_query__query_id__trace_get",
+      "path": "/lineage/query/{query_id}/trace",
+      "schema_fingerprint": "eb9d415d9022bfa1",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "source_impact_lineage_source__source_id__impact_get",
+      "path": "/lineage/source/{source_id}/impact",
+      "schema_fingerprint": "f7fdba82f69f0aef",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_metrics_metrics_mind_get",
+      "path": "/metrics/mind",
+      "schema_fingerprint": "647be14a8962f419",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_inbox_metrics_mind_inbox_get",
+      "path": "/metrics/mind/inbox",
+      "schema_fingerprint": "c7d86e1733820f1f",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_injection_channels_metrics_mind_injection_channels_get",
+      "path": "/metrics/mind/injection-channels",
+      "schema_fingerprint": "40c4d67816e48621",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_locomo_run_metrics_mind_locomo_run_get",
+      "path": "/metrics/mind/locomo-run",
+      "schema_fingerprint": "b779a429c4136134",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_sessions_metrics_mind_sessions_get",
+      "path": "/metrics/mind/sessions",
+      "schema_fingerprint": "876be27c4ea311db",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_skills_metrics_mind_skills_get",
+      "path": "/metrics/mind/skills",
+      "schema_fingerprint": "961d74b86a8e1ba0",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_subscription_metrics_mind_subscription_get",
+      "path": "/metrics/mind/subscription",
+      "schema_fingerprint": "895f5f78c7cdd020",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_codex_subscription_metrics_mind_subscription_codex_get",
+      "path": "/metrics/mind/subscription/codex",
+      "schema_fingerprint": "4d90af895db5c274",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_trust_metrics_mind_trust_get",
+      "path": "/metrics/mind/trust",
+      "schema_fingerprint": "1f76049259a92e4f",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_available_models_models_get",
+      "path": "/models",
+      "schema_fingerprint": "96dc4d84d4195780",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neurons_capacity_neurons_capacity_get",
+      "path": "/neurons/capacity",
+      "schema_fingerprint": "354adb1b08d43887",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_children_neurons_children_get",
+      "path": "/neurons/children",
+      "schema_fingerprint": "fabb7576761328d0",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_clusters_neurons_clusters_get",
+      "path": "/neurons/clusters",
+      "schema_fingerprint": "47fdd2360ae1c3a7",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "department_chord_neurons_edges_department_chord_get",
+      "path": "/neurons/edges/department-chord",
+      "schema_fingerprint": "a697cc0d4b995398",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "layer_flow_neurons_edges_layer_flow_get",
+      "path": "/neurons/edges/layer-flow",
+      "schema_fingerprint": "b5c7d1240b1a3d8a",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "spread_log_neurons_edges_spread_log_get",
+      "path": "/neurons/edges/spread-log",
+      "schema_fingerprint": "53bcc91ff90b184a",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "spread_trail_neurons_edges_spread_trail_get",
+      "path": "/neurons/edges/spread-trail",
+      "schema_fingerprint": "c8bf45eefbceda15",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "graph_3d_neurons_graph_3d_get",
+      "path": "/neurons/graph-3d",
+      "schema_fingerprint": "1f52ec7eda794376",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_refinements_neurons_refinements_get",
+      "path": "/neurons/refinements",
+      "schema_fingerprint": "a5bbe2db2d601fb3",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neurons_stats_neurons_stats_get",
+      "path": "/neurons/stats",
+      "schema_fingerprint": "35535bf5b93dbcbc",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neurons_tree_neurons_tree_get",
+      "path": "/neurons/tree",
+      "schema_fingerprint": "6da244f181c385a9",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_detail_neurons__neuron_id__get",
+      "path": "/neurons/{neuron_id}",
+      "schema_fingerprint": "979e14fcde368426",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_edges_neurons__neuron_id__edges_get",
+      "path": "/neurons/{neuron_id}/edges",
+      "schema_fingerprint": "3ed9ae54ec4a47e1",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_scores_neurons__neuron_id__scores_get",
+      "path": "/neurons/{neuron_id}/scores",
+      "schema_fingerprint": "e09d98268a77094b",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_queries_queries_get",
+      "path": "/queries",
+      "schema_fingerprint": "c167f13ffb0e022a",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "query_run_counts_queries_run_counts_post",
+      "path": "/queries/run-counts",
+      "schema_fingerprint": "0582b689300a36ed",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_query_detail_queries__query_id__get",
+      "path": "/queries/{query_id}",
+      "schema_fingerprint": "020934c1b53a92a0",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_query_dossier_queries__query_id__dossier_get",
+      "path": "/queries/{query_id}/dossier",
+      "schema_fingerprint": "4b1dc6c73e3644f8",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "post_query_query_post",
+      "path": "/query",
+      "schema_fingerprint": "ef1f0803226fe182",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "post_query_stream_query_stream_post",
+      "path": "/query/stream",
+      "schema_fingerprint": "d37719ee5bb007ee",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "evaluate_query_query__query_id__evaluate_post",
+      "path": "/query/{query_id}/evaluate",
+      "schema_fingerprint": "8fb0f7c0229d5605",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "get_followups_query__query_id__followups_post",
+      "path": "/query/{query_id}/followups",
+      "schema_fingerprint": "e75fa078cc772db1",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "rate_query_query__query_id__rate_post",
+      "path": "/query/{query_id}/rate",
+      "schema_fingerprint": "13fd626686f01fbc",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "refine_query_query__query_id__refine_post",
+      "path": "/query/{query_id}/refine",
+      "schema_fingerprint": "c4289441110da316",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "apply_refinements_query__query_id__refine_apply_post",
+      "path": "/query/{query_id}/refine/apply",
+      "schema_fingerprint": "d7460f88e0e454fc",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "recall_recall_post",
+      "path": "/recall",
+      "schema_fingerprint": "85dc5466a54c65f0",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "remember_remember_post",
+      "path": "/remember",
+      "schema_fingerprint": "68909956a91f7e72",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_tenant_tenant_get",
+      "path": "/tenant",
+      "schema_fingerprint": "a4fd7670e471a2f9",
+      "tags": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_tenants_tenants_get",
+      "path": "/tenants",
+      "schema_fingerprint": "7845ba2e807b346c",
+      "tags": []
+    }
+  ],
+  "routes_absent_from_openapi": [
+    "GET /docs",
+    "GET /docs/oauth2-redirect",
+    "GET /openapi.json",
+    "GET /redoc"
+  ],
+  "static_frontend_excluded": {
+    "note": "conditional on frontend/dist; excluded so the snapshot is identical on a dev box and a clean CI checkout",
+    "routes": [
+      "GET /{full_path}",
+      "MOUNT /assets"
+    ]
+  },
+  "tenant_id": "corvus-locomo"
+}

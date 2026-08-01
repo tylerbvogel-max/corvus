@@ -182,8 +182,7 @@ async def v1_query(
     """
     await _enforce_rate_limit(identity)
 
-    # Lazy import avoids a cycle with ``app.routers.query``.
-    from app.routers.query import _apply_output_guards
+    from app.governance.output_guard import apply_output_guards
 
     result = await _run_v1_pipeline(db, req)
 
@@ -191,7 +190,7 @@ async def v1_query(
     violations: list[OutputViolationOut] = []
     blocked = False
     if query_id is not None:
-        violations, blocked = await _apply_output_guards(
+        violations, blocked = await apply_output_guards(
             db, query_id, result.get("slots", []), identity,
         )
         await db.commit()

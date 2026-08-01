@@ -68,6 +68,13 @@ const REPULSION_SCALE = 100;
 const REPULSION_DEFAULT = 10;
 const REPULSION_MIN = 3;
 const REPULSION_MAX = 15;
+const FIRING_PACE_DEFAULT = 2;
+const FIRING_PACE_MIN = 0;
+const FIRING_PACE_MAX = 5;
+const FIRING_PACE_LABELS = ['Static', 'Slow', 'Alive', 'Busy', 'Fast', 'Frantic'] as const;
+const FIRING_COVERAGE_TARGET_SECONDS = [Infinity, 3300, 1800, 900, 420, 180] as const;
+const FIRING_CHAIN_LENGTH = [0, 4, 6, 8, 10, 12] as const;
+const FIRING_MAX_INTERVAL_SECONDS = [Infinity, 2.8, 1.5, 0.75, 0.32, 0.14] as const;
 const REGION_COLORS = [
   '#5b8ff9', '#61ddaa', '#f6bd16', '#e8684a', '#9270ca', '#78d3f8',
   '#f08bb4', '#ff9d4d', '#7dc9a1', '#c77dff', '#4dd0e1', '#ffd166',
@@ -195,6 +202,8 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
   // the Assistant wanderer, shell rotation, synapse firing, and the sim's
   // background simmer. Off = a fully still universe.
   const [motion, setMotion] = useState(true);
+  const [firings, setFirings] = useState(true);
+  const [firingPace, setFiringPace] = useState(FIRING_PACE_DEFAULT);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('organic');
   const [panelOpen, setPanelOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -902,6 +911,8 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
     let inspectedZoneId: number | null = null;
     let synapsesOn = true;
     let visibleEdge = new Uint8Array(M).fill(1);
+    renderer.domElement.dataset.synapsesEnabled = 'true';
+    renderer.domElement.dataset.visibleSynapses = String(M);
 
     // Historical recall replay. Query rows prove which neurons co-activated;
     // the backend projects each query onto a compact forest of retained
@@ -911,7 +922,7 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
       t0: number;
       dur: number;
       reverse: boolean;
-      kind: 'coactivation' | 'spread';
+      kind: 'coactivation' | 'spread' | 'coverage';
     };
     type MappedReplay = {
       queryId: number;
@@ -937,6 +948,10 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
           : [{ e: reverse, reverse: true, kind: segment.kind, weight: segment.weight }];
       }),
     })).filter(trace => trace.segments.length > 0);
+    const historicalReplayEdges = new Uint8Array(M);
+    mappedReplays.forEach(trace => {
+      trace.segments.forEach(segment => { historicalReplayEdges[segment.e] = 1; });
+    });
     renderer.domElement.dataset.replayTraceCount = String(mappedReplays.length);
     renderer.domElement.dataset.replayHistoricalSegments = String(
       mappedReplays.reduce((sum, trace) => sum + trace.segments.length, 0),
@@ -981,9 +996,53 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
     scene.add(glowLines);
     const COACTIVATION_REPLAY = new THREE.Color('#79efff');
     const SPREAD_REPLAY = new THREE.Color('#ffd166');
+    const COVERAGE_REPLAY = new THREE.Color('#c99bff');
     const fires: ReplayPulse[] = [];
     let nextReplayAt = 0;
     let lastReplayIndex = -1;
+    let firingsOn = true;
+    let firingPaceVal = FIRING_PACE_DEFAULT;
+
+    // Historical traces are intentionally sparse and center-biased: on the
+    // live Mind graph they currently cover only a small fraction of displayed
+    // synapses. A separate structural sweep makes the visualization alive
+    // without pretending that every animated edge came from a recorded query.
+    // The sweep consumes every visible edge once per cycle, starting with the
+    // least-used and most peripheral edges, and groups adjacent edges into
+    // connected co-firing chains.
+    const incidentEdges = new Map<number, number[]>();
+    const degree = new Map<number, number>();
+    E.forEach((edge, index) => {
+      const sourceEdges = incidentEdges.get(edge.source) || [];
+      sourceEdges.push(index);
+      incidentEdges.set(edge.source, sourceEdges);
+      const targetEdges = incidentEdges.get(edge.target) || [];
+      targetEdges.push(index);
+      incidentEdges.set(edge.target, targetEdges);
+      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+    });
+    const coverageOrder = Array.from({ length: M }, (_, index) => index).sort((a, b) => {
+      const edgeA = E[a];
+      const edgeB = E[b];
+      return (
+        edgeA.activity_all - edgeB.activity_all ||
+        edgeA.co_fire_count - edgeB.co_fire_count ||
+        ((degree.get(edgeA.source) || 0) + (degree.get(edgeA.target) || 0)) -
+          ((degree.get(edgeB.source) || 0) + (degree.get(edgeB.target) || 0)) ||
+        a - b
+      );
+    });
+    const coverageRank = new Int32Array(M);
+    coverageOrder.forEach((edgeIndex, rank) => { coverageRank[edgeIndex] = rank; });
+    const coverageSeen = new Uint8Array(M);
+    const coverageNodesSeen = new Set<number>();
+    let coverageCursor = 0;
+    let coverageCount = 0;
+    let coverageCycle = 0;
+    let coverageZeroActivitySeen = 0;
+    let coverageUnreplayedSeen = 0;
+    let nextCoverageAt = 0;
 
     function edgeCanReplay(e: number) {
       const source = byId.get(E[e].source);
@@ -995,7 +1054,12 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
     }
 
     function spawnHistoricalReplay(t: number) {
-      if (!synapsesOn || !mappedReplays.length || fires.length >= REPLAY_MAX_PULSES) return;
+      if (!synapsesOn || !firingsOn || firingPaceVal === 0 || !mappedReplays.length || fires.length >= REPLAY_MAX_PULSES) return;
+      const coverageReserve = FIRING_CHAIN_LENGTH[firingPaceVal];
+      if (REPLAY_MAX_PULSES - fires.length < coverageReserve) {
+        nextReplayAt = t + 0.25;
+        return;
+      }
       const eligible = mappedReplays
         .map((trace, index) => ({
           trace,
@@ -1028,13 +1092,148 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
         fires.push({
           e: segment.e,
           t0: t + index * 0.19 + Math.random() * 0.06,
-          dur: 0.9 + segment.weight * 0.55,
+          dur: (0.9 + segment.weight * 0.55) / (0.82 + firingPaceVal * 0.12),
           reverse: segment.reverse,
           kind: segment.kind,
         });
       });
       renderer.domElement.dataset.lastReplayQuery = String(choice.trace.queryId);
-      nextReplayAt = t + 1.8 + segments.length * 0.16 + Math.random() * 2.4;
+      const paceScale = Math.max(0.55, firingPaceVal / FIRING_PACE_DEFAULT);
+      nextReplayAt = t + (1.8 + segments.length * 0.16 + Math.random() * 2.4) / paceScale;
+    }
+
+    function updateCoverageDataset() {
+      renderer.domElement.dataset.firingsEnabled = String(firingsOn && firingPaceVal > 0);
+      renderer.domElement.dataset.firingPace = String(firingPaceVal);
+      renderer.domElement.dataset.coverageEdgesSeen = String(coverageCount);
+      renderer.domElement.dataset.coverageTotalEdges = String(M);
+      renderer.domElement.dataset.coverageNodesSeen = String(coverageNodesSeen.size);
+      renderer.domElement.dataset.coverageZeroActivityEdgesSeen = String(coverageZeroActivitySeen);
+      renderer.domElement.dataset.coverageUnreplayedEdgesSeen = String(coverageUnreplayedSeen);
+      renderer.domElement.dataset.coverageCycle = String(coverageCycle);
+      renderer.domElement.dataset.coverageTargetSeconds = Number.isFinite(FIRING_COVERAGE_TARGET_SECONDS[firingPaceVal])
+        ? String(FIRING_COVERAGE_TARGET_SECONDS[firingPaceVal])
+        : 'static';
+    }
+
+    function resetCoverageCycle() {
+      coverageSeen.fill(0);
+      coverageNodesSeen.clear();
+      coverageCount = 0;
+      coverageZeroActivitySeen = 0;
+      coverageUnreplayedSeen = 0;
+      coverageCursor = coverageCycle % Math.max(coverageOrder.length, 1);
+      coverageCycle++;
+      updateCoverageDataset();
+    }
+
+    function markCoverageEdge(edgeIndex: number) {
+      if (coverageSeen[edgeIndex]) return;
+      coverageSeen[edgeIndex] = 1;
+      coverageCount++;
+      const edge = E[edgeIndex];
+      coverageNodesSeen.add(edge.source);
+      coverageNodesSeen.add(edge.target);
+      if (edge.activity_all <= 0 && edge.co_fire_count <= 0) coverageZeroActivitySeen++;
+      if (!historicalReplayEdges[edgeIndex]) coverageUnreplayedSeen++;
+    }
+
+    function nextCoverageSeed() {
+      for (let scanned = 0; scanned < coverageOrder.length; scanned++) {
+        const orderIndex = (coverageCursor + scanned) % coverageOrder.length;
+        const edgeIndex = coverageOrder[orderIndex];
+        if (!coverageSeen[edgeIndex] && edgeCanReplay(edgeIndex)) {
+          coverageCursor = (orderIndex + 1) % coverageOrder.length;
+          return edgeIndex;
+        }
+      }
+      if (coverageOrder.some(edgeIndex => edgeCanReplay(edgeIndex))) {
+        resetCoverageCycle();
+        return nextCoverageSeed();
+      }
+      return null;
+    }
+
+    function buildCoverageChain(limit: number) {
+      const seed = nextCoverageSeed();
+      if (seed == null) return [];
+      const selected: Array<{ e: number; reverse: boolean }> = [];
+      const frontier: number[] = [];
+      const selectedSet = new Set<number>();
+
+      const addEdge = (edgeIndex: number, fromNode?: number) => {
+        const edge = E[edgeIndex];
+        const start = fromNode ?? (
+          (degree.get(edge.source) || 0) <= (degree.get(edge.target) || 0)
+            ? edge.source
+            : edge.target
+        );
+        selected.push({ e: edgeIndex, reverse: start === edge.target });
+        selectedSet.add(edgeIndex);
+        markCoverageEdge(edgeIndex);
+        if (!frontier.includes(edge.source)) frontier.push(edge.source);
+        if (!frontier.includes(edge.target)) frontier.push(edge.target);
+      };
+      addEdge(seed);
+
+      while (selected.length < limit) {
+        let choice: { edgeIndex: number; fromNode: number } | null = null;
+        for (const nodeId of frontier) {
+          const candidates = (incidentEdges.get(nodeId) || [])
+            .filter(edgeIndex => (
+              !coverageSeen[edgeIndex] &&
+              !selectedSet.has(edgeIndex) &&
+              edgeCanReplay(edgeIndex)
+            ))
+            .sort((a, b) => coverageRank[a] - coverageRank[b]);
+          if (candidates.length) {
+            choice = { edgeIndex: candidates[0], fromNode: nodeId };
+            break;
+          }
+        }
+        if (!choice) break;
+        addEdge(choice.edgeIndex, choice.fromNode);
+      }
+      return selected;
+    }
+
+    updateCoverageDataset();
+
+    function spawnCoverageChain(t: number) {
+      if (!synapsesOn || !firingsOn || firingPaceVal === 0 || !M || fires.length >= REPLAY_MAX_PULSES) return;
+      const capacity = REPLAY_MAX_PULSES - fires.length;
+      const desiredLength = FIRING_CHAIN_LENGTH[firingPaceVal];
+      const minimumUsefulLength = Math.max(4, Math.ceil(desiredLength * 0.66));
+      if (capacity < minimumUsefulLength) {
+        nextCoverageAt = t + 0.08;
+        return;
+      }
+      const chain = buildCoverageChain(Math.min(desiredLength, capacity));
+      if (!chain.length) return;
+      const duration = 1.08 / (0.78 + firingPaceVal * 0.16);
+      const stagger = Math.max(0.035, 0.16 - firingPaceVal * 0.021);
+      chain.forEach((segment, index) => {
+        fires.push({
+          e: segment.e,
+          t0: t + index * stagger,
+          dur: duration,
+          reverse: segment.reverse,
+          kind: 'coverage',
+        });
+      });
+      const visibleCount = visibleEdge.reduce((sum, visible, edgeIndex) => (
+        sum + (visible && edgeCanReplay(edgeIndex) ? 1 : 0)
+      ), 0);
+      const targetSeconds = FIRING_COVERAGE_TARGET_SECONDS[firingPaceVal];
+      const fairInterval = targetSeconds * chain.length / Math.max(1, visibleCount);
+      const nextInterval = Math.max(
+        0.06,
+        Math.min(FIRING_MAX_INTERVAL_SECONDS[firingPaceVal], fairInterval),
+      );
+      nextCoverageAt = t + nextInterval;
+      renderer.domElement.dataset.lastCoverageChainLength = String(chain.length);
+      renderer.domElement.dataset.coverageNextInterval = nextInterval.toFixed(3);
+      updateCoverageDataset();
     }
 
     function syncReplayGlow() {
@@ -1049,7 +1248,9 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
         }
         glowingEdges++;
         glowPos.set(linePos.subarray(base, base + CURVE_SEGS * 6), base);
-        const color = replayGlowKind[e] === 2 ? SPREAD_REPLAY : COACTIVATION_REPLAY;
+        const color = replayGlowKind[e] === 3
+          ? COVERAGE_REPLAY
+          : replayGlowKind[e] === 2 ? SPREAD_REPLAY : COACTIVATION_REPLAY;
         const hdr = 2.1 + intensity * 3.4;
         for (let v = 0; v < CURVE_SEGS * 2; v++) {
           const o = base + v * 3;
@@ -1064,14 +1265,16 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
     }
 
     function syncFires(t: number, dt: number) {
-      if (!synapsesOn) {
+      if (!synapsesOn || !firingsOn || firingPaceVal === 0) {
         fires.length = 0;
         fireGeo.setDrawRange(0, 0);
         renderer.domElement.dataset.replayActivePulses = '0';
+        renderer.domElement.dataset.firingActivePulses = '0';
         renderer.domElement.dataset.replayGlowingEdges = '0';
         return;
       }
       for (let e = 0; e < M; e++) replayGlow[e] *= Math.exp(-dt * 2.35);
+      if (M > 0 && t >= nextCoverageAt) spawnCoverageChain(t);
       if (M > 0 && t >= nextReplayAt) spawnHistoricalReplay(t);
 
       let writePulse = 0;
@@ -1086,8 +1289,10 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
         edgeControl(fire.e, source, target, _ctrl);
         const wave = Math.sin(Math.PI * raw);
         replayGlow[fire.e] = Math.max(replayGlow[fire.e], 0.35 + wave * 1.05);
-        replayGlowKind[fire.e] = fire.kind === 'spread' ? 2 : 1;
-        const color = fire.kind === 'spread' ? SPREAD_REPLAY : COACTIVATION_REPLAY;
+        replayGlowKind[fire.e] = fire.kind === 'coverage' ? 3 : fire.kind === 'spread' ? 2 : 1;
+        const color = fire.kind === 'coverage'
+          ? COVERAGE_REPLAY
+          : fire.kind === 'spread' ? SPREAD_REPLAY : COACTIVATION_REPLAY;
 
         for (let tail = 0; tail < REPLAY_TAIL_POINTS; tail++) {
           let p = raw - tail * 0.045;
@@ -1113,6 +1318,7 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
       renderer.domElement.dataset.replayActivePulses = String(
         fires.filter(fire => fire.t0 <= t).length,
       );
+      renderer.domElement.dataset.firingActivePulses = renderer.domElement.dataset.replayActivePulses;
       fireGeo.setDrawRange(0, writePoint);
       (fireGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
       (fireGeo.attributes.color as THREE.BufferAttribute).needsUpdate = true;
@@ -1440,6 +1646,35 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
           syncPositions();
           syncReplayGlow();
         },
+        setFirings(on: boolean) {
+          firingsOn = on;
+          if (!on) {
+            fires.length = 0;
+            replayGlow.fill(0);
+            replayGlowKind.fill(0);
+            fireGeo.setDrawRange(0, 0);
+            renderer.domElement.dataset.replayActivePulses = '0';
+            renderer.domElement.dataset.firingActivePulses = '0';
+            syncReplayGlow();
+          } else {
+            nextCoverageAt = animT;
+            nextReplayAt = animT;
+          }
+          updateCoverageDataset();
+        },
+        setFiringPace(value: number) {
+          firingPaceVal = Math.max(FIRING_PACE_MIN, Math.min(FIRING_PACE_MAX, Math.round(value)));
+          nextCoverageAt = animT;
+          nextReplayAt = animT;
+          if (firingPaceVal === 0) {
+            fires.length = 0;
+            replayGlow.fill(0);
+            replayGlowKind.fill(0);
+            fireGeo.setDrawRange(0, 0);
+            syncReplayGlow();
+          }
+          updateCoverageDataset();
+        },
         setEdgeLens(on: boolean, window: ActivityWindow) {
           heatMode = on;
           heatWindow = window;
@@ -1673,6 +1908,8 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
   useEffect(() => { engineRef.current?.api.setBloom(bloom); }, [bloom]);
   useEffect(() => { engineRef.current?.api.setMotion(motion); }, [motion]);
   useEffect(() => { engineRef.current?.api.setSynapses(synapses); }, [synapses]);
+  useEffect(() => { engineRef.current?.api.setFirings(firings); }, [firings]);
+  useEffect(() => { engineRef.current?.api.setFiringPace(firingPace); }, [firingPace]);
   useEffect(() => { engineRef.current?.api.setNodeLight(nodeLight); }, [nodeLight]);
   useEffect(() => { engineRef.current?.api.setSynapseLight(synapseLight); }, [synapseLight]);
   useEffect(() => { engineRef.current?.api.setRepulsion(repulsion); }, [repulsion]);
@@ -2039,17 +2276,30 @@ export default function NeuronUniverse({ transparent = false, controlPosition,
               format: value => `${value} · ${value * REPULSION_SCALE}`,
               onChange: setRepulsion,
             },
+            {
+              key: 'firing-pace',
+              label: 'Firing pace',
+              min: FIRING_PACE_MIN,
+              max: FIRING_PACE_MAX,
+              step: 1,
+              value: firingPace,
+              format: value => FIRING_PACE_LABELS[Math.round(value)] || 'Alive',
+              onChange: setFiringPace,
+            },
           ]}
           layoutMode={layoutMode}
           zonesAvailable={zones.length > 0}
           bloom={bloom}
           motion={motion}
           synapses={synapses}
+          firings={firings}
+          firingPace={firingPace}
           recallActive={lensMode === 'recall'}
           replayTraceCount={replayTraces.length}
           onBloomChange={setBloom}
           onMotionChange={setMotion}
           onSynapsesChange={setSynapses}
+          onFiringsChange={setFirings}
           onRecallOpen={() => openLens('recall')}
           onFitView={() => engineRef.current?.api.fitView()}
           onLayoutModeChange={mode => {

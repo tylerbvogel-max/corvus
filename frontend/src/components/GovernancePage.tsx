@@ -225,7 +225,7 @@ export default function GovernancePage() {
           </div>
           <div className="stat-card">
             <div className="card-value">{data.change_activity.autopilot_runs_30d}</div>
-            <div className="card-label">Autopilot Runs (30d)</div>
+            <div className="card-label">Retired Autopilot Runs (30d)</div>
           </div>
           <div className="stat-card">
             <div className="card-value">{data.totals.refinements}</div>
@@ -259,8 +259,8 @@ export default function GovernancePage() {
         <div className="security-items">
           <div className="security-item" style={{ padding: '8px 12px' }}>
             <p className="security-item-detail">
-              <strong>1. Proposal</strong> &mdash; Changes originate from the Refine process (manual or autopilot).
-              The LLM analyzes query results and proposes neuron updates or new neurons with reasoning.
+              <strong>1. Proposal</strong> &mdash; Changes originate from explicit refinement and governed
+              maintenance workflows. Models may propose updates, but cannot silently apply them.
             </p>
           </div>
           <div className="security-item" style={{ padding: '8px 12px' }}>
@@ -304,11 +304,11 @@ export default function GovernancePage() {
               { id: 'R02', risk: 'Scoring drift degrades quality', l: 2, i: 3, treatment: 'Mitigate', control: 'Z-score drift detection, circuit breaker, health check alerts' },
               { id: 'R03', risk: 'Prompt injection attack', l: 2, i: 4, treatment: 'Mitigate', control: 'Input guard with 16 regex patterns, 24-test adversarial suite' },
               { id: 'R04', risk: 'API model version change', l: 3, i: 3, treatment: 'Monitor', control: 'Model version tracking per query, version change alerts' },
-              { id: 'R05', risk: 'Department coverage imbalance', l: 4, i: 2, treatment: 'Accept', control: 'Bias assessment with CV monitoring, autopilot gap detection' },
+              { id: 'R05', risk: 'Department coverage imbalance', l: 4, i: 2, treatment: 'Accept', control: 'Bias assessment with CV monitoring and explicit coverage review' },
               { id: 'R06', risk: 'Neuron content staleness', l: 3, i: 3, treatment: 'Mitigate', control: 'Provenance audit, last_verified tracking, novelty signal decay' },
               { id: 'R07', risk: 'PII in neuron content', l: 1, i: 4, treatment: 'Mitigate', control: 'Automated PII scan on all neuron fields, input guard PII detection' },
               { id: 'R08', risk: 'Cost overrun from model usage', l: 2, i: 2, treatment: 'Monitor', control: 'Per-query cost tracking, token budget limits, cost dashboard' },
-              { id: 'R09', risk: 'Zero-hit queries (knowledge gap)', l: 3, i: 3, treatment: 'Mitigate', control: 'Zero-hit rate monitoring, autopilot gap-driven queries' },
+              { id: 'R09', risk: 'Zero-hit queries (knowledge gap)', l: 3, i: 3, treatment: 'Mitigate', control: 'Zero-hit rate monitoring and evidence-gated ingestion' },
               { id: 'R10', risk: 'Unauthorized neuron modification', l: 1, i: 4, treatment: 'Mitigate', control: 'Human approval required for all refinements, audit trail' },
               { id: 'R11', risk: 'Dual-use/ITAR content exposure', l: 1, i: 5, treatment: 'Mitigate', control: 'Output risk tagging for dual_use category, domain-scoped graph' },
               { id: 'R12', risk: 'Vendor lock-in (Anthropic)', l: 3, i: 3, treatment: 'Accept', control: 'Model-agnostic architecture, CLI wrapper abstraction' },
@@ -464,7 +464,7 @@ export default function GovernancePage() {
               'Circuit breaker trips automatically when avg eval drops below threshold',
               'Review grounding check results: identify ungrounded references',
               'Check if affected neurons have been recently modified (refinement log)',
-              'If autopilot-caused: review and revert recent autopilot refinements',
+              'If caused by a historical automated refinement: review and revert the affected receipt',
               'Run blind A/B evaluation on affected query set to quantify impact',
               'Restore neuron content from most recent checkpoint if needed',
               'Re-run compliance audit to verify grounding improvement',

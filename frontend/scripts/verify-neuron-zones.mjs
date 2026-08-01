@@ -61,8 +61,8 @@ try {
     throw new Error(`Neuron canvas is undersized: ${JSON.stringify(canvasSize)}`);
   }
 
-  // Ambient motion is now a randomized cadence over historical query traces,
-  // never random graph edges. Prove a recorded trace produces both a moving
+  // Ambient motion combines truthful historical replay with the independent
+  // fair structural sweep. Prove the shared renderer produces both a moving
   // pulse and a glowing retained synapse before pausing Motion later.
   await page.waitForFunction(() => {
     const neuronCanvas = document.querySelector('.desktop-neuron-layer canvas');

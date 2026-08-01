@@ -61,6 +61,8 @@ class PipelineState:
     all_scored: list[NeuronScoreBreakdown] = field(default_factory=list)
     neurons_activated: int = 0
     redundancy_suppressed: int = 0
+    # Database-backed spread safety-limit observations for calibration.
+    spread_traversal: dict[str, Any] = field(default_factory=dict)
 
     # --- regulatory resolve stage ---
     resolved_regulations: list[Any] = field(default_factory=list)

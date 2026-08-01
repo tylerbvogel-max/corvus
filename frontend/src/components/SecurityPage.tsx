@@ -55,7 +55,7 @@ export default function SecurityPage() {
   // ── Group 5: Personnel Training ──
   const trainingItems: NistItem[] = [
     { id: 'GOV-2.2', title: 'Personnel Training', status: 'partial',
-      detail: 'Getting Started page provides setup guide (prerequisites, installation, configuration) and training walkthrough (query lab, explorer, health monitoring, autopilot, evaluation). Operational checklist included. Missing: role-based training paths, assessment/certification, video walkthroughs.' },
+      detail: 'Getting Started page provides setup guidance and training walkthroughs for query inspection, exploration, health monitoring, and evaluation. Operational checklist included. Missing: role-based training paths, assessment/certification, video walkthroughs.' },
   ];
 
   // ── Already Addressed ──

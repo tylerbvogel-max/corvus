@@ -8,6 +8,11 @@ import asyncio
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = [pytest.mark.evaluation, pytest.mark.timeout(120)]
+
 MODULE_PATH = Path(__file__).with_name("run_locomo.py")
 SPEC = importlib.util.spec_from_file_location("run_locomo", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None

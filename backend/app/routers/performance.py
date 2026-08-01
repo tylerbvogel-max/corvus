@@ -106,7 +106,7 @@ async def _cost_by_activity(db: AsyncSession) -> dict:
 
     v1 buckets come from existing tables:
       - query_pipeline : SUM(queries.cost_usd) — user-facing queries end-to-end
-      - autopilot      : SUM(autopilot_runs.cost_usd) — background tick cost
+      - autopilot      : historical SUM(autopilot_runs.cost_usd) — retired feature
       - untracked      : activities whose per-call LLM cost is not aggregated
                          today: agent runs (actions.kind LIKE 'agent.%'),
                          document ingestion, eval runs outside queries,
@@ -135,10 +135,10 @@ async def _cost_by_activity(db: AsyncSession) -> dict:
         },
         {
             "key": "autopilot",
-            "label": "Autopilot (background maintenance)",
+            "label": "Autopilot (retired; historical)",
             "total_cost": round(autopilot_cost, 4),
             "source_table": "autopilot_runs.cost_usd",
-            "description": "Cost of each autopilot tick (completed runs only).",
+            "description": "Historical cost of completed autopilot ticks before retirement.",
         },
     ]
     total_tracked = sum(b["total_cost"] for b in buckets)

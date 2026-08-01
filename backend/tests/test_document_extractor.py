@@ -11,7 +11,7 @@ import os
 from typing import Any
 from unittest.mock import patch
 
-os.environ.setdefault("TENANT_ID", "corvus-aero")
+os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 import pytest
 

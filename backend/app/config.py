@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings
 
 
@@ -129,6 +131,11 @@ class Settings(BaseSettings):
     # Scoring parameters (query-count based)
     burst_window_queries: int = 50
     neuron_index_enabled: bool = True  # serve scoring inputs from the in-memory NeuronIndex
+    # Process-local caches are a single-worker latency optimization, never a
+    # source of truth.  "database" is the horizontal-safe mode: firing
+    # aggregates and graph frontiers come from PostgreSQL, while the small
+    # embedding matrix is retained only behind a shared revision check.
+    cache_coherence_mode: Literal["process-local", "database"] = "process-local"
     burst_threshold: int = 15
     novelty_halflife_queries: int = 200
     recency_decay_queries: int = 500
@@ -212,6 +219,10 @@ class Settings(BaseSettings):
     citation_relevance_pass_threshold: float = 0.45
     citation_relevance_escalate: bool = True
     spread_vectorized: bool = True  # numpy scatter-max spread (equivalent to the BFS reference)
+    # Hard response bounds for database-backed frontier traversal. These are
+    # guessed safety constants; telemetry should drive later calibration.
+    spread_frontier_max_nodes: int = 2000
+    spread_edges_max_per_hop: int = 10000
     # Candidate selection limits
     candidate_limit: int = 500
     # Co-firing edge management
@@ -276,7 +287,7 @@ class Settings(BaseSettings):
     consolidation_retention_queries: int = 2000
     consolidation_decay_rate: float = 0.95
     consolidation_deactivation_threshold: float = 0.05
-    # Consolidation rides the autopilot tick heartbeat at most this often
+    # Consolidation cadence for the dedicated janitor scheduler
     consolidation_interval_hours: float = 24.0
     # Hierarchy-aware selection: include ancestor chains so graph shows trees
     hierarchy_selection_enabled: bool = True

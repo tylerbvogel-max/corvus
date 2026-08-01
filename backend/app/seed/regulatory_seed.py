@@ -43,15 +43,17 @@ def seed_regulatory(force: bool = False):
     conn = psycopg2.connect(dsn)
     cursor = conn.cursor()
 
-    # Ensure standard_date column exists
+    # Schema authority lives in Alembic; this seed must not mutate tables.
     cursor.execute(
         "SELECT 1 FROM information_schema.columns "
         "WHERE table_name = 'neurons' AND column_name = 'standard_date'"
     )
     if not cursor.fetchone():
-        cursor.execute("ALTER TABLE neurons ADD COLUMN standard_date VARCHAR(20)")
-        conn.commit()
-        print("Migrated: added neurons.standard_date (sync)")
+        cursor.close()
+        conn.close()
+        raise RuntimeError(
+            "neurons.standard_date is missing; run alembic upgrade head before seeding regulatory data"
+        )
 
     # Check if Regulatory department already exists
     cursor.execute("SELECT COUNT(*) FROM neurons WHERE department = %s", (DEPARTMENT,))

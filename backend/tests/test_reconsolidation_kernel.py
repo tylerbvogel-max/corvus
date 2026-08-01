@@ -12,6 +12,7 @@ decision — facet validity, coverage delta, disposition, every inherited
 signal — is deterministic code under test here.
 """
 
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -482,10 +483,16 @@ class TestWriteGateLexicalLane:
 
     async def _gate(self, spec, candidate_vec):
         from app.services.lesson_store import _nearest_active_lesson
+        loop = asyncio.get_running_loop()
+
+        async def run_inline(_executor, func, *args):
+            return func(*args)
+
         with patch("app.services.embedding_service.embed_text",
                    return_value=candidate_vec), \
              patch("app.services.mind_janitors._load_lessons",
-                   new=AsyncMock(return_value=[self._member_57()])):
+                   new=AsyncMock(return_value=[self._member_57()])), \
+             patch.object(loop, "run_in_executor", new=run_inline):
             return await _nearest_active_lesson(MagicMock(), spec)
 
     @pytest.mark.asyncio

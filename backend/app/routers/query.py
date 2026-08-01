@@ -7,8 +7,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.database import get_db
-from app.models import Query, NeuronFiring, Neuron, EvalScore, NeuronRefinement, SynapticLearningEvent, OutputViolation
+from app.database import get_db, release_connection_before_external_io
+from app.models import Query, NeuronFiring, Neuron, EvalScore, NeuronRefinement, SynapticLearningEvent
 from app.schemas import (
     QueryRequest, QueryResponse, QuerySummary, QueryDetail, NeuronHit,
     EvalRequest, EvalResponse, EvalScoreOut, EvalScoreSummary,
@@ -16,12 +16,11 @@ from app.schemas import (
     RefineRequest, RefineResponse, NeuronUpdateSuggestion, NewNeuronSuggestion,
     ApplyRefineRequest, ApplyRefineResponse, RefinementOut,
     LearningEventOut, LearningAnalytics,
-    OutputViolationOut,
     QueryDossier,
     FollowUpSuggestion, FollowUpSuggestionsResponse,
     SlotResult,  # For backward-compat: parsing legacy multi-slot query data
 )
-from app.governance.output_guard import GuardResult, run_guards
+from app.governance.output_guard import apply_output_guards
 from app.services.executor import execute_query, prepare_context
 from app.services.pipeline import PipelineStageError
 from app.services.llm_provider import llm_chat, estimate_cost, get_available_models, MODEL_REGISTRY, effort_var
@@ -360,14 +359,14 @@ async def _load_refinements(
 def _parse_pending_refine(refine_json: str | None, fallback_query_id: int) -> dict | None:
     """Parse the stored refine artifact into a RefineResponse-shaped dict.
 
-    Two writers populate `query.refine_json`:
+    Two historical writers populated `query.refine_json`:
     - Manual /refine endpoint — writes the full RefineResponse shape.
-    - Autopilot _refine — writes only {reasoning, updates, new_neurons} and
-      omits query_id/model/input_tokens/output_tokens.
+    - The retired automated refiner — wrote only
+      {reasoning, updates, new_neurons} and omitted
+      query_id/model/input_tokens/output_tokens.
 
     Normalize by backfilling defaults so Pydantic validation succeeds for
-    both shapes. Required — otherwise /queries/{id} 500s on any query that
-    was last refined by the autopilot.
+    both shapes. Required for backward compatibility with retained query rows.
     """
     assert isinstance(fallback_query_id, int), "fallback_query_id must be int"
     if not refine_json:
@@ -448,79 +447,6 @@ async def get_query_dossier(query_id: int, db: AsyncSession = Depends(get_db)):
     return dossier
 
 
-async def _load_included_firings(
-    db: AsyncSession, query_id: int,
-) -> list[NeuronFiring]:
-    """Fetch NeuronFiring rows for a query so output policies can inspect them."""
-    result = await db.execute(
-        select(NeuronFiring).where(NeuronFiring.query_id == query_id)
-    )
-    return list(result.scalars())
-
-
-def _violation_to_out(row: OutputViolation) -> OutputViolationOut:
-    """Serialize a persisted OutputViolation row for the API response."""
-    return OutputViolationOut(
-        id=row.id,
-        rule_id=row.rule_id,
-        severity=row.severity,
-        action=row.action,
-        matched_span=row.matched_span,
-        redaction=row.redaction,
-        detail=row.detail,
-    )
-
-
-async def _apply_output_guards(
-    db: AsyncSession,
-    query_id: int,
-    slots: list[dict],
-    actor: UserIdentity,
-) -> tuple[list[OutputViolationOut], bool]:
-    """Run Pattern #7 output policies against every slot's response.
-
-    Returns ``(violations_out, blocked)``. Redactions are applied in place
-    to each slot's ``response`` field AND mirrored onto the persisted
-    ``queries.response_text`` / ``queries.opus_response_text`` columns
-    so the governed text — not the raw LLM output — is what remains on
-    the audit record. Caller owns the commit.
-    """
-    assert len(slots) <= 16, "slot count exceeds sanity cap (JPL-2)"
-    firings = await _load_included_firings(db, query_id)
-    out: list[OutputViolationOut] = []
-    blocked = False
-    query_row: Query | None = None
-    for slot in slots:
-        text = slot.get("response") or ""
-        if not text:
-            continue
-        guard: GuardResult = await run_guards(
-            db,
-            query_id=query_id,
-            response_text=text,
-            firings=firings,
-            actor=actor,
-        )
-        if guard.final_text != text:
-            slot["response"] = guard.final_text
-            # Mirror the redaction back onto the persisted Query row so
-            # queries.response_text reflects the governed text, not the
-            # raw LLM output. Load lazily to avoid a query when nothing
-            # is being redacted.
-            if query_row is None:
-                query_row = await db.get(Query, query_id)
-            if query_row is not None:
-                mode = slot.get("mode")
-                if mode == "haiku_neuron" and query_row.response_text == text:
-                    query_row.response_text = guard.final_text
-                elif mode == "opus_raw" and query_row.opus_response_text == text:
-                    query_row.opus_response_text = guard.final_text
-        out.extend(_violation_to_out(v) for v in guard.violations)
-        if guard.blocked:
-            blocked = True
-    return out, blocked
-
-
 async def _run_output_gate(
     db: AsyncSession,
     result: dict,
@@ -534,7 +460,7 @@ async def _run_output_gate(
     query_id = result.get("query_id")
     if query_id is None:
         return
-    violations, blocked = await _apply_output_guards(
+    violations, blocked = await apply_output_guards(
         db, query_id, result.get("slots", []), identity,
     )
     await db.commit()  # persist violations + audit action regardless of block
@@ -1145,6 +1071,10 @@ async def evaluate_query(
             domain_knowledge = ""
     domain_knowledge = _strip_citation_keys(domain_knowledge)
 
+    # The query/context read phase is complete; do not pin its pooled
+    # connection across two concurrent judge-model subprocesses.
+    await release_connection_before_external_io(db)
+
     merged_scores, winner, verdict_text, eval_in, eval_out = await _run_counterbalanced_eval(
         query.user_message, slots, domain_knowledge, req.model,
     )
@@ -1350,6 +1280,7 @@ async def get_followups(query_id: int, db: AsyncSession = Depends(get_db)):
         f"Original question:\n{query.user_message[:600]}\n\n"
         f"Assistant's answer:\n{response_text[:1800]}"
     )
+    await release_connection_before_external_io(db)
     try:
         result = await llm_chat(
             _FOLLOWUP_SYSTEM_PROMPT, user_prompt, max_tokens=180, model="haiku",
@@ -1605,6 +1536,9 @@ async def refine_query(
     system_prompt = _build_refine_system_prompt(domain_knowledge)
     user_prompt = _build_refine_user_prompt(query, neurons, eval_scores, req.user_context)
 
+    # Prompt inputs are fully materialized; release the read transaction while
+    # the refinement model runs, then reuse the session to persist its result.
+    await release_connection_before_external_io(db)
     result = await llm_chat(system_prompt, user_prompt, max_tokens=req.max_tokens, model=req.model)
     reasoning, neuron_vs_raw_verdict, updates, new_neurons = _parse_refine_response(result["text"].strip())
 

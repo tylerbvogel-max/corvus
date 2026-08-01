@@ -14,7 +14,7 @@ import textwrap
 from pathlib import Path
 from types import SimpleNamespace
 
-os.environ.setdefault("TENANT_ID", "corvus-aero")
+os.environ.setdefault("TENANT_ID", "corvus-mind")
 
 import pytest
 

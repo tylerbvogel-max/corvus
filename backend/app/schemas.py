@@ -474,60 +474,10 @@ class HealthResponse(BaseModel):
     total_queries: int
 
 
-class AutopilotConfigOut(BaseModel):
-    enabled: bool
-    directive: str
-    interval_minutes: int
-    focus_neuron_id: int | None = None
-    focus_neuron_label: str | None = None
-    max_layer: int = 5
-    eval_model: str = "haiku"
-    last_tick_at: str | None = None
-
-
-class AutopilotConfigUpdate(BaseModel):
-    enabled: bool | None = None
-    directive: str | None = None
-    interval_minutes: int | None = None
-    focus_neuron_id: int | None = Field(None, description="Neuron ID to focus on (L0-L5). Set to 0 to clear.")
-    max_layer: int | None = Field(None, ge=0, le=5, description="Max layer depth for new neuron creation (0-5)")
-    eval_model: str | None = Field(None, min_length=1)
-
-
-class AutopilotRunOut(BaseModel):
-    id: int
-    query_id: int | None = None
-    proposal_id: int | None = None
-    generated_query: str
-    directive: str
-    focus_neuron_label: str | None = None
-    gap_source: str | None = None
-    gap_target: str | None = None
-    neurons_activated: int
-    updates_applied: int
-    neurons_created: int
-    eval_overall: int
-    eval_text: str | None = None
-    refine_reasoning: str | None = None
-    cost_usd: float
-    status: str
-    error_message: str | None = None
-    created_at: str | None = None
-    # Pattern #8: per-stage timing + status from the autopilot-tick runner.
-    # Shape: list[{stage, status, duration_ms, detail?, error_message?}]
-    stage_telemetry: list[dict] | None = None
-
-
-class AutopilotTickResponse(BaseModel):
-    status: str
-    run_id: int | None = None
-    message: str | None = None
-
-
 # ── Proposal schemas ──────────────────────────────────────────────────
 
 class GapEvidenceOut(BaseModel):
-    """Gap evidence from autopilot heuristic detection."""
+    """Gap evidence retained by proposal-producing review workflows."""
     signal: str
     description: str
     metric_value: float

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import settings
+from app.database import release_connection_before_external_io
 from app.models import Neuron, Query, NeuronEdge, CitationHopSession
 from app.services.llm_provider import llm_chat, MODEL_REGISTRY, effort_var
 from app.services.neuron_service import (
@@ -1348,7 +1349,6 @@ def _format_slot_result_dict(
 
 
 async def _execute_slot(
-    db: AsyncSession,
     slot: dict,
     slot_index: int,
     user_message: str,
@@ -1387,7 +1387,7 @@ async def _execute_slot(
 
     try:
         result_data = await _execute_slot_llm(
-            db, user_message, ctx, model_name, uses_neurons, on_stage,
+            user_message, ctx, model_name, uses_neurons, on_stage,
             session_spec=session_spec,
         )
 
@@ -1444,7 +1444,6 @@ async def _execute_slot(
 
 
 async def _execute_slot_llm(
-    db: AsyncSession,
     user_message: str,
     ctx: PreparedContext | None,
     model_name: str,
@@ -1585,11 +1584,10 @@ async def _clean_answer_citations(ctx, user_message: str, answer: str) -> tuple[
 
 
 async def _apply_citation_hop_exit(
-    db: AsyncSession,
     query: Query,
     ctx: PreparedContext | None,
     user_message: str,
-) -> None:
+) -> CitationHopSession | None:
     """Exit layer: grade the answer's citation keys against the secret hop map.
 
     Detects fabricated neuron references (cited keys absent from the per-query
@@ -1598,10 +1596,10 @@ async def _apply_citation_hop_exit(
     is disabled, no map was minted, or the answer is empty.
     """
     if not settings.citation_hopping_enabled:
-        return
+        return None
     hop_map = getattr(ctx, "hop_map", None) if ctx else None
     if hop_map is None or not query.response_text:
-        return
+        return None
 
     from app.services.citation_hopping import (
         extract_citation_tokens, verify_citations, strip_hallucinated,
@@ -1623,9 +1621,7 @@ async def _apply_citation_hop_exit(
         required_json=sorted(hop_map.tokens()) if require_all else None,
         audit_json=result.to_dict(),
     )
-    db.add(session)
-    await db.flush()
-    query.citation_hop_session_id = session.id
+    return session
 
 
 async def _finalize_query_results(
@@ -1656,7 +1652,23 @@ async def _finalize_query_results(
             break
 
     # Exit layer: verify citation keys against the secret per-query hop map.
-    await _apply_citation_hop_exit(db, query, ctx, user_message)
+    # This can make one bounded repair-model call, so it runs while ``query`` is
+    # still transient and the prep transaction's connection has been released.
+    citation_session = await _apply_citation_hop_exit(query, ctx, user_message)
+
+    query.cost_usd = total_cost
+    query.results_json = json.dumps(slot_results)
+
+    # Persistence begins only after every provider-model call above has
+    # completed.  The citation audit is inserted first so the Query can link
+    # to its generated id; then the Query id is available to coverage/firing
+    # receipts in the same transaction.
+    if citation_session is not None:
+        db.add(citation_session)
+        await db.flush()
+        query.citation_hop_session_id = citation_session.id
+    db.add(query)
+    await db.flush()
 
     # Regulatory coverage: queue CFR refs cited but not resolved this query.
     if ctx is not None and ctx.resolved_regulations is not None:
@@ -1664,8 +1676,6 @@ async def _finalize_query_results(
         resolved_refs = {r.cfr_ref for r in ctx.resolved_regulations}
         await record_regulatory_coverage_gaps(db, query.response_text or "", resolved_refs, query.id)
 
-    query.cost_usd = total_cost
-    query.results_json = json.dumps(slot_results)
     fired_engram_ids = [r.engram_id for r in ctx.resolved_regulations] if ctx and ctx.resolved_regulations else []
     await _update_counters_and_fire(
         db, query, slot_results, classify_result,
@@ -1717,6 +1727,34 @@ def _decide_primary_tier(
     return decide_tier_escalation(ctx, user_message, ctx_overlap)
 
 
+def _build_slot_tasks(
+    slots: list[dict],
+    ctx_by_cfg: dict[tuple, PreparedContext | None],
+    user_message: str,
+    on_stage: StageCallback,
+    session_spec: dict | None,
+    tier_decision: TierDecision | None,
+) -> list:
+    """Build DB-free provider coroutines for concurrent slot execution."""
+    tasks = []
+    for i, slot in enumerate(slots):
+        mode = slot.get("mode", "haiku_neuron")
+        parts = mode.rsplit("_", 1)
+        uses_neurons = len(parts) <= 1 or parts[1] == "neuron"
+        slot_ctx = ctx_by_cfg.get(_slot_spread_cfg(slot)) if uses_neurons else None
+        tasks.append(_execute_slot(
+            slot=slot,
+            slot_index=i,
+            user_message=user_message,
+            ctx=slot_ctx,
+            on_stage=on_stage,
+            is_primary=(i == 0),
+            session_spec=session_spec if i == 0 else None,
+            tier_decision=tier_decision if i == 0 else None,
+        ))
+    return tasks
+
+
 async def execute_query(
     db: AsyncSession,
     user_message: str,
@@ -1762,7 +1800,8 @@ async def execute_query(
     if ctx is None and ctx_by_cfg:
         ctx = next(iter(ctx_by_cfg.values()))
 
-    # Create query record early (before execution). primary_prompt is the
+    # Build the query record before execution, but keep it transient until all
+    # provider work finishes. primary_prompt is the
     # ground truth later evals judge against (query.py evaluate_query) — it
     # must be the context the primary answer actually grounded on, including
     # a drift-gate-reused session block. Was "" from 2026-04 to 2026-07-10,
@@ -1772,38 +1811,24 @@ async def execute_query(
         primary_prompt=(ctx.system_prompt if ctx else ""),
         classify_result=classify_result,
     )
-    db.add(query)
-    await db.flush()
-
     intent = ctx.intent if ctx else "general_query"
     all_scored = ctx.all_scored if ctx else []
     neuron_map = ctx.neuron_map if ctx else {}
 
     tier_decision = _decide_primary_tier(slots, ctx, user_message, ctx_overlap)
 
+    # SQLAlchemy checks out a pooled connection on the first prep query and
+    # otherwise holds it for the entire request. End the completed read phase
+    # before provider subprocesses can wait for seconds or minutes. The same
+    # session is reused for a fresh persistence transaction after execution.
+    await release_connection_before_external_io(db)
+
     # Execute each slot in parallel. Raw slots get no neuron context (vanilla
     # control group); slot 0 is the primary answer (effort/model floor) and the
     # only slot a persisted session applies to — compare slots stay stateless.
-    slot_tasks = []
-    for i, slot in enumerate(slots):
-        mode = slot.get("mode", "haiku_neuron")
-        parts = mode.rsplit("_", 1)
-        slot_type = parts[1] if len(parts) > 1 else "neuron"
-        uses_neurons = slot_type == "neuron"
-        slot_ctx = ctx_by_cfg.get(_slot_spread_cfg(slot)) if uses_neurons else None
-        task = _execute_slot(
-            db=db,
-            slot=slot,
-            slot_index=i,
-            user_message=user_message,
-            ctx=slot_ctx,
-            on_stage=on_stage,
-            is_primary=(i == 0),
-            session_spec=session_spec if i == 0 else None,
-            tier_decision=tier_decision if i == 0 else None,
-        )
-        slot_tasks.append(task)
-
+    slot_tasks = _build_slot_tasks(
+        slots, ctx_by_cfg, user_message, on_stage, session_spec, tier_decision,
+    )
     slot_results = await asyncio.gather(*slot_tasks)
     if session_spec:
         _update_session_context(session_spec, slot_results, ctx)
@@ -1848,7 +1873,11 @@ async def _load_candidates_by_ids(
 
     # Fast path: serve from the materialized NeuronIndex (unrestricted requesters
     # only — ACL filtering stays on the DB path).
-    if settings.neuron_index_enabled and requester is None:
+    if (
+        settings.neuron_index_enabled
+        and settings.cache_coherence_mode == "process-local"
+        and requester is None
+    ):
         from app.services.neuron_index import ensure_index_loaded, get_index
         await ensure_index_loaded(db)
         return get_index().candidates(neuron_ids, keywords)

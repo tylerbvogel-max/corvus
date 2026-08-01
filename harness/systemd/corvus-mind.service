@@ -5,8 +5,9 @@ Description=Corvus Mind — agentic memory tenant (port 8005)
 Type=simple
 Environment=TENANT_ID=corvus-mind
 Environment=PORT=8005
+EnvironmentFile=/home/tylerbvogel/Projects/corvus/deploy/memory-tenant.env
 WorkingDirectory=/home/tylerbvogel/Projects/corvus/backend
-ExecStart=/home/tylerbvogel/Projects/corvus/backend/venv/bin/uvicorn app.main:app --port 8005
+ExecStart=/bin/bash /home/tylerbvogel/Projects/corvus/backend/scripts/start_backend.sh
 Restart=on-failure
 RestartSec=10
 

@@ -1,0 +1,7175 @@
+{
+  "components": {
+    "schemas": {
+      "ApplyRefineRequest": {
+        "properties": {
+          "new_neuron_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "New Neuron Ids",
+            "type": "array"
+          },
+          "update_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Update Ids",
+            "type": "array"
+          }
+        },
+        "title": "ApplyRefineRequest",
+        "type": "object"
+      },
+      "ApplyRefineResponse": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated",
+          "created"
+        ],
+        "title": "ApplyRefineResponse",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "properties": {
+          "effort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort"
+          },
+          "history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "message": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "model": {
+            "default": "codex-luna",
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
+      "ChatResponse": {
+        "properties": {
+          "cost_usd": {
+            "default": 0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "input_tokens": {
+            "default": 0,
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "output_tokens": {
+            "default": 0,
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "response": {
+            "title": "Response",
+            "type": "string"
+          }
+        },
+        "required": [
+          "response",
+          "model"
+        ],
+        "title": "ChatResponse",
+        "type": "object"
+      },
+      "ContextRequest": {
+        "properties": {
+          "message": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "project_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Path"
+          },
+          "token_budget": {
+            "default": 4000,
+            "maximum": 16000.0,
+            "minimum": 500.0,
+            "title": "Token Budget",
+            "type": "integer"
+          },
+          "top_k": {
+            "default": 8,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "ContextRequest",
+        "type": "object"
+      },
+      "ContextResponse": {
+        "properties": {
+          "assembly_stop_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assembly Stop Reason"
+          },
+          "candidates_considered": {
+            "default": 0,
+            "title": "Candidates Considered",
+            "type": "integer"
+          },
+          "classify_cost_usd": {
+            "default": 0,
+            "title": "Classify Cost Usd",
+            "type": "number"
+          },
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "estimated_memory_tokens": {
+            "default": 0,
+            "title": "Estimated Memory Tokens",
+            "type": "integer"
+          },
+          "intent": {
+            "title": "Intent",
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "memory_context_chars": {
+            "default": 0,
+            "title": "Memory Context Chars",
+            "type": "integer"
+          },
+          "memory_context_utf8_bytes": {
+            "default": 0,
+            "title": "Memory Context Utf8 Bytes",
+            "type": "integer"
+          },
+          "memory_token_budget": {
+            "default": 0,
+            "title": "Memory Token Budget",
+            "type": "integer"
+          },
+          "neuron_scores": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Neuron Scores",
+            "type": "array"
+          },
+          "neurons_activated": {
+            "title": "Neurons Activated",
+            "type": "integer"
+          },
+          "neurons_delivered": {
+            "default": 0,
+            "title": "Neurons Delivered",
+            "type": "integer"
+          },
+          "recall_latency_ms": {
+            "default": 0.0,
+            "title": "Recall Latency Ms",
+            "type": "number"
+          },
+          "redundancy_suppressed": {
+            "default": 0,
+            "title": "Redundancy Suppressed",
+            "type": "integer"
+          },
+          "role_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Role Keys",
+            "type": "array"
+          },
+          "system_prompt": {
+            "title": "System Prompt",
+            "type": "string"
+          },
+          "token_estimator_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Estimator Version"
+          }
+        },
+        "required": [
+          "system_prompt",
+          "intent",
+          "departments",
+          "role_keys",
+          "keywords",
+          "neurons_activated"
+        ],
+        "title": "ContextResponse",
+        "type": "object"
+      },
+      "DossierActionOut": {
+        "description": "One Action audit-trail row scoped to a specific query.",
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "actor_type": {
+            "title": "Actor Type",
+            "type": "string"
+          },
+          "applied_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "parent_action_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Action Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "requires_approval": {
+            "default": false,
+            "title": "Requires Approval",
+            "type": "boolean"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "actor_type",
+          "state"
+        ],
+        "title": "DossierActionOut",
+        "type": "object"
+      },
+      "DossierEvalRunParticipation": {
+        "description": "Indicates an EvalRun included this query as one of its cases.",
+        "properties": {
+          "blocked": {
+            "default": false,
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "case_label": {
+            "title": "Case Label",
+            "type": "string"
+          },
+          "certified": {
+            "title": "Certified",
+            "type": "boolean"
+          },
+          "eval_run_case_id": {
+            "title": "Eval Run Case Id",
+            "type": "integer"
+          },
+          "eval_run_id": {
+            "title": "Eval Run Id",
+            "type": "integer"
+          },
+          "run_completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Completed At"
+          },
+          "run_started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Started At"
+          },
+          "run_status": {
+            "title": "Run Status",
+            "type": "string"
+          },
+          "scores_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scores Json"
+          },
+          "suite_hash": {
+            "title": "Suite Hash",
+            "type": "string"
+          },
+          "suite_name": {
+            "title": "Suite Name",
+            "type": "string"
+          },
+          "violations_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Violations Json"
+          }
+        },
+        "required": [
+          "eval_run_id",
+          "eval_run_case_id",
+          "case_label",
+          "suite_name",
+          "suite_hash",
+          "certified",
+          "run_status"
+        ],
+        "title": "DossierEvalRunParticipation",
+        "type": "object"
+      },
+      "DossierIntegrityFindingOut": {
+        "description": "An IntegrityFinding attributed to this query via neuron-id overlap.",
+        "properties": {
+          "attributed_via": {
+            "title": "Attributed Via",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "finding_type": {
+            "title": "Finding Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "overlapping_neuron_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Overlapping Neuron Ids",
+            "type": "array"
+          },
+          "priority_score": {
+            "title": "Priority Score",
+            "type": "number"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "integer"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scan_id",
+          "finding_type",
+          "severity",
+          "priority_score",
+          "status",
+          "attributed_via"
+        ],
+        "title": "DossierIntegrityFindingOut",
+        "type": "object"
+      },
+      "DossierOutputViolationOut": {
+        "description": "One OutputViolation row for this query, with linkage to its triggering Action.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "action_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "matched_span": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Span"
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redaction"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule_id",
+          "severity",
+          "action"
+        ],
+        "title": "DossierOutputViolationOut",
+        "type": "object"
+      },
+      "EngramCreate": {
+        "description": "Payload for seeding a new engram (optionally from a coverage gap).",
+        "properties": {
+          "authority_level": {
+            "default": "regulatory",
+            "title": "Authority Level",
+            "type": "string"
+          },
+          "cfr_part": {
+            "title": "Cfr Part",
+            "type": "string"
+          },
+          "cfr_section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cfr Section"
+          },
+          "cfr_title": {
+            "title": "Cfr Title",
+            "type": "integer"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "gap_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Id"
+          },
+          "issuing_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuing Body"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source_api": {
+            "default": "ecfr",
+            "title": "Source Api",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "cfr_title",
+          "cfr_part",
+          "label"
+        ],
+        "title": "EngramCreate",
+        "type": "object"
+      },
+      "EvalRequest": {
+        "properties": {
+          "model": {
+            "default": "sonnet",
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "title": "EvalRequest",
+        "type": "object"
+      },
+      "EvalResponse": {
+        "properties": {
+          "eval_input_tokens": {
+            "title": "Eval Input Tokens",
+            "type": "integer"
+          },
+          "eval_model": {
+            "title": "Eval Model",
+            "type": "string"
+          },
+          "eval_output_tokens": {
+            "title": "Eval Output Tokens",
+            "type": "integer"
+          },
+          "eval_text": {
+            "title": "Eval Text",
+            "type": "string"
+          },
+          "learning": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SynapticLearningOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "scores": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvalScoreOut"
+            },
+            "title": "Scores",
+            "type": "array"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner"
+          }
+        },
+        "required": [
+          "query_id",
+          "eval_text",
+          "eval_model",
+          "eval_input_tokens",
+          "eval_output_tokens"
+        ],
+        "title": "EvalResponse",
+        "type": "object"
+      },
+      "EvalScoreOut": {
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "answer_label": {
+            "title": "Answer Label",
+            "type": "string"
+          },
+          "answer_mode": {
+            "title": "Answer Mode",
+            "type": "string"
+          },
+          "clarity": {
+            "title": "Clarity",
+            "type": "number"
+          },
+          "completeness": {
+            "title": "Completeness",
+            "type": "number"
+          },
+          "faithfulness": {
+            "title": "Faithfulness",
+            "type": "number"
+          },
+          "overall": {
+            "title": "Overall",
+            "type": "number"
+          }
+        },
+        "required": [
+          "answer_label",
+          "answer_mode",
+          "accuracy",
+          "completeness",
+          "clarity",
+          "faithfulness",
+          "overall"
+        ],
+        "title": "EvalScoreOut",
+        "type": "object"
+      },
+      "EvalScoreSummary": {
+        "properties": {
+          "accuracy": {
+            "title": "Accuracy",
+            "type": "number"
+          },
+          "answer_label": {
+            "title": "Answer Label",
+            "type": "string"
+          },
+          "answer_mode": {
+            "title": "Answer Mode",
+            "type": "string"
+          },
+          "clarity": {
+            "title": "Clarity",
+            "type": "number"
+          },
+          "completeness": {
+            "title": "Completeness",
+            "type": "number"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "eval_model": {
+            "title": "Eval Model",
+            "type": "string"
+          },
+          "faithfulness": {
+            "title": "Faithfulness",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "overall": {
+            "title": "Overall",
+            "type": "number"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "query_id",
+          "eval_model",
+          "answer_mode",
+          "answer_label",
+          "accuracy",
+          "completeness",
+          "clarity",
+          "faithfulness",
+          "overall",
+          "created_at"
+        ],
+        "title": "EvalScoreSummary",
+        "type": "object"
+      },
+      "FiringDetail": {
+        "properties": {
+          "burst": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst"
+          },
+          "combined_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Combined Score"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "firing_id": {
+            "title": "Firing Id",
+            "type": "integer"
+          },
+          "impact": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact"
+          },
+          "novelty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Novelty"
+          },
+          "precision": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precision"
+          },
+          "query_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Id"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "recency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recency"
+          },
+          "relevance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevance"
+          },
+          "spread_boost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread Boost"
+          },
+          "was_included": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Was Included"
+          }
+        },
+        "required": [
+          "firing_id",
+          "query_id",
+          "rank",
+          "combined_score",
+          "burst",
+          "impact",
+          "precision",
+          "novelty",
+          "recency",
+          "relevance",
+          "spread_boost",
+          "was_included",
+          "created_at"
+        ],
+        "title": "FiringDetail",
+        "type": "object"
+      },
+      "FollowUpSuggestion": {
+        "description": "One suggested next question derived from a completed query + answer.",
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "FollowUpSuggestion",
+        "type": "object"
+      },
+      "FollowUpSuggestionsResponse": {
+        "description": "2-3 follow-up questions generated from a completed query.\n\nProduced by a post-hoc Haiku call; cached on the Query row so the\nsame question doesn't re-trigger LLM work on page refresh.",
+        "properties": {
+          "cost_usd": {
+            "default": 0.0,
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query_id",
+          "suggestions"
+        ],
+        "title": "FollowUpSuggestionsResponse",
+        "type": "object"
+      },
+      "GroundingOut": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "grounded": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grounded"
+          },
+          "overlap_terms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overlap Terms"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          },
+          "response_terms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Terms"
+          },
+          "ungrounded_references": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Ungrounded References",
+            "type": "array"
+          }
+        },
+        "title": "GroundingOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "ImportRequest": {
+        "properties": {
+          "apply": {
+            "default": false,
+            "title": "Apply",
+            "type": "boolean"
+          },
+          "capsule": {
+            "additionalProperties": true,
+            "title": "Capsule",
+            "type": "object"
+          },
+          "target_harness": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Target Harness",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capsule",
+          "target_harness"
+        ],
+        "title": "ImportRequest",
+        "type": "object"
+      },
+      "InputGuardOut": {
+        "properties": {
+          "flag_count": {
+            "default": 0,
+            "title": "Flag Count",
+            "type": "integer"
+          },
+          "flags": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "verdict": {
+            "default": "pass",
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "title": "InputGuardOut",
+        "type": "object"
+      },
+      "InspectRequest": {
+        "properties": {
+          "capsule": {
+            "additionalProperties": true,
+            "title": "Capsule",
+            "type": "object"
+          },
+          "target_harness": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Target Harness",
+            "type": "string"
+          }
+        },
+        "required": [
+          "capsule",
+          "target_harness"
+        ],
+        "title": "InspectRequest",
+        "type": "object"
+      },
+      "LearningAnalytics": {
+        "properties": {
+          "avg_penalty": {
+            "title": "Avg Penalty",
+            "type": "number"
+          },
+          "avg_reward": {
+            "title": "Avg Reward",
+            "type": "number"
+          },
+          "recent_events": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/LearningEventOut"
+            },
+            "title": "Recent Events",
+            "type": "array"
+          },
+          "total_events": {
+            "title": "Total Events",
+            "type": "integer"
+          },
+          "total_losses": {
+            "title": "Total Losses",
+            "type": "integer"
+          },
+          "total_wins": {
+            "title": "Total Wins",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_events",
+          "total_wins",
+          "total_losses",
+          "avg_reward",
+          "avg_penalty"
+        ],
+        "title": "LearningAnalytics",
+        "type": "object"
+      },
+      "LearningEventOut": {
+        "properties": {
+          "attribution_weight": {
+            "title": "Attribution Weight",
+            "type": "number"
+          },
+          "combined_score": {
+            "title": "Combined Score",
+            "type": "number"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "effective_delta": {
+            "title": "Effective Delta",
+            "type": "number"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "neuron_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neuron Label"
+          },
+          "new_avg_utility": {
+            "title": "New Avg Utility",
+            "type": "number"
+          },
+          "old_avg_utility": {
+            "title": "Old Avg Utility",
+            "type": "number"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "winner_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner Mode"
+          }
+        },
+        "required": [
+          "id",
+          "query_id",
+          "neuron_id",
+          "event_type",
+          "old_avg_utility",
+          "new_avg_utility",
+          "effective_delta",
+          "combined_score",
+          "attribution_weight",
+          "outcome"
+        ],
+        "title": "LearningEventOut",
+        "type": "object"
+      },
+      "NeuronDetail": {
+        "properties": {
+          "avg_utility": {
+            "title": "Avg Utility",
+            "type": "number"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "cross_ref_departments": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cross Ref Departments"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "invocations": {
+            "title": "Invocations",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "node_type": {
+            "title": "Node Type",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "role_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Key"
+          },
+          "standard_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Date"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "id",
+          "parent_id",
+          "layer",
+          "node_type",
+          "label",
+          "content",
+          "summary",
+          "department",
+          "role_key",
+          "invocations",
+          "avg_utility",
+          "is_active"
+        ],
+        "title": "NeuronDetail",
+        "type": "object"
+      },
+      "NeuronForwardResult": {
+        "properties": {
+          "firings": {
+            "items": {
+              "$ref": "#/components/schemas/FiringDetail"
+            },
+            "title": "Firings",
+            "type": "array"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "neuron_label": {
+            "title": "Neuron Label",
+            "type": "string"
+          },
+          "total_firings": {
+            "title": "Total Firings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "neuron_label",
+          "total_firings",
+          "firings"
+        ],
+        "title": "NeuronForwardResult",
+        "type": "object"
+      },
+      "NeuronHit": {
+        "properties": {
+          "burst": {
+            "title": "Burst",
+            "type": "number"
+          },
+          "combined": {
+            "title": "Combined",
+            "type": "number"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "impact": {
+            "title": "Impact",
+            "type": "number"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "novelty": {
+            "title": "Novelty",
+            "type": "number"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "precision": {
+            "title": "Precision",
+            "type": "number"
+          },
+          "recency": {
+            "title": "Recency",
+            "type": "number"
+          },
+          "relevance": {
+            "title": "Relevance",
+            "type": "number"
+          },
+          "spread_boost": {
+            "default": 0,
+            "title": "Spread Boost",
+            "type": "number"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "label",
+          "layer",
+          "department",
+          "combined",
+          "burst",
+          "impact",
+          "precision",
+          "novelty",
+          "recency",
+          "relevance"
+        ],
+        "title": "NeuronHit",
+        "type": "object"
+      },
+      "NeuronRefinementOut": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "neuron_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neuron Label"
+          },
+          "new_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value"
+          },
+          "old_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value"
+          },
+          "query_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Id"
+          },
+          "query_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Snippet"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "id",
+          "neuron_id",
+          "action"
+        ],
+        "title": "NeuronRefinementOut",
+        "type": "object"
+      },
+      "NeuronScoreDetail": {
+        "properties": {
+          "burst": {
+            "title": "Burst",
+            "type": "number"
+          },
+          "combined": {
+            "title": "Combined",
+            "type": "number"
+          },
+          "impact": {
+            "title": "Impact",
+            "type": "number"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "novelty": {
+            "title": "Novelty",
+            "type": "number"
+          },
+          "precision": {
+            "title": "Precision",
+            "type": "number"
+          },
+          "recency": {
+            "title": "Recency",
+            "type": "number"
+          },
+          "relevance": {
+            "title": "Relevance",
+            "type": "number"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "burst",
+          "impact",
+          "precision",
+          "novelty",
+          "recency",
+          "relevance",
+          "combined"
+        ],
+        "title": "NeuronScoreDetail",
+        "type": "object"
+      },
+      "NeuronScoreResponse": {
+        "properties": {
+          "burst": {
+            "title": "Burst",
+            "type": "number"
+          },
+          "combined": {
+            "title": "Combined",
+            "type": "number"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "impact": {
+            "title": "Impact",
+            "type": "number"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "layer": {
+            "default": 0,
+            "title": "Layer",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "novelty": {
+            "title": "Novelty",
+            "type": "number"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "precision": {
+            "title": "Precision",
+            "type": "number"
+          },
+          "recency": {
+            "title": "Recency",
+            "type": "number"
+          },
+          "relevance": {
+            "title": "Relevance",
+            "type": "number"
+          },
+          "spread_boost": {
+            "default": 0,
+            "title": "Spread Boost",
+            "type": "number"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "combined",
+          "burst",
+          "impact",
+          "precision",
+          "novelty",
+          "recency",
+          "relevance"
+        ],
+        "title": "NeuronScoreResponse",
+        "type": "object"
+      },
+      "NeuronUpdateSuggestion": {
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "new_value": {
+            "title": "New Value",
+            "type": "string"
+          },
+          "old_value": {
+            "title": "Old Value",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "field",
+          "old_value",
+          "new_value",
+          "reason"
+        ],
+        "title": "NeuronUpdateSuggestion",
+        "type": "object"
+      },
+      "NewNeuronSuggestion": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "node_type": {
+            "title": "Node Type",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "role_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Key"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "layer",
+          "node_type",
+          "label",
+          "content",
+          "summary",
+          "reason"
+        ],
+        "title": "NewNeuronSuggestion",
+        "type": "object"
+      },
+      "OutputCheckOut": {
+        "properties": {
+          "entailment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entailment"
+          },
+          "grounding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroundingOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "risk_flags": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Risk Flags",
+            "type": "array"
+          }
+        },
+        "title": "OutputCheckOut",
+        "type": "object"
+      },
+      "OutputViolationOut": {
+        "description": "Serialized runtime policy-gate violation (Pattern #7).",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "matched_span": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Span"
+          },
+          "redaction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Redaction"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rule_id",
+          "severity",
+          "action"
+        ],
+        "title": "OutputViolationOut",
+        "type": "object"
+      },
+      "OverrideIn": {
+        "properties": {
+          "ceiling": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceiling"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "signal": {
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal"
+        ],
+        "title": "OverrideIn",
+        "type": "object"
+      },
+      "OverrideOut": {
+        "properties": {
+          "ceiling": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceiling"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "signal": {
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "neuron_id",
+          "signal",
+          "floor",
+          "ceiling",
+          "multiplier",
+          "reason",
+          "created_by",
+          "is_active",
+          "created_at"
+        ],
+        "title": "OverrideOut",
+        "type": "object"
+      },
+      "QueryDetail": {
+        "properties": {
+          "assembled_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assembled Prompt"
+          },
+          "classified_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classified Intent"
+          },
+          "classify_cost": {
+            "default": 0,
+            "title": "Classify Cost",
+            "type": "number"
+          },
+          "classify_input_tokens": {
+            "title": "Classify Input Tokens",
+            "type": "integer"
+          },
+          "classify_output_tokens": {
+            "title": "Classify Output Tokens",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "eval_input_tokens": {
+            "default": 0,
+            "title": "Eval Input Tokens",
+            "type": "integer"
+          },
+          "eval_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Model"
+          },
+          "eval_output_tokens": {
+            "default": 0,
+            "title": "Eval Output Tokens",
+            "type": "integer"
+          },
+          "eval_scores": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvalScoreOut"
+            },
+            "title": "Eval Scores",
+            "type": "array"
+          },
+          "eval_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Text"
+          },
+          "eval_winner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Winner"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "neuron_hits": {
+            "items": {
+              "$ref": "#/components/schemas/NeuronHit"
+            },
+            "title": "Neuron Hits",
+            "type": "array"
+          },
+          "pending_refine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefineResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "refinements": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RefinementOut"
+            },
+            "title": "Refinements",
+            "type": "array"
+          },
+          "role_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Role Keys",
+            "type": "array"
+          },
+          "slots": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SlotResult"
+            },
+            "title": "Slots",
+            "type": "array"
+          },
+          "total_cost": {
+            "default": 0,
+            "title": "Total Cost",
+            "type": "number"
+          },
+          "user_message": {
+            "title": "User Message",
+            "type": "string"
+          },
+          "user_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Rating"
+          }
+        },
+        "required": [
+          "id",
+          "user_message",
+          "classified_intent",
+          "departments",
+          "role_keys",
+          "keywords",
+          "assembled_prompt",
+          "classify_input_tokens",
+          "classify_output_tokens",
+          "user_rating",
+          "neuron_hits",
+          "created_at"
+        ],
+        "title": "QueryDetail",
+        "type": "object"
+      },
+      "QueryDossier": {
+        "description": "AIP Phase 3 — unified per-query reviewable artifact.",
+        "properties": {
+          "actions": {
+            "$ref": "#/components/schemas/QueryDossierActionsSection"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "eval": {
+            "$ref": "#/components/schemas/QueryDossierEvalSection"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/QueryDossierIntegritySection"
+          },
+          "output_checks": {
+            "$ref": "#/components/schemas/QueryDossierOutputSection"
+          },
+          "pipeline": {
+            "$ref": "#/components/schemas/QueryDossierPipelineSection"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "user_message": {
+            "title": "User Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query_id",
+          "user_message",
+          "pipeline",
+          "eval",
+          "output_checks",
+          "actions",
+          "integrity"
+        ],
+        "title": "QueryDossier",
+        "type": "object"
+      },
+      "QueryDossierActionsSection": {
+        "description": "Full Action audit trail with source_query_id == this query.",
+        "properties": {
+          "actions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DossierActionOut"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "title": "QueryDossierActionsSection",
+        "type": "object"
+      },
+      "QueryDossierEvalSection": {
+        "description": "Eval-level signals: ad-hoc scores + eval-run participations.",
+        "properties": {
+          "ad_hoc_scores": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvalScoreOut"
+            },
+            "title": "Ad Hoc Scores",
+            "type": "array"
+          },
+          "eval_run_participations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DossierEvalRunParticipation"
+            },
+            "title": "Eval Run Participations",
+            "type": "array"
+          }
+        },
+        "title": "QueryDossierEvalSection",
+        "type": "object"
+      },
+      "QueryDossierIntegritySection": {
+        "description": "IntegrityFindings whose neuron_ids overlap with this query's selected neurons.",
+        "properties": {
+          "findings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DossierIntegrityFindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          }
+        },
+        "title": "QueryDossierIntegritySection",
+        "type": "object"
+      },
+      "QueryDossierOutputSection": {
+        "description": "Output-guard violations (Pattern #7) fired against this query.",
+        "properties": {
+          "violations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DossierOutputViolationOut"
+            },
+            "title": "Violations",
+            "type": "array"
+          }
+        },
+        "title": "QueryDossierOutputSection",
+        "type": "object"
+      },
+      "QueryDossierPipelineSection": {
+        "description": "Per-stage pipeline telemetry (from queries.stage_telemetry_json).",
+        "properties": {
+          "stage_telemetry": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Stage Telemetry",
+            "type": "array"
+          }
+        },
+        "title": "QueryDossierPipelineSection",
+        "type": "object"
+      },
+      "QueryRequest": {
+        "properties": {
+          "audit_grade": {
+            "default": false,
+            "title": "Audit Grade",
+            "type": "boolean"
+          },
+          "effort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort"
+          },
+          "llm_session_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[0-9a-fA-F-]{8,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Session Id"
+          },
+          "message": {
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "persist_session": {
+            "default": false,
+            "title": "Persist Session",
+            "type": "boolean"
+          },
+          "prior_neuron_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prior Neuron Ids"
+          },
+          "refresh_context": {
+            "default": false,
+            "title": "Refresh Context",
+            "type": "boolean"
+          },
+          "slots": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/QuerySlotRequest"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slots"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "QueryRequest",
+        "type": "object"
+      },
+      "QueryResponse": {
+        "properties": {
+          "assembly_stop_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assembly Stop Reason"
+          },
+          "candidates_considered": {
+            "default": 0,
+            "title": "Candidates Considered",
+            "type": "integer"
+          },
+          "classify_cost": {
+            "default": 0,
+            "title": "Classify Cost",
+            "type": "number"
+          },
+          "classify_input_tokens": {
+            "default": 0,
+            "title": "Classify Input Tokens",
+            "type": "integer"
+          },
+          "classify_output_tokens": {
+            "default": 0,
+            "title": "Classify Output Tokens",
+            "type": "integer"
+          },
+          "context_overlap": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Overlap"
+          },
+          "context_reused": {
+            "default": false,
+            "title": "Context Reused",
+            "type": "boolean"
+          },
+          "departments": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Departments",
+            "type": "array"
+          },
+          "estimated_memory_tokens": {
+            "default": 0,
+            "title": "Estimated Memory Tokens",
+            "type": "integer"
+          },
+          "failed_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Stage"
+          },
+          "input_guard": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InputGuardOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "keywords": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "llm_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Session Id"
+          },
+          "memory_context_chars": {
+            "default": 0,
+            "title": "Memory Context Chars",
+            "type": "integer"
+          },
+          "memory_context_utf8_bytes": {
+            "default": 0,
+            "title": "Memory Context Utf8 Bytes",
+            "type": "integer"
+          },
+          "memory_token_budget": {
+            "default": 0,
+            "title": "Memory Token Budget",
+            "type": "integer"
+          },
+          "neuron_scores": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NeuronScoreResponse"
+            },
+            "title": "Neuron Scores",
+            "type": "array"
+          },
+          "neurons_activated": {
+            "default": 0,
+            "title": "Neurons Activated",
+            "type": "integer"
+          },
+          "neurons_delivered": {
+            "default": 0,
+            "title": "Neurons Delivered",
+            "type": "integer"
+          },
+          "observed_total_model_input_tokens": {
+            "default": 0,
+            "title": "Observed Total Model Input Tokens",
+            "type": "integer"
+          },
+          "output_checks": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OutputCheckOut"
+            },
+            "title": "Output Checks",
+            "type": "array"
+          },
+          "output_violations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/OutputViolationOut"
+            },
+            "title": "Output Violations",
+            "type": "array"
+          },
+          "oversized_first_neuron": {
+            "default": false,
+            "title": "Oversized First Neuron",
+            "type": "boolean"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "recall_latency_ms": {
+            "default": 0.0,
+            "title": "Recall Latency Ms",
+            "type": "number"
+          },
+          "redundancy_suppressed": {
+            "default": 0,
+            "title": "Redundancy Suppressed",
+            "type": "integer"
+          },
+          "role_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Role Keys",
+            "type": "array"
+          },
+          "slots": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SlotResult"
+            },
+            "title": "Slots",
+            "type": "array"
+          },
+          "stage_telemetry": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StageTelemetryOut"
+            },
+            "title": "Stage Telemetry",
+            "type": "array"
+          },
+          "tier_routing": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier Routing"
+          },
+          "token_estimator_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Estimator Version"
+          },
+          "total_cost": {
+            "default": 0,
+            "title": "Total Cost",
+            "type": "number"
+          }
+        },
+        "required": [
+          "query_id"
+        ],
+        "title": "QueryResponse",
+        "type": "object"
+      },
+      "QuerySlotRequest": {
+        "properties": {
+          "audit": {
+            "default": false,
+            "title": "Audit",
+            "type": "boolean"
+          },
+          "effort": {
+            "anyOf": [
+              {
+                "pattern": "^(low|medium|high)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effort"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "max_output_tokens": {
+            "anyOf": [
+              {
+                "maximum": 8192.0,
+                "minimum": 256.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Output Tokens"
+          },
+          "mode": {
+            "minLength": 1,
+            "title": "Mode",
+            "type": "string"
+          },
+          "priming": {
+            "default": true,
+            "title": "Priming",
+            "type": "boolean"
+          },
+          "spread_floor": {
+            "anyOf": [
+              {
+                "maximum": 0.5,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread Floor"
+          },
+          "spread_hops": {
+            "anyOf": [
+              {
+                "maximum": 6.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spread Hops"
+          },
+          "token_budget": {
+            "default": 8000,
+            "maximum": 32000.0,
+            "minimum": 1000.0,
+            "title": "Token Budget",
+            "type": "integer"
+          },
+          "top_k": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top K"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "QuerySlotRequest",
+        "type": "object"
+      },
+      "QuerySummary": {
+        "properties": {
+          "classified_intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classified Intent"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "modes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Modes",
+            "type": "array"
+          },
+          "user_message": {
+            "title": "User Message",
+            "type": "string"
+          },
+          "user_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Rating"
+          }
+        },
+        "required": [
+          "id",
+          "user_message",
+          "classified_intent",
+          "cost_usd",
+          "user_rating",
+          "created_at"
+        ],
+        "title": "QuerySummary",
+        "type": "object"
+      },
+      "QueryTraceResult": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "fired_neurons": {
+            "items": {
+              "$ref": "#/components/schemas/TraceFiring"
+            },
+            "title": "Fired Neurons",
+            "type": "array"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "user_message": {
+            "title": "User Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query_id",
+          "user_message",
+          "created_at",
+          "fired_neurons"
+        ],
+        "title": "QueryTraceResult",
+        "type": "object"
+      },
+      "RatingRequest": {
+        "properties": {
+          "utility": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Utility",
+            "type": "number"
+          }
+        },
+        "required": [
+          "utility"
+        ],
+        "title": "RatingRequest",
+        "type": "object"
+      },
+      "RatingResponse": {
+        "properties": {
+          "neurons_updated": {
+            "title": "Neurons Updated",
+            "type": "integer"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "utility": {
+            "title": "Utility",
+            "type": "number"
+          }
+        },
+        "required": [
+          "query_id",
+          "utility",
+          "neurons_updated"
+        ],
+        "title": "RatingResponse",
+        "type": "object"
+      },
+      "RecallRequest": {
+        "properties": {
+          "include_content": {
+            "default": false,
+            "title": "Include Content",
+            "type": "boolean"
+          },
+          "persist": {
+            "default": true,
+            "title": "Persist",
+            "type": "boolean"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "query": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "source": {
+            "default": "api",
+            "maxLength": 40,
+            "title": "Source",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "maximum": 25.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "RecallRequest",
+        "type": "object"
+      },
+      "RefineRequest": {
+        "properties": {
+          "max_tokens": {
+            "default": 4096,
+            "maximum": 16384.0,
+            "minimum": 512.0,
+            "title": "Max Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "default": "opus",
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "user_context": {
+            "anyOf": [
+              {
+                "maxLength": 16000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Context"
+          }
+        },
+        "title": "RefineRequest",
+        "type": "object"
+      },
+      "RefineResponse": {
+        "properties": {
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "neuron_vs_raw_verdict": {
+            "default": "",
+            "title": "Neuron Vs Raw Verdict",
+            "type": "string"
+          },
+          "new_neurons": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NewNeuronSuggestion"
+            },
+            "title": "New Neurons",
+            "type": "array"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "query_id": {
+            "title": "Query Id",
+            "type": "integer"
+          },
+          "reasoning": {
+            "title": "Reasoning",
+            "type": "string"
+          },
+          "updates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NeuronUpdateSuggestion"
+            },
+            "title": "Updates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query_id",
+          "model",
+          "input_tokens",
+          "output_tokens",
+          "reasoning"
+        ],
+        "title": "RefineResponse",
+        "type": "object"
+      },
+      "RefinementOut": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "neuron_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neuron Label"
+          },
+          "new_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value"
+          },
+          "old_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "id",
+          "neuron_id",
+          "action"
+        ],
+        "title": "RefinementOut",
+        "type": "object"
+      },
+      "RegionPolicyIn": {
+        "properties": {
+          "acl": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acl"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "loop_config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loop Config"
+          },
+          "projection": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projection"
+          },
+          "scoring_weights": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scoring Weights"
+          },
+          "write_gate": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Write Gate"
+          }
+        },
+        "title": "RegionPolicyIn",
+        "type": "object"
+      },
+      "RememberRequest": {
+        "properties": {
+          "abstraction_type": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "principle",
+            "title": "Abstraction Type"
+          },
+          "authority_level": {
+            "default": "informational",
+            "maxLength": 30,
+            "title": "Authority Level",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "context": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "entities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entities"
+          },
+          "evidence": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "future_use": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Future Use"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "lesson": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Lesson",
+            "type": "string"
+          },
+          "likely_queries": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likely Queries"
+          },
+          "node_type": {
+            "default": "lesson",
+            "maxLength": 50,
+            "title": "Node Type",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "time_scope": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Scope"
+          },
+          "volatility": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Volatility"
+          }
+        },
+        "required": [
+          "lesson",
+          "evidence",
+          "label"
+        ],
+        "title": "RememberRequest",
+        "type": "object"
+      },
+      "SlotResult": {
+        "properties": {
+          "audit_grade": {
+            "default": false,
+            "title": "Audit Grade",
+            "type": "boolean"
+          },
+          "cache_creation_tokens": {
+            "default": 0,
+            "title": "Cache Creation Tokens",
+            "type": "integer"
+          },
+          "cache_read_tokens": {
+            "default": 0,
+            "title": "Cache Read Tokens",
+            "type": "integer"
+          },
+          "citation_relevance": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Relevance"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "estimated_memory_tokens": {
+            "default": 0,
+            "title": "Estimated Memory Tokens",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "memory_estimation_error_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Estimation Error Tokens"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "neurons": {
+            "title": "Neurons",
+            "type": "boolean"
+          },
+          "observed_total_input_tokens": {
+            "default": 0,
+            "title": "Observed Total Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          },
+          "response": {
+            "title": "Response",
+            "type": "string"
+          },
+          "routing": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing"
+          },
+          "token_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Budget"
+          },
+          "top_k": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top K"
+          }
+        },
+        "required": [
+          "mode",
+          "model",
+          "neurons",
+          "response",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd"
+        ],
+        "title": "SlotResult",
+        "type": "object"
+      },
+      "SourceImpactNeuron": {
+        "properties": {
+          "derivation_type": {
+            "title": "Derivation Type",
+            "type": "string"
+          },
+          "firing_count": {
+            "title": "Firing Count",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "neuron_label": {
+            "title": "Neuron Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "neuron_label",
+          "derivation_type",
+          "firing_count"
+        ],
+        "title": "SourceImpactNeuron",
+        "type": "object"
+      },
+      "SourceImpactResult": {
+        "properties": {
+          "canonical_id": {
+            "title": "Canonical Id",
+            "type": "string"
+          },
+          "linked_neurons": {
+            "items": {
+              "$ref": "#/components/schemas/SourceImpactNeuron"
+            },
+            "title": "Linked Neurons",
+            "type": "array"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "integer"
+          },
+          "total_query_citations": {
+            "title": "Total Query Citations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_id",
+          "canonical_id",
+          "linked_neurons",
+          "total_query_citations"
+        ],
+        "title": "SourceImpactResult",
+        "type": "object"
+      },
+      "StageTelemetryOut": {
+        "description": "Per-stage timing + status for the query-prep pipeline (Pattern #5).",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "number"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "status",
+          "duration_ms"
+        ],
+        "title": "StageTelemetryOut",
+        "type": "object"
+      },
+      "SynapticLearningOut": {
+        "properties": {
+          "avg_delta": {
+            "default": 0.0,
+            "title": "Avg Delta",
+            "type": "number"
+          },
+          "edges_adjusted": {
+            "default": 0,
+            "title": "Edges Adjusted",
+            "type": "integer"
+          },
+          "neurons_adjusted": {
+            "default": 0,
+            "title": "Neurons Adjusted",
+            "type": "integer"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "total_penalty": {
+            "default": 0.0,
+            "title": "Total Penalty",
+            "type": "number"
+          },
+          "total_reward": {
+            "default": 0.0,
+            "title": "Total Reward",
+            "type": "number"
+          },
+          "winner_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner Mode"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "SynapticLearningOut",
+        "type": "object"
+      },
+      "TraceFiring": {
+        "properties": {
+          "actions_count": {
+            "title": "Actions Count",
+            "type": "integer"
+          },
+          "combined_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Combined Score"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "neuron_id": {
+            "title": "Neuron Id",
+            "type": "integer"
+          },
+          "neuron_label": {
+            "title": "Neuron Label",
+            "type": "string"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "source_documents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Documents",
+            "type": "array"
+          },
+          "was_included": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Was Included"
+          }
+        },
+        "required": [
+          "neuron_id",
+          "neuron_label",
+          "department",
+          "layer",
+          "rank",
+          "combined_score",
+          "was_included",
+          "source_documents",
+          "actions_count"
+        ],
+        "title": "TraceFiring",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Agentic institutional memory for coding harnesses. Situated episodes with outcomes, evidence-gated lessons, temporal supersession.",
+    "title": "Corvus LoCoMo Eval",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/admin/regions": {
+      "get": {
+        "description": "All regions on the substrate: policy (if configured) + neuron counts.",
+        "operationId": "list_regions_admin_regions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Regions Admin Regions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Regions",
+        "tags": [
+          "regions"
+        ]
+      }
+    },
+    "/admin/regions/{region}": {
+      "get": {
+        "operationId": "get_region_admin_regions__region__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "region",
+            "required": true,
+            "schema": {
+              "title": "Region",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Region Admin Regions  Region  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Region",
+        "tags": [
+          "regions"
+        ]
+      },
+      "put": {
+        "description": "Create or update a region's policy. The write is audited via the\nHTTP audit middleware; scoring/ACL caches are invalidated.",
+        "operationId": "upsert_region_admin_regions__region__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "region",
+            "required": true,
+            "schema": {
+              "title": "Region",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Upsert Region Admin Regions  Region  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upsert Region",
+        "tags": [
+          "regions"
+        ]
+      }
+    },
+    "/auditor/audit/{neuron_id}": {
+      "post": {
+        "description": "Event-driven pass: reopen one memory now (contradicted attribution,\nuser correction, incident participation).",
+        "operationId": "audit_one_auditor_audit__neuron_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit One",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/auditor/candidates": {
+      "get": {
+        "description": "Dry-run microglial surveillance: score the corpus, return the\nranked risk breakdowns. No LLM, no proposals, no watermark movement.",
+        "operationId": "auditor_candidates_auditor_candidates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auditor Candidates",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/auditor/run": {
+      "post": {
+        "description": "Run one auditor pass. mode=auto lets the evidence clock decide;\nlight/deep force the pass (deep = admin request per the cadence spec).",
+        "operationId": "auditor_run_auditor_run_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "default": "auto",
+              "pattern": "^(auto|light|deep)$",
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_candidates",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 200,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Candidates"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_critic",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 50,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Critic"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auditor Run",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/auditor/status": {
+      "get": {
+        "description": "Watermark, evidence-clock position, and last-run summary.",
+        "operationId": "auditor_status_auditor_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auditor Status",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/capabilities/capsule": {
+      "get": {
+        "operationId": "capsule_capabilities_capsule_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capsule",
+        "tags": [
+          "capabilities"
+        ]
+      }
+    },
+    "/capabilities/health": {
+      "post": {
+        "operationId": "capsule_health_capabilities_health_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Capsule Health",
+        "tags": [
+          "capabilities"
+        ]
+      }
+    },
+    "/capabilities/reconcile": {
+      "post": {
+        "operationId": "reconcile_capsule_capabilities_reconcile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconcile Capsule",
+        "tags": [
+          "capabilities"
+        ]
+      }
+    },
+    "/capabilities/verify": {
+      "post": {
+        "operationId": "verify_capsule_capabilities_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verify Capsule",
+        "tags": [
+          "capabilities"
+        ]
+      }
+    },
+    "/chat": {
+      "post": {
+        "description": "Direct LLM chat without neuron pipeline. For casual conversation.",
+        "operationId": "simple_chat_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Simple Chat",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/compile/run": {
+      "post": {
+        "description": "Reverse check + compile eligible clusters (bounded Opus spend).",
+        "operationId": "compile_run_compile_run_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Compile Run",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/compile/status": {
+      "get": {
+        "description": "Eligible clusters + current manifest (no LLM, no side effects).",
+        "operationId": "compile_status_compile_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Compile Status",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/context": {
+      "post": {
+        "description": "Lightweight context assembly endpoint — runs prepare_context() without LLM execution.\n\nDesigned for external consumers (e.g., Corvus) that need Corvus's domain context\ninjected into their own LLM calls. Returns the assembled system prompt and metadata.",
+        "operationId": "get_context_context_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Context",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/distill/run": {
+      "post": {
+        "description": "Distill up to `limit` ready session logs into candidate lessons.",
+        "operationId": "distill_run_distill_run_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "maximum": 10,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_quiet_minutes",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 1440,
+              "minimum": 0,
+              "title": "Min Quiet Minutes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Distill Run",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/distill/status": {
+      "get": {
+        "description": "Ready-to-distill episode logs (no LLM, no side effects).",
+        "operationId": "distill_status_distill_status_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "min_quiet_minutes",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 1440,
+              "minimum": 0,
+              "title": "Min Quiet Minutes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Distill Status",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/engrams/": {
+      "get": {
+        "description": "List all active engrams with cache status and neuron-association counts.",
+        "operationId": "get_all_engrams_engrams__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get All Engrams",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/coverage/gaps": {
+      "get": {
+        "description": "Regulations cited in answers but NOT covered by an engram — candidates to seed.\n\nReads the tail of the coverage-gap detector: the EmergentQueue\n(domain='regulatory'), i.e. every un-grounded CFR reference an answer produced.",
+        "operationId": "coverage_gaps_engrams_coverage_gaps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Coverage Gaps",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/create": {
+      "post": {
+        "description": "Create + embed a new engram. If gap_id is given, mark that coverage gap resolved.",
+        "operationId": "create_engram_engrams_create_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EngramCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Engram",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/embed": {
+      "post": {
+        "description": "Generate embeddings for all engrams missing them.",
+        "operationId": "embed_engrams_engrams_embed_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Embed Engrams",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/seed": {
+      "post": {
+        "description": "Seed engrams from tenant configuration.",
+        "operationId": "seed_engrams_engrams_seed_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "force",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Force",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seed Engrams",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/stats/summary": {
+      "get": {
+        "description": "Summary statistics for engrams.",
+        "operationId": "engram_stats_engrams_stats_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Engram Stats",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/{engram_id}": {
+      "get": {
+        "description": "Get full engram detail including cache status.",
+        "operationId": "get_engram_detail_engrams__engram_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engram_id",
+            "required": true,
+            "schema": {
+              "title": "Engram Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Engram Detail",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/engrams/{engram_id}/resolve": {
+      "post": {
+        "description": "Test-fetch regulatory text from eCFR for a specific engram.",
+        "operationId": "resolve_engram_engrams__engram_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "engram_id",
+            "required": true,
+            "schema": {
+              "title": "Engram Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Engram",
+        "tags": [
+          "engrams"
+        ]
+      }
+    },
+    "/eval-scores": {
+      "get": {
+        "description": "Get all eval scores for quick querying/comparison across queries.",
+        "operationId": "list_eval_scores_eval_scores_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvalScoreSummary"
+                  },
+                  "title": "Response List Eval Scores Eval Scores Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Eval Scores",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Return system health status with neuron count and total queries.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/janitor/as-of/{neuron_id}": {
+      "get": {
+        "description": "What did we believe about this memory row at datetime `at`?\n\nReverts change-log events newer than `at` (newest first) to\nreconstruct the row's logged fields as they stood at that moment.",
+        "operationId": "memory_as_of_janitor_as_of__neuron_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ISO datetime — reconstruct belief state then",
+            "in": "query",
+            "name": "at",
+            "required": true,
+            "schema": {
+              "description": "ISO datetime — reconstruct belief state then",
+              "title": "At",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Memory As Of",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/janitor/corpus-health": {
+      "get": {
+        "description": "Deterministic corpus-quality metrics (graph lint item 0): duplicate\nmass, scope consistency, injection-slot waste. No LLM; persists the\nlatest snapshot + trend history beside janitor-report.json.",
+        "operationId": "corpus_health_report_janitor_corpus_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Corpus Health Report",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/janitor/history/{neuron_id}": {
+      "get": {
+        "description": "Temporal view of one memory row (kill-temporal-kg parity).\n\nReturns the row's change log plus its predecessors — rows it\nsuperseded, each with a validity window (created_at .. the\nchanged_at of the supersession event).",
+        "operationId": "memory_history_janitor_history__neuron_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Memory History",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/janitor/run": {
+      "post": {
+        "description": "Run the selected janitor passes and return the combined report.",
+        "operationId": "janitor_run_janitor_run_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "consolidation",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Consolidation",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "staleness",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Staleness",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "decay",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Decay",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lint",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Lint",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_pairs",
+            "required": false,
+            "schema": {
+              "default": 40,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Max Pairs",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Janitor Run",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/janitor/status": {
+      "get": {
+        "description": "Janitor-relevant graph state (no LLM, no side effects).",
+        "operationId": "janitor_status_janitor_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Janitor Status",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/learning-analytics": {
+      "get": {
+        "description": "Return synaptic learning history and aggregate metrics.",
+        "operationId": "get_learning_analytics_learning_analytics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningAnalytics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Learning Analytics",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/lineage/neuron/{neuron_id}/forward": {
+      "get": {
+        "description": "What queries used this neuron? Returns recent firings with scores.",
+        "operationId": "neuron_forward_lineage_lineage_neuron__neuron_id__forward_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeuronForwardResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neuron Forward Lineage",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/lineage/neuron/{neuron_id}/overrides": {
+      "get": {
+        "description": "List all score overrides for a neuron.",
+        "operationId": "list_overrides_lineage_neuron__neuron_id__overrides_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OverrideOut"
+                  },
+                  "title": "Response List Overrides Lineage Neuron  Neuron Id  Overrides Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Overrides",
+        "tags": [
+          "lineage"
+        ]
+      },
+      "post": {
+        "description": "Create or update a score override for a neuron signal.",
+        "operationId": "create_override_lineage_neuron__neuron_id__overrides_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverrideOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Override",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/lineage/overrides/{override_id}": {
+      "delete": {
+        "description": "Deactivate a score override (soft delete).",
+        "operationId": "delete_override_lineage_overrides__override_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "override_id",
+            "required": true,
+            "schema": {
+              "title": "Override Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Override",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/lineage/query/{query_id}/trace": {
+      "get": {
+        "description": "Full provenance trace for a query answer.",
+        "operationId": "query_trace_lineage_query__query_id__trace_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryTraceResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Trace",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/lineage/source/{source_id}/impact": {
+      "get": {
+        "description": "What queries were influenced by this source document?\n\nJoins: SourceDocument → NeuronSourceLink → Neuron → NeuronFiring → Query.",
+        "operationId": "source_impact_lineage_source__source_id__impact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceImpactResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Source Impact",
+        "tags": [
+          "lineage"
+        ]
+      }
+    },
+    "/metrics/mind": {
+      "get": {
+        "description": "Aggregate memory-organ performance and growth metrics.",
+        "operationId": "mind_metrics_metrics_mind_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Metrics",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/inbox": {
+      "get": {
+        "description": "Everything awaiting human judgment: findings, proposals, borderline pairs.",
+        "operationId": "mind_inbox_metrics_mind_inbox_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Inbox",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/injection-channels": {
+      "get": {
+        "description": "Load-bearing rate split by delivery channel (standing vs retrieved).\n\nStanding content succeeds by being present and retrieved content by\nbeing relevant, so the pooled rate judges neither. This is the\nbefore/after instrument for any change to charter membership.",
+        "operationId": "mind_injection_channels_metrics_mind_injection_channels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Injection Channels",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/locomo-run": {
+      "get": {
+        "description": "LoCoMo certificate phase status, derived from run logs on disk.",
+        "operationId": "mind_locomo_run_metrics_mind_locomo_run_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Locomo Run",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/sessions": {
+      "get": {
+        "description": "Episode-log browser: captured/backfilled sessions + distill status.",
+        "operationId": "mind_sessions_metrics_mind_sessions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Sessions",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/skills": {
+      "get": {
+        "description": "Compiled skills with source health and rendered bodies.",
+        "operationId": "mind_skills_metrics_mind_skills_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Skills",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/subscription": {
+      "get": {
+        "description": "Live Claude subscription utilization (5-hour block + weekly limits).",
+        "operationId": "mind_subscription_metrics_mind_subscription_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Subscription",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/subscription/codex": {
+      "get": {
+        "description": "Live Codex subscription rate limits and token activity.",
+        "operationId": "mind_codex_subscription_metrics_mind_subscription_codex_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Codex Subscription",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/trust": {
+      "get": {
+        "description": "Per-lesson trust trajectories (utility over time).",
+        "operationId": "mind_trust_metrics_mind_trust_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Trust",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/models": {
+      "get": {
+        "description": "Return list of LLM models whose provider API key is configured.",
+        "operationId": "list_available_models_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Available Models",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/neurons/capacity": {
+      "get": {
+        "description": "Total token capacity of the active neuron graph.",
+        "operationId": "neurons_capacity_neurons_capacity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Neurons Capacity",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/children": {
+      "get": {
+        "description": "Fetch direct children of a neuron (or roots if parent_id is None).\n\nReturns flat list with child_count for lazy-load tree rendering.",
+        "operationId": "neuron_children_neurons_children_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "parent_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Parent Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neuron Children",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/clusters": {
+      "get": {
+        "description": "Discover deterministic Leiden communities over co-firing edges.\n\nThe cross-department default preserves the original discovery behavior.\nVisual map clients can request ``min_departments=1`` to receive the full\nassociative territory map, including communities contained in one scope.",
+        "operationId": "neuron_clusters_neurons_clusters_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "min_weight",
+            "required": false,
+            "schema": {
+              "default": 0.3,
+              "title": "Min Weight",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_size",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "title": "Min Size",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_departments",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "title": "Min Departments",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resolution",
+            "required": false,
+            "schema": {
+              "default": 1.0,
+              "title": "Resolution",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neuron Clusters",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/edges/department-chord": {
+      "get": {
+        "description": "Aggregate co-firing edges grouped at a specific neuron layer.\n\nlayer=-1 returns concept neuron instantiation edges grouped by concept × department.",
+        "operationId": "department_chord_neurons_edges_department_chord_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "layer",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Layer",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_weight",
+            "required": false,
+            "schema": {
+              "default": 0.15,
+              "title": "Min Weight",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Department Chord",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/edges/layer-flow": {
+      "get": {
+        "description": "Aggregate co-firing edges between layers, grouped by (layer, department).\n\nReturns nodes (layer × department) and links (flow between them) suitable for Sankey layout.",
+        "operationId": "layer_flow_neurons_edges_layer_flow_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "min_weight",
+            "required": false,
+            "schema": {
+              "default": 0.15,
+              "title": "Min Weight",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Layer Flow",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/edges/spread-log": {
+      "get": {
+        "description": "Aggregate spread activation history across recent queries.\n\nThe detailed entries/corridors cover the `limit` most recent queries,\nbut the headline rate is computed over a `days` time window — at high\nquery volume the last 100 queries can span minutes, and a burst of\nspread-free traffic used to read as \"spread rate 0%\" while spread was\nfiring daily just outside the window.",
+        "operationId": "spread_log_neurons_edges_spread_log_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Spread Log",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/edges/spread-trail": {
+      "get": {
+        "description": "Get spread activation trail for a query.",
+        "operationId": "spread_trail_neurons_edges_spread_trail_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Spread Trail",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/graph-3d": {
+      "get": {
+        "description": "Active neurons + coverage-first co-firing edges for the 3D universe.\n\nper_node bounds the top-K edges kept per neuron before global fill;\npayload includes the abstraction axis, region tag, centrality, and\nedge_type so the client can style stellate/pyramidal/instantiates\nconnections differently.",
+        "operationId": "graph_3d_neurons_graph_3d_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "min_weight",
+            "required": false,
+            "schema": {
+              "default": 0.25,
+              "title": "Min Weight",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_edges",
+            "required": false,
+            "schema": {
+              "default": 12000,
+              "title": "Max Edges",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_node",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "title": "Per Node",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "replay_limit",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Replay Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Graph 3D",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/refinements": {
+      "get": {
+        "description": "List refinements with optional filters for action, field, neuron, and date range.",
+        "operationId": "list_refinements_neurons_refinements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field"
+            }
+          },
+          {
+            "in": "query",
+            "name": "neuron_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Neuron Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NeuronRefinementOut"
+                  },
+                  "title": "Response List Refinements Neurons Refinements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Refinements",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/stats": {
+      "get": {
+        "operationId": "neurons_stats_neurons_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Neurons Stats",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/tree": {
+      "get": {
+        "operationId": "neurons_tree_neurons_tree_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "department",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role Key"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_depth",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Depth"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neurons Tree",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/{neuron_id}": {
+      "get": {
+        "operationId": "neuron_detail_neurons__neuron_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeuronDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neuron Detail",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/{neuron_id}/edges": {
+      "get": {
+        "description": "Multi-hop neighbors by edge weight for a neuron.\n\nReturns neighbors with hop distance (1 = direct co-fire, 2+ = reached\nthrough intermediate nodes).  Edges between all returned nodes are\nincluded so the frontend can draw the full subgraph.",
+        "operationId": "neuron_edges_neurons__neuron_id__edges_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 15,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hops",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "title": "Hops",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neuron Edges",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/neurons/{neuron_id}/scores": {
+      "get": {
+        "operationId": "neuron_scores_neurons__neuron_id__scores_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "neuron_id",
+            "required": true,
+            "schema": {
+              "title": "Neuron Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeuronScoreDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Neuron Scores",
+        "tags": [
+          "neurons"
+        ]
+      }
+    },
+    "/queries": {
+      "get": {
+        "description": "List the 50 most recent queries with summary metadata.",
+        "operationId": "list_queries_queries_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QuerySummary"
+                  },
+                  "title": "Response List Queries Queries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Queries",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/queries/run-counts": {
+      "post": {
+        "description": "Return {text: count} for each provided query text.",
+        "operationId": "query_run_counts_queries_run_counts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Texts",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Run Counts",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/queries/{query_id}": {
+      "get": {
+        "description": "Retrieve full detail for a single query including neuron hits, slots, eval scores, and refinements.",
+        "operationId": "get_query_detail_queries__query_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Query Detail",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/queries/{query_id}/dossier": {
+      "get": {
+        "description": "AIP Phase 3 — return the full Dossier for a single query.\n\nOn-read aggregation of the five per-query governance signals:\npipeline telemetry, eval (ad-hoc + eval-run participations), output\nviolations, action audit trail, and integrity findings (attributed\nby selected-neuron-id overlap). See\n`docs/design/aip-phase-3-query-dossier.md` for scope + caveats.",
+        "operationId": "get_query_dossier_queries__query_id__dossier_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDossier"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Query Dossier",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query": {
+      "post": {
+        "description": "Execute a query through the neuron pipeline.\n\nclassify → score → assemble → execute (per-slot, parallel) → output gate.",
+        "operationId": "post_query_query_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Query",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query/stream": {
+      "post": {
+        "description": "SSE streaming version of POST /query — emits pipeline stage events in real time.",
+        "operationId": "post_query_stream_query_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Post Query Stream",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query/{query_id}/evaluate": {
+      "post": {
+        "description": "Run domain-informed LLM evaluation comparing multiple response slots for a query.\n\nAssembles neuron context from the query's activated neurons, providing the evaluator\nwith ground-truth domain knowledge. Scores responses based on accuracy against the\ndomain facts, completeness, clarity, and faithfulness.",
+        "operationId": "evaluate_query_query__query_id__evaluate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluate Query",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query/{query_id}/followups": {
+      "post": {
+        "description": "Tier C2: suggest 2-3 follow-up questions for a completed query.\n\nRuns a small Haiku post-call against the user's question + the\nassistant's neuron-enhanced response. Returns an empty list on any\nerror — follow-ups are nice-to-have, never block the UI.",
+        "operationId": "get_followups_query__query_id__followups_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpSuggestionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Followups",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query/{query_id}/rate": {
+      "post": {
+        "description": "Submit a user utility rating for a query and update neuron impact scores.",
+        "operationId": "rate_query_query__query_id__rate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rate Query",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query/{query_id}/refine": {
+      "post": {
+        "description": "Generate LLM-driven neuron update and creation suggestions based on eval results.\n\nOpus acts as a third-party observer comparing neuron-enhanced vs. raw slot responses.\nIt analyzes where neurons helped or hurt, identifies inaccuracies in neuron content,\nand proposes targeted improvements grounded in evidence from the responses.",
+        "operationId": "refine_query_query__query_id__refine_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refine Query",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/query/{query_id}/refine/apply": {
+      "post": {
+        "description": "Apply selected neuron update and creation suggestions from a prior refine call.",
+        "operationId": "apply_refinements_query__query_id__refine_apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "query_id",
+            "required": true,
+            "schema": {
+              "title": "Query Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyRefineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyRefineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Refinements",
+        "tags": [
+          "query"
+        ]
+      }
+    },
+    "/recall": {
+      "post": {
+        "description": "Cheap structured recall: prepare pipeline only, no LLM, no execution.",
+        "operationId": "recall_recall_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recall",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/remember": {
+      "post": {
+        "description": "Persist an explicit lesson save through the write gate.\n\nInformational-tier saves auto-commit (and are reclaimed by\nconsolidation decay if never reinforced); anything above the\ntenant's auto-commit ceiling queues for human review.",
+        "operationId": "remember_remember_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RememberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remember",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/tenant": {
+      "get": {
+        "description": "Return tenant configuration for the frontend.",
+        "operationId": "get_tenant_tenant_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Tenant"
+      }
+    },
+    "/tenants": {
+      "get": {
+        "description": "Return all available tenants with their default URLs.",
+        "operationId": "list_tenants_tenants_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Tenants"
+      }
+    }
+  }
+}

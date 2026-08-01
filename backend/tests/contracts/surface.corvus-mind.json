@@ -1,0 +1,2194 @@
+{
+  "documented_path_count": 224,
+  "method_level_route_count": 242,
+  "routes": [
+    {
+      "method": "GET",
+      "operation_id": "get_alerts_admin_alerts_get",
+      "path": "/admin/alerts",
+      "schema_fingerprint": "0eed4e4f3c8a79fe",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "acknowledge_all_alerts_admin_alerts_acknowledge_all_post",
+      "path": "/admin/alerts/acknowledge-all",
+      "schema_fingerprint": "ad1f524d078fd064",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "acknowledge_alert_admin_alerts__alert_id__acknowledge_post",
+      "path": "/admin/alerts/{alert_id}/acknowledge",
+      "schema_fingerprint": "cb4ed364f0de5002",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_architecture_admin_architecture_get",
+      "path": "/admin/architecture",
+      "schema_fingerprint": "fb48e2b064df89ac",
+      "tags": [
+        "architecture"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_module_admin_architecture_module__module_name__get",
+      "path": "/admin/architecture/module/{module_name}",
+      "schema_fingerprint": "1d59485579773f44",
+      "tags": [
+        "architecture"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_audit_log_admin_audit_log_get",
+      "path": "/admin/audit-log",
+      "schema_fingerprint": "b160e0d32e91fdc3",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "audit_log_summary_admin_audit_log_summary_get",
+      "path": "/admin/audit-log/summary",
+      "schema_fingerprint": "32cd532db0914f99",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "bootstrap_firings_endpoint_admin_bootstrap_firings_post",
+      "path": "/admin/bootstrap-firings",
+      "schema_fingerprint": "077f967d64824be3",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "bootstrap_stats_endpoint_admin_bootstrap_stats_get",
+      "path": "/admin/bootstrap-stats",
+      "schema_fingerprint": "c1f5ffa349c9d563",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_checkpoint_admin_checkpoint_post",
+      "path": "/admin/checkpoint",
+      "schema_fingerprint": "6232c098e97a4ac1",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "classify_edges_admin_classify_edges_post",
+      "path": "/admin/classify-edges",
+      "schema_fingerprint": "a33bbd0c88c75288",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "code_review_checklist_admin_code_review_get",
+      "path": "/admin/code-review",
+      "schema_fingerprint": "f4968cf0aa38aade",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "compliance_audit_admin_compliance_audit_get",
+      "path": "/admin/compliance-audit",
+      "schema_fingerprint": "ba4ae4f63503872c",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "compliance_report_admin_compliance_report_get",
+      "path": "/admin/compliance-report",
+      "schema_fingerprint": "8c358db0ac964958",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_snapshots_admin_compliance_snapshots_get",
+      "path": "/admin/compliance-snapshots",
+      "schema_fingerprint": "1354ffa1a65bd15f",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_snapshot_admin_compliance_snapshots_post",
+      "path": "/admin/compliance-snapshots",
+      "schema_fingerprint": "b6817b3120925977",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_snapshot_admin_compliance_snapshots__snapshot_id__get",
+      "path": "/admin/compliance-snapshots/{snapshot_id}",
+      "schema_fingerprint": "7c91f0feb9aaa61b",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "submit_attestation_admin_compliance_attest_post",
+      "path": "/admin/compliance/attest",
+      "schema_fingerprint": "20fe9f12c922792c",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_attestations_admin_compliance_attestations_get",
+      "path": "/admin/compliance/attestations",
+      "schema_fingerprint": "b13c0acc2bc10f87",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_controls_admin_compliance_controls_get",
+      "path": "/admin/compliance/controls",
+      "schema_fingerprint": "ec8533f37fa848f9",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_control_detail_admin_compliance_controls__framework___control_id__get",
+      "path": "/admin/compliance/controls/{framework}/{control_id}",
+      "schema_fingerprint": "6a954d72eb708ffe",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "dashboard_admin_compliance_dashboard_get",
+      "path": "/admin/compliance/dashboard",
+      "schema_fingerprint": "ffbebbe5865c2ad0",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_providers_admin_compliance_providers_get",
+      "path": "/admin/compliance/providers",
+      "schema_fingerprint": "a12355b827ca365a",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_provider_detail_admin_compliance_providers__provider_id__get",
+      "path": "/admin/compliance/providers/{provider_id}",
+      "schema_fingerprint": "f07063ae66e4a504",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "run_suite_admin_compliance_run_suite_post",
+      "path": "/admin/compliance/run-suite",
+      "schema_fingerprint": "800d0c02bc49773e",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_runs_admin_compliance_runs_get",
+      "path": "/admin/compliance/runs",
+      "schema_fingerprint": "0906d5c8c13c6098",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_run_admin_compliance_runs__run_id__get",
+      "path": "/admin/compliance/runs/{run_id}",
+      "schema_fingerprint": "6ad7f0be7a6e4dff",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_run_report_admin_compliance_runs__run_id__report_get",
+      "path": "/admin/compliance/runs/{run_id}/report",
+      "schema_fingerprint": "81245ea56caf8123",
+      "tags": [
+        "compliance-suite"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_concept_neurons_admin_concept_neurons_get",
+      "path": "/admin/concept-neurons",
+      "schema_fingerprint": "27e88c221a01a601",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_concept_neuron_endpoint_admin_concept_neurons_post",
+      "path": "/admin/concept-neurons",
+      "schema_fingerprint": "5bf4e91b9d3731e6",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "relink_concepts_endpoint_admin_concept_neurons_relink_post",
+      "path": "/admin/concept-neurons/relink",
+      "schema_fingerprint": "a9cf0706460097cc",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_all_concepts_endpoint_admin_concept_neurons_seed_all_post",
+      "path": "/admin/concept-neurons/seed-all",
+      "schema_fingerprint": "c57cdaee303dfc0e",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_three_horizons_endpoint_admin_concept_neurons_seed_three_horizons_post",
+      "path": "/admin/concept-neurons/seed-three-horizons",
+      "schema_fingerprint": "9ce0da023f216a18",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "link_concept_neuron_admin_concept_neurons__concept_id__link_post",
+      "path": "/admin/concept-neurons/{concept_id}/link",
+      "schema_fingerprint": "e4754218440878d0",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "cost_report_admin_cost_report_get",
+      "path": "/admin/cost-report",
+      "schema_fingerprint": "ffeb5fdaa9020187",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_jobs_admin_documents__get",
+      "path": "/admin/documents/",
+      "schema_fingerprint": "920c0ceeaa5bb421",
+      "tags": [
+        "document-ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "upload_document_admin_documents_upload_post",
+      "path": "/admin/documents/upload",
+      "schema_fingerprint": "e763538bc46a6121",
+      "tags": [
+        "document-ingest"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_job_admin_documents__job_id__get",
+      "path": "/admin/documents/{job_id}",
+      "schema_fingerprint": "03b5f795c73390d2",
+      "tags": [
+        "document-ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "cancel_job_admin_documents__job_id__cancel_post",
+      "path": "/admin/documents/{job_id}/cancel",
+      "schema_fingerprint": "0d3da388d2e9d1ab",
+      "tags": [
+        "document-ingest"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_job_structure_admin_documents__job_id__structure_get",
+      "path": "/admin/documents/{job_id}/structure",
+      "schema_fingerprint": "f353a0575c81bc70",
+      "tags": [
+        "document-ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "embed_neurons_admin_embed_neurons_post",
+      "path": "/admin/embed-neurons",
+      "schema_fingerprint": "7c92b799ac04e2b5",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_emergent_queue_admin_emergent_queue_get",
+      "path": "/admin/emergent-queue",
+      "schema_fingerprint": "a1e26518c0e6a471",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "dismiss_queue_entry_admin_emergent_queue__entry_id__dismiss_post",
+      "path": "/admin/emergent-queue/{entry_id}/dismiss",
+      "schema_fingerprint": "638ebd8a2b235018",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_eval_runs_admin_eval_runs_get",
+      "path": "/admin/eval/runs",
+      "schema_fingerprint": "71931ae3919c8c27",
+      "tags": [
+        "admin-eval"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "start_eval_run_admin_eval_runs_post",
+      "path": "/admin/eval/runs",
+      "schema_fingerprint": "aa6706954282f421",
+      "tags": [
+        "admin-eval"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_eval_run_admin_eval_runs__run_id__get",
+      "path": "/admin/eval/runs/{run_id}",
+      "schema_fingerprint": "24dfface163bd6ce",
+      "tags": [
+        "admin-eval"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "certify_eval_run_admin_eval_runs__run_id__certify_post",
+      "path": "/admin/eval/runs/{run_id}/certify",
+      "schema_fingerprint": "73b2220d4d1faf60",
+      "tags": [
+        "admin-eval"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "evidence_content_admin_evidence_content_get",
+      "path": "/admin/evidence-content",
+      "schema_fingerprint": "e2d32d982b10649a",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_evidence_admin_evidence_map_get",
+      "path": "/admin/evidence-map",
+      "schema_fingerprint": "aa540bacf460d588",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_evidence_map_admin_evidence_map_seed_post",
+      "path": "/admin/evidence-map/seed",
+      "schema_fingerprint": "5d6f72edde6941ff",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "verify_all_evidence_admin_evidence_map_verify_all_post",
+      "path": "/admin/evidence-map/verify-all",
+      "schema_fingerprint": "c84b6758c60d27ee",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "update_evidence_admin_evidence_map__mapping_id__put",
+      "path": "/admin/evidence-map/{mapping_id}",
+      "schema_fingerprint": "7b494f774b4e7271",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "extract_source_admin_extract_source_post",
+      "path": "/admin/extract-source",
+      "schema_fingerprint": "136eeab3f139da48",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_frameworks_admin_frameworks_get",
+      "path": "/admin/frameworks",
+      "schema_fingerprint": "528413aa8c394a37",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "cmmc_practices_admin_frameworks_cmmc_get",
+      "path": "/admin/frameworks/cmmc",
+      "schema_fingerprint": "d5eb19061f7bf6e3",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "fedramp_controls_admin_frameworks_fedramp_get",
+      "path": "/admin/frameworks/fedramp",
+      "schema_fingerprint": "e5b9de4a35af3024",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "soc2_criteria_admin_frameworks_soc2_get",
+      "path": "/admin/frameworks/soc2",
+      "schema_fingerprint": "0225f748413797f3",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "unified_framework_view_admin_frameworks_unified_get",
+      "path": "/admin/frameworks/unified",
+      "schema_fingerprint": "1a0b2d42e2d5d396",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "governance_dashboard_admin_governance_dashboard_get",
+      "path": "/admin/governance-dashboard",
+      "schema_fingerprint": "1582c9e88dab92fd",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "health_check_admin_health_check_get",
+      "path": "/admin/health-check",
+      "schema_fingerprint": "163c57aabac1addc",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "ingest_source_admin_ingest_source_post",
+      "path": "/admin/ingest-source",
+      "schema_fingerprint": "d9757052b9072d32",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "apply_ingest_source_admin_ingest_source_apply_post",
+      "path": "/admin/ingest-source/apply",
+      "schema_fingerprint": "140e147de4667288",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_batch_jobs_admin_ingest_source_batch_get",
+      "path": "/admin/ingest-source/batch",
+      "schema_fingerprint": "303a11e5053081f6",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "start_batch_ingest_admin_ingest_source_batch_post",
+      "path": "/admin/ingest-source/batch",
+      "schema_fingerprint": "3ff6331a10cb8804",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_batch_ingest_status_admin_ingest_source_batch__job_id__get",
+      "path": "/admin/ingest-source/batch/{job_id}",
+      "schema_fingerprint": "2cba0f723cbb30b5",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "cancel_batch_ingest_admin_ingest_source_batch__job_id__cancel_post",
+      "path": "/admin/ingest-source/batch/{job_id}/cancel",
+      "schema_fingerprint": "03eede2beb15fe1d",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "resume_batch_ingest_admin_ingest_source_batch__job_id__resume_post",
+      "path": "/admin/ingest-source/batch/{job_id}/resume",
+      "schema_fingerprint": "a4d16f92529eafe6",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_inhibitory_regulators_admin_inhibitory_regulators_get",
+      "path": "/admin/inhibitory-regulators",
+      "schema_fingerprint": "b93f01cf12c1f13d",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "scan_aging_endpoint_admin_integrity_aging_scan_post",
+      "path": "/admin/integrity/aging/scan",
+      "schema_fingerprint": "f8c52839cd8ada5b",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "scan_conflicts_endpoint_admin_integrity_conflicts_scan_post",
+      "path": "/admin/integrity/conflicts/scan",
+      "schema_fingerprint": "1ace4fdc164dc496",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "scan_connections_endpoint_admin_integrity_connections_scan_post",
+      "path": "/admin/integrity/connections/scan",
+      "schema_fingerprint": "9f404ffb80113e4a",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "integrity_dashboard_admin_integrity_dashboard_get",
+      "path": "/admin/integrity/dashboard",
+      "schema_fingerprint": "4fc3a67504b18bf9",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "scan_duplicates_endpoint_admin_integrity_duplicates_scan_post",
+      "path": "/admin/integrity/duplicates/scan",
+      "schema_fingerprint": "c2e2f15e3e857415",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_findings_admin_integrity_findings_get",
+      "path": "/admin/integrity/findings",
+      "schema_fingerprint": "75fca5f04c028922",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "bulk_resolve_findings_admin_integrity_findings_bulk_resolve_post",
+      "path": "/admin/integrity/findings/bulk-resolve",
+      "schema_fingerprint": "9a66c464b4ed1fd9",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_finding_admin_integrity_findings__finding_id__get",
+      "path": "/admin/integrity/findings/{finding_id}",
+      "schema_fingerprint": "a686abfaa3fdbe7c",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "dismiss_finding_admin_integrity_findings__finding_id__dismiss_post",
+      "path": "/admin/integrity/findings/{finding_id}/dismiss",
+      "schema_fingerprint": "fc5655aadcae9084",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "propose_finding_admin_integrity_findings__finding_id__propose_post",
+      "path": "/admin/integrity/findings/{finding_id}/propose",
+      "schema_fingerprint": "298977c4ee0f0cd9",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "resolve_finding_admin_integrity_findings__finding_id__resolve_post",
+      "path": "/admin/integrity/findings/{finding_id}/resolve",
+      "schema_fingerprint": "98d3af4bd1364eda",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "scan_homeostasis_endpoint_admin_integrity_homeostasis_scan_post",
+      "path": "/admin/integrity/homeostasis/scan",
+      "schema_fingerprint": "d578f16106872afe",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "apply_homeostasis_endpoint_admin_integrity_homeostasis__scan_id__apply_post",
+      "path": "/admin/integrity/homeostasis/{scan_id}/apply",
+      "schema_fingerprint": "6dd8a32155794223",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "reconciler_report_admin_integrity_reconciler_report_get",
+      "path": "/admin/integrity/reconciler/report",
+      "schema_fingerprint": "78bdce488fc1e48c",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "reconciler_sweep_endpoint_admin_integrity_reconciler_sweep_post",
+      "path": "/admin/integrity/reconciler/sweep",
+      "schema_fingerprint": "0e50b7cfa41ca51a",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_integrity_runs_admin_integrity_runs_get",
+      "path": "/admin/integrity/runs",
+      "schema_fingerprint": "286ffe64946d3f28",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_scans_admin_integrity_scans_get",
+      "path": "/admin/integrity/scans",
+      "schema_fingerprint": "6c6b754189d742b0",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_scan_admin_integrity_scans__scan_id__get",
+      "path": "/admin/integrity/scans/{scan_id}",
+      "schema_fingerprint": "61c287d633b1d34a",
+      "tags": [
+        "integrity"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "intra_department_bridge_endpoint_admin_intra_department_bridge_post",
+      "path": "/admin/intra-department-bridge",
+      "schema_fingerprint": "8e112b5a5b826dd6",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "oracle_funnel_latest_admin_labs_oracle_funnel_get",
+      "path": "/admin/labs/oracle-funnel",
+      "schema_fingerprint": "01c4689ac273260a",
+      "tags": [
+        "admin-labs"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_neuron_source_link_admin_neuron_source_links_post",
+      "path": "/admin/neuron-source-links",
+      "schema_fingerprint": "f58d88a90a5039e4",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "delete_neuron_source_link_admin_neuron_source_links__link_id__delete",
+      "path": "/admin/neuron-source-links/{link_id}",
+      "schema_fingerprint": "0645f7bb6bb0bd78",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "review_neuron_source_link_admin_neuron_source_links__link_id__review_put",
+      "path": "/admin/neuron-source-links/{link_id}/review",
+      "schema_fingerprint": "3d4e65cf8dbee9c0",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_provenance_admin_neurons__neuron_id__provenance_get",
+      "path": "/admin/neurons/{neuron_id}/provenance",
+      "schema_fingerprint": "b42f667f9e321287",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "performance_report_admin_performance_get",
+      "path": "/admin/performance",
+      "schema_fingerprint": "407675822709fd5f",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "stage_telemetry_report_admin_performance_stage_telemetry_get",
+      "path": "/admin/performance/stage-telemetry",
+      "schema_fingerprint": "1ac198be444cd56e",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_proposals_admin_proposals__get",
+      "path": "/admin/proposals/",
+      "schema_fingerprint": "ff93a1ec5069bc68",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "dedup_clusters_admin_proposals_dedup_clusters_get",
+      "path": "/admin/proposals/dedup-clusters",
+      "schema_fingerprint": "899a41124dc00a59",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "proposal_stats_admin_proposals_stats_get",
+      "path": "/admin/proposals/stats",
+      "schema_fingerprint": "19b6a9f3fa2a8f09",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "whoami_admin_proposals_whoami_get",
+      "path": "/admin/proposals/whoami",
+      "schema_fingerprint": "c63fa7e7e4e62861",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_proposal_admin_proposals__proposal_id__get",
+      "path": "/admin/proposals/{proposal_id}",
+      "schema_fingerprint": "21b74d384fccc819",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "apply_proposal_admin_proposals__proposal_id__apply_post",
+      "path": "/admin/proposals/{proposal_id}/apply",
+      "schema_fingerprint": "695b35fbe83d88cc",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "review_proposal_admin_proposals__proposal_id__review_post",
+      "path": "/admin/proposals/{proposal_id}/review",
+      "schema_fingerprint": "0caf22891c91ec2b",
+      "tags": [
+        "proposals"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "authority_summary_admin_provenance_authority_summary_get",
+      "path": "/admin/provenance/authority-summary",
+      "schema_fingerprint": "b1c02b298163fcd0",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "auto_link_admin_provenance_auto_link_post",
+      "path": "/admin/provenance/auto-link",
+      "schema_fingerprint": "9a0b5aee5e57172c",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "recompute_authority_admin_provenance_recompute_authority_post",
+      "path": "/admin/provenance/recompute-authority",
+      "schema_fingerprint": "6286bf572f558f55",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_sources_admin_provenance_seed_sources_post",
+      "path": "/admin/provenance/seed-sources",
+      "schema_fingerprint": "5114ae7b3d7e72f5",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "stale_neurons_admin_provenance_stale_get",
+      "path": "/admin/provenance/stale",
+      "schema_fingerprint": "6385d7f4318d7814",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "prune_edges_admin_prune_edges_post",
+      "path": "/admin/prune-edges",
+      "schema_fingerprint": "54d828829b436a41",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "purge_bootstrap_endpoint_admin_purge_bootstrap_post",
+      "path": "/admin/purge-bootstrap",
+      "schema_fingerprint": "d330a68e651cf490",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_reference_documents_admin_reference_documents_get",
+      "path": "/admin/reference/documents",
+      "schema_fingerprint": "f269f6a755549227",
+      "tags": [
+        "reference-memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "upload_reference_document_admin_reference_documents_post",
+      "path": "/admin/reference/documents",
+      "schema_fingerprint": "1662aa4c6a2d5835",
+      "tags": [
+        "reference-memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_reference_document_admin_reference_documents__canonical_id__get",
+      "path": "/admin/reference/documents/{canonical_id}",
+      "schema_fingerprint": "3a952bbbc0c34512",
+      "tags": [
+        "reference-memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "revoke_reference_document_endpoint_admin_reference_documents__canonical_id__revoke_post",
+      "path": "/admin/reference/documents/{canonical_id}/revoke",
+      "schema_fingerprint": "52757a70ab318c5a",
+      "tags": [
+        "reference-memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_regions_admin_regions_get",
+      "path": "/admin/regions",
+      "schema_fingerprint": "2e9ddb5b13022b39",
+      "tags": [
+        "regions"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_region_admin_regions__region__get",
+      "path": "/admin/regions/{region}",
+      "schema_fingerprint": "c70aaffca4789054",
+      "tags": [
+        "regions"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "upsert_region_admin_regions__region__put",
+      "path": "/admin/regions/{region}",
+      "schema_fingerprint": "86b0154e794aee21",
+      "tags": [
+        "regions"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "reset_firings_admin_reset_post",
+      "path": "/admin/reset",
+      "schema_fingerprint": "bf3b0b7897cbbf27",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "retention_purge_now_admin_retention_purge_post",
+      "path": "/admin/retention/purge",
+      "schema_fingerprint": "34c8146e4b37fb0d",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_reviews_admin_reviews_get",
+      "path": "/admin/reviews",
+      "schema_fingerprint": "e90d46ce803acc3d",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_review_admin_reviews_post",
+      "path": "/admin/reviews",
+      "schema_fingerprint": "809c80d9aca446e1",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "review_cadence_admin_reviews_cadence_get",
+      "path": "/admin/reviews/cadence",
+      "schema_fingerprint": "90d7bbc0b75d1f0f",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_review_admin_reviews__review_id__get",
+      "path": "/admin/reviews/{review_id}",
+      "schema_fingerprint": "aeac4ad019e55f4f",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "update_review_admin_reviews__review_id__put",
+      "path": "/admin/reviews/{review_id}",
+      "schema_fingerprint": "439394b2d6573369",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "scan_references_admin_scan_references_post",
+      "path": "/admin/scan-references",
+      "schema_fingerprint": "5125f038844d5f49",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "scoring_health_admin_scoring_health_get",
+      "path": "/admin/scoring-health",
+      "schema_fingerprint": "e3da2b06657b2d25",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_database_admin_seed_post",
+      "path": "/admin/seed",
+      "schema_fingerprint": "a459893857f39b29",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_inhibitory_regulators_endpoint_admin_seed_inhibitory_regulators_post",
+      "path": "/admin/seed-inhibitory-regulators",
+      "schema_fingerprint": "1cfad65aaeccbe0b",
+      "tags": [
+        "admin"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "bootstrap_cooccurrence_admin_seeding_cooccurrence_edges_post",
+      "path": "/admin/seeding/cooccurrence-edges",
+      "schema_fingerprint": "6a170f39addbdae9",
+      "tags": [
+        "seeding"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "discover_regions_admin_seeding_discover_regions_post",
+      "path": "/admin/seeding/discover-regions",
+      "schema_fingerprint": "f1ff5d36b4b6005d",
+      "tags": [
+        "seeding"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "bootstrap_knn_admin_seeding_knn_edges_post",
+      "path": "/admin/seeding/knn-edges",
+      "schema_fingerprint": "f3d6043cdaff6540",
+      "tags": [
+        "seeding"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "retype_edges_admin_seeding_retype_edges_post",
+      "path": "/admin/seeding/retype-edges",
+      "schema_fingerprint": "f604a15647abd46c",
+      "tags": [
+        "seeding"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_source_docs_admin_source_documents_get",
+      "path": "/admin/source-documents",
+      "schema_fingerprint": "07888c1a3fa1819d",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_source_doc_admin_source_documents_post",
+      "path": "/admin/source-documents",
+      "schema_fingerprint": "d6df9a21d5fdb7d3",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_source_doc_admin_source_documents__doc_id__get",
+      "path": "/admin/source-documents/{doc_id}",
+      "schema_fingerprint": "2e06bc7f726d3b20",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "update_source_doc_admin_source_documents__doc_id__put",
+      "path": "/admin/source-documents/{doc_id}",
+      "schema_fingerprint": "9e2553e503d11b3b",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "supersede_source_doc_admin_source_documents__doc_id__supersede_post",
+      "path": "/admin/source-documents/{doc_id}/supersede",
+      "schema_fingerprint": "b000fa3e6a982ec9",
+      "tags": [
+        "provenance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_system_banner_admin_system_banner_get",
+      "path": "/admin/system-banner",
+      "schema_fingerprint": "c54262bffe1ec2c6",
+      "tags": [
+        "compliance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_tool_definitions_admin_tool_definitions_get",
+      "path": "/admin/tool-definitions",
+      "schema_fingerprint": "507cb4072f06a3a7",
+      "tags": [
+        "tools"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "audit_one_auditor_audit__neuron_id__post",
+      "path": "/auditor/audit/{neuron_id}",
+      "schema_fingerprint": "924edc49999aa58f",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "auditor_candidates_auditor_candidates_get",
+      "path": "/auditor/candidates",
+      "schema_fingerprint": "6a2dc4bc939343cd",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "auditor_run_auditor_run_post",
+      "path": "/auditor/run",
+      "schema_fingerprint": "0c16f54e76d043b7",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "auditor_status_auditor_status_get",
+      "path": "/auditor/status",
+      "schema_fingerprint": "a835de42c08dc675",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "capsule_capabilities_capsule_get",
+      "path": "/capabilities/capsule",
+      "schema_fingerprint": "2ad02af926820e0a",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "capsule_health_capabilities_health_post",
+      "path": "/capabilities/health",
+      "schema_fingerprint": "ed84fd663f508657",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "reconcile_capsule_capabilities_reconcile_post",
+      "path": "/capabilities/reconcile",
+      "schema_fingerprint": "07a84a02c1e4d68d",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "verify_capsule_capabilities_verify_post",
+      "path": "/capabilities/verify",
+      "schema_fingerprint": "40e3184ef298b172",
+      "tags": [
+        "capabilities"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "simple_chat_chat_post",
+      "path": "/chat",
+      "schema_fingerprint": "f59709bfed4cfbf0",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_sessions_chat_sessions_get",
+      "path": "/chat/sessions",
+      "schema_fingerprint": "52de1b8f69671edd",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_session_chat_sessions_post",
+      "path": "/chat/sessions",
+      "schema_fingerprint": "26f11721dc3ed8c4",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "archive_session_chat_sessions__session_id__delete",
+      "path": "/chat/sessions/{session_id}",
+      "schema_fingerprint": "d70479a0d5270083",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_session_chat_sessions__session_id__get",
+      "path": "/chat/sessions/{session_id}",
+      "schema_fingerprint": "689bb18bb808714b",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "update_session_title_chat_sessions__session_id__patch",
+      "path": "/chat/sessions/{session_id}",
+      "schema_fingerprint": "361718c391a0697a",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "generate_title_chat_sessions__session_id__generate_title_post",
+      "path": "/chat/sessions/{session_id}/generate-title",
+      "schema_fingerprint": "33dd084f76ab803a",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "append_message_chat_sessions__session_id__messages_post",
+      "path": "/chat/sessions/{session_id}/messages",
+      "schema_fingerprint": "7e2a025f9953ea06",
+      "tags": [
+        "Chat Sessions"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "compile_run_compile_run_post",
+      "path": "/compile/run",
+      "schema_fingerprint": "4fa4a5763e19a3f1",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "compile_status_compile_status_get",
+      "path": "/compile/status",
+      "schema_fingerprint": "d6c7e834fd9a9f99",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "get_context_context_post",
+      "path": "/context",
+      "schema_fingerprint": "e2711524a7681052",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "distill_run_distill_run_post",
+      "path": "/distill/run",
+      "schema_fingerprint": "a12a91efbdb10f10",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "distill_status_distill_status_get",
+      "path": "/distill/status",
+      "schema_fingerprint": "8dd037b87b7d0971",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_all_engrams_engrams__get",
+      "path": "/engrams/",
+      "schema_fingerprint": "3174c09fafdfd331",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "coverage_gaps_engrams_coverage_gaps_get",
+      "path": "/engrams/coverage/gaps",
+      "schema_fingerprint": "f30941c5e5ace508",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_engram_engrams_create_post",
+      "path": "/engrams/create",
+      "schema_fingerprint": "96dcfa4048e1aa41",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "embed_engrams_engrams_embed_post",
+      "path": "/engrams/embed",
+      "schema_fingerprint": "58526bf7be872656",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "seed_engrams_engrams_seed_post",
+      "path": "/engrams/seed",
+      "schema_fingerprint": "2ebce301ad5e2849",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "engram_stats_engrams_stats_summary_get",
+      "path": "/engrams/stats/summary",
+      "schema_fingerprint": "c9844040a0a32118",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_engram_detail_engrams__engram_id__get",
+      "path": "/engrams/{engram_id}",
+      "schema_fingerprint": "c928921ac5fbfdb4",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "resolve_engram_engrams__engram_id__resolve_post",
+      "path": "/engrams/{engram_id}/resolve",
+      "schema_fingerprint": "50807bc8346d924a",
+      "tags": [
+        "engrams"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_eval_scores_eval_scores_get",
+      "path": "/eval-scores",
+      "schema_fingerprint": "c11bf8630039736f",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "health_health_get",
+      "path": "/health",
+      "schema_fingerprint": "066eb22fb9901773",
+      "tags": []
+    },
+    {
+      "method": "POST",
+      "operation_id": "ingest_observation_ingest_observation_post",
+      "path": "/ingest/observation",
+      "schema_fingerprint": "fa72df6c18ff6785",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_observations_ingest_observations_get",
+      "path": "/ingest/observations",
+      "schema_fingerprint": "b04068e4e1e07dd7",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "evaluate_observation_batch_ingest_observations_evaluate_batch_post",
+      "path": "/ingest/observations/evaluate-batch",
+      "schema_fingerprint": "98fdadf10d809edb",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_observation_detail_ingest_observations__obs_id__get",
+      "path": "/ingest/observations/{obs_id}",
+      "schema_fingerprint": "daf89e0b3ffabb72",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "apply_observation_ingest_observations__obs_id__apply_post",
+      "path": "/ingest/observations/{obs_id}/apply",
+      "schema_fingerprint": "a8f0dbbc735be06b",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "approve_observation_ingest_observations__obs_id__approve_post",
+      "path": "/ingest/observations/{obs_id}/approve",
+      "schema_fingerprint": "354bc897e319df05",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "evaluate_observation_ingest_observations__obs_id__evaluate_post",
+      "path": "/ingest/observations/{obs_id}/evaluate",
+      "schema_fingerprint": "2328cf6adc839aed",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "reject_observation_ingest_observations__obs_id__reject_post",
+      "path": "/ingest/observations/{obs_id}/reject",
+      "schema_fingerprint": "37a587715a637817",
+      "tags": [
+        "ingest"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "memory_as_of_janitor_as_of__neuron_id__get",
+      "path": "/janitor/as-of/{neuron_id}",
+      "schema_fingerprint": "9314b6da88245aa8",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "corpus_health_report_janitor_corpus_health_get",
+      "path": "/janitor/corpus-health",
+      "schema_fingerprint": "3f8d065c572c1f8c",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "memory_history_janitor_history__neuron_id__get",
+      "path": "/janitor/history/{neuron_id}",
+      "schema_fingerprint": "98dcce4a5b87d276",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "janitor_run_janitor_run_post",
+      "path": "/janitor/run",
+      "schema_fingerprint": "dafb2d1eb49f4563",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "janitor_status_janitor_status_get",
+      "path": "/janitor/status",
+      "schema_fingerprint": "3fd0820aea3d2c46",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_learning_analytics_learning_analytics_get",
+      "path": "/learning-analytics",
+      "schema_fingerprint": "e31f0d3ec4e1ee43",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_forward_lineage_lineage_neuron__neuron_id__forward_get",
+      "path": "/lineage/neuron/{neuron_id}/forward",
+      "schema_fingerprint": "9d86a979daa6d144",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_overrides_lineage_neuron__neuron_id__overrides_get",
+      "path": "/lineage/neuron/{neuron_id}/overrides",
+      "schema_fingerprint": "24022b142f284835",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_override_lineage_neuron__neuron_id__overrides_post",
+      "path": "/lineage/neuron/{neuron_id}/overrides",
+      "schema_fingerprint": "c2433c8cd8dc1671",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "operation_id": "delete_override_lineage_overrides__override_id__delete",
+      "path": "/lineage/overrides/{override_id}",
+      "schema_fingerprint": "6a3f03d111a5a0ef",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "query_trace_lineage_query__query_id__trace_get",
+      "path": "/lineage/query/{query_id}/trace",
+      "schema_fingerprint": "eb9d415d9022bfa1",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "source_impact_lineage_source__source_id__impact_get",
+      "path": "/lineage/source/{source_id}/impact",
+      "schema_fingerprint": "f7fdba82f69f0aef",
+      "tags": [
+        "lineage"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_metrics_metrics_mind_get",
+      "path": "/metrics/mind",
+      "schema_fingerprint": "647be14a8962f419",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_inbox_metrics_mind_inbox_get",
+      "path": "/metrics/mind/inbox",
+      "schema_fingerprint": "c7d86e1733820f1f",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_injection_channels_metrics_mind_injection_channels_get",
+      "path": "/metrics/mind/injection-channels",
+      "schema_fingerprint": "40c4d67816e48621",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_locomo_run_metrics_mind_locomo_run_get",
+      "path": "/metrics/mind/locomo-run",
+      "schema_fingerprint": "b779a429c4136134",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_sessions_metrics_mind_sessions_get",
+      "path": "/metrics/mind/sessions",
+      "schema_fingerprint": "876be27c4ea311db",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_skills_metrics_mind_skills_get",
+      "path": "/metrics/mind/skills",
+      "schema_fingerprint": "961d74b86a8e1ba0",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_subscription_metrics_mind_subscription_get",
+      "path": "/metrics/mind/subscription",
+      "schema_fingerprint": "895f5f78c7cdd020",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_codex_subscription_metrics_mind_subscription_codex_get",
+      "path": "/metrics/mind/subscription/codex",
+      "schema_fingerprint": "4d90af895db5c274",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_trust_metrics_mind_trust_get",
+      "path": "/metrics/mind/trust",
+      "schema_fingerprint": "1f76049259a92e4f",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_available_models_models_get",
+      "path": "/models",
+      "schema_fingerprint": "96dc4d84d4195780",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neurons_capacity_neurons_capacity_get",
+      "path": "/neurons/capacity",
+      "schema_fingerprint": "354adb1b08d43887",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_children_neurons_children_get",
+      "path": "/neurons/children",
+      "schema_fingerprint": "fabb7576761328d0",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_clusters_neurons_clusters_get",
+      "path": "/neurons/clusters",
+      "schema_fingerprint": "47fdd2360ae1c3a7",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "department_chord_neurons_edges_department_chord_get",
+      "path": "/neurons/edges/department-chord",
+      "schema_fingerprint": "a697cc0d4b995398",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "layer_flow_neurons_edges_layer_flow_get",
+      "path": "/neurons/edges/layer-flow",
+      "schema_fingerprint": "b5c7d1240b1a3d8a",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "spread_log_neurons_edges_spread_log_get",
+      "path": "/neurons/edges/spread-log",
+      "schema_fingerprint": "53bcc91ff90b184a",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "spread_trail_neurons_edges_spread_trail_get",
+      "path": "/neurons/edges/spread-trail",
+      "schema_fingerprint": "c8bf45eefbceda15",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "graph_3d_neurons_graph_3d_get",
+      "path": "/neurons/graph-3d",
+      "schema_fingerprint": "1f52ec7eda794376",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_refinements_neurons_refinements_get",
+      "path": "/neurons/refinements",
+      "schema_fingerprint": "a5bbe2db2d601fb3",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neurons_stats_neurons_stats_get",
+      "path": "/neurons/stats",
+      "schema_fingerprint": "35535bf5b93dbcbc",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neurons_tree_neurons_tree_get",
+      "path": "/neurons/tree",
+      "schema_fingerprint": "6da244f181c385a9",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_detail_neurons__neuron_id__get",
+      "path": "/neurons/{neuron_id}",
+      "schema_fingerprint": "979e14fcde368426",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_edges_neurons__neuron_id__edges_get",
+      "path": "/neurons/{neuron_id}/edges",
+      "schema_fingerprint": "3ed9ae54ec4a47e1",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "neuron_scores_neurons__neuron_id__scores_get",
+      "path": "/neurons/{neuron_id}/scores",
+      "schema_fingerprint": "e09d98268a77094b",
+      "tags": [
+        "neurons"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_queries_queries_get",
+      "path": "/queries",
+      "schema_fingerprint": "c167f13ffb0e022a",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "query_run_counts_queries_run_counts_post",
+      "path": "/queries/run-counts",
+      "schema_fingerprint": "0582b689300a36ed",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_query_detail_queries__query_id__get",
+      "path": "/queries/{query_id}",
+      "schema_fingerprint": "020934c1b53a92a0",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_query_dossier_queries__query_id__dossier_get",
+      "path": "/queries/{query_id}/dossier",
+      "schema_fingerprint": "4b1dc6c73e3644f8",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "post_query_query_post",
+      "path": "/query",
+      "schema_fingerprint": "ef1f0803226fe182",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "post_query_stream_query_stream_post",
+      "path": "/query/stream",
+      "schema_fingerprint": "d37719ee5bb007ee",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "evaluate_query_query__query_id__evaluate_post",
+      "path": "/query/{query_id}/evaluate",
+      "schema_fingerprint": "8fb0f7c0229d5605",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "get_followups_query__query_id__followups_post",
+      "path": "/query/{query_id}/followups",
+      "schema_fingerprint": "e75fa078cc772db1",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "rate_query_query__query_id__rate_post",
+      "path": "/query/{query_id}/rate",
+      "schema_fingerprint": "13fd626686f01fbc",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "refine_query_query__query_id__refine_post",
+      "path": "/query/{query_id}/refine",
+      "schema_fingerprint": "c4289441110da316",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "apply_refinements_query__query_id__refine_apply_post",
+      "path": "/query/{query_id}/refine/apply",
+      "schema_fingerprint": "d7460f88e0e454fc",
+      "tags": [
+        "query"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "recall_recall_post",
+      "path": "/recall",
+      "schema_fingerprint": "85dc5466a54c65f0",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "remember_remember_post",
+      "path": "/remember",
+      "schema_fingerprint": "68909956a91f7e72",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_ledgers_roadmap_ledgers_get",
+      "path": "/roadmap-ledgers",
+      "schema_fingerprint": "95a5f0472444e8e7",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_ledger_roadmap_ledgers_post",
+      "path": "/roadmap-ledgers",
+      "schema_fingerprint": "5cbbeb8027f41b3b",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "admission_context_roadmap_ledgers_admission_context_get",
+      "path": "/roadmap-ledgers/admission-context",
+      "schema_fingerprint": "c34203f9c821ff10",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_ledger_roadmap_ledgers__slug__get",
+      "path": "/roadmap-ledgers/{slug}",
+      "schema_fingerprint": "7810cca93226003e",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operation_id": "update_ledger_metadata_roadmap_ledgers__slug__patch",
+      "path": "/roadmap-ledgers/{slug}",
+      "schema_fingerprint": "3cb43213ec1fc943",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operation_id": "update_ledger_roadmap_ledgers__slug__put",
+      "path": "/roadmap-ledgers/{slug}",
+      "schema_fingerprint": "b5495bf974937f45",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_admissions_roadmap_ledgers__slug__admissions_get",
+      "path": "/roadmap-ledgers/{slug}/admissions",
+      "schema_fingerprint": "8eaa0d28abda4608",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "create_admission_roadmap_ledgers__slug__admissions_post",
+      "path": "/roadmap-ledgers/{slug}/admissions",
+      "schema_fingerprint": "965d008758ccc033",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "reconcile_roadmap_record_roadmap_ledgers__slug__nodes__node_id__reconcile_post",
+      "path": "/roadmap-ledgers/{slug}/nodes/{node_id}/reconcile",
+      "schema_fingerprint": "b9b301141bda2302",
+      "tags": [
+        "roadmap-ledgers"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_tenant_tenant_get",
+      "path": "/tenant",
+      "schema_fingerprint": "a4fd7670e471a2f9",
+      "tags": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_tenants_tenants_get",
+      "path": "/tenants",
+      "schema_fingerprint": "7845ba2e807b346c",
+      "tags": []
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_agents_v1_agents_get",
+      "path": "/v1/agents",
+      "schema_fingerprint": "5bb1619ad520120f",
+      "tags": [
+        "agents"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "list_agent_runs_v1_agents_runs_get",
+      "path": "/v1/agents/runs",
+      "schema_fingerprint": "06e8569da9ab0d05",
+      "tags": [
+        "agents"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_agent_run_v1_agents_runs__action_id__get",
+      "path": "/v1/agents/runs/{action_id}",
+      "schema_fingerprint": "d484c1f7acf7284b",
+      "tags": [
+        "agents"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "get_agent_v1_agents__name__get",
+      "path": "/v1/agents/{name}",
+      "schema_fingerprint": "d872e5c24ecf651d",
+      "tags": [
+        "agents"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "trigger_agent_run_v1_agents__name__run_post",
+      "path": "/v1/agents/{name}/run",
+      "schema_fingerprint": "596fcff971bab75f",
+      "tags": [
+        "agents"
+      ]
+    },
+    {
+      "method": "POST",
+      "operation_id": "v1_query_v1_query_post",
+      "path": "/v1/query",
+      "schema_fingerprint": "544983263b05281f",
+      "tags": [
+        "external-v1"
+      ]
+    }
+  ],
+  "routes_absent_from_openapi": [
+    "DELETE /mcp",
+    "GET /docs",
+    "GET /docs/oauth2-redirect",
+    "GET /openapi.json",
+    "GET /redoc",
+    "MOUNT /mcp"
+  ],
+  "static_frontend_excluded": {
+    "note": "conditional on frontend/dist; excluded so the snapshot is identical on a dev box and a clean CI checkout",
+    "routes": [
+      "GET /{full_path}",
+      "MOUNT /assets"
+    ]
+  },
+  "tenant_id": "corvus-mind"
+}

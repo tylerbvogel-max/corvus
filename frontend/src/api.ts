@@ -12,10 +12,6 @@ import type {
   RefineResponse,
   ApplyRefineResponse,
   NeuronRefinementEntry,
-  AutopilotConfig,
-  AutopilotRun,
-  AutopilotTickResponse,
-  AutopilotChange,
   DeptChordEntry,
   EgoGraphResponse,
   SpreadTrailResponse,
@@ -863,52 +859,6 @@ export interface CheckpointResponse {
 
 export function createCheckpoint(): Promise<CheckpointResponse> {
   return json<CheckpointResponse>('/admin/checkpoint', { method: 'POST' });
-}
-
-// Autopilot
-export function fetchAutopilotConfig(): Promise<AutopilotConfig> {
-  return json<AutopilotConfig>('/admin/autopilot/config');
-}
-
-export function updateAutopilotConfig(update: Partial<AutopilotConfig>): Promise<AutopilotConfig> {
-  return json<AutopilotConfig>('/admin/autopilot/config', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(update),
-  });
-}
-
-export function triggerAutopilotTick(): Promise<AutopilotTickResponse> {
-  return json<AutopilotTickResponse>('/admin/autopilot/tick', { method: 'POST' });
-}
-
-export function triggerAutopilotRunNow(): Promise<AutopilotTickResponse> {
-  return json<AutopilotTickResponse>('/admin/autopilot/run-now', { method: 'POST' });
-}
-
-export interface ConsolidationResult {
-  status: string; firings_pruned?: number; neurons_decayed?: number;
-  neurons_deactivated?: number; centrality_updates?: number; total_queries?: number;
-  engram_cache?: { scheduled?: boolean; total?: number; fetched?: number; failed?: number; fresh?: number };
-}
-export function triggerConsolidation(): Promise<ConsolidationResult> {
-  return json<ConsolidationResult>('/admin/autopilot/consolidate', { method: 'POST' });
-}
-
-export function fetchAutopilotRuns(): Promise<AutopilotRun[]> {
-  return json<AutopilotRun[]>('/admin/autopilot/runs');
-}
-
-export function fetchAutopilotRunChanges(runId: number): Promise<AutopilotChange[]> {
-  return json<AutopilotChange[]>(`/admin/autopilot/runs/${runId}/changes`);
-}
-
-export function cancelAutopilotTick(): Promise<AutopilotTickResponse> {
-  return json<AutopilotTickResponse>('/admin/autopilot/cancel', { method: 'POST' });
-}
-
-export function fetchAutopilotStatus(): Promise<{ running: boolean; step: string; detail: string }> {
-  return json<{ running: boolean; step: string; detail: string }>('/admin/autopilot/status');
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

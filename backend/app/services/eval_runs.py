@@ -29,6 +29,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.rbac import UserIdentity
+from app.governance.output_guard import apply_output_guards
 from app.models import EvalRun, EvalRunCase, NeuronScoreOverride, OutputViolation
 from app.services import action_bus
 from app.services.executor import execute_query
@@ -142,8 +143,6 @@ async def _execute_case(
     try/except — per-case failures record an ``error_message`` on the case
     row without aborting the rest of the run.
     """
-    from app.routers.query import _apply_output_guards
-
     case_row = EvalRunCase(
         eval_run_id=eval_run.id,
         case_label=case.label,
@@ -161,7 +160,7 @@ async def _execute_case(
         violations_out: list[dict] = []
         blocked = False
         if query_id is not None:
-            violations, blocked = await _apply_output_guards(
+            violations, blocked = await apply_output_guards(
                 db, query_id, result.get("slots", []), actor,
             )
             violations_out = [v.model_dump() for v in violations]

@@ -18,12 +18,15 @@ interface Props {
   bloom: boolean;
   motion: boolean;
   synapses: boolean;
+  firings: boolean;
+  firingPace: number;
   recallActive: boolean;
   replayTraceCount: number;
   onLayoutModeChange: (mode: 'organic' | 'zones') => void;
   onBloomChange: (enabled: boolean) => void;
   onMotionChange: (enabled: boolean) => void;
   onSynapsesChange: (enabled: boolean) => void;
+  onFiringsChange: (enabled: boolean) => void;
   onRecallOpen: () => void;
   onFitView: () => void;
 }
@@ -84,17 +87,21 @@ export default function NeuronRadarControls({
   bloom,
   motion,
   synapses,
+  firings,
+  firingPace,
   recallActive,
   replayTraceCount,
   onLayoutModeChange,
   onBloomChange,
   onMotionChange,
   onSynapsesChange,
+  onFiringsChange,
   onRecallOpen,
   onFitView,
 }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const dragAxis = useRef<number | null>(null);
+  const firingLive = motion && firings && firingPace > 0;
 
   const setFromClientPoint = (index: number, clientX: number, clientY: number) => {
     const svg = svgRef.current;
@@ -218,6 +225,16 @@ export default function NeuronRadarControls({
         >
           Synapses
         </button>
+        <button
+          type="button"
+          className={firings ? 'active' : ''}
+          aria-pressed={firings}
+          data-testid="toggle-firings"
+          title="Animate a fair sweep across the full visible synapse graph"
+          onClick={() => onFiringsChange(!firings)}
+        >
+          Firings
+        </button>
       </div>
 
       <div className="neuron-radar-utility">
@@ -228,9 +245,9 @@ export default function NeuronRadarControls({
           aria-pressed={recallActive}
           onClick={onRecallOpen}
         >
-          <span className={motion ? 'live' : ''} />
+          <span className={firingLive ? 'live' : ''} />
           Recall replay
-          <strong>{replayTraceCount} traces · {motion ? 'live' : 'paused'}</strong>
+          <strong>{replayTraceCount} traces · {firingLive ? 'live' : 'paused'}</strong>
         </button>
         <button
           type="button"

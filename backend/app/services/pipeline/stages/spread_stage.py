@@ -26,6 +26,7 @@ class SpreadActivationStage:
             requester=state.requester,
             max_hops=state.spread_hops,
             min_activation=state.spread_floor,
+            traversal_metrics=state.spread_traversal,
         )
         state.neurons_activated = len(state.scored)
         return state
@@ -34,4 +35,5 @@ class SpreadActivationStage:
         return {
             "propagated": len(out.scored),
             "neurons_activated": out.neurons_activated,
+            "bounds": out.spread_traversal,
         }

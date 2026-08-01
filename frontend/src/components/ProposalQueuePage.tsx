@@ -44,7 +44,7 @@ const ORIGIN_COLORS: Record<string, string> = {
 
 const SOURCE_OPTIONS: { key: OriginFilter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'autopilot', label: 'Autopilot' },
+  { key: 'autopilot', label: 'Autopilot (historical)' },
   { key: 'integrity', label: 'Integrity' },
   { key: 'document', label: 'Document' },
   { key: 'emergent', label: 'Emergent' },

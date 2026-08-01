@@ -17,13 +17,13 @@ import WakeSettingsPanel from './components/WakeSettingsPanel'
 import Explorer from './components/Explorer'
 import QueryLab from './components/QueryLab'
 import MindMetricsPage from './components/MindMetricsPage'
+import ArchitecturePage from './components/ArchitecturePage'
 import MindSessionsPage from './components/MindSessionsPage'
 import MindInboxPage from './components/MindInboxPage'
 import MindSkillsPage from './components/MindSkillsPage'
 import EvaluationPage from './components/EvaluationPage'
 import EvalRunsPage from './components/EvalRunsPage'
 import RefinementHistory from './components/RefinementHistory'
-import AutopilotPage from './components/AutopilotPage'
 import CirclePacking from './components/CirclePacking'
 import SampleQueries from './components/SampleQueries'
 import QualityPage from './components/QualityPage'
@@ -47,7 +47,7 @@ import NexusLabPage from './components/NexusLabPage'
 import OracleFunnelLabPage from './components/OracleFunnelLabPage'
 
 import { fetchTenantConfig } from './config'
-import type { TenantConfig } from './config'
+import type { Capability, TenantConfig } from './config'
 import { checkAccess, setAccessKey, getAccessKey } from './auth'
 import { fetchProposalStats } from './api'
 
@@ -63,7 +63,8 @@ type OriginKey = 'autopilot' | 'integrity' | 'document' | 'emergent' | 'manual';
 // reverse link is clicked. Kept in App.tsx because the producer-page
 // components don't know about each other.
 const ORIGIN_TO_TAB: Record<OriginKey, Tab> = {
-  autopilot: 'autopilot',
+  // Autopilot is retired; historical proposals remain inspectable here.
+  autopilot: 'proposal-queue',
   integrity: 'integrity-findings',
   document: 'document-ingest',
   emergent: 'emergent-queue',
@@ -74,14 +75,13 @@ const ORIGIN_TO_TAB: Record<OriginKey, Tab> = {
 // Proposal Queue itself aggregates all pending; the four producer tabs
 // each show their own origin's pending count.
 const TAB_TO_ORIGIN: Partial<Record<Tab, OriginKey | 'all'>> = {
-  'autopilot': 'autopilot',
   'integrity-findings': 'integrity',
   'document-ingest': 'document',
   'emergent-queue': 'emergent',
   'proposal-queue': 'all',
 };
 
-type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'autopilot' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'autopilot-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'carlos-lab' | 'nexus-lab' | 'oracle-funnel-lab';
+type Tab = 'home' | 'chat-history' | 'chat-graph' | 'explorer' | 'graph' | 'universe' | 'layer-heatmap' | 'query' | 'samples' | 'evaluation' | 'eval-runs' | 'refinements' | 'proposal-queue' | 'emergent-queue' | 'document-ingest' | 'integrity-dashboard' | 'integrity-scan' | 'integrity-findings' | 'synaptic-learning' | 'quality' | 'fairness' | 'performance' | 'knowledge-governance' | 'engrams' | 'agents' | 'query-landing' | 'knowledge-landing' | 'evaluate-landing' | 'history-landing' | 'mind-metrics' | 'mind-sessions' | 'mind-inbox' | 'mind-skills' | 'roadmap-ledgers' | 'carlos-lab' | 'nexus-lab' | 'oracle-funnel-lab' | 'architecture';
 
 type Theme = 'corvus-native' | 'corvus-dark' | 'corvus-light' | 'high-contrast' | 'colorblind';
 
@@ -99,6 +99,10 @@ interface NavItem {
   description: string;
   className?: string;
   labelColor?: string;
+  /** Backend capability this page's API calls depend on. When the active
+   *  profile does not grant it, the item is removed rather than shown and
+   *  left to 404 (durability-tenant-composition, verification #6). */
+  requires?: Capability;
 }
 
 interface NavGroup {
@@ -143,7 +147,11 @@ const IconLab = (
   </svg>
 );
 
-function buildNavGroups(_tenantId: string | undefined, memorySurface = false): NavGroup[] {
+function buildNavGroups(
+  _tenantId: string | undefined,
+  memorySurface = false,
+  capabilities?: Capability[],
+): NavGroup[] {
   const groups: NavGroup[] = [];
 
   if (!memorySurface) groups.push(
@@ -153,8 +161,8 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'Run and test queries against the neuron graph',
       icon: IconTerminal,
       items: [
-        { key: 'query', label: 'Query Lab', description: 'Run queries against the neuron graph' },
-        { key: 'samples', label: 'Samples', description: 'Pre-built queries for testing and demos' },
+        { key: 'query', label: 'Query Lab', description: 'Run queries against the neuron graph', requires: 'knowledge_graph' },
+        { key: 'samples', label: 'Samples', description: 'Pre-built queries for testing and demos', requires: 'knowledge_graph' },
       ],
     },
   );
@@ -166,11 +174,11 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'Inspect what Corvus knows and how it learned',
       icon: IconNetwork,
       items: [
-        { key: 'explorer', label: 'Explorer', description: 'Browse and edit individual neurons' },
-        { key: 'engrams', label: 'Engrams', description: 'Source documents linked to the graph' },
-        { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health' },
+        { key: 'explorer', label: 'Explorer', description: 'Browse and edit individual neurons', requires: 'knowledge_graph' },
+        { key: 'engrams', label: 'Engrams', description: 'Source documents linked to the graph', requires: 'knowledge_graph' },
+        { key: 'mind-skills', label: 'Skills', description: 'Compiled playbooks and their source health', requires: 'memory' },
         { key: 'synaptic-learning', label: 'Synaptic Learning', description: 'Learned patterns from query feedback' },
-        { key: 'layer-heatmap', label: 'Layer Heatmap', description: 'Activity heatmap across graph layers' },
+        { key: 'layer-heatmap', label: 'Layer Heatmap', description: 'Activity heatmap across graph layers', requires: 'knowledge_graph' },
       ],
     },
     {
@@ -179,10 +187,10 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'Resolve judgment and preserve forward intent',
       icon: IconCompass,
       items: [
-        { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment' },
-        { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve proposed graph changes' },
-        { key: 'roadmap-ledgers', label: 'Roadmap Ledgers', description: 'Project-scoped long-horizon plans, gates, and durable kickoff context' },
-        { key: 'refinements', label: 'Refinements', description: 'History of neuron updates and changes' },
+        { key: 'mind-inbox', label: 'Inbox', description: 'Everything awaiting your judgment', requires: 'governance' },
+        { key: 'proposal-queue', label: 'Proposal Queue', description: 'Review and approve proposed graph changes', requires: 'governance' },
+        { key: 'roadmap-ledgers', label: 'Roadmap Ledgers', description: 'Project-scoped long-horizon plans, gates, and durable kickoff context', requires: 'operator' },
+        { key: 'refinements', label: 'Refinements', description: 'History of neuron updates and changes', requires: 'governance' },
       ],
     },
     {
@@ -191,14 +199,15 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
       description: 'Read the system’s health, behavior, and evidence',
       icon: IconPulse,
       items: [
-        { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost' },
+        { key: 'mind-metrics', label: 'Pallium', description: 'Pallium performance, trust, growth, and cost', requires: 'memory' },
         { key: 'mind-sessions', label: 'Sessions', description: "Episode logs: the memory's inputs and their distillation" },
-        { key: 'performance', label: 'Performance', description: 'Volume, cost, scoring health, spread activation, and per-stage pipeline latency' },
-        { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics' },
+        { key: 'performance', label: 'Performance', description: 'Volume, cost, scoring health, spread activation, and per-stage pipeline latency', requires: 'evaluation' },
+        { key: 'knowledge-governance', label: 'Governance', description: 'Knowledge governance and compliance metrics', requires: 'compliance' },
         { key: 'quality', label: 'Quality', description: 'Response quality scoring and trends' },
         { key: 'fairness', label: 'Fairness', description: 'Bias detection across departments and roles' },
-        { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history' },
-        { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query' },
+        { key: 'evaluation', label: 'Evaluation', description: 'Per-query evaluation scores and history', requires: 'evaluation' },
+        { key: 'eval-runs', label: 'Eval Runs', description: 'Immutable eval artifacts — certify a run to stamp /v1/query', requires: 'evaluation' },
+        { key: 'architecture', label: 'Architecture', description: "The system's own shape — boxes, drift, and the frontend/backend route join", requires: 'operator' },
       ],
     },
   );
@@ -226,11 +235,21 @@ function buildNavGroups(_tenantId: string | undefined, memorySurface = false): N
     ],
   });
 
+  // Composition filter first: never advertise a page whose backend routes this
+  // process did not mount. An older backend omits the field entirely, in which
+  // case nothing is filtered and the legacy rules below still apply.
+  if (capabilities) {
+    const granted = new Set<Capability>(capabilities);
+    for (const g of groups) {
+      g.items = g.items.filter(i => !i.requires || granted.has(i.requires));
+    }
+  }
+
   if (memorySurface) {
     // Memory tenants: hide chat-era and knowledge-tenant-only surfaces.
     // Performance + Pipeline Timing stay visible: recall queries carry full
     // stage telemetry, so per-step speed is real data on memory tenants too.
-    const hidden = new Set(['autopilot', 'emergent-queue', 'document-ingest',
+    const hidden = new Set(['emergent-queue', 'document-ingest',
       'engrams', 'layer-heatmap', 'knowledge-governance', 'quality',
       'fairness', 'evaluation', 'eval-runs',
       'integrity-dashboard', 'integrity-scan', 'integrity-findings']);
@@ -590,7 +609,10 @@ export default function App() {
 
   // Build nav groups based on tenant (memoized — page-element identity
   // depends on it, so it must be referentially stable between renders)
-  const navGroups = useMemo(() => buildNavGroups(tenantConfig?.tenant_id, !!tenantConfig?.memory_surface), [tenantConfig?.tenant_id, tenantConfig?.memory_surface]);
+  const navGroups = useMemo(
+    () => buildNavGroups(tenantConfig?.tenant_id, !!tenantConfig?.memory_surface, tenantConfig?.capabilities),
+    [tenantConfig?.tenant_id, tenantConfig?.memory_surface, tenantConfig?.capabilities],
+  );
   const activeGroup = navGroups.find(g => g.landingKey === focusedKey || g.items.some(i => i.key === focusedKey))?.label;
 
   const windowTitle = useCallback((key: string): string => {
@@ -637,7 +659,6 @@ export default function App() {
       case 'eval-runs': return <EvalRunsPage />;
       case 'refinements': return <RefinementHistory />;
       case 'samples': return <SampleQueries />;
-      case 'autopilot': return <AutopilotPage />;
       case 'proposal-queue': return <ProposalQueuePage initialOriginFilter={queueInitialOrigin} onNavigateToProducer={goToProducer} />;
       case 'emergent-queue': return <EmergentQueuePage />;
       case 'document-ingest': return <DocumentIngestPage />;
@@ -649,6 +670,7 @@ export default function App() {
       case 'fairness': return <FairnessPage />;
       case 'performance': return <PerformancePage />;
       case 'mind-metrics': return <MindMetricsPage />;
+      case 'architecture': return <ArchitecturePage />;
       case 'mind-sessions': return <MindSessionsPage />;
       case 'mind-inbox': return <MindInboxPage />;
       case 'mind-skills': return <MindSkillsPage />;

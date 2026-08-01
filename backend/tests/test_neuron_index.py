@@ -92,3 +92,13 @@ def test_on_firing_incremental():
     assert idx.dept_totals(["Mfg"]) == {"Mfg": 4}
     cands = idx.candidates([1], [])
     assert cands[0].invocations == 4                     # 3 + 1
+
+
+def test_interleaved_department_firings_stay_distinct():
+    """Concurrent query interleaving does not double-count a department query."""
+    idx = get_index()
+    idx.on_firing(1, 103, 110)
+    idx.on_firing(1, 104, 111)
+    idx.on_firing(1, 103, 110)  # delayed second firing from query 103
+    assert idx.dept_totals(["Mfg"]) == {"Mfg": 5}
+    assert idx.fire_stats([1])[0] == {1: 5}

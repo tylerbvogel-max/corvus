@@ -68,6 +68,7 @@ frontend/.turbo/
 *.tmp
 *.temp
 .tmp/
+.artifacts/
 
 # Systemd service files with absolute paths (use templates instead)
 deploy/*.service

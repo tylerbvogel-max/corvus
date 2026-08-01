@@ -18,6 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.governance.policies import (
@@ -26,7 +27,8 @@ from app.governance.policies import (
     ViolationDraft,
 )
 from app.middleware.rbac import UserIdentity
-from app.models import OutputViolation
+from app.models import NeuronFiring, OutputViolation, Query
+from app.schemas import OutputViolationOut
 from app.services import action_bus
 from app.tenant import tenant
 
@@ -195,3 +197,60 @@ async def run_guards(
         violations=rows,
         action_id=action_id,
     )
+
+
+async def apply_output_guards(
+    db: AsyncSession,
+    query_id: int,
+    slots: list[dict],
+    actor: UserIdentity,
+) -> tuple[list[OutputViolationOut], bool]:
+    """Apply output policy to every response slot and persist governed text.
+
+    This is a domain service shared by the internal query route, the public v1
+    adapter, and immutable eval runs. Keeping it below the transport layer
+    prevents service code from importing a FastAPI router.
+    """
+    assert len(slots) <= 16, "slot count exceeds sanity cap (JPL-2)"
+    firing_result = await db.execute(
+        select(NeuronFiring).where(NeuronFiring.query_id == query_id)
+    )
+    firings = list(firing_result.scalars())
+    out: list[OutputViolationOut] = []
+    blocked = False
+    query_row: Query | None = None
+    for slot in slots:
+        text = slot.get("response") or ""
+        if not text:
+            continue
+        guard = await run_guards(
+            db,
+            query_id=query_id,
+            response_text=text,
+            firings=firings,
+            actor=actor,
+        )
+        if guard.final_text != text:
+            slot["response"] = guard.final_text
+            if query_row is None:
+                query_row = await db.get(Query, query_id)
+            if query_row is not None:
+                mode = slot.get("mode")
+                if mode == "haiku_neuron" and query_row.response_text == text:
+                    query_row.response_text = guard.final_text
+                elif mode == "opus_raw" and query_row.opus_response_text == text:
+                    query_row.opus_response_text = guard.final_text
+        out.extend(
+            OutputViolationOut(
+                id=row.id,
+                rule_id=row.rule_id,
+                severity=row.severity,
+                action=row.action,
+                matched_span=row.matched_span,
+                redaction=row.redaction,
+                detail=row.detail,
+            )
+            for row in guard.violations
+        )
+        blocked = blocked or guard.blocked
+    return out, blocked

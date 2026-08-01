@@ -114,12 +114,19 @@ def test_run_entailment_check_happy_path():
     verdict_payload = json.dumps({"verdicts": [
         {"pair": 0, "supported": False, "reason": "source describes inspection, not torque"},
     ]})
-    llm = AsyncMock(return_value={"text": verdict_payload, "cost_usd": 0.003})
+    db = AsyncMock()
+
+    async def judge_after_release(*_args, **_kwargs):
+        assert db.commit.await_count == 1, \
+            "entailment judge must not run inside the source-read transaction"
+        return {"text": verdict_payload, "cost_usd": 0.003}
+
+    llm = AsyncMock(side_effect=judge_after_release)
     sources = {token: ("Wrench Calibration", "calibration schedule content")}
     with patch.object(ec, "_load_hop_map_for_query", AsyncMock(return_value=_hop_map(token))), \
          patch.object(ec, "_load_source_texts", AsyncMock(return_value=sources)), \
          patch.object(ec, "llm_chat", llm):
-        result = asyncio.run(ec.run_entailment_check(AsyncMock(), answer, 7))
+        result = asyncio.run(ec.run_entailment_check(db, answer, 7))
     assert result["status"] == "ok"
     assert result["checked"] == 1
     assert result["unsupported_count"] == 1

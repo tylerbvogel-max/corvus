@@ -45,7 +45,7 @@ The framework is **harness-agnostic** — it works as an invisible add-on for an
 │  └──────────────┘  │    RRF lanes │  └──────────────────────┘  │
 │                    └──────────────┘                             │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │              NEURON GRAPH (PostgreSQL + pgvector)        │  │
+│  │                    NEURON GRAPH (PostgreSQL)              │  │
 │  │  Neurons: flat substrate, typed by abstraction_type      │  │
 │  │  Edges: stellate (intra-scope), pyramidal (cross-scope)  │  │
 │  │  Scoring: 6-signal (relevance, impact, burst, recency,   │  │
@@ -73,7 +73,7 @@ The framework is **harness-agnostic** — it works as an invisible add-on for an
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | Python | 3.11+ | |
-| PostgreSQL | 15+ | Must have `pgvector` extension |
+| PostgreSQL | 15+ | pgvector is not required by the current text-embedding schema |
 | Node.js | 20+ | For frontend demo only |
 | **Claude CLI** | Latest | **Required for LLM calls** — uses your personal Anthropic subscription (no API credits consumed). Install via `npm install -g @anthropic-ai/claude-code` then `claude auth login` |
 
@@ -86,9 +86,6 @@ The framework is **harness-agnostic** — it works as an invisible add-on for an
 ```bash
 # Create the database (run as postgres user)
 sudo -u postgres createdb -O $USER corvus_mind
-
-# Enable pgvector extension
-sudo -u postgres psql -d corvus_mind -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 
 ---
@@ -100,8 +97,9 @@ cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# Run the corvus-mind tenant (port 8005)
-TENANT_ID=corvus-mind PORT=8005 uvicorn app.main:app --port 8005 --reload
+# Run the corvus-mind tenant (port 8005). This applies reviewed migrations,
+# then the application independently verifies that the schema is at head.
+TENANT_ID=corvus-mind PORT=8005 bash scripts/start_backend.sh
 ```
 
 > **One-command with Docker** (if you prefer):
@@ -360,7 +358,7 @@ docker compose up --build
 └─────────────────────┘                           └─────────────────────┘
 ```
 
-**Consolidation decay** (runs on autopilot tick, max 24h):
+**Consolidation decay** (runs from the dedicated janitor schedule):
 - Unreinforced informational → deactivated → reclaimed
 - Near-duplicate lessons across independent sessions → fused (human-gated), weight accumulated, provenance preserved
 - **Independence required**: an episode where the lesson was already in context is a *usage*, not a confirmation — prevents self-reinforcement trap
@@ -461,7 +459,7 @@ version per workload); the dataset is SHA-256-pinned and loaded fail-closed.
 corvus/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app, lifespan, migrations
+│   │   ├── main.py              # FastAPI app and read-only schema guard
 │   │   ├── config.py            # Settings (env-driven)
 │   │   ├── tenant.py            # Tenant singleton loader
 │   │   ├── models.py            # SQLAlchemy models
@@ -481,7 +479,7 @@ corvus/
 │   │       ├── risk_categories.py
 │   │       ├── provenance_seeds.py
 │   │       └── regulatory_tree.py
-│   ├── alembic/                 # Schema migrations (not run at startup)
+│   ├── alembic/                 # Sole schema-mutation authority
 │   ├── requirements.txt
 │   └── tests/                   # Engine tests (domain-agnostic)
 ├── frontend/                    # React + Vite + TypeScript demo UI

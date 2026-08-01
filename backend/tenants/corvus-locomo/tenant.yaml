@@ -13,6 +13,23 @@ semantic_prefilter_enabled: true
 # Enables /recall, /remember, /distill, /janitor, /compile on this tenant
 # (they 404 on knowledge tenants — see tenant.py memory_surface_enabled).
 memory_surface: true
+# Runtime composition (app/composition/capabilities.py). Fail-closed: a tenant
+# with no capabilities block refuses to start.
+#
+# This is a benchmark tenant, and its only consumer does not speak HTTP: the
+# LoCoMo harness (eval/locomo/run_locomo.py) imports app.services.* and
+# app.database directly, in-process — 19 direct service imports, zero HTTP
+# calls, and an empty audit_log (measured 2026-07-31). Every operator,
+# compliance, governance, and external surface it currently exposes is
+# therefore unreachable by anything that actually drives it.
+#
+# memory + knowledge_graph keep the surface an operator needs to inspect a
+# benchmark run by hand (recall probes, neuron/engram reads) and keep the
+# recall prefilter warm; nothing else is composed.
+capabilities:
+  - memory
+  - knowledge_graph
+
 regulatory_department_name: "Provenance"
 region_label: "Scope"
 reseed_threshold: 10

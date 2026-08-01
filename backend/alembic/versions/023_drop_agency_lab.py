@@ -34,11 +34,10 @@ TABLES = (
 
 
 def upgrade() -> None:
-    for table in TABLES:
-        op.execute(f'DROP TABLE IF EXISTS "{table}" CASCADE')
+    # Agency Lab tables are retained as historical provenance. Do not drop
+    # them automatically during schema upgrades.
+    pass
 
 
 def downgrade() -> None:
-    # This experimental schema is intentionally not recreated. Its behavior
-    # remains auditable in git history and the archived calibration receipts.
     pass

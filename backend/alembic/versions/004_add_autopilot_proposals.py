@@ -18,8 +18,21 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_exists(table_name: str) -> bool:
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = :t"
+        ),
+        {"t": table_name},
+    )
+    return result.scalar() is not None
+
+
 def upgrade() -> None:
     """Create proposal tables and add FK columns."""
+    if _table_exists("autopilot_proposals"):
+        return
     # Create autopilot_proposals first (referenced by proposal_items and autopilot_runs)
     op.create_table(
         'autopilot_proposals',
@@ -76,7 +89,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop proposal tables and FK columns."""
-    op.drop_column('autopilot_runs', 'proposal_id')
-    op.drop_column('neurons', 'proposal_item_id')
-    op.drop_table('proposal_items')
-    op.drop_table('autopilot_proposals')
+    if _table_exists("autopilot_runs"):
+        op.drop_column('autopilot_runs', 'proposal_id')
+    if _table_exists("neurons"):
+        op.drop_column('neurons', 'proposal_item_id')
+    if _table_exists("proposal_items"):
+        op.drop_table('proposal_items')
+    if _table_exists("autopilot_proposals"):
+        op.drop_table('autopilot_proposals')

@@ -16,8 +16,62 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.middleware.rbac import UserIdentity
 from app.models import Neuron, NeuronEdge
 from app.tenant import tenant
+
+
+_CONCEPT_SYSTEM_ACTOR = UserIdentity(
+    user_id="concept_service", role="admin", source="system",
+)
+
+
+class ConceptMutationError(RuntimeError):
+    """An authoritative concept mutation failed inside the Action Bus."""
+
+
+def _concept_create_input(
+    label: str,
+    content: str,
+    summary: str | None,
+    total_queries: int,
+) -> dict:
+    return {
+        "total_queries": total_queries,
+        "reason": f"Create concept neuron: {label}",
+        "spec": {
+            "parent_id": None,
+            "layer": -1,
+            "node_type": "concept",
+            "label": label,
+            "content": content,
+            "summary": summary or label,
+            "department": None,
+            "role_key": None,
+            "source_type": "operational",
+            "source_origin": "concept",
+        },
+    }
+
+
+async def _derive_concept_embedding(
+    db: AsyncSession,
+    neuron: Neuron,
+    label: str,
+    content: str,
+    summary: str | None,
+) -> None:
+    """Populate the rebuildable semantic projection after authoritative create."""
+    import asyncio
+    import concurrent.futures
+    from app.services.embedding_service import embed_text
+
+    loop = asyncio.get_running_loop()
+    embed_text_str = f"{label} {summary or ''} {content}"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        vec = await loop.run_in_executor(pool, embed_text, embed_text_str)
+    neuron.embedding = json.dumps(vec)
+    await db.flush()
 
 
 async def create_concept_neuron(
@@ -25,40 +79,40 @@ async def create_concept_neuron(
     label: str,
     content: str,
     summary: str | None = None,
+    *,
+    actor: UserIdentity | None = None,
+    actor_type: str = "system",
 ) -> Neuron:
-    """Create a concept neuron (layer=-1, no department, no parent)."""
+    """Create a concept neuron through the governed write boundary.
+
+    Embedding is a rebuildable projection and remains outside the authoritative
+    action. The caller owns the outer transaction.
+    """
     from app.services.neuron_service import get_system_state
+    from app.services import action_bus
 
     state = await get_system_state(db)
-
-    neuron = Neuron(
-        parent_id=None,
-        layer=-1,
-        node_type="concept",
-        label=label,
-        content=content,
-        summary=summary or label,
-        department=None,
-        role_key=None,
-        created_at_query_count=state.total_queries,
-        source_type="operational",
-        source_origin="concept",
+    result = await action_bus.submit(
+        db=db,
+        kind="neuron.create",
+        actor=actor or _CONCEPT_SYSTEM_ACTOR,
+        actor_type=actor_type,
+        reason=f"Create concept neuron: {label}",
+        input_data=_concept_create_input(
+            label, content, summary, state.total_queries,
+        ),
     )
-    db.add(neuron)
-    await db.flush()  # get ID
+    if result.state != "applied" or not result.payload:
+        raise ConceptMutationError(
+            f"neuron.create failed for concept {label!r}: {result.error or result.state}"
+        )
+    neuron = await db.get(Neuron, result.payload["neuron_id"])
+    if neuron is None:
+        raise ConceptMutationError(
+            f"neuron.create returned missing concept #{result.payload['neuron_id']}"
+        )
 
-    # Embed
-    import concurrent.futures
-    import asyncio
-    from app.services.embedding_service import embed_text
-
-    loop = asyncio.get_running_loop()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        embed_text_str = f"{label} {summary or ''} {content}"
-        vec = await loop.run_in_executor(pool, embed_text, embed_text_str)
-
-    neuron.embedding = json.dumps(vec)
-    await db.flush()
+    await _derive_concept_embedding(db, neuron, label, content, summary)
 
     return neuron
 
@@ -69,23 +123,45 @@ async def link_concept_to_neurons(
     target_ids: list[int],
     weight: float = 0.5,
     concept_label: str | None = None,
+    *,
+    actor: UserIdentity | None = None,
+    actor_type: str = "system",
 ) -> int:
-    """Create 'instantiates' edges from a concept neuron to target neurons.
+    """Assert durable ``instantiates`` edges through the Action Bus.
 
-    Returns count of edges created.
+    These are authored topology, unlike later co-firing adjustments. They stay
+    promoted at co-fire count 1 to preserve the original concept semantics.
+    Returns the number of successfully asserted relationships.
     """
+    from app.services import action_bus
+
     context_text = f"instantiates concept: {concept_label}" if concept_label else None
     created = 0
-    from app.services.edge_tier import delete_weak_edge
     for tid in target_ids:
         src, tgt = min(concept_id, tid), max(concept_id, tid)
-        await db.execute(text(
-            "INSERT INTO neuron_edges (source_id, target_id, co_fire_count, weight, last_updated_query, edge_type, source, last_adjusted, context) "
-            "VALUES (:src, :tgt, 1, :w, 0, 'instantiates', 'concept_seed', now(), :ctx) "
-            "ON CONFLICT (source_id, target_id) DO UPDATE SET edge_type = 'instantiates', weight = GREATEST(neuron_edges.weight, :w), last_adjusted = now(), context = COALESCE(:ctx, neuron_edges.context)"
-        ), {"src": src, "tgt": tgt, "w": weight, "ctx": context_text})
-        # Remove from JSONB if previously stored as weak edge
-        await delete_weak_edge(db, src, tgt)
+        result = await action_bus.submit(
+            db=db,
+            kind="edge.link",
+            actor=actor or _CONCEPT_SYSTEM_ACTOR,
+            actor_type=actor_type,
+            reason=context_text or "Assert concept instantiation",
+            input_data={
+                "source_id": src,
+                "target_id": tgt,
+                "weight": weight,
+                "co_fire_count": 1,
+                "edge_type": "instantiates",
+                "source": "concept_seed",
+                "context": context_text or "",
+                "last_updated_query": 0,
+                "storage_tier": "promoted",
+            },
+        )
+        if result.state != "applied":
+            raise ConceptMutationError(
+                f"edge.link failed for concept {concept_id} -> {tid}: "
+                f"{result.error or result.state}"
+            )
         created += 1
 
     await db.flush()
@@ -310,7 +386,9 @@ async def relink_existing_concepts(db: AsyncSession) -> dict:
 
     if results:
         await db.commit()
+        from app.services.adjacency_cache import invalidate_adjacency_cache
         from app.services.semantic_prefilter import invalidate_cache
+        invalidate_adjacency_cache()
         invalidate_cache()
 
     return {
@@ -383,8 +461,10 @@ async def seed_all_concepts(
 
     if seeded:
         await db.commit()
-        # Invalidate embedding cache so new concept neurons are included in semantic search
+        # Authoritative graph and derived semantic projections both changed.
+        from app.services.adjacency_cache import invalidate_adjacency_cache
         from app.services.semantic_prefilter import invalidate_cache
+        invalidate_adjacency_cache()
         invalidate_cache()
 
     total_edges = sum(r["edges_created"] for r in seeded)

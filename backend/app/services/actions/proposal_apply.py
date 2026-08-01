@@ -1,4 +1,4 @@
-"""Action: proposal.apply — root container action for an autopilot proposal apply.
+"""Action: proposal.apply — root container action for a reviewed proposal apply.
 
 This handler does no DB work itself. It exists so that every per-item write
 inside the apply (neuron.create, neuron.refine, eventually edge mutations)

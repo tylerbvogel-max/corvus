@@ -177,7 +177,13 @@ export default function AsciiWake() {
     };
 
     const draw = () => {
+      // Clear the physical backing store independently of the active DPR
+      // transform. This makes the full-bitmap clear explicit on fractional-DPR
+      // ChromeOS displays and prevents stale bottom/right backing pixels.
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
       ctx.font = `${Math.round(cellH * 0.82)}px ui-monospace, "Cascadia Mono", Menlo, monospace`;
       const ramp = cfg.ramp;
       const rampMax = ramp.length - 1;

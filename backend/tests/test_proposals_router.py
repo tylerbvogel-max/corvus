@@ -2,9 +2,13 @@
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+import pytest
 
 from app.config import settings
 from app.routers.proposals import router
+
+
+pytestmark = pytest.mark.integration
 
 
 def test_whoami_static_route_is_not_swallowed_by_proposal_id(monkeypatch):

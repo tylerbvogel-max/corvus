@@ -102,4 +102,5 @@ def _build_payload(state: PipelineState) -> dict[str, Any]:
         "entity_coverage": _entity_coverage(entities, delivered, state.neuron_map),
         "lane_candidates": {lane: len(ids) for lane, ids in sorted(lane_ids.items())},
         "delivered_lanes": delivered_lanes,
+        "spread_bounds": state.spread_traversal,
     }

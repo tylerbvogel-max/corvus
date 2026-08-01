@@ -1,9 +1,4 @@
-// Shared telemetry-rendering primitives used by AutopilotPage and QueryLab.
-// Each page composes these into its own layout — waterfall table on Autopilot
-// (batch-record summary) vs. vertical tabular flow in QueryLab (single-query
-// walkthrough). The data/chip layer is shared; the table layout is not.
-
-import type { StageTelemetry } from '../types';
+// Shared telemetry-rendering primitives used by QueryLab.
 
 // ── Formatting helpers ──────────────────────────────────────────────────
 
@@ -39,18 +34,10 @@ export function stageStatusColor(status: string): string {
 
 // ── Detail-key categorization ───────────────────────────────────────────
 
-// Shortened labels for verbose telemetry keys across both pipelines.
+// Shortened labels for verbose query-pipeline telemetry keys.
 // Keys not listed render with their original name. Maps are conservative —
 // only rename when the original name is clunky in a chip.
 export const SHORT_KEYS: Record<string, string> = {
-  // autopilot
-  neurons_activated: 'neurons',
-  query_chars: 'chars',
-  prompt_chars: 'prompt',
-  eval_overall: 'overall',
-  new_neurons: 'new',
-  recent_count: 'recent',
-  // query pipeline
   effective_top_k: 'top_k',
   engram_candidates: 'engrams',
 };
@@ -90,19 +77,6 @@ export function categorizeDetail(detail: Record<string, unknown> | undefined): D
     }
   }
   return groups;
-}
-
-// Sum durations + cost_usd across all stages. Used by Autopilot's header
-// summary; available for any consumer that wants tick-level totals.
-export function pipelineTotals(telemetry: StageTelemetry[]): { totalMs: number; totalCost: number } {
-  let totalMs = 0;
-  let totalCost = 0;
-  for (const t of telemetry) {
-    totalMs += t.duration_ms || 0;
-    const c = t.detail?.cost_usd;
-    if (typeof c === 'number') totalCost += c;
-  }
-  return { totalMs, totalCost };
 }
 
 // ── Presentational components ───────────────────────────────────────────

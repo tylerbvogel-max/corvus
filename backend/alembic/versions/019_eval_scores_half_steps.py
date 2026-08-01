@@ -28,22 +28,37 @@ depends_on: Union[str, Sequence[str], None] = None
 DIMS = ("accuracy", "completeness", "clarity", "faithfulness", "overall")
 
 
+def _column_type(table_name: str, column_name: str) -> str | None:
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_name = :t AND column_name = :c"
+        ),
+        {"t": table_name, "c": column_name},
+    )
+    row = result.fetchone()
+    return row[0] if row else None
+
+
 def upgrade() -> None:
     for dim in DIMS:
-        op.alter_column(
-            "eval_scores", dim,
-            existing_type=sa.Integer(),
-            type_=sa.Float(),
-            existing_nullable=False,
-        )
+        if _column_type("eval_scores", dim) in {"smallint", "integer", "bigint"}:
+            op.alter_column(
+                "eval_scores", dim,
+                existing_type=sa.Integer(),
+                type_=sa.Float(),
+                existing_nullable=False,
+            )
 
 
 def downgrade() -> None:
     for dim in DIMS:
-        op.alter_column(
-            "eval_scores", dim,
-            existing_type=sa.Float(),
-            type_=sa.Integer(),
-            existing_nullable=False,
-            postgresql_using=f"floor({dim} + 0.5)::integer",
-        )
+        if _column_type("eval_scores", dim) in {"real", "double precision", "numeric"}:
+            op.alter_column(
+                "eval_scores", dim,
+                existing_type=sa.Float(),
+                type_=sa.Integer(),
+                existing_nullable=False,
+                postgresql_using=f"floor({dim} + 0.5)::integer",
+            )

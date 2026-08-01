@@ -19,6 +19,11 @@ def _fake_embed_batch(texts):
     return [[1.0, 0.0] if "torque" in t.lower() else [0.0, 1.0] for t in texts]
 
 
+async def _run_thread_inline(func, /, *args, **kwargs):
+    """Hermetic replacement for the async/thread seam used in production."""
+    return func(*args, **kwargs)
+
+
 class _Neuron:
     def __init__(self, label, summary="", content=""):
         self.label = label
@@ -107,6 +112,7 @@ class _GuardCtx:
 @pytest.mark.asyncio
 async def test_guards_attach_relevance_payload(monkeypatch):
     monkeypatch.setattr(ex.settings, "citation_relevance_enabled", True)
+    monkeypatch.setattr(asyncio, "to_thread", _run_thread_inline)
 
     async def fake_clean(_ctx, _msg, text):
         return text, 0
@@ -157,6 +163,7 @@ def test_headers_excluded_from_claims():
 
 @pytest.mark.asyncio
 async def test_escalation_judges_only_verify_band(monkeypatch):
+    monkeypatch.setattr(asyncio, "to_thread", _run_thread_inline)
     monkeypatch.setattr(cr.settings, "citation_relevance_flag_floor", 0.25)
     monkeypatch.setattr(cr.settings, "citation_relevance_pass_threshold", 0.45)
     payload = cr.apply_relevance_bands(_payload([0.1, 0.30, 0.35, 0.7]))
@@ -194,6 +201,7 @@ async def test_escalation_noop_without_verify_band(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_escalation_llm_failure_degrades_to_status(monkeypatch):
+    monkeypatch.setattr(asyncio, "to_thread", _run_thread_inline)
     payload = cr.apply_relevance_bands(_payload([0.3]))
 
     async def broken(**_k):

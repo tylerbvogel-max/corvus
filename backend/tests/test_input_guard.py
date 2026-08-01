@@ -1,5 +1,9 @@
 """Tests for input guard: prompt injection detection, content policy, output checks."""
 
+import re
+from types import SimpleNamespace
+
+import app.services.input_guard as input_guard
 from app.services.input_guard import (
     check_input,
     check_output_risk,
@@ -140,12 +144,24 @@ def test_legitimate_act_as_passes():
 
 # ── Output Risk Tagging ──
 
-def test_safety_critical_flagged():
+def test_safety_critical_flagged(monkeypatch):
+    monkeypatch.setattr(input_guard, "RISK_CATEGORIES", {
+        "safety_critical": [
+            (re.compile(r"\b(structural failure|catastrophic)\b", re.I),
+             "Safety-critical consequence"),
+        ],
+    })
     flags = check_output_risk("A structural failure in the wing spar could be catastrophic.")
     assert any(f["category"] == "safety_critical" for f in flags)
 
 
-def test_dual_use_flagged():
+def test_dual_use_flagged(monkeypatch):
+    monkeypatch.setattr(input_guard, "RISK_CATEGORIES", {
+        "dual_use": [
+            (re.compile(r"\b(ITAR|export authorization)\b", re.I),
+             "Export-controlled subject"),
+        ],
+    })
     flags = check_output_risk("This component is ITAR controlled and requires export authorization.")
     assert any(f["category"] == "dual_use" for f in flags)
 
@@ -176,7 +192,15 @@ def test_grounding_no_context():
     assert result["confidence"] == 0.0
 
 
-def test_grounding_ungrounded_reference():
+def test_grounding_ungrounded_reference(monkeypatch):
+    reference_pattern = re.compile(
+        r"\b(?:FAR\s+\d+(?:\.\d+)*(?:-\d+)?|MIL-STD-\d+|ISO\s+\d+)\b",
+        re.I,
+    )
+    monkeypatch.setattr(
+        input_guard, "tenant",
+        SimpleNamespace(grounding_ref_pattern=reference_pattern),
+    )
     context = "FAR 52.246-2 requires inspection."
     response = "Per MIL-STD-1234, the process must follow ISO 55000 guidelines."
     result = check_output_grounding(response, context)

@@ -20,7 +20,7 @@ from app.schemas import (
 )
 from app.seed.loader import load_seed
 from app.services import action_bus
-from app.middleware.rbac import UserIdentity
+from app.middleware.rbac import UserIdentity, require_role
 
 _ADMIN_ACTOR = UserIdentity(user_id="admin-ingest", role="admin", source="system")
 
@@ -2028,7 +2028,7 @@ def _audit_remediation(
                     "severity": "high" if count < fair_share * 0.25 else "medium",
                     "department": dept,
                     "message": f"{dept} has {count} neurons ({round(count/total_neurons*100, 1)}% of total), well below fair share of ~{round(fair_share)}. Consider adding ~{deficit} neurons.",
-                    "action": f"Use autopilot gap-driven queries targeting {dept} topics to grow coverage.",
+                    "action": f"Review and ingest evidence targeting {dept} topics to grow coverage.",
                 })
 
     if dept_eval_quality:
@@ -2472,12 +2472,16 @@ async def create_concept_neuron_endpoint(
     content: str,
     summary: str | None = None,
     db: AsyncSession = Depends(get_db),
+    identity: UserIdentity = Depends(require_role("admin")),
 ):
     """Create a new concept neuron (layer=-1, department-agnostic)."""
     from app.services.concept_service import create_concept_neuron
     from app.services.semantic_prefilter import update_cache_incremental
 
-    neuron = await create_concept_neuron(db, label, content, summary)
+    neuron = await create_concept_neuron(
+        db, label, content, summary,
+        actor=identity, actor_type="user",
+    )
     await db.commit()
     await update_cache_incremental(db, [neuron.id])
 
@@ -2496,6 +2500,7 @@ async def link_concept_neuron(
     target_ids: list[int],
     weight: float = 0.5,
     db: AsyncSession = Depends(get_db),
+    identity: UserIdentity = Depends(require_role("admin")),
 ):
     """Create instantiation edges from a concept neuron to target neurons."""
     from app.services.concept_service import link_concept_to_neurons
@@ -2505,8 +2510,14 @@ async def link_concept_neuron(
     if not concept or concept.node_type != "concept":
         raise HTTPException(status_code=404, detail=f"Concept neuron #{concept_id} not found")
 
-    count = await link_concept_to_neurons(db, concept_id, target_ids, weight, concept_label=concept.label)
+    count = await link_concept_to_neurons(
+        db, concept_id, target_ids, weight,
+        concept_label=concept.label,
+        actor=identity, actor_type="user",
+    )
     await db.commit()
+    from app.services.adjacency_cache import invalidate_adjacency_cache
+    invalidate_adjacency_cache()
 
     return {
         "concept_id": concept_id,
