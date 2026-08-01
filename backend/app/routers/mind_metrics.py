@@ -115,6 +115,49 @@ async def mind_locomo_run():
     return report
 
 
+@router.get("/mind/delivery-pathways")
+async def mind_delivery_pathways(db: AsyncSession = Depends(get_db)):
+    """Habituation ledger (mind-delivery-plasticity): per-pathway counters
+    and states, plus the hot-path projection currently in force. Read-only —
+    the sole writer is the plasticity janitor pass."""
+    import json as _json
+    import os as _os
+
+    from sqlalchemy import select
+
+    from app.models import DeliveryPathway
+    from app.services.delivery_plasticity import PROJECTION_PATH, STATE_FLOORS
+
+    rows = (await db.execute(
+        select(DeliveryPathway).order_by(
+            DeliveryPathway.state, DeliveryPathway.neuron_id)
+    )).scalars().all()
+    by_state: dict[str, int] = {}
+    for r in rows:
+        by_state[r.state] = by_state.get(r.state, 0) + 1
+    projection = None
+    try:
+        with open(_os.path.expanduser(PROJECTION_PATH), encoding="utf-8") as fh:
+            projection = _json.load(fh)
+    except (OSError, ValueError):
+        pass
+    return {
+        "pathways": len(rows), "by_state": by_state,
+        "floors": STATE_FLOORS,
+        "projection": projection,
+        "rows": [{
+            "neuron_id": r.neuron_id, "trigger": r.trigger,
+            "tool": r.tool or None, "state": r.state,
+            "delivered_n": r.delivered_n, "rewarded_n": r.rewarded_n,
+            "penalized_n": r.penalized_n,
+            "last_delivered_at": r.last_delivered_at,
+            "last_rewarded_at": r.last_rewarded_at,
+            "state_changed_at": r.state_changed_at,
+            "proposal_id": r.proposal_id,
+        } for r in rows],
+    }
+
+
 @router.get("/mind/skills")
 async def mind_skills(db: AsyncSession = Depends(get_db)):
     """Compiled skills with source health and rendered bodies."""

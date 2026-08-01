@@ -133,6 +133,24 @@ async def compile_charter(db: AsyncSession) -> dict:
             *eligible, Neuron.delivery_mode == STANDING,
         ).order_by(Neuron.avg_utility.desc(), Neuron.id)
     )).scalars().all()
+    # COUNTERSIGNED RETIREMENT (mind-delivery-plasticity): a charter line
+    # whose capsule pathway reached `retired` — which requires an APPLIED
+    # human countersign; the plasticity writer refuses it otherwise — is
+    # compiled out here. This is tier-2 amputation, not the tier-1 reflex:
+    # attenuated/retire-proposed pathways do NOT thin the capsule. Dropping
+    # the line takes this PATHWAY to zero by explicit human decision (not
+    # silently — the no-silent-kill floor governs the automatic states);
+    # the neuron keeps authority and stays reachable via retrieved lanes.
+    from app.models import DeliveryPathway
+    retired_ids = set((await db.execute(
+        select(DeliveryPathway.neuron_id).where(
+            DeliveryPathway.trigger == f"capsule:{CHARTER_NAME}",
+            DeliveryPathway.state == "retired")
+    )).scalars().all())
+    if retired_ids:
+        _log_action("compiler.charter_pathway_retired", {
+            "excluded": sorted(retired_ids)})
+        rows = [n for n in rows if n.id not in retired_ids]
     # SAFETY: an empty verdict set means the classifier has not run (or
     # failed) — that is not evidence that no policy exists, so leave the
     # existing charter standing rather than shipping a blank one.

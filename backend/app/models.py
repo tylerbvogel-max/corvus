@@ -1287,3 +1287,46 @@ class RoadmapLedger(Base):
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), index=True,
     )
+
+
+# ── Delivery plasticity: habituation state per delivery pathway ─────
+
+class DeliveryPathway(Base):
+    """Habituation ledger for one delivery pathway (mind-delivery-plasticity).
+
+    The unit of learning is the PATHWAY — (neuron, trigger, tool) — not the
+    neuron: the same memory can be dead at SessionStart and load-bearing on
+    PreToolUse/Bash. The neuron is never touched; the graph keeps knowing,
+    delivery stops spending. Every column here is DERIVED SIGNAL (the same
+    class as co_fire_count and avg_utility): counters folded from the episode
+    log and attribution verdicts by app/services/delivery_plasticity.py, the
+    sole writer (architecture/pathway_writers.json).
+
+    States: active | attenuated | retire-proposed | retired. Attenuation is
+    automatic and reversible (tier 1); `retired` requires an APPLIED
+    countersign proposal (tier 2) — the writer refuses it otherwise. No state
+    reduces delivery probability to zero (exploration floor).
+    """
+
+    __tablename__ = "delivery_pathways"
+    __table_args__ = (
+        UniqueConstraint("neuron_id", "trigger", "tool", name="uq_delivery_pathway"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    neuron_id: Mapped[int] = mapped_column(Integer, ForeignKey("neurons.id"), nullable=False, index=True)
+    trigger: Mapped[str] = mapped_column(String(60), nullable=False)
+    # Tool split exists only for PreToolUse; every other trigger stores "".
+    tool: Mapped[str] = mapped_column(String(60), nullable=False, default="", server_default="")
+    delivered_n: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    rewarded_n: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    penalized_n: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_delivered_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    last_rewarded_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    state: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
+    state_changed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    # Latest tier-2 countersign proposal for this pathway, if any.
+    proposal_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("autopilot_proposals.id"), nullable=True)
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(),
+    )

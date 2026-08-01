@@ -8,12 +8,12 @@ from app.services.schema_authority import (
 
 
 def test_packaged_schema_has_one_expected_head():
-    assert expected_schema_heads() == ("025_standard_date_seed",)
+    assert expected_schema_heads() == ("026_delivery_pathways",)
 
 
 def test_matching_schema_head_is_accepted():
     status = require_schema_heads(
-        ("025_standard_date_seed",), ("025_standard_date_seed",)
+        ("026_delivery_pathways",), ("026_delivery_pathways",)
     )
 
     assert status.current_heads == status.expected_heads
@@ -29,9 +29,9 @@ def test_matching_schema_head_is_accepted():
 )
 def test_unmanaged_behind_and_ahead_schemas_fail_closed(current, expected_fragment):
     with pytest.raises(SchemaAuthorityError) as exc_info:
-        require_schema_heads(current, ("025_standard_date_seed",))
+        require_schema_heads(current, ("026_delivery_pathways",))
 
     message = str(exc_info.value)
     assert expected_fragment in message
     assert "alembic upgrade head" in message
-    assert "025_standard_date_seed" in message
+    assert "026_delivery_pathways" in message

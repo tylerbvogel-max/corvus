@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "SOLE-WRITER REGISTER for the delivery_pathways table",
+    "(mind-delivery-plasticity). Same contract as graph_writers.json:",
+    "this is a boundary, not a blessing. Exactly ONE module may construct",
+    "a DeliveryPathway row or write delivery_pathways via SQL — the",
+    "plasticity fold, where the decision rule, the exploration floor, the",
+    "tier-2 countersign guard, and the audit logging all live. A second",
+    "writer would be a delivery-policy mutation that skips all four.",
+    "Enforced by backend/tests/test_pathway_writers.py (AST scan + honeypot).",
+    "Pathway state is derived signal: recomputable from episode logs and",
+    "attribution verdicts. It is still single-writer because it ACTUATES",
+    "(it changes what future sessions see), unlike passive derived columns."
+  ],
+  "write": [
+    {
+      "module": "app/services/delivery_plasticity.py",
+      "reason": "the plasticity fold — sole writer by design, not by debt"
+    }
+  ]
+}

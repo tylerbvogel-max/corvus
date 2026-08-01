@@ -1,6 +1,6 @@
 {
-  "documented_path_count": 76,
-  "method_level_route_count": 78,
+  "documented_path_count": 77,
+  "method_level_route_count": 79,
   "routes": [
     {
       "method": "GET",
@@ -274,7 +274,7 @@
       "method": "POST",
       "operation_id": "janitor_run_janitor_run_post",
       "path": "/janitor/run",
-      "schema_fingerprint": "dafb2d1eb49f4563",
+      "schema_fingerprint": "e8eeba736636552d",
       "tags": [
         "memory"
       ]
@@ -356,6 +356,15 @@
       "operation_id": "mind_metrics_metrics_mind_get",
       "path": "/metrics/mind",
       "schema_fingerprint": "647be14a8962f419",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_delivery_pathways_metrics_mind_delivery_pathways_get",
+      "path": "/metrics/mind/delivery-pathways",
+      "schema_fingerprint": "7ee55a7bb88e2d84",
       "tags": [
         "memory"
       ]

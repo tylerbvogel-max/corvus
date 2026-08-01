@@ -146,7 +146,7 @@ async def test_charter_renders_only_standing_neurons(tmp_path, monkeypatch):
                         _record(written, tmp_path, name, body, sources))
     policy = _FakeNeuron(1, "Never push this repo to the public remote")
     policy.delivery_mode = STANDING
-    result = await skill_compiler.compile_charter(_QueryDb([[policy]]))
+    result = await skill_compiler.compile_charter(_QueryDb([[policy], []]))
 
     assert result["included"] == 1
     assert result["sources"] == [1]
@@ -164,7 +164,7 @@ async def test_unclassified_corpus_never_ships_an_empty_charter(monkeypatch):
     monkeypatch.setattr(skill_compiler, "_log_action",
                         lambda a, d: logged.append(a))
     monkeypatch.setattr(skill_compiler, "_write_skill", _must_not_write)
-    result = await skill_compiler.compile_charter(_QueryDb([[], 0]))
+    result = await skill_compiler.compile_charter(_QueryDb([[], [], 0]))
 
     assert result["skipped"] == "no delivery verdicts yet"
     assert result["path"] is None
@@ -179,10 +179,39 @@ async def test_all_retrievable_is_a_real_verdict_not_a_skip(monkeypatch):
 
     monkeypatch.setattr(skill_compiler, "_log_action", lambda a, d: None)
     monkeypatch.setattr(skill_compiler, "_write_skill", _must_not_write)
-    result = await skill_compiler.compile_charter(_QueryDb([[], 12]))
+    result = await skill_compiler.compile_charter(_QueryDb([[], [], 12]))
 
     assert "skipped" not in result
     assert result["included"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_countersign_retired_capsule_pathway_is_compiled_out(
+        tmp_path, monkeypatch):
+    """Tier-2 actuation for the standing channel (mind-delivery-plasticity):
+    a charter line whose capsule pathway reached `retired` — possible only
+    through an APPLIED countersign proposal — leaves the render. The tier-1
+    reflex (attenuated) must NOT thin the capsule; only `retired` rows are
+    queued here, matching the compiler's state filter."""
+    from app.services import skill_compiler
+
+    logged = []
+    monkeypatch.setattr(skill_compiler, "_log_action",
+                        lambda a, d: logged.append((a, d)))
+    written = {}
+    monkeypatch.setattr(skill_compiler, "_write_skill",
+                        lambda name, desc, body, sources:
+                        _record(written, tmp_path, name, body, sources))
+    kept = _FakeNeuron(1, "Still-earned policy")
+    kept.delivery_mode = STANDING
+    dropped = _FakeNeuron(2, "Countersign-retired policy")
+    dropped.delivery_mode = STANDING
+    result = await skill_compiler.compile_charter(
+        _QueryDb([[kept, dropped], [2]]))
+
+    assert result["sources"] == [1]
+    assert "Countersign-retired policy" not in written["body"]
+    assert ("compiler.charter_pathway_retired", {"excluded": [2]}) in logged
 
 
 def test_skipped_compile_preserves_the_existing_manifest_entry():

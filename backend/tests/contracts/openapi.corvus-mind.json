@@ -13452,6 +13452,16 @@
           },
           {
             "in": "query",
+            "name": "plasticity",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Plasticity",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "max_pairs",
             "required": false,
             "schema": {
@@ -13820,6 +13830,26 @@
           }
         },
         "summary": "Mind Metrics",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/metrics/mind/delivery-pathways": {
+      "get": {
+        "description": "Habituation ledger (mind-delivery-plasticity): per-pathway counters\nand states, plus the hot-path projection currently in force. Read-only —\nthe sole writer is the plasticity janitor pass.",
+        "operationId": "mind_delivery_pathways_metrics_mind_delivery_pathways_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Delivery Pathways",
         "tags": [
           "memory"
         ]

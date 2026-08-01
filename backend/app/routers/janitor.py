@@ -48,6 +48,7 @@ async def janitor_run(
     staleness: bool = Query(default=True),
     decay: bool = Query(default=True),
     lint: bool = Query(default=True),
+    plasticity: bool = Query(default=True),
     max_pairs: int = Query(default=40, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
@@ -55,7 +56,7 @@ async def janitor_run(
     assert max_pairs >= 1, "max_pairs must be positive"
     report = await run_janitors(
         db, consolidation=consolidation, staleness=staleness,
-        decay=decay, lint=lint, max_pairs=max_pairs,
+        decay=decay, lint=lint, plasticity=plasticity, max_pairs=max_pairs,
     )
     assert isinstance(report, dict), "janitor report must be a dict"
     return json.loads(json.dumps(report, default=str))

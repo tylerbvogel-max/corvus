@@ -1000,11 +1000,11 @@ async def run_stale_approved_sweep(db: AsyncSession) -> dict:
 async def run_janitors(
     db: AsyncSession, *, consolidation: bool = True,
     staleness: bool = True, decay: bool = True, promotion: bool = True,
-    lint: bool = True, max_pairs: int = 40,
+    lint: bool = True, plasticity: bool = True, max_pairs: int = 40,
 ) -> dict:
     """Run the selected janitor passes; returns a combined report."""
-    assert consolidation or staleness or decay or promotion or lint, \
-        "select at least one pass"
+    assert consolidation or staleness or decay or promotion or lint \
+        or plasticity, "select at least one pass"
     report: dict = {"ran_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     # Lifecycle hygiene FIRST, before consolidation queues new proposals:
     # approved-at-rest cannot occur under the one-step lifecycle, so any
@@ -1046,6 +1046,12 @@ async def run_janitors(
         report["reference_promotion"] = await run_reference_promotion(db)
     if lint:
         report["scope_lint"] = await run_scope_lint(db)
+    if plasticity:
+        # Delivery plasticity runs LAST: it folds this run's attribution
+        # verdicts into pathway counters and projects suppression state
+        # for the hot path. Deterministic, no LLM (mind-delivery-plasticity).
+        from app.services.delivery_plasticity import run_plasticity
+        report["plasticity"] = await run_plasticity(db)
     # Persist for the inbox surface: borderline pairs need human judgment
     # and would otherwise vanish with the HTTP response.
     try:

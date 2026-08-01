@@ -15,6 +15,7 @@ additionalContext. Requirements from CORVUS-MIND-DESIGN.md §8.3:
     (backend down = no ambient memory, nothing else)
 """
 
+import hashlib
 import json
 import os
 import re
@@ -25,6 +26,12 @@ from datetime import datetime, timezone
 BACKEND = os.environ.get("CORVUS_MIND_BACKEND", "http://localhost:8005")
 ACCESS_KEY = os.environ.get("CORVUS_ACCESS_KEY", "")
 EPISODE_DIR = os.path.expanduser("~/.corvus-mind/episodes")
+# Habituation projection (mind-delivery-plasticity): written by the
+# plasticity janitor, read here at delivery time — hot path stays
+# filesystem-only. Missing/unreadable file = deliver everything (fail open).
+PATHWAY_PROJECTION = os.path.expanduser(
+    os.environ.get("CORVUS_MIND_PATHWAY_PROJECTION",
+                   "~/.corvus-mind/delivery-pathways.json"))
 CONFIG_PATH = os.path.expanduser("~/.corvus-mind/config.json")
 INJECTABLE_TYPES = ("lesson", "tool-profile", "context-scope", "reference")
 SESSION_START_TOP_K = 0  # retired 2026-07-29 (mind-sessionstart-recall) — see main()
@@ -113,8 +120,51 @@ def _already_pointed(session_id: str) -> set:
     return seen
 
 
+def _pathway_gate(session_id: str, hits: list, trigger: str,
+                  tool: str | None) -> tuple:
+    """Habituation filter (mind-delivery-plasticity): drop hits whose
+    (neuron, trigger, tool) pathway is suppressed — EXCEPT the probe slot.
+
+    Attenuated is not silenced: a suppressed pathway still delivers 1-in-k
+    sessions (dishabituation probe) so it can earn its way back. The slot
+    is a deterministic hash of (session, pathway) — no state, reproducible,
+    and over k sessions every pathway probes once in expectation. The
+    projection carries k per state; k missing or invalid fails OPEN
+    (deliver), never closed: the invariant is that no state may reduce
+    delivery probability to zero.
+
+    Returns (kept hits, probe neuron ids among them).
+    """
+    try:
+        with open(PATHWAY_PROJECTION, encoding="utf-8") as fh:
+            proj = json.load(fh)
+        suppressed = proj.get("suppressed") or {}
+        intervals = proj.get("probe_intervals") or {}
+    except (OSError, ValueError):
+        return hits, []
+    if not suppressed:
+        return hits, []
+    kept, probes = [], []
+    for h in hits:
+        key = f"{h['neuron_id']}|{trigger}|{tool or ''}"
+        state = suppressed.get(key)
+        if not state:
+            kept.append(h)
+            continue
+        k = intervals.get(state)
+        if not isinstance(k, int) or k < 1:
+            kept.append(h)  # fail open — never silently kill a pathway
+            continue
+        digest = hashlib.sha256(f"{session_id}|{key}".encode()).hexdigest()
+        if int(digest, 16) % k == 0:
+            kept.append(h)
+            probes.append(h["neuron_id"])
+    return kept, probes
+
+
 def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
-                   query_id=None, tool: str | None = None) -> None:
+                   query_id=None, tool: str | None = None,
+                   probes: list | None = None) -> None:
     """Append one Injection episode record.
 
     `trigger` stays the bare hook event (mind-pretooluse-reach). The tempting
@@ -142,6 +192,10 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
     }
     if tool:
         record["tool"] = tool
+    if probes:
+        # Which of neuron_ids arrived via a habituation probe slot — a
+        # sibling field like `tool`, absent before mind-delivery-plasticity.
+        record["probes"] = probes
     path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -353,6 +407,11 @@ def main() -> int:
 
     seen = _already_injected(session_id)
     hits = [h for h in hits if h["neuron_id"] not in seen]
+    # Habituation gate (mind-delivery-plasticity) — retrieved lanes only.
+    # Capsule delivery is standing content: the reflex may not thin it;
+    # that retirement is tier-2, human-countersigned, at compile time.
+    hook_tool = payload.get("tool_name") if event == "PreToolUse" else None
+    hits, probe_ids = _pathway_gate(session_id, hits, event, hook_tool)
     pointers = [p for p in pointers
                 if p.get("name") and p["name"] not in _already_pointed(session_id)]
     capsule = _self_capsule() if event == "SessionStart" else None
@@ -362,8 +421,7 @@ def main() -> int:
 
     if hits:
         _log_injection(session_id, cwd, event, hits, query_id,
-                       tool=payload.get("tool_name") if event == "PreToolUse"
-                       else None)
+                       tool=hook_tool, probes=probe_ids)
     if pointers:
         _log_pointers(session_id, cwd, event, pointers, query_id)
     # Capsule attribution (W7 fix): log the capsules' source neurons so
