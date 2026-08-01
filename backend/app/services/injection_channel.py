@@ -37,7 +37,7 @@ No LLM, no writes, no DB — episode logs and markers only.
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.services.mind_janitors import ACTIONS_LOG, EPISODE_DIR
 
@@ -76,9 +76,12 @@ def _parse_ts(value: str) -> datetime | None:
         return None
 
 
-def _session_injections(path: str) -> dict[str, set[int]]:
-    """neuron ids injected into one session, keyed by trigger."""
+def _session_injections(path: str) -> tuple[dict[str, set[int]],
+                                            datetime | None]:
+    """neuron ids injected into one session keyed by trigger, plus the
+    earliest injection timestamp — the session's anchor for windowing."""
     per_trigger: dict[str, set[int]] = {}
+    first_ts: datetime | None = None
     try:
         with open(path, encoding="utf-8") as fh:
             for line in fh:
@@ -90,14 +93,17 @@ def _session_injections(path: str) -> dict[str, set[int]]:
                     continue
                 if rec.get("event") != "Injection":
                     continue
+                when = _parse_ts(rec.get("ts"))
+                if when is not None and (first_ts is None or when < first_ts):
+                    first_ts = when
                 trigger = str(rec.get("trigger") or "unknown")
                 bucket = per_trigger.setdefault(trigger, set())
                 for nid in rec.get("neuron_ids") or []:
                     if isinstance(nid, int):
                         bucket.add(nid)
     except OSError:
-        return {}
-    return per_trigger
+        return {}, None
+    return per_trigger, first_ts
 
 
 def _scan_sessions(episode_dir: str) -> dict[str, dict]:
@@ -109,7 +115,7 @@ def _scan_sessions(episode_dir: str) -> dict[str, dict]:
         if not name.endswith(".jsonl") or name == os.path.basename(ACTIONS_LOG):
             continue
         path = os.path.join(episode_dir, name)
-        per_trigger = _session_injections(path)
+        per_trigger, started_at = _session_injections(path)
         if not per_trigger:
             continue
         marker_ts = None
@@ -122,7 +128,8 @@ def _scan_sessions(episode_dir: str) -> dict[str, dict]:
         for ids in per_trigger.values():
             every |= ids
         sessions[name.removesuffix(".jsonl")] = {
-            "per_trigger": per_trigger, "all": every, "marker_ts": marker_ts}
+            "per_trigger": per_trigger, "all": every, "marker_ts": marker_ts,
+            "started_at": started_at}
     return sessions
 
 
@@ -264,14 +271,45 @@ def reconstruct_history(episode_dir: str = EPISODE_DIR,
     }
 
 
-def standing_volume(episode_dir: str = EPISODE_DIR) -> dict:
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Normalise to naive UTC so window bounds and episode timestamps
+    compare regardless of which side carries a tzinfo."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def standing_volume(episode_dir: str = EPISODE_DIR,
+                    since: datetime | None = None,
+                    until: datetime | None = None) -> dict:
     """Standing neurons per session — the before/after number a charter
     change has to move. Counts every session with injections, distilled
-    or not, since delivery volume does not depend on distillation."""
+    or not, since delivery volume does not depend on distillation.
+
+    Unwindowed this is a LIFETIME average, so once a charter change lands
+    it reports a blend of pre- and post-change sessions and understates the
+    effect indefinitely. Pass `since`/`until` — sessions are bucketed by
+    their first injection — to read one side of a cutover on its own.
+    Sessions with no parseable timestamp are excluded whenever a bound is
+    given, rather than silently landing in the window.
+    """
     sessions = _scan_sessions(episode_dir)
+    lo, hi = _as_utc(since), _as_utc(until)
     per_session: list[int] = []
     retrieved: list[int] = []
+    undated = 0
     for sess in sessions.values():
+        if lo is not None or hi is not None:
+            started = _as_utc(sess.get("started_at"))
+            if started is None:
+                undated += 1
+                continue
+            if lo is not None and started < lo:
+                continue
+            if hi is not None and started >= hi:
+                continue
         stand = retr = 0
         for triggers in _triggers_by_neuron(sess).values():
             channels = {channel_for_trigger(t) for t in triggers}
@@ -280,10 +318,17 @@ def standing_volume(episode_dir: str = EPISODE_DIR) -> dict:
         per_session.append(stand)
         retrieved.append(retr)
     count = len(per_session)
-    return {
+    report = {
         "sessions": count,
         "standing_total": sum(per_session),
         "retrieved_total": sum(retrieved),
         "standing_per_session": round(sum(per_session) / count, 2) if count else None,
         "retrieved_per_session": round(sum(retrieved) / count, 2) if count else None,
     }
+    if lo is not None or hi is not None:
+        report["window"] = {
+            "since": lo.isoformat() if lo else None,
+            "until": hi.isoformat() if hi else None,
+            "sessions_excluded_undated": undated,
+        }
+    return report
