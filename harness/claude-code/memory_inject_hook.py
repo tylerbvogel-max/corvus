@@ -114,7 +114,20 @@ def _already_pointed(session_id: str) -> set:
 
 
 def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
-                   query_id=None) -> None:
+                   query_id=None, tool: str | None = None) -> None:
+    """Append one Injection episode record.
+
+    `trigger` stays the bare hook event (mind-pretooluse-reach). The tempting
+    alternative — compositing it, the way capsule:{name} does — would fork the
+    PreToolUse row the moment the tool gate widens, and the before/after this
+    channel is measured by would silently become a comparison between two
+    different rows. `tool` is a sibling field instead, so injection_channel
+    can split WITHIN a trigger without moving the trigger's own denominator.
+
+    Absent on every record written before 2026-08-01; readers must treat that
+    absence as Bash, which is not a default but a fact about the gate that
+    wrote them.
+    """
     os.makedirs(EPISODE_DIR, exist_ok=True)
     record = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
@@ -127,6 +140,8 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
         "labels": [h["label"] for h in hits],
         "scores": [h["score"] for h in hits],
     }
+    if tool:
+        record["tool"] = tool
     path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -346,7 +361,9 @@ def main() -> int:
         return 0
 
     if hits:
-        _log_injection(session_id, cwd, event, hits, query_id)
+        _log_injection(session_id, cwd, event, hits, query_id,
+                       tool=payload.get("tool_name") if event == "PreToolUse"
+                       else None)
     if pointers:
         _log_pointers(session_id, cwd, event, pointers, query_id)
     # Capsule attribution (W7 fix): log the capsules' source neurons so

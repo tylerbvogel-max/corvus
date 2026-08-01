@@ -60,6 +60,11 @@ JOIN_UPPER = timedelta(seconds=120)
 ATTRIBUTION_PREFIX = "attribution."
 REWARD_KINDS = ("reward", "penalty")
 
+# The one trigger whose delivery is gated by tool name, and the tool every
+# record predating the `tool` field was necessarily produced by.
+PRE_TOOL_TRIGGER = "PreToolUse"
+LEGACY_PRE_TOOL = "Bash"
+
 
 def channel_for_trigger(trigger: str) -> str:
     """The delivery channel an injection trigger belongs to."""
@@ -77,10 +82,30 @@ def _parse_ts(value: str) -> datetime | None:
 
 
 def _session_injections(path: str) -> tuple[dict[str, set[int]],
+                                            dict[str, set[int]],
                                             datetime | None]:
-    """neuron ids injected into one session keyed by trigger, plus the
-    earliest injection timestamp — the session's anchor for windowing."""
+    """neuron ids injected into one session, keyed by trigger and by tool,
+    plus the earliest injection timestamp.
+
+    Three returns rather than two because two concurrent records landed here
+    and both readings are load-bearing. mind-charter-composition needs the
+    earliest timestamp as the session's anchor for windowing, so that a
+    charter change is measurable against the sessions that followed it.
+    mind-pretooluse-reach needs the per-tool split because PreToolUse is the
+    only trigger whose reach is gated by tool, and a pooled PreToolUse rate
+    that hid a Bash regression would be worse than no number. Neither
+    subsumes the other; collapsing them back to a pair would silently drop
+    one record's instrument.
+
+    The per-tool mapping is keyed by tool name alone and populated only for
+    PreToolUse records. Records written before 2026-08-01 carry no `tool`
+    field. They are counted as Bash — not as a fallback guess, but because
+    the hook's gate admitted nothing else: `if payload["tool_name"] !=
+    "Bash": return 0`. That is what makes the sub-rate one continuous series
+    across the widening rather than two incomparable halves.
+    """
     per_trigger: dict[str, set[int]] = {}
+    per_tool: dict[str, set[int]] = {}
     first_ts: datetime | None = None
     try:
         with open(path, encoding="utf-8") as fh:
@@ -98,12 +123,18 @@ def _session_injections(path: str) -> tuple[dict[str, set[int]],
                     first_ts = when
                 trigger = str(rec.get("trigger") or "unknown")
                 bucket = per_trigger.setdefault(trigger, set())
+                tool_bucket = None
+                if trigger == PRE_TOOL_TRIGGER:
+                    tool_bucket = per_tool.setdefault(
+                        str(rec.get("tool") or LEGACY_PRE_TOOL), set())
                 for nid in rec.get("neuron_ids") or []:
                     if isinstance(nid, int):
                         bucket.add(nid)
+                        if tool_bucket is not None:
+                            tool_bucket.add(nid)
     except OSError:
-        return {}, None
-    return per_trigger, first_ts
+        return {}, {}, None
+    return per_trigger, per_tool, first_ts
 
 
 def _scan_sessions(episode_dir: str) -> dict[str, dict]:
@@ -115,7 +146,7 @@ def _scan_sessions(episode_dir: str) -> dict[str, dict]:
         if not name.endswith(".jsonl") or name == os.path.basename(ACTIONS_LOG):
             continue
         path = os.path.join(episode_dir, name)
-        per_trigger, started_at = _session_injections(path)
+        per_trigger, per_tool, started_at = _session_injections(path)
         if not per_trigger:
             continue
         marker_ts = None
@@ -128,7 +159,8 @@ def _scan_sessions(episode_dir: str) -> dict[str, dict]:
         for ids in per_trigger.values():
             every |= ids
         sessions[name.removesuffix(".jsonl")] = {
-            "per_trigger": per_trigger, "all": every, "marker_ts": marker_ts,
+            "per_trigger": per_trigger, "per_tool": per_tool,
+            "all": every, "marker_ts": marker_ts,
             "started_at": started_at}
     return sessions
 
@@ -176,6 +208,33 @@ def _triggers_by_neuron(sess: dict) -> dict[int, set[str]]:
     return out
 
 
+def _tools_by_neuron(sess: dict) -> dict[int, set[str]]:
+    """Invert one session's per-tool sets: neuron -> tools that delivered it."""
+    out: dict[int, set[str]] = {}
+    for tool, ids in (sess.get("per_tool") or {}).items():
+        for nid in ids:
+            out.setdefault(nid, set()).add(tool)
+    return out
+
+
+def _tools_for_line(nid: int, when: datetime, marked: list,
+                    sessions: dict) -> set[str]:
+    """Tools that could have delivered the neuron this verdict is about.
+
+    Uses the marker join for every line, stamped or not: the distiller stamps
+    channel and trigger but not the tool, and inventing one from the trigger
+    is exactly the pooling this split exists to undo.
+    """
+    return {
+        tool
+        for marker_ts, sid in marked
+        if JOIN_LOWER <= marker_ts - when <= JOIN_UPPER
+        and nid in sessions[sid]["all"]
+        for tool, ids in (sessions[sid].get("per_tool") or {}).items()
+        if nid in ids
+    }
+
+
 def _blank() -> dict:
     return {"injected": 0, "reward": 0, "penalty": 0}
 
@@ -209,10 +268,24 @@ def reconstruct_history(episode_dir: str = EPISODE_DIR,
     # rather than assigned to a guess — the same rule the join uses.
     cross_channel = 0
     ambiguous_trigger = 0
+    by_tool: dict[str, dict] = {}
+    ambiguous_tool = 0
     for sess in sessions.values():
         if not sess["marker_ts"]:
             continue
+        tools_of = _tools_by_neuron(sess)
         for nid, triggers in _triggers_by_neuron(sess).items():
+            # Same unit rule as by_trigger, or the sub-rates would not sum to
+            # the row they are splitting: only neurons this session saw ONLY
+            # via PreToolUse count, because those are the only ones whose
+            # verdict the loop below can attribute to a tool.
+            if triggers == {PRE_TOOL_TRIGGER}:
+                tools = tools_of.get(nid) or set()
+                if len(tools) == 1:
+                    by_tool.setdefault(
+                        next(iter(tools)), _blank())["injected"] += 1
+                else:
+                    ambiguous_tool += 1
             channels = {channel_for_trigger(t) for t in triggers}
             if len(channels) == 1:
                 by_channel[next(iter(channels))]["injected"] += 1
@@ -246,7 +319,14 @@ def reconstruct_history(episode_dir: str = EPISODE_DIR,
             continue
         by_channel[channels.pop()][kind] += 1
         if len(triggers) == 1:
-            by_trigger.setdefault(triggers.pop(), _blank())[kind] += 1
+            trigger_key = triggers.pop()
+            by_trigger.setdefault(trigger_key, _blank())[kind] += 1
+            if trigger_key == PRE_TOOL_TRIGGER:
+                tools = _tools_for_line(nid, when, marked, sessions)
+                if len(tools) == 1:
+                    by_tool.setdefault(tools.pop(), _blank())[kind] += 1
+                else:
+                    ambiguous_tool += 1
 
     pooled = _blank()
     for bucket in by_channel.values():
@@ -261,10 +341,16 @@ def reconstruct_history(episode_dir: str = EPISODE_DIR,
         "unresolved_lines": unresolved,
         "cross_channel_neurons": cross_channel,
         "ambiguous_trigger_neurons": ambiguous_trigger,
+        "ambiguous_tool_units": ambiguous_tool,
         "pooled": _rate(pooled),
         "by_channel": {k: _rate(v) for k, v in by_channel.items()},
         "by_trigger": {k: _rate(v) for k, v in sorted(
             by_trigger.items(), key=lambda kv: -kv[1]["injected"])},
+        # PreToolUse only, split by the tool that triggered it. A pooled gain
+        # here that hid a Bash regression would be a failure, not a result
+        # (mind-pretooluse-reach), and the pooled row above cannot show it.
+        "pretooluse_by_tool": {k: _rate(v) for k, v in sorted(
+            by_tool.items(), key=lambda kv: -kv[1]["injected"])},
         "standing_share_pct": (
             round(100.0 * by_channel[STANDING]["injected"] / pooled["injected"], 2)
             if pooled["injected"] else None),

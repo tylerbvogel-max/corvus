@@ -42,21 +42,32 @@ def test_channel_for_trigger(trigger, expected):
 # ── corpus fixture ───────────────────────────────────────────────────
 
 def _session(tmp_path, sid, injections, distilled_at=None, ts=None):
-    """injections: [(trigger, [neuron_id, ...])]
+    """injections: [(trigger, [neuron_id, ...])] or [(trigger, ids, tool)]
 
-    `ts` stamps every injection line, which is what buckets the session
-    into a volume window. Left None the session is undated, exactly like
-    the older episodes that predate timestamped injection lines.
+    Two independent axes, because two concurrent records extended this
+    fixture and both are still exercised:
+
+    `ts` stamps every injection line, which is what buckets the session into
+    a volume window. Left None the session is undated, exactly like the older
+    episodes that predate timestamped injection lines.
+
+    The three-tuple form writes the `tool` field the hook started stamping on
+    PreToolUse injections in 2026-08; the two-tuple form is the legacy record
+    shape, deliberately kept so every test above still exercises it.
     """
     path = tmp_path / f"{sid}.jsonl"
     lines = []
-    for trigger, ids in injections:
-        rec = {
+    for entry in injections:
+        trigger, ids = entry[0], entry[1]
+        tool = entry[2] if len(entry) > 2 else None
+        record = {
             "event": "Injection", "session_id": sid, "trigger": trigger,
             "neuron_ids": ids, "labels": [f"lesson {n}" for n in ids]}
+        if tool:
+            record["tool"] = tool
         if ts:
-            rec["ts"] = ts
-        lines.append(json.dumps(rec))
+            record["ts"] = ts
+        lines.append(json.dumps(record))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     if distilled_at:
         (tmp_path / f"{sid}.jsonl.distilled").write_text(
@@ -216,6 +227,94 @@ def test_empty_corpus_reports_none_not_zero(corpus):
     report = reconstruct_history(str(corpus), str(corpus / "janitor-actions.jsonl"))
     assert report["pooled"]["load_bearing_pct"] is None
     assert report["standing_share_pct"] is None
+
+
+# ── PreToolUse tool sub-split (mind-pretooluse-reach) ────────────────
+
+def test_legacy_records_without_a_tool_field_read_as_bash(corpus):
+    """Every PreToolUse injection ever logged before the `tool` field was
+    added came through a gate that admitted Bash and nothing else, so
+    reading absence as Bash is a fact about the writer, not a default.
+    Without this the widening would orphan 1,900+ historical injections and
+    the before/after would compare two different rows."""
+    _session(corpus, "s1", [("PreToolUse", [7, 8])],
+             distilled_at="2026-07-20T10:00:00+00:00")
+    _actions(corpus, [
+        {"ts": "2026-07-20T10:00:00.100+00:00", "action": "attribution.reward",
+         "neuron_id": 7},
+    ])
+    report = reconstruct_history(str(corpus), str(corpus / "janitor-actions.jsonl"))
+    assert report["pretooluse_by_tool"] == {
+        "Bash": {"injected": 2, "reward": 1, "penalty": 0,
+                 "load_bearing_pct": 50.0}}
+
+
+def test_bash_sub_rate_survives_a_widened_gate(corpus):
+    """The failure this split exists to prevent: Edit/Write injections
+    that earn nothing must not be able to dilute a healthy Bash rate into
+    a pooled number that still looks fine."""
+    _session(corpus, "s1", [("PreToolUse", [7, 8], "Bash"),
+                            ("PreToolUse", [20, 21, 22, 23], "Edit")],
+             distilled_at="2026-07-20T10:00:00+00:00")
+    _actions(corpus, [
+        {"ts": "2026-07-20T10:00:00.100+00:00", "action": "attribution.reward",
+         "neuron_id": 7},
+    ])
+    report = reconstruct_history(str(corpus), str(corpus / "janitor-actions.jsonl"))
+    # Pooled would read 1/6 = 16.7% and hide which half earned it.
+    assert report["by_trigger"]["PreToolUse"]["load_bearing_pct"] == pytest.approx(
+        16.67, abs=0.01)
+    assert report["pretooluse_by_tool"]["Bash"] == {
+        "injected": 2, "reward": 1, "penalty": 0, "load_bearing_pct": 50.0}
+    assert report["pretooluse_by_tool"]["Edit"] == {
+        "injected": 4, "reward": 0, "penalty": 0, "load_bearing_pct": 0.0}
+
+
+def test_tool_sub_split_sums_to_the_trigger_row_it_splits(corpus):
+    """A sub-rate that does not reconcile with its parent is a second
+    number, not a breakdown."""
+    _session(corpus, "s1", [("PreToolUse", [7, 8], "Bash"),
+                            ("PreToolUse", [20], "Write")],
+             distilled_at="2026-07-20T10:00:00+00:00")
+    _actions(corpus, [
+        {"ts": "2026-07-20T10:00:00.100+00:00", "action": "attribution.reward",
+         "neuron_id": 8},
+        {"ts": "2026-07-20T10:00:00.200+00:00", "action": "attribution.penalty",
+         "neuron_id": 20},
+    ])
+    report = reconstruct_history(str(corpus), str(corpus / "janitor-actions.jsonl"))
+    parent = report["by_trigger"]["PreToolUse"]
+    for key in ("injected", "reward", "penalty"):
+        assert parent[key] == sum(
+            v[key] for v in report["pretooluse_by_tool"].values()), key
+
+
+def test_neuron_delivered_by_two_tools_is_not_credited_to_either(corpus):
+    """Same refusal-to-guess rule the trigger split already uses: one
+    verdict per neuron per session cannot be owned by two tools."""
+    _session(corpus, "s1", [("PreToolUse", [7], "Bash"),
+                            ("PreToolUse", [7], "Edit")],
+             distilled_at="2026-07-20T10:00:00+00:00")
+    _actions(corpus, [
+        {"ts": "2026-07-20T10:00:00.100+00:00", "action": "attribution.reward",
+         "neuron_id": 7},
+    ])
+    report = reconstruct_history(str(corpus), str(corpus / "janitor-actions.jsonl"))
+    assert report["ambiguous_tool_units"] >= 1
+    assert report["pretooluse_by_tool"] == {}
+    # The trigger row is unaffected — the neuron still arrived via PreToolUse.
+    assert report["by_trigger"]["PreToolUse"]["injected"] == 1
+
+
+def test_other_triggers_are_absent_from_the_tool_split(corpus):
+    """Only PreToolUse is gated by tool; nothing else may appear here."""
+    _session(corpus, "s1", [("UserPromptSubmit", [1]),
+                            ("capsule:mind-charter", [2]),
+                            ("PreToolUse", [7], "Bash")],
+             distilled_at="2026-07-20T10:00:00+00:00")
+    _actions(corpus, [])
+    report = reconstruct_history(str(corpus), str(corpus / "janitor-actions.jsonl"))
+    assert set(report["pretooluse_by_tool"]) == {"Bash"}
 
 
 # ── volume ───────────────────────────────────────────────────────────
