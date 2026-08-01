@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import RoadmapLedger
-from app.routers.recall import require_memory_surface
 from app.services.roadmap_admission import (
     admit_session, recent_admissions, refresh_cache,
 )
@@ -26,7 +25,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/roadmap-ledgers",
     tags=["roadmap-ledgers"],
-    dependencies=[Depends(require_memory_surface)],
 )
 
 

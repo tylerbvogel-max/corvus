@@ -13,13 +13,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.routers.recall import require_memory_surface
 from app.services.memory_quality_auditor import (
     _prior_ran_at, _sessions_distilled_since, auditor_metrics, run_audit,
 )
 
-router = APIRouter(prefix="/auditor", tags=["memory"],
-                   dependencies=[Depends(require_memory_surface)])
+router = APIRouter(prefix="/auditor", tags=["memory"])
 
 
 @router.get("/status")

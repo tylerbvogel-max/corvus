@@ -246,14 +246,33 @@ function buildNavGroups(
   }
 
   if (memorySurface) {
-    // Memory tenants: hide chat-era and knowledge-tenant-only surfaces.
-    // Performance + Pipeline Timing stay visible: recall queries carry full
-    // stage telemetry, so per-step speed is real data on memory tenants too.
-    const hidden = new Set(['emergent-queue', 'document-ingest',
+    // Editorial curation, NOT capability composition — the two were conflated
+    // before 2026-07-31 and they answer different questions. The filter above
+    // asks "did the backend mount this?" and is authoritative. This list asks
+    // "is this page meaningful on a memory tenant?", and every key below is
+    // backed by a capability corvus-mind still grants:
+    //   emergent-queue, integrity-*  -> operator/governance, both also serve
+    //                                   the Inbox and Proposal Queue
+    //   document-ingest              -> ingestion, which also serves the
+    //                                   harness capture path /ingest/observations
+    //   engrams, layer-heatmap       -> knowledge_graph, which recall depends on
+    //   eval-runs, evaluation        -> evaluation, which also serves Performance
+    //   quality, fairness            -> no API client imports at all; inert pages
+    // knowledge-governance stays curated out rather than composed out. It is
+    // the one entry a capability could genuinely govern, but dropping
+    // `compliance` from corvus-mind also removes /admin/system-banner and
+    // /admin/audit-log*, which routers/compliance.py owns despite their being
+    // operator surfaces. See that tenant.yaml comment; the split belongs to
+    // roadmap record 04. Once compliance can be composed away cleanly, this
+    // key moves to `requires: 'compliance'` above and leaves this list.
+    //
+    // Performance stays visible: recall queries carry full stage telemetry, so
+    // per-step speed is real data on memory tenants too.
+    const curatedOut = new Set(['emergent-queue', 'document-ingest',
       'engrams', 'layer-heatmap', 'knowledge-governance', 'quality',
       'fairness', 'evaluation', 'eval-runs',
       'integrity-dashboard', 'integrity-scan', 'integrity-findings']);
-    for (const g of groups) g.items = g.items.filter(i => !hidden.has(i.key));
+    for (const g of groups) g.items = g.items.filter(i => !curatedOut.has(i.key));
     return groups.filter(g => g.items.length > 0);
   }
   for (const g of groups) g.items = g.items.filter(i => i.key !== 'roadmap-ledgers');

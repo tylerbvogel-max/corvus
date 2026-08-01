@@ -66,9 +66,10 @@ class CapabilityProfile:
                 continue
             for spec in CAPABILITIES[capability].routers:
                 key = (spec.module, spec.attr)
-                if key not in seen:
-                    seen.add(key)
-                    ordered.append(spec)
+                if key in seen or not spec.is_satisfied(self.granted):
+                    continue
+                seen.add(key)
+                ordered.append(spec)
         return tuple(ordered)
 
     def startup_steps(self) -> tuple[StartupStep, ...]:

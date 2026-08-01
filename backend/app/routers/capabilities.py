@@ -5,11 +5,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.routers.recall import require_memory_surface
 from app.services.capability_capsule import export_capsule, import_capsule, transfer_health, verify
 
-router = APIRouter(prefix="/capabilities", tags=["capabilities"],
-                   dependencies=[Depends(require_memory_surface)])
+router = APIRouter(prefix="/capabilities", tags=["capabilities"])
 
 
 class InspectRequest(BaseModel):

@@ -273,3 +273,96 @@ def test_declared_jobs_belong_to_a_granted_capability():
     memory = _profile(Capability.MEMORY)
     assert "corvus-mind-distill.timer" in memory.jobs()
     assert _profile(Capability.COMPLIANCE).jobs() == ()
+
+
+# ── Carry-forward 1: the 404-dependency gate is gone ───────────────────────
+
+@pytest.mark.hermetic
+def test_memory_surface_gate_no_longer_exists():
+    """require_memory_surface must not come back.
+
+    It answered 404 from inside a mounted route, which is precisely the
+    "later authorization failure" this record rejects. Composition decides
+    this now, so a reintroduction would mean two authorities again.
+    """
+    import ast
+    import pathlib
+
+    backend = pathlib.Path(__file__).resolve().parents[1]
+    offenders = []
+    for path in (backend / "app").rglob("*.py"):
+        # Parsed, not grepped: the comment recording why the gate was removed
+        # mentions it by name, and a text search would flag its own epitaph.
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for node in ast.walk(tree):
+            named = (
+                (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name)
+                or (isinstance(node, ast.Name) and node.id)
+                or (isinstance(node, ast.Attribute) and node.attr)
+                or (isinstance(node, ast.alias) and node.name)
+            )
+            if named == "require_memory_surface":
+                offenders.append(str(path.relative_to(backend)))
+                break
+    assert not offenders, (
+        f"require_memory_surface is defined or called again in {offenders}; "
+        f"capability composition is the single authority for memory gating"
+    )
+
+
+@pytest.mark.hermetic
+def test_memory_backed_routers_need_memory_even_when_their_owner_is_granted():
+    """Roadmap ledgers and the reference library store rows in the memory graph.
+
+    Granting OPERATOR or INGESTION without MEMORY must not mount them — that
+    is the behavior require_memory_surface used to provide, now declared.
+    """
+    operator_only = create_app(profile=_profile(Capability.OPERATOR), tenant=_FakeTenant())
+    assert not any(
+        r.path.startswith("/roadmap-ledgers") for r in operator_only.routes if hasattr(r, "path")
+    ), "roadmap ledgers mounted without the memory graph that stores them"
+
+    with_memory = create_app(
+        profile=_profile(Capability.OPERATOR, Capability.MEMORY), tenant=_FakeTenant()
+    )
+    assert any(
+        r.path.startswith("/roadmap-ledgers") for r in with_memory.routes if hasattr(r, "path")
+    ), "roadmap ledgers absent even with both capabilities granted"
+
+    ingestion_only = create_app(profile=_profile(Capability.INGESTION), tenant=_FakeTenant())
+    assert not any(
+        r.path.startswith("/admin/reference") for r in ingestion_only.routes if hasattr(r, "path")
+    ), "reference library mounted without the memory graph it writes to"
+
+
+# ── Carry-forward 2: job ownership ─────────────────────────────────────────
+
+@pytest.mark.hermetic
+def test_every_declared_job_targets_a_route_its_capability_mounts():
+    """A claimed timer must POST to a route the claiming profile serves.
+
+    The maintenance lanes are systemd timers curling the app's own routes, so
+    job ownership is route ownership and is checkable without systemd.
+    """
+    import pathlib
+    import re
+
+    backend = pathlib.Path(__file__).resolve().parents[1]
+    systemd = backend.parent / "harness" / "systemd"
+    exec_url = re.compile(r"ExecStart=.*?-X\s+POST\s+\"?(?P<url>https?://[^\s\"?]+)")
+
+    for capability, spec in CAPABILITIES.items():
+        if not spec.jobs:
+            continue
+        app = create_app(profile=_profile(capability), tenant=_FakeTenant())
+        mounted = {r.path for r in app.routes if hasattr(r, "path")}
+        for unit in spec.jobs:
+            service = systemd / (unit.removesuffix(".timer") + ".service")
+            assert service.exists(), f"{capability.value} claims {unit}, absent from harness/systemd"
+            match = exec_url.search(service.read_text())
+            assert match, f"{service.name} has no HTTP POST ExecStart to reconcile"
+            path = "/" + match.group("url").split("/", 3)[-1]
+            assert path in mounted, (
+                f"{capability.value} claims {unit} -> POST {path}, but does not "
+                f"mount that route; the timer would fire into a 404"
+            )

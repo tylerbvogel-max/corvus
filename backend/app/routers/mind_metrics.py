@@ -9,11 +9,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.routers.recall import require_memory_surface
 from app.services.mind_metrics import collect_all
 
-router = APIRouter(prefix="/metrics", tags=["memory"],
-                   dependencies=[Depends(require_memory_surface)])
+router = APIRouter(prefix="/metrics", tags=["memory"])
 
 
 @router.get("/mind")

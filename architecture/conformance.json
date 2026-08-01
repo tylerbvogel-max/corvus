@@ -54,8 +54,8 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "140b086dc23bb0779081c23dd0a74db1cc9bd1d1798b20e79b085cec4bb6f032",
-    "current_fingerprint": "140b086dc23bb0779081c23dd0a74db1cc9bd1d1798b20e79b085cec4bb6f032",
+    "stored_fingerprint": "0b2609dc708a6e710ae840db2568f0b0e84390d5e80b5f22a84a0214fafcb6b3",
+    "current_fingerprint": "0b2609dc708a6e710ae840db2568f0b0e84390d5e80b5f22a84a0214fafcb6b3",
     "stored_files": 464,
     "current_files": 464
   },
@@ -69,7 +69,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 1495,
+      "loc": 1493,
       "routes": 9,
       "modules": [
         "app.routers.roadmap_ledgers",
@@ -88,7 +88,7 @@
       "confidence": "reviewed",
       "module_count": 13,
       "frontend_file_count": 0,
-      "loc": 2650,
+      "loc": 2648,
       "routes": 4,
       "modules": [
         "app.mcp_http",
@@ -115,7 +115,7 @@
       "confidence": "reviewed",
       "module_count": 0,
       "frontend_file_count": 76,
-      "loc": 32118,
+      "loc": 32137,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -275,7 +275,7 @@
       "confidence": "reviewed",
       "module_count": 20,
       "frontend_file_count": 0,
-      "loc": 7651,
+      "loc": 7649,
       "routes": 24,
       "modules": [
         "app.routers.engrams",
@@ -309,7 +309,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 1516,
+      "loc": 1514,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -328,7 +328,7 @@
       "confidence": "reviewed",
       "module_count": 8,
       "frontend_file_count": 0,
-      "loc": 2761,
+      "loc": 2759,
       "routes": 9,
       "modules": [
         "app.routers.document_ingest",
@@ -383,7 +383,7 @@
       "confidence": "reviewed",
       "module_count": 30,
       "frontend_file_count": 0,
-      "loc": 11274,
+      "loc": 11270,
       "routes": 65,
       "modules": [
         "app.routers.admin",
@@ -427,7 +427,7 @@
       "confidence": "reviewed",
       "module_count": 4,
       "frontend_file_count": 0,
-      "loc": 772,
+      "loc": 770,
       "routes": 2,
       "modules": [
         "app.routers.compile",
@@ -520,7 +520,7 @@
       "confidence": "reviewed",
       "module_count": 31,
       "frontend_file_count": 0,
-      "loc": 6237,
+      "loc": 6235,
       "routes": 16,
       "modules": [
         "app.routers.eval_runs",
@@ -643,7 +643,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 946,
+      "loc": 965,
       "routes": 4,
       "modules": [
         "app.composition",
@@ -662,7 +662,7 @@
       "confidence": "reviewed",
       "module_count": 95,
       "frontend_file_count": 0,
-      "loc": 19056,
+      "loc": 19325,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",

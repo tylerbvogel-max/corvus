@@ -40,6 +40,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -181,6 +182,161 @@ def _capture(tenant_id: str) -> dict:
     return json.loads(proc.stdout)
 
 
+_SYSTEMD_DIR = _BACKEND_DIR.parent / "harness" / "systemd"
+_EXEC_URL = re.compile(r"ExecStart=.*?-X\s+POST\s+\"?(?P<url>https?://[^\s\"?]+)")
+
+
+def _declared_unit_targets() -> dict[str, str]:
+    """Map each in-repo timer unit to the path its service POSTs to.
+
+    The maintenance jobs are not in-process schedulers — they are systemd
+    timers that curl the application's own routes. Job ownership is therefore
+    route ownership, and it can be checked without systemd being present.
+    """
+    targets: dict[str, str] = {}
+    if not _SYSTEMD_DIR.is_dir():
+        return targets
+    for timer in sorted(_SYSTEMD_DIR.glob("*.timer")):
+        service = timer.with_suffix(".service")
+        if not service.exists():
+            continue
+        match = _EXEC_URL.search(service.read_text())
+        if match:
+            targets[timer.name] = "/" + match.group("url").split("/", 3)[-1]
+    return targets
+
+
+def _reconcile_jobs(tenant_id: str) -> tuple[list[str], list[str]]:
+    """Compare a tenant's declared job ownership against the in-repo units.
+
+    Returns (findings, informational lines). A finding is a real inconsistency:
+    a profile claiming a unit that does not exist, or claiming one whose target
+    route the profile does not mount — which would make the timer fire into a
+    404 on every tick.
+    """
+    env = dict(os.environ, TENANT_ID=tenant_id, PYTHONPATH=str(_BACKEND_DIR))
+    probe = (
+        "import json;"
+        "from app.composition.profiles import resolve_profile;"
+        "from app.composition.factory import create_app;"
+        "from app.tenant import tenant;"
+        "p=resolve_profile(tenant);"
+        "a=create_app(profile=p, tenant=tenant);"
+        "print(json.dumps({'jobs': list(p.jobs()),"
+        " 'paths': sorted({r.path for r in a.routes if hasattr(r,'path')})}))"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", probe],
+        capture_output=True, text=True, env=env, cwd=str(_BACKEND_DIR),
+    )
+    if proc.returncode != 0:
+        return ([f"{tenant_id}: could not resolve profile — {proc.stderr.strip()[-200:]}"], [])
+
+    data = json.loads(proc.stdout)
+    declared, mounted = data["jobs"], set(data["paths"])
+    units = _declared_unit_targets()
+
+    findings, info = [], []
+    for unit in declared:
+        target = units.get(unit)
+        if target is None:
+            findings.append(f"{tenant_id}: claims {unit}, which has no unit under harness/systemd")
+        elif target not in mounted:
+            findings.append(
+                f"{tenant_id}: claims {unit} -> POST {target}, but this profile "
+                f"does not mount that route; the timer would fire into a 404"
+            )
+        else:
+            info.append(f"{tenant_id}: {unit} -> POST {target} (mounted)")
+
+    for unit, target in units.items():
+        if unit not in declared:
+            info.append(
+                f"{tenant_id}: {unit} -> POST {target} is UNOWNED by this "
+                f"profile; installing it here would create an orphaned timer"
+            )
+    return findings, info
+
+
+def _declared_jobs(tenant_id: str) -> set[str]:
+    """The set of units ``tenant_id``'s profile claims ownership of."""
+    env = dict(os.environ, TENANT_ID=tenant_id, PYTHONPATH=str(_BACKEND_DIR))
+    probe = (
+        "import json;"
+        "from app.composition.profiles import resolve_profile;"
+        "from app.tenant import tenant;"
+        "print(json.dumps(list(resolve_profile(tenant).jobs())))"
+    )
+    proc = subprocess.run([sys.executable, "-c", probe], capture_output=True,
+                          text=True, env=env, cwd=str(_BACKEND_DIR))
+    return set(json.loads(proc.stdout)) if proc.returncode == 0 else set()
+
+
+def _orphaned_installed_units(claimed: set[str]) -> list[str]:
+    """Installed corvus timers that no tenant profile claims.
+
+    This is the half that motivated the check. A capability composed away stops
+    mounting its routes, but the systemd units live outside the repo in
+    ~/.config/systemd/user and keep firing on their schedule — into a 404,
+    silently, forever. Nothing else in the system would notice.
+
+    Skipped (not failed) where systemd is unavailable, e.g. in CI containers.
+    """
+    try:
+        proc = subprocess.run(
+            ["systemctl", "--user", "list-unit-files", "--no-legend", "corvus-*.timer"],
+            capture_output=True, text=True, timeout=15,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        print("  (systemd unavailable — skipped installed-unit reconciliation)")
+        return []
+    if proc.returncode != 0:
+        print("  (systemd query failed — skipped installed-unit reconciliation)")
+        return []
+
+    installed = {
+        line.split()[0] for line in proc.stdout.splitlines()
+        if line.strip() and line.split()[0].endswith(".timer")
+    }
+    if not installed:
+        print("  (no corvus timers installed on this host)")
+        return []
+
+    findings = []
+    for unit in sorted(installed):
+        if unit in claimed:
+            print(f"  installed: {unit} (claimed)")
+            continue
+        # Only timers that drive the application are a composition concern.
+        # corvus-backup.timer runs pg_dump via a shell script; it owns no route
+        # and composing a capability away cannot orphan it. Flagging it would
+        # be a false alarm, and an alarm that cries wolf gets switched off.
+        target = _installed_unit_target(unit)
+        if target is None:
+            print(f"  installed: {unit} (not capability-driven; no HTTP target)")
+        else:
+            findings.append(
+                f"ORPHAN: {unit} is installed and scheduled and POSTs "
+                f"{target}, but no tenant profile claims it — that route is "
+                f"not mounted, so every tick fires into a 404"
+            )
+    return findings
+
+
+def _installed_unit_target(timer_unit: str) -> str | None:
+    """The route an installed timer's service POSTs to, if it drives the app."""
+    service = timer_unit.removesuffix(".timer") + ".service"
+    try:
+        proc = subprocess.run(["systemctl", "--user", "cat", service],
+                              capture_output=True, text=True, timeout=15)
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        return None
+    if proc.returncode != 0:
+        return None
+    match = _EXEC_URL.search(proc.stdout)
+    return "/" + match.group("url").split("/", 3)[-1] if match else None
+
+
 def _paths(out_dir: Path, tenant_id: str) -> dict[str, Path]:
     return {
         "openapi": out_dir / f"openapi.{tenant_id}.json",
@@ -203,6 +359,8 @@ def main() -> int:
     mode.add_argument("--write", action="store_true", help="write/refresh snapshots")
     mode.add_argument("--check", action="store_true", help="fail if snapshots drifted")
     mode.add_argument("--emit", metavar="TENANT", help="internal: emit one tenant as JSON")
+    mode.add_argument("--jobs", action="store_true",
+                      help="reconcile declared job ownership against harness/systemd units")
     parser.add_argument("--tenant", action="append", help="limit to this tenant (repeatable)")
     parser.add_argument("--out-dir", type=Path, default=_DEFAULT_OUT)
     args = parser.parse_args()
@@ -215,6 +373,24 @@ def main() -> int:
     if not tenants:
         sys.stderr.write(f"no tenants with a tenant.yaml under {_TENANTS_DIR}\n")
         return 2
+
+    if args.jobs:
+        all_findings: list[str] = []
+        claimed: set[str] = set()
+        for tenant_id in tenants:
+            findings, info = _reconcile_jobs(tenant_id)
+            for line in info:
+                print(f"  {line}")
+            all_findings.extend(findings)
+            claimed.update(_declared_jobs(tenant_id))
+        all_findings.extend(_orphaned_installed_units(claimed))
+        if all_findings:
+            sys.stderr.write("\njob ownership findings:\n")
+            for line in all_findings:
+                sys.stderr.write(f"  {line}\n")
+            return 1
+        print("\njob ownership reconciles for: " + ", ".join(tenants))
+        return 0
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     drifted: list[str] = []

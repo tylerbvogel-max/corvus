@@ -20,14 +20,12 @@ from app.models import (
     DocumentIngestJob, Neuron, NeuronSourceLink, SourceDocument,
 )
 from app.routers.document_ingest import MAX_FILE_SIZE, _get_format, _job_to_dict
-from app.routers.recall import require_memory_surface
 from app.services.document_parser import parse_document
 from app.services.reference_class import REFERENCE_AUTHORITY_CAP, REFERENCE_REGION
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin/reference", tags=["reference-memory"],
-                   dependencies=[Depends(require_memory_surface)])
+router = APIRouter(prefix="/admin/reference", tags=["reference-memory"])
 
 
 async def _resolve_document(db: AsyncSession, canonical_id: str) -> SourceDocument:

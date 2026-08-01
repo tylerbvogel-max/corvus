@@ -46,10 +46,24 @@ class Capability(str, Enum):
 
 @dataclass(frozen=True)
 class RouterSpec:
-    """A router to mount, addressed by import path rather than by reference."""
+    """A router to mount, addressed by import path rather than by reference.
+
+    ``also_requires`` names capabilities that must ALSO be granted for this
+    router to mount. It exists because a handful of routers are owned by one
+    capability but store their state in another's: roadmap ledgers are an
+    operator surface whose rows live in the memory graph, and the reference
+    library is ingestion that writes reference memory. Both were previously
+    gated by ``require_memory_surface``, a dependency that left the routes
+    mounted and answering 404. Declaring the dependency here removes them
+    instead, which is the property this record is about.
+    """
 
     module: str
     attr: str = "router"
+    also_requires: frozenset[Capability] = field(default_factory=frozenset)
+
+    def is_satisfied(self, granted: frozenset[Capability]) -> bool:
+        return self.also_requires <= granted
 
     def __str__(self) -> str:  # pragma: no cover - diagnostics only
         return f"{self.module}:{self.attr}"
@@ -127,7 +141,9 @@ CAPABILITIES: dict[Capability, CapabilitySpec] = {
         routers=(
             RouterSpec("app.routers.ingest"),
             RouterSpec("app.routers.document_ingest"),
-            RouterSpec("app.routers.reference"),
+            # Writes reference-tier memory, so it needs the memory graph too.
+            RouterSpec("app.routers.reference",
+                       also_requires=frozenset({Capability.MEMORY})),
             RouterSpec("app.routers.seeding"),
         ),
     ),
@@ -167,7 +183,9 @@ CAPABILITIES: dict[Capability, CapabilitySpec] = {
             RouterSpec("app.routers.admin"),
             RouterSpec("app.routers.architecture"),
             RouterSpec("app.routers.chat_sessions"),
-            RouterSpec("app.routers.roadmap_ledgers"),
+            # Operator-facing, but ledger rows live in the memory graph.
+            RouterSpec("app.routers.roadmap_ledgers",
+                       also_requires=frozenset({Capability.MEMORY})),
         ),
     ),
     Capability.EXTERNAL_API: CapabilitySpec(

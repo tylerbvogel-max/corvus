@@ -15,11 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import IntegrityFinding, MemoryChangeEvent, Neuron
-from app.routers.recall import require_memory_surface
 from app.services.mind_janitors import LESSON_TYPES, run_janitors
 
-router = APIRouter(prefix="/janitor", tags=["memory"],
-                   dependencies=[Depends(require_memory_surface)])
+router = APIRouter(prefix="/janitor", tags=["memory"])
 
 
 @router.get("/status")

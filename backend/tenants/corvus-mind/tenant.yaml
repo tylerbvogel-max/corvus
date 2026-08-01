@@ -14,12 +14,27 @@ semantic_prefilter_enabled: true
 # (they 404 on knowledge tenants — see tenant.py memory_surface_enabled).
 memory_surface: true
 # Runtime composition (app/composition/capabilities.py). Fail-closed: a tenant
-# with no capabilities block refuses to start. This tenant is the operator-
-# facing deployment, and the frontend measurably calls every surface below
-# (/admin/compliance, /admin/documents, /admin/eval, /admin/labs, /v1/agents,
-# /admin/integrity — audited from src/api.ts on 2026-07-31), so the operator
-# profile is full. Reductions here must be driven by frontend evidence, not by
-# how dormant a surface looks from the backend.
+# with no capabilities block refuses to start. This is the operator-facing
+# deployment; the frontend measurably calls /admin/documents, /admin/eval,
+# /admin/labs, /admin/integrity, /v1/agents and the memory surface, so those
+# capabilities stay. Reductions must be driven by consumer evidence, not by how
+# dormant a surface looks from the backend.
+#
+# compliance is RETAINED, and the attempt to drop it is worth recording.
+# 2026-07-31: composing it away removes 34 routes and 8 modules, and the
+# compliance UI genuinely is unreachable here (only KnowledgeGovernancePage
+# imports a compliance client function, the nav does not render it on a memory
+# tenant, four more compliance client functions have no importer at all, and
+# audit_log shows zero compliance mutations in this tenant's history).
+#
+# It is blocked by a seam, not by demand: backend/app/routers/compliance.py
+# also owns /admin/system-banner and /admin/audit-log*, which are operator
+# surfaces. SystemUseBanner renders on every page load and fails soft, so
+# dropping compliance made the system-use notification silently disappear —
+# a control surface vanishing with no error. Re-homing those three routes is
+# a bounded-context split, which is record 04's job (it already names
+# compliance.py at 1,166 lines as a target seam). Revisit this line then; the
+# measured payoff above is the reason to.
 capabilities:
   - memory
   - knowledge_graph

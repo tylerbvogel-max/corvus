@@ -61,6 +61,12 @@ jobs:
       # imported from inside a process that imported it.
       - name: Verify per-tenant runtime composition snapshots
         run: python scripts/capability_snapshot.py --check
+      # Maintenance jobs are systemd timers curling the app's own routes, so a
+      # composed-away capability can strand a timer firing into a 404. The
+      # in-repo units make that checkable; installed-unit reconciliation is
+      # skipped where systemd is unavailable.
+      - name: Reconcile scheduled job ownership against capability profiles
+        run: python scripts/capability_snapshot.py --jobs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

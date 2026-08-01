@@ -25,15 +25,13 @@ from app.tenant import tenant
 
 router = APIRouter(tags=["memory"])
 
-
-def require_memory_surface() -> None:
-    """404 the memory endpoints on knowledge tenants (aero/flow): they
-    would write harness episodes and lessons into the wrong graph."""
-    if not tenant.memory_surface_enabled:
-        raise HTTPException(
-            status_code=404,
-            detail="memory surface disabled for this tenant (tenant.yaml memory_surface)",
-        )
+# require_memory_surface() lived here until 2026-07-31. It 404'd the memory
+# endpoints from inside a dependency, which meant the routes stayed mounted,
+# stayed in the OpenAPI document, and kept their imports resident. The MEMORY
+# capability in app/composition/capabilities.py now decides this by not
+# mounting these routers at all — absent rather than refused. Routers owned by
+# another capability but backed by the memory graph (roadmap ledgers, the
+# reference library) declare that dependency via RouterSpec.also_requires.
 
 
 class RecallRequest(BaseModel):
@@ -177,7 +175,7 @@ _SCAFFOLDING_HEADROOM = 3
 _MAX_FETCH_K = 40
 
 
-@router.post("/recall", dependencies=[Depends(require_memory_surface)])
+@router.post("/recall")
 async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
     """Cheap structured recall: prepare pipeline only, no LLM, no execution."""
     t0 = time.monotonic()
@@ -268,7 +266,7 @@ async def recall(req: RecallRequest, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.post("/remember", dependencies=[Depends(require_memory_surface)])
+@router.post("/remember")
 async def remember(req: RememberRequest, db: AsyncSession = Depends(get_db)):
     """Persist an explicit lesson save through the write gate.
 
