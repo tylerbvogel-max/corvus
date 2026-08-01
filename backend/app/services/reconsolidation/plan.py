@@ -253,10 +253,61 @@ class FusionPlan(BaseModel):
         ).hexdigest()
 
 
+# -- wire format ------------------------------------------------------------
+# The two halves of ONE format. They used to live in different modules —
+# the serializer in lifecycle, the deserializer in apply — and each module
+# imported the other back, which was the last import cycle in the cluster
+# (record 04b). Both hashes they check are defined directly above, so this
+# is where the format belongs. apply and lifecycle re-export these names.
+
+
+class ReconsolidationApplyError(RuntimeError):
+    """A FusionPlan may not be applied — the apply rolls back. Fail closed."""
+
+    def __init__(self, violations: list[str]):
+        self.violations = violations
+        super().__init__(
+            "reconsolidation apply failed closed: " + "; ".join(violations))
+
+
+def reconsolidation_item_spec(plan, plan_hash: str | None = None) -> str:
+    """Serialize a FusionPlan into a ProposalItem.neuron_spec_json payload
+    (single source of the format written by the janitor and read by
+    parse_reconsolidation_spec)."""
+    return json.dumps({
+        "fusion_plan": plan.model_dump(mode="json"),
+        "plan_hash": plan_hash or plan.plan_hash(),
+        "member_state_hash": plan.member_state_hash(),
+    })
+
+
+def parse_reconsolidation_spec(spec_json: str) -> tuple["FusionPlan", str, str]:
+    """(plan, plan_hash, member_state_hash) from a ProposalItem's spec.
+    Hash fields recorded at proposal time are revalidated against the
+    embedded plan so a tampered spec fails before preflight."""
+    spec = json.loads(spec_json)
+    plan = FusionPlan.model_validate(spec["fusion_plan"])
+    plan_hash = spec.get("plan_hash") or plan.plan_hash()
+    member_hash = spec.get("member_state_hash") or plan.member_state_hash()
+    if plan_hash != plan.plan_hash():
+        raise ReconsolidationApplyError(
+            ["stored plan_hash does not match the embedded plan"])
+    if member_hash != plan.member_state_hash():
+        raise ReconsolidationApplyError(
+            ["stored member_state_hash does not match the embedded plan"])
+    return plan, plan_hash, member_hash
+
+
 def snapshot_of(neuron) -> MemberSnapshot:
-    """Build a MemberSnapshot from a live Neuron row (parity with
-    mind_lint.content_hash so drift detection matches the verdict store)."""
-    from app.services.mind_lint import content_hash
+    """Build a MemberSnapshot from a live Neuron row.
+
+    The hash comes from the shared corpus primitive, which is also what the
+    lint's verdict store uses — that parity is why a plan's drift detection
+    agrees with the verdict that nominated it. It used to be reached UP for
+    through mind_lint, and that single edge was this module's only tie to the
+    maintenance cycle (record 04b).
+    """
+    from app.services.mind_corpus import content_hash
 
     return MemberSnapshot(
         neuron_id=neuron.id,

@@ -30,11 +30,19 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron
-from app.services.mind_janitors import LESSON_TYPES, _log_action
+from app.services.mind_corpus import LESSON_TYPES, _log_action
 
 STANDING = "standing"
 RETRIEVABLE = "retrievable"
 VERDICTS = (STANDING, RETRIEVABLE)
+
+# Which authority tiers the charter may draw from. This is a MEMBERSHIP
+# predicate, so it lives beside the membership gate (charter_eligible_filters)
+# rather than in the compiler that renders the capsule — record 04b: the two
+# modules each owned half the charter's vocabulary and imported the other half
+# back, which was the whole of that import cycle. skill_compiler keeps the
+# RENDERING parameters (CHARTER_NAME, CHARTER_MAX_CHARS) and reads this.
+CHARTER_TIERS = ("guidance", "organizational")
 
 JUDGE_MODEL = "opus"
 # Graph mutations get the quality-first model: this runs rarely and
@@ -111,7 +119,6 @@ def charter_eligible_filters() -> list:
     and scope walls the charter has always enforced. Kept here so the
     classifier judges exactly the population the charter draws from."""
     from app.services.reference_class import reference_exclusion_filters
-    from app.services.skill_compiler import CHARTER_TIERS
     return [
         Neuron.is_active.is_(True),
         Neuron.node_type.in_(LESSON_TYPES),

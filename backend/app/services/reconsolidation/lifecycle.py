@@ -26,6 +26,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.rbac import UserIdentity
 from app.models import AutopilotProposal, Neuron, ProposalItem
+# The FusionPlan wire format lives with the model (record 04b). This module
+# used to define the serializer while apply defined the deserializer, and each
+# imported the other back. Re-exported: callers know these names here.
+from app.services.reconsolidation.plan import (  # noqa: F401
+    ReconsolidationApplyError, parse_reconsolidation_spec,
+    reconsolidation_item_spec,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,9 +123,6 @@ async def revalidate_items(
                         f"{item.field} drifted since proposal "
                         f"({(item.old_value or '')[:60]!r} -> {live[:60]!r})")
         elif item.action == "reconsolidate" and item.neuron_spec_json:
-            from app.services.reconsolidation.apply import (
-                ReconsolidationApplyError, parse_reconsolidation_spec,
-            )
             from app.services.reconsolidation.validators import preflight
 
             try:
@@ -211,17 +215,6 @@ async def supersede_stale_approved(
         )
         retired.append({"proposal_id": p.id, "violations": stale})
     return retired
-
-
-def reconsolidation_item_spec(plan, plan_hash: str | None = None) -> str:
-    """Serialize a FusionPlan into a ProposalItem.neuron_spec_json payload
-    (single source of the format written by the janitor and read by
-    parse_reconsolidation_spec)."""
-    return json.dumps({
-        "fusion_plan": plan.model_dump(mode="json"),
-        "plan_hash": plan_hash or plan.plan_hash(),
-        "member_state_hash": plan.member_state_hash(),
-    })
 
 
 def find_reconsolidation_item(p: AutopilotProposal) -> ProposalItem | None:

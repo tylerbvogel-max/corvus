@@ -1,5 +1,5 @@
 {
-  "app_module_count": 79,
+  "app_module_count": 81,
   "app_modules": [
     "app",
     "app.composition",
@@ -42,6 +42,7 @@
     "app.services.action_bus",
     "app.services.capability_capsule",
     "app.services.citation_hopping",
+    "app.services.delivery_mode",
     "app.services.distiller",
     "app.services.ecfr_client",
     "app.services.engram_service",
@@ -51,6 +52,7 @@
     "app.services.lesson_store",
     "app.services.llm_provider",
     "app.services.memory_quality_auditor",
+    "app.services.mind_corpus",
     "app.services.mind_janitors",
     "app.services.mind_metrics",
     "app.services.neuron_candidate",

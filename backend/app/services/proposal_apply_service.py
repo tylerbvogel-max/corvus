@@ -131,7 +131,7 @@ async def _submit_reconsolidate_child(
     proposal.reconsolidate action. idempotency_key = the plan hash, so
     replaying an already-applied plan returns its recorded receipt instead
     of re-executing (kernel Phase 4C)."""
-    from app.services.reconsolidation.apply import parse_reconsolidation_spec
+    from app.services.reconsolidation.plan import parse_reconsolidation_spec
 
     assert item.neuron_spec_json is not None, "reconsolidate item must have spec"
     _plan, plan_hash, member_hash = parse_reconsolidation_spec(

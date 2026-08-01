@@ -44,15 +44,22 @@ from app.models import (
     ProposalItem, SynapticLearningEvent,
 )
 
-EPISODE_DIR = os.path.expanduser(
-    os.environ.get("CORVUS_MIND_EPISODE_DIR", "~/.corvus-mind/episodes")
+# The corpus primitives live one layer down (record 04b): every module that
+# needed them used to import this scheduler and get imported back. They are
+# re-exported here because eight modules outside the cycle — and the test
+# seams that monkeypatch them on this module — resolve them at this name.
+from app.services.mind_corpus import (  # noqa: F401
+    ACTIONS_LOG,
+    BORDERLINE_SIM,
+    EPISODE_DIR,
+    FUSE_SIM,
+    LESSON_TYPES,
+    _add_memory_edge,
+    _load_lessons,
+    _log_action,
+    _similar_pairs,
 )
-ACTIONS_LOG = os.path.join(EPISODE_DIR, "janitor-actions.jsonl")
-LESSON_TYPES = ("lesson", "tool-profile", "context-scope")
-FUSE_SIM = 0.88          # >= : auto-fuse (same scope only)
-BORDERLINE_SIM = 0.75    # >= : report for review, never auto-fuse
-                         # (calibrated on real pair 22/28 @ 0.778: complementary
-                         # facts, related-not-duplicate — must surface, not fuse)
+
 STALE_DEMOTION = 0.5     # superseded lesson keeps half its utility
 DECAY_FACTOR = 0.9
 DECAY_FLOOR = 0.4
@@ -72,51 +79,6 @@ CHARTER_DEMOTE_UTILITY = 0.5  # strictly-below comparison: 0.5 birth weight is s
 _SESSION_REF = re.compile(r"\[session:([A-Za-z0-9_-]+)\]")
 
 
-async def _add_memory_edge(
-    db: AsyncSession, source_id: int, target_id: int,
-    edge_type: str, context: str,
-) -> None:
-    """Create a memory-semantics edge through the Action Bus (audited).
-
-    Idempotent: asserting a relationship that already exists is a no-op,
-    not an error. Janitor passes re-derive the same resolution when both
-    parties survive (e.g. a contradiction pair re-detected next run) —
-    found 2026-07-12 crashing every staleness pass on neuron_edges_pkey,
-    which killed the whole janitor run before decay/promotion could run."""
-    assert edge_type in ("supersedes", "scoped-by", "evidence-link"), \
-        f"not a memory edge type: {edge_type}"
-    from sqlalchemy import select as sa_select
-    from app.middleware.rbac import UserIdentity
-    from app.models import NeuronEdge
-    from app.services import action_bus
-
-    existing = (await db.execute(
-        sa_select(NeuronEdge).where(
-            NeuronEdge.source_id == source_id,
-            NeuronEdge.target_id == target_id,
-        ).limit(1)
-    )).scalar_one_or_none()
-    if existing is not None:
-        return  # relationship already asserted — re-assertion is a no-op
-
-    identity = UserIdentity(user_id="mind_janitor", role="admin", source="system")
-    result = await action_bus.submit(
-        db=db, kind="edge.link", actor=identity, actor_type="system",
-        input_data={
-            "source_id": source_id, "target_id": target_id,
-            # Memory edges are semantic assertions, not co-fire statistics:
-            # meet the promotion threshold by construction so they land in
-            # neuron_edges (durable), never the reapable weak tier.
-            "weight": 1.0,
-            "co_fire_count": settings.edge_promote_min_cofires,
-            "edge_type": edge_type, "source": "mind_janitor",
-            "context": context[:300],
-        },
-        reason=context[:200],
-    )
-    assert result.state == "applied", f"edge.link failed: {result.error}"
-
-
 def _log_change(
     db: AsyncSession, neuron_id: int, field: str,
     old_value, new_value, reason: str,
@@ -134,19 +96,6 @@ def _log_change(
         new_value=None if new_value is None else str(new_value),
         reason=reason[:300], actor="mind_janitor",
     ))
-
-
-def _log_action(action: str, detail: dict) -> None:
-    """Janitor actions are episodes: append to the janitor actions log."""
-    os.makedirs(EPISODE_DIR, exist_ok=True)
-    record = {
-        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
-        "event": "JanitorAction",
-        "action": action,
-        **detail,
-    }
-    with open(ACTIONS_LOG, "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def _session_of(neuron: Neuron) -> str | None:
@@ -181,43 +130,6 @@ def _injected_in_session(session_id: str | None, label: str) -> bool:
                 if needle in cf or cf in needle:
                     return True
     return False
-
-
-async def _load_lessons(db: AsyncSession) -> list[Neuron]:
-    # IDENTITY WALL (mind-reference-class): reference-class neurons never
-    # enter lesson maintenance or the skill compiler's cluster feed — a
-    # PDF can become "what I can look up", never "who I am".
-    from app.services.reference_class import reference_exclusion_filters
-    rows = (await db.execute(
-        select(Neuron).where(
-            Neuron.is_active.is_(True),
-            Neuron.node_type.in_(LESSON_TYPES),
-            Neuron.embedding.isnot(None),
-            *reference_exclusion_filters(),
-        ).order_by(Neuron.id)
-    )).scalars().all()
-    return list(rows)
-
-
-def _similar_pairs(
-    lessons: list[Neuron], floor: float = BORDERLINE_SIM,
-) -> list[tuple[int, int, float]]:
-    """Index pairs (i, j, cosine) at or above `floor`. The default floor is
-    BORDERLINE_SIM; the lint lane lowers it to NEAR_MISS_SIM so lexically
-    near-verbatim pairs below the cosine radar can still be judged."""
-    if len(lessons) < 2:
-        return []
-    matrix = np.array([json.loads(n.embedding) for n in lessons], dtype=np.float64)
-    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-    norms[norms == 0] = 1.0
-    unit = matrix / norms
-    sims = unit @ unit.T
-    pairs: list[tuple[int, int, float]] = []
-    for i in range(len(lessons)):
-        for j in range(i + 1, len(lessons)):
-            if sims[i, j] >= floor:
-                pairs.append((i, j, float(sims[i, j])))
-    return pairs
 
 
 async def _resolve_pair(

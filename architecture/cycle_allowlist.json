@@ -11,7 +11,7 @@
     "one-line diff in a file named for the debt it tracks, so review cannot miss it.",
     "Owned by roadmap record durability-modular-monolith (04)."
   ],
-  "budget": 1,
+  "budget": 0,
   "history": [
     {
       "date": "2026-08-01",
@@ -37,22 +37,12 @@
       "date": "2026-08-01",
       "budget": 1,
       "note": "Record 04 seam 4: broke executor <-> pipeline.stages <-> structural_resolver. Two loops were braided into one 8-module cycle. executor was doing two jobs \u2014 holding the recall algorithms AND building/running the pipeline that calls them \u2014 so the thin stage wrappers imported it back; separately structural_resolver constructs PreparedContext, which also lived in executor. Extracted recall_primitives.py (9 functions, 427 lines) and prepared_context.py. executor 2087 -> 1633 lines and now imports both one-way."
+    },
+    {
+      "date": "2026-08-01",
+      "budget": 0,
+      "note": "Record 04b: the 12-module maintenance/reconsolidation cluster \u2014 the last measured cycle and the only one carrying evidence-gated writes. A read-only mapping pass classified all twelve as write-path, propose-path or pure computation BEFORE any file moved, and it falsified the plan the record proposed: reconsolidation.plan is indeed shared vocabulary, but it was ALREADY a near-leaf whose five module-scope importers all point downward, so extracting it would have moved nothing. Its single outbound edge \u2014 snapshot_of reaching up for mind_lint.content_hash \u2014 was the whole of its participation. Three cuts, all of them vocabulary in the wrong layer: (1) extracted mind_corpus.py, the maintenance substrate mind_janitors held underneath its own schedule \u2014 EVERY back-edge in the cycle wanted only primitives (LESSON_TYPES, _log_action, _load_lessons, _similar_pairs, EPISODE_DIR, BORDERLINE_SIM, _add_memory_edge) and none wanted a janitor pass; eight modules outside the cycle were reaching in for the same names. content_hash moved down with them, which is what freed plan. (2) CHARTER_TIERS moved to delivery_mode: charter MEMBERSHIP belongs with the membership gate, skill_compiler owns RENDERING. (3) The FusionPlan wire format was split across two modules \u2014 serializer in lifecycle, deserializer in apply, each importing the other back \u2014 and both moved to plan.py beside the two hashes they verify. No gate was weakened: the direct ORM writes to protected columns stayed in mind_janitors, graph_writers.json is unchanged, and the reference-class identity-wall guard was RE-AIMED at the substrate's new home with its aggregate bar held at two rather than lowered. mind_janitors 1145 -> 1057 lines. Hypothesis 3 (apply <-> lifecycle is genuinely behavioural) was also falsified: it was the wire format, not behaviour. Zero cycles across all 367 modules."
     }
   ],
-  "cycles": [
-    [
-      "app.services.delivery_mode",
-      "app.services.mind_janitors",
-      "app.services.mind_lint",
-      "app.services.proposal_apply_service",
-      "app.services.reconsolidation.apply",
-      "app.services.reconsolidation.inheritance",
-      "app.services.reconsolidation.lifecycle",
-      "app.services.reconsolidation.loaders",
-      "app.services.reconsolidation.plan",
-      "app.services.reconsolidation.review",
-      "app.services.reconsolidation.validators",
-      "app.services.skill_compiler"
-    ]
-  ]
+  "cycles": []
 }

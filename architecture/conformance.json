@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 366,
+    "modules": 368,
     "frontend_files": 72,
-    "units": 438,
-    "classified": 438,
+    "units": 440,
+    "classified": 440,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "c5fb53036577f79a36dc8f6d72c5726be5d735e55638c90a6ba3b21a8630cf90",
-    "current_fingerprint": "c5fb53036577f79a36dc8f6d72c5726be5d735e55638c90a6ba3b21a8630cf90",
-    "stored_files": 438,
-    "current_files": 438
+    "stored_fingerprint": "bdfba10ef7206e52809d67a151b721b30edbfbd8269123ad97af386ae01cdc9a",
+    "current_fingerprint": "bdfba10ef7206e52809d67a151b721b30edbfbd8269123ad97af386ae01cdc9a",
+    "stored_files": 440,
+    "current_files": 440
   },
   "manifest_problems": [],
   "boxes": [
@@ -381,9 +381,9 @@
       "tier": "background",
       "purpose": "Detect duplication, staleness, conflict, low utility, scope drift, and delivery drift; propose or apply bounded repairs.",
       "confidence": "reviewed",
-      "module_count": 30,
+      "module_count": 31,
       "frontend_file_count": 0,
-      "loc": 11270,
+      "loc": 11382,
       "routes": 65,
       "modules": [
         "app.routers.admin",
@@ -402,6 +402,7 @@
         "app.services.integrity.reconciler",
         "app.services.integrity.similarity",
         "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
         "app.services.mind_janitors",
         "app.services.mind_lint",
         "app.services.reconsolidation",
@@ -427,7 +428,7 @@
       "confidence": "reviewed",
       "module_count": 4,
       "frontend_file_count": 0,
-      "loc": 770,
+      "loc": 776,
       "routes": 2,
       "modules": [
         "app.routers.compile",
@@ -633,9 +634,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 96,
+      "module_count": 97,
       "frontend_file_count": 0,
-      "loc": 19625,
+      "loc": 19870,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -693,6 +694,7 @@
         "tests.test_integrity_reconciler_tools",
         "tests.test_live_provider",
         "tests.test_llm_fallback",
+        "tests.test_maintenance_substrate",
         "tests.test_memory_assembly",
         "tests.test_memory_quality_auditor",
         "tests.test_migration_smoke",

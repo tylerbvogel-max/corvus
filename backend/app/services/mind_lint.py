@@ -48,6 +48,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     AutopilotProposal, MindPairVerdict, Neuron, NeuronFiring, ProposalItem,
 )
+# Corpus substrate (record 04b). These used to be reached UP for, inside
+# functions, because mind_janitors held both the primitives and the schedule
+# that calls this module — the deferred imports were the confession. Now they
+# sit one layer down and this is an ordinary module-scope import.
+# `content_hash` is re-exported: it is imported from here as mind_lint's own
+# name by tests and by reconsolidation.plan's parity requirement.
+from app.services.mind_corpus import (  # noqa: F401
+    BORDERLINE_SIM, EPISODE_DIR, _load_lessons, _similar_pairs, content_hash,
+)
 
 # ── thresholds ──────────────────────────────────────────────────────────
 # NEAR_MISS_SIM + LEXICAL_JACCARD_HIGH calibrated on the live corpus
@@ -80,12 +89,6 @@ def pair_key(id_a: int, id_b: int) -> tuple[int, int]:
     """Normalized pair identity: (min, max)."""
     assert id_a != id_b, "a pair needs two distinct neurons"
     return (id_a, id_b) if id_a < id_b else (id_b, id_a)
-
-
-def content_hash(neuron: Neuron) -> str:
-    """Stable hash of the judged text — mismatch means the verdict is stale."""
-    text = f"{neuron.label}\n{neuron.content or ''}"
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
 async def load_verdicts(db: AsyncSession) -> dict[tuple[int, int], MindPairVerdict]:
@@ -272,7 +275,6 @@ def codelivery_count(
 # ── corpus health (item 0 — deterministic, no LLM) ──────────────────────
 
 def _health_path() -> str:
-    from app.services.mind_janitors import EPISODE_DIR
     return os.path.join(EPISODE_DIR, "corpus-health.json")
 
 
@@ -375,9 +377,6 @@ def _persist_health(report: dict) -> None:
 async def corpus_health(db: AsyncSession, persist: bool = True) -> dict:
     """Deterministic corpus-quality metrics. Read-only against the graph;
     persists corpus-health.json + appends corpus-health-history.jsonl."""
-    from app.services.mind_janitors import (
-        BORDERLINE_SIM, _load_lessons, _similar_pairs,
-    )
     lessons = await _load_lessons(db)
     by_id = {n.id: n for n in lessons}
     pairs = _similar_pairs(lessons)  # (i, j, sim) at >= BORDERLINE_SIM

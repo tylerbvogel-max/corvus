@@ -81,15 +81,28 @@ def test_wall_is_wired_into_identity_queries():
     delivery_mode.charter_eligible_filters (mind-charter-composition
     centralised the charter eligibility gate there so the delivery
     classifier judges exactly the population the charter draws from), so
-    that indirection is asserted rather than counted."""
+    that indirection is asserted rather than counted.
+
+    The two janitor-side call sites now live in two files: record 04b moved
+    the cluster loader (_load_lessons) down into mind_corpus to break the
+    maintenance import cycle, and the wall travelled with it. mind_janitors
+    keeps the charter-promotion site. The AGGREGATE bar is unchanged at two —
+    splitting the count per file, rather than lowering it, is what stops this
+    guard from being quietly satisfied by a future move."""
     import app.services.delivery_mode as dm
+    import app.services.mind_corpus as mc
     import app.services.mind_janitors as mj
     import app.services.skill_compiler as sc
-    for module, count in ((mj, 2), (sc, 1), (dm, 1)):
+
+    def _count(module) -> int:
         with open(module.__file__, encoding="utf-8") as fh:
-            src = fh.read()
-        assert src.count("reference_exclusion_filters()") >= count, \
+            return fh.read().count("reference_exclusion_filters()")
+
+    for module, count in ((mc, 1), (mj, 1), (sc, 1), (dm, 1)):
+        assert _count(module) >= count, \
             f"{module.__name__} lost a reference wall call site"
+    assert _count(mc) + _count(mj) >= 2, \
+        "cluster load and charter promotion must BOTH still carry the wall"
     with open(sc.__file__, encoding="utf-8") as fh:
         assert "charter_eligible_filters()" in fh.read(), \
             "charter render must reach the wall via the shared gate"

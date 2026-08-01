@@ -32,7 +32,14 @@ from sqlalchemy import func as sa_func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Neuron
-from app.services.mind_janitors import (
+# Charter MEMBERSHIP (which tiers qualify, which verdict admits, and the
+# eligibility gate itself) is owned by delivery_mode; this module owns
+# RENDERING. Record 04b: the two used to hold half each and import the other
+# half back at function scope, which was that entire import cycle.
+from app.services.delivery_mode import (  # noqa: F401
+    CHARTER_TIERS, STANDING, charter_eligible_filters,
+)
+from app.services.mind_corpus import (
     LESSON_TYPES, _add_memory_edge, _load_lessons, _log_action,
 )
 
@@ -72,7 +79,7 @@ CHARTER_NAME = SKILL_PREFIX + "charter"
 # ~1500 tokens: the always-on budget. Guessed constant — revisit once
 # injection-size telemetry exists (label per data-driven-design rule).
 CHARTER_MAX_CHARS = 6000
-CHARTER_TIERS = ("guidance", "organizational")
+# (CHARTER_TIERS moved to delivery_mode — see the import at the top.)
 
 
 def _charter_line(n: Neuron) -> str:
@@ -120,7 +127,6 @@ async def compile_charter(db: AsyncSession) -> dict:
     # on every axis even if mislabeled or somehow holding charter-tier
     # authority. A PDF can never become standing policy without the
     # human-countersigned graduation path.
-    from app.services.delivery_mode import STANDING, charter_eligible_filters
     eligible = charter_eligible_filters()
     rows = (await db.execute(
         select(Neuron).where(

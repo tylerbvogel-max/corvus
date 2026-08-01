@@ -27,7 +27,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.middleware.rbac import UserIdentity
 from app.models import AutopilotProposal, Neuron, NeuronEdge, ProposalItem
-from app.services.reconsolidation.plan import Disposition, FusionPlan
+from app.services.reconsolidation.plan import (  # noqa: F401
+    Disposition, FusionPlan, ReconsolidationApplyError,
+    parse_reconsolidation_spec,
+)
 from app.services.reconsolidation.validators import (
     assert_preflight, check_postconditions,
 )
@@ -36,32 +39,6 @@ logger = logging.getLogger(__name__)
 
 _CONDUCTING = ("pyramidal", "stellate")
 RECONSOLIDATE_ITEM_ACTION = "reconsolidate"
-
-
-class ReconsolidationApplyError(RuntimeError):
-    """Postconditions (or a child action) failed — the apply rolls back."""
-
-    def __init__(self, violations: list[str]):
-        self.violations = violations
-        super().__init__(
-            "reconsolidation apply failed closed: " + "; ".join(violations))
-
-
-def parse_reconsolidation_spec(spec_json: str) -> tuple[FusionPlan, str, str]:
-    """(plan, plan_hash, member_state_hash) from a ProposalItem's spec.
-    Hash fields recorded at proposal time are revalidated against the
-    embedded plan so a tampered spec fails before preflight."""
-    spec = json.loads(spec_json)
-    plan = FusionPlan.model_validate(spec["fusion_plan"])
-    plan_hash = spec.get("plan_hash") or plan.plan_hash()
-    member_hash = spec.get("member_state_hash") or plan.member_state_hash()
-    if plan_hash != plan.plan_hash():
-        raise ReconsolidationApplyError(
-            ["stored plan_hash does not match the embedded plan"])
-    if member_hash != plan.member_state_hash():
-        raise ReconsolidationApplyError(
-            ["stored member_state_hash does not match the embedded plan"])
-    return plan, plan_hash, member_hash
 
 
 def synthesis_entities(members, final_text: str) -> list[str] | None:
