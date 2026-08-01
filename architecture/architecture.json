@@ -3,58 +3,31 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "2b93628a1a956777741ea6ebfba880a9b2d3286c88e9f5963ab744fa556f9954",
-    "files": 443
+    "fingerprint": "f453300697d985112d234877a9f3c96facebbc73cb003d09e633d76d7dd73e16",
+    "files": 448
   },
   "frontend": {
     "available": true,
     "totals": {
-      "files": 72,
-      "loc": 31145,
-      "files_calling_api": 44,
+      "files": 74,
+      "loc": 44571,
+      "files_calling_api": 46,
       "files_using_fetch": 14,
-      "distinct_urls": 115
+      "distinct_urls": 201
     },
     "files": {
       "frontend/src/App.tsx": {
         "path": "frontend/src/App.tsx",
-        "loc": 1074,
+        "loc": 1104,
         "imports": [
           "frontend/src/api.ts",
           "frontend/src/assets/corvus-logo-128.png",
           "frontend/src/assets/corvus-logo.png",
           "frontend/src/auth.ts",
           "frontend/src/chatBus.ts",
-          "frontend/src/components/AgentsPage.tsx",
-          "frontend/src/components/ArchitecturePage.tsx",
           "frontend/src/components/AsciiWake.tsx",
-          "frontend/src/components/ChatHistoryWindow.tsx",
-          "frontend/src/components/CirclePacking.tsx",
-          "frontend/src/components/DocumentIngestPage.tsx",
-          "frontend/src/components/EmergentQueuePage.tsx",
-          "frontend/src/components/EngramPage.tsx",
-          "frontend/src/components/EvalRunsPage.tsx",
-          "frontend/src/components/EvaluationPage.tsx",
-          "frontend/src/components/Explorer.tsx",
           "frontend/src/components/GroupLandingPage.tsx",
-          "frontend/src/components/HomePage.tsx",
-          "frontend/src/components/IntegrityPage.tsx",
-          "frontend/src/components/KnowledgeGovernancePage.tsx",
-          "frontend/src/components/LayerHeatmap.tsx",
-          "frontend/src/components/MindInboxPage.tsx",
-          "frontend/src/components/MindMetricsPage.tsx",
-          "frontend/src/components/MindSessionsPage.tsx",
-          "frontend/src/components/MindSkillsPage.tsx",
-          "frontend/src/components/NeuronGraphWindow.tsx",
-          "frontend/src/components/NeuronUniverse.tsx",
-          "frontend/src/components/NexusLabPage.tsx",
-          "frontend/src/components/OracleFunnelLabPage.tsx",
-          "frontend/src/components/PerformancePage.tsx",
-          "frontend/src/components/QueryLab.tsx",
-          "frontend/src/components/RefinementHistory.tsx",
-          "frontend/src/components/RoadmapLedgersPage.tsx",
-          "frontend/src/components/SampleQueries.tsx",
-          "frontend/src/components/SynapticLearningPage.tsx",
+          "frontend/src/components/ProposalQueuePage.tsx",
           "frontend/src/components/SystemUseBanner.tsx",
           "frontend/src/components/WakeSettingsPanel.tsx",
           "frontend/src/config.ts"
@@ -63,8 +36,8 @@
           "CHAT_STARTED_EVENT": "frontend/src/chatBus.ts",
           "CHAT_NEW_EVENT": "frontend/src/chatBus.ts",
           "CHAT_LOAD_SESSION_EVENT": "frontend/src/chatBus.ts",
-          "SingleAgentPane": "frontend/src/components/AgentsPage.tsx",
-          "friendlyName": "frontend/src/components/AgentsPage.tsx",
+          "ProposalProducerTarget": "frontend/src/components/ProposalQueuePage.tsx",
+          "OriginFilter": "frontend/src/components/ProposalQueuePage.tsx",
           "fetchTenantConfig": "frontend/src/config.ts",
           "Capability": "frontend/src/config.ts",
           "TenantConfig": "frontend/src/config.ts",
@@ -89,8 +62,9 @@
       },
       "frontend/src/api.ts": {
         "path": "frontend/src/api.ts",
-        "loc": 2199,
+        "loc": 2203,
         "imports": [
+          "frontend/src/auth.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
@@ -123,7 +97,8 @@
           "IntegrityFindingDetail": "frontend/src/types.ts",
           "IntegrityApplyResult": "frontend/src/types.ts",
           "IntegrityBulkResolveResult": "frontend/src/types.ts",
-          "IntegrityProposeResult": "frontend/src/types.ts"
+          "IntegrityProposeResult": "frontend/src/types.ts",
+          "getAuthHeaders": "frontend/src/auth.ts"
         },
         "urls_direct": [
           "/admin/alerts/acknowledge-all",
@@ -2054,6 +2029,810 @@
         "urls_via_imports": [],
         "urls_all": []
       },
+      "frontend/src/contracts/capabilities.ts": {
+        "path": "frontend/src/contracts/capabilities.ts",
+        "loc": 272,
+        "imports": [],
+        "named_imports": {},
+        "urls_direct": [
+          "/admin/alerts",
+          "/admin/alerts/acknowledge-all",
+          "/admin/alerts/{}/acknowledge",
+          "/admin/architecture",
+          "/admin/architecture/module/{}",
+          "/admin/audit-log",
+          "/admin/audit-log/summary",
+          "/admin/bootstrap-firings",
+          "/admin/bootstrap-stats",
+          "/admin/checkpoint",
+          "/admin/classify-edges",
+          "/admin/compliance-audit",
+          "/admin/concept-neurons",
+          "/admin/concept-neurons/relink",
+          "/admin/concept-neurons/seed-all",
+          "/admin/concept-neurons/seed-three-horizons",
+          "/admin/concept-neurons/{}/link",
+          "/admin/cost-report",
+          "/admin/documents",
+          "/admin/documents/upload",
+          "/admin/documents/{}",
+          "/admin/documents/{}/cancel",
+          "/admin/documents/{}/structure",
+          "/admin/embed-neurons",
+          "/admin/emergent-queue",
+          "/admin/emergent-queue/{}/dismiss",
+          "/admin/eval/runs",
+          "/admin/eval/runs/{}",
+          "/admin/eval/runs/{}/certify",
+          "/admin/extract-source",
+          "/admin/governance-dashboard",
+          "/admin/health-check",
+          "/admin/ingest-source",
+          "/admin/ingest-source/apply",
+          "/admin/ingest-source/batch",
+          "/admin/ingest-source/batch/{}",
+          "/admin/ingest-source/batch/{}/cancel",
+          "/admin/ingest-source/batch/{}/resume",
+          "/admin/inhibitory-regulators",
+          "/admin/integrity/aging/scan",
+          "/admin/integrity/conflicts/scan",
+          "/admin/integrity/connections/scan",
+          "/admin/integrity/dashboard",
+          "/admin/integrity/duplicates/scan",
+          "/admin/integrity/findings",
+          "/admin/integrity/findings/bulk-resolve",
+          "/admin/integrity/findings/{}",
+          "/admin/integrity/findings/{}/dismiss",
+          "/admin/integrity/findings/{}/propose",
+          "/admin/integrity/findings/{}/resolve",
+          "/admin/integrity/homeostasis/scan",
+          "/admin/integrity/homeostasis/{}/apply",
+          "/admin/integrity/reconciler/report",
+          "/admin/integrity/reconciler/sweep",
+          "/admin/integrity/runs",
+          "/admin/integrity/scans",
+          "/admin/integrity/scans/{}",
+          "/admin/intra-department-bridge",
+          "/admin/labs/oracle-funnel",
+          "/admin/neuron-source-links",
+          "/admin/neuron-source-links/{}",
+          "/admin/neuron-source-links/{}/review",
+          "/admin/neurons/{}/provenance",
+          "/admin/performance",
+          "/admin/performance/stage-telemetry",
+          "/admin/proposals",
+          "/admin/proposals/dedup-clusters",
+          "/admin/proposals/stats",
+          "/admin/proposals/whoami",
+          "/admin/proposals/{}",
+          "/admin/proposals/{}/apply",
+          "/admin/proposals/{}/review",
+          "/admin/provenance/authority-summary",
+          "/admin/provenance/auto-link",
+          "/admin/provenance/recompute-authority",
+          "/admin/provenance/seed-sources",
+          "/admin/provenance/stale",
+          "/admin/prune-edges",
+          "/admin/purge-bootstrap",
+          "/admin/reference/documents",
+          "/admin/reference/documents/{}",
+          "/admin/reference/documents/{}/revoke",
+          "/admin/regions",
+          "/admin/regions/{}",
+          "/admin/reset",
+          "/admin/retention/purge",
+          "/admin/scan-references",
+          "/admin/scoring-health",
+          "/admin/seed",
+          "/admin/seed-inhibitory-regulators",
+          "/admin/seeding/cooccurrence-edges",
+          "/admin/seeding/discover-regions",
+          "/admin/seeding/knn-edges",
+          "/admin/seeding/retype-edges",
+          "/admin/source-documents",
+          "/admin/source-documents/{}",
+          "/admin/source-documents/{}/supersede",
+          "/admin/system-banner",
+          "/admin/tool-definitions",
+          "/auditor/audit/{}",
+          "/auditor/candidates",
+          "/auditor/run",
+          "/auditor/status",
+          "/capabilities/capsule",
+          "/capabilities/health",
+          "/capabilities/reconcile",
+          "/capabilities/verify",
+          "/chat",
+          "/chat/sessions",
+          "/chat/sessions/{}",
+          "/chat/sessions/{}/generate-title",
+          "/chat/sessions/{}/messages",
+          "/compile/run",
+          "/compile/status",
+          "/context",
+          "/distill/run",
+          "/distill/status",
+          "/engrams",
+          "/engrams/coverage/gaps",
+          "/engrams/create",
+          "/engrams/embed",
+          "/engrams/seed",
+          "/engrams/stats/summary",
+          "/engrams/{}",
+          "/engrams/{}/resolve",
+          "/eval-scores",
+          "/ingest/observation",
+          "/ingest/observations",
+          "/ingest/observations/evaluate-batch",
+          "/ingest/observations/{}",
+          "/ingest/observations/{}/apply",
+          "/ingest/observations/{}/approve",
+          "/ingest/observations/{}/evaluate",
+          "/ingest/observations/{}/reject",
+          "/janitor/as-of/{}",
+          "/janitor/corpus-health",
+          "/janitor/history/{}",
+          "/janitor/run",
+          "/janitor/status",
+          "/learning-analytics",
+          "/lineage/neuron/{}/forward",
+          "/lineage/neuron/{}/overrides",
+          "/lineage/overrides/{}",
+          "/lineage/query/{}/trace",
+          "/lineage/source/{}/impact",
+          "/metrics/mind",
+          "/metrics/mind/inbox",
+          "/metrics/mind/injection-channels",
+          "/metrics/mind/locomo-run",
+          "/metrics/mind/sessions",
+          "/metrics/mind/skills",
+          "/metrics/mind/subscription",
+          "/metrics/mind/subscription/codex",
+          "/metrics/mind/trust",
+          "/models",
+          "/neurons/capacity",
+          "/neurons/children",
+          "/neurons/clusters",
+          "/neurons/edges/department-chord",
+          "/neurons/edges/layer-flow",
+          "/neurons/edges/spread-log",
+          "/neurons/edges/spread-trail",
+          "/neurons/graph-3d",
+          "/neurons/refinements",
+          "/neurons/stats",
+          "/neurons/tree",
+          "/neurons/{}",
+          "/neurons/{}/edges",
+          "/neurons/{}/scores",
+          "/queries",
+          "/queries/run-counts",
+          "/queries/{}",
+          "/queries/{}/dossier",
+          "/query",
+          "/query/stream",
+          "/query/{}/evaluate",
+          "/query/{}/followups",
+          "/query/{}/rate",
+          "/query/{}/refine",
+          "/query/{}/refine/apply",
+          "/recall",
+          "/remember",
+          "/roadmap-ledgers",
+          "/roadmap-ledgers/admission-context",
+          "/roadmap-ledgers/{}",
+          "/roadmap-ledgers/{}/admissions",
+          "/roadmap-ledgers/{}/nodes/{}/reconcile",
+          "/v1/agents",
+          "/v1/agents/runs",
+          "/v1/agents/runs/{}",
+          "/v1/agents/{}",
+          "/v1/agents/{}/run",
+          "/v1/query"
+        ],
+        "exports_with_urls": {},
+        "uses_fetch": false,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/admin/alerts",
+          "/admin/alerts/acknowledge-all",
+          "/admin/alerts/{}/acknowledge",
+          "/admin/architecture",
+          "/admin/architecture/module/{}",
+          "/admin/audit-log",
+          "/admin/audit-log/summary",
+          "/admin/bootstrap-firings",
+          "/admin/bootstrap-stats",
+          "/admin/checkpoint",
+          "/admin/classify-edges",
+          "/admin/compliance-audit",
+          "/admin/concept-neurons",
+          "/admin/concept-neurons/relink",
+          "/admin/concept-neurons/seed-all",
+          "/admin/concept-neurons/seed-three-horizons",
+          "/admin/concept-neurons/{}/link",
+          "/admin/cost-report",
+          "/admin/documents",
+          "/admin/documents/upload",
+          "/admin/documents/{}",
+          "/admin/documents/{}/cancel",
+          "/admin/documents/{}/structure",
+          "/admin/embed-neurons",
+          "/admin/emergent-queue",
+          "/admin/emergent-queue/{}/dismiss",
+          "/admin/eval/runs",
+          "/admin/eval/runs/{}",
+          "/admin/eval/runs/{}/certify",
+          "/admin/extract-source",
+          "/admin/governance-dashboard",
+          "/admin/health-check",
+          "/admin/ingest-source",
+          "/admin/ingest-source/apply",
+          "/admin/ingest-source/batch",
+          "/admin/ingest-source/batch/{}",
+          "/admin/ingest-source/batch/{}/cancel",
+          "/admin/ingest-source/batch/{}/resume",
+          "/admin/inhibitory-regulators",
+          "/admin/integrity/aging/scan",
+          "/admin/integrity/conflicts/scan",
+          "/admin/integrity/connections/scan",
+          "/admin/integrity/dashboard",
+          "/admin/integrity/duplicates/scan",
+          "/admin/integrity/findings",
+          "/admin/integrity/findings/bulk-resolve",
+          "/admin/integrity/findings/{}",
+          "/admin/integrity/findings/{}/dismiss",
+          "/admin/integrity/findings/{}/propose",
+          "/admin/integrity/findings/{}/resolve",
+          "/admin/integrity/homeostasis/scan",
+          "/admin/integrity/homeostasis/{}/apply",
+          "/admin/integrity/reconciler/report",
+          "/admin/integrity/reconciler/sweep",
+          "/admin/integrity/runs",
+          "/admin/integrity/scans",
+          "/admin/integrity/scans/{}",
+          "/admin/intra-department-bridge",
+          "/admin/labs/oracle-funnel",
+          "/admin/neuron-source-links",
+          "/admin/neuron-source-links/{}",
+          "/admin/neuron-source-links/{}/review",
+          "/admin/neurons/{}/provenance",
+          "/admin/performance",
+          "/admin/performance/stage-telemetry",
+          "/admin/proposals",
+          "/admin/proposals/dedup-clusters",
+          "/admin/proposals/stats",
+          "/admin/proposals/whoami",
+          "/admin/proposals/{}",
+          "/admin/proposals/{}/apply",
+          "/admin/proposals/{}/review",
+          "/admin/provenance/authority-summary",
+          "/admin/provenance/auto-link",
+          "/admin/provenance/recompute-authority",
+          "/admin/provenance/seed-sources",
+          "/admin/provenance/stale",
+          "/admin/prune-edges",
+          "/admin/purge-bootstrap",
+          "/admin/reference/documents",
+          "/admin/reference/documents/{}",
+          "/admin/reference/documents/{}/revoke",
+          "/admin/regions",
+          "/admin/regions/{}",
+          "/admin/reset",
+          "/admin/retention/purge",
+          "/admin/scan-references",
+          "/admin/scoring-health",
+          "/admin/seed",
+          "/admin/seed-inhibitory-regulators",
+          "/admin/seeding/cooccurrence-edges",
+          "/admin/seeding/discover-regions",
+          "/admin/seeding/knn-edges",
+          "/admin/seeding/retype-edges",
+          "/admin/source-documents",
+          "/admin/source-documents/{}",
+          "/admin/source-documents/{}/supersede",
+          "/admin/system-banner",
+          "/admin/tool-definitions",
+          "/auditor/audit/{}",
+          "/auditor/candidates",
+          "/auditor/run",
+          "/auditor/status",
+          "/capabilities/capsule",
+          "/capabilities/health",
+          "/capabilities/reconcile",
+          "/capabilities/verify",
+          "/chat",
+          "/chat/sessions",
+          "/chat/sessions/{}",
+          "/chat/sessions/{}/generate-title",
+          "/chat/sessions/{}/messages",
+          "/compile/run",
+          "/compile/status",
+          "/context",
+          "/distill/run",
+          "/distill/status",
+          "/engrams",
+          "/engrams/coverage/gaps",
+          "/engrams/create",
+          "/engrams/embed",
+          "/engrams/seed",
+          "/engrams/stats/summary",
+          "/engrams/{}",
+          "/engrams/{}/resolve",
+          "/eval-scores",
+          "/ingest/observation",
+          "/ingest/observations",
+          "/ingest/observations/evaluate-batch",
+          "/ingest/observations/{}",
+          "/ingest/observations/{}/apply",
+          "/ingest/observations/{}/approve",
+          "/ingest/observations/{}/evaluate",
+          "/ingest/observations/{}/reject",
+          "/janitor/as-of/{}",
+          "/janitor/corpus-health",
+          "/janitor/history/{}",
+          "/janitor/run",
+          "/janitor/status",
+          "/learning-analytics",
+          "/lineage/neuron/{}/forward",
+          "/lineage/neuron/{}/overrides",
+          "/lineage/overrides/{}",
+          "/lineage/query/{}/trace",
+          "/lineage/source/{}/impact",
+          "/metrics/mind",
+          "/metrics/mind/inbox",
+          "/metrics/mind/injection-channels",
+          "/metrics/mind/locomo-run",
+          "/metrics/mind/sessions",
+          "/metrics/mind/skills",
+          "/metrics/mind/subscription",
+          "/metrics/mind/subscription/codex",
+          "/metrics/mind/trust",
+          "/models",
+          "/neurons/capacity",
+          "/neurons/children",
+          "/neurons/clusters",
+          "/neurons/edges/department-chord",
+          "/neurons/edges/layer-flow",
+          "/neurons/edges/spread-log",
+          "/neurons/edges/spread-trail",
+          "/neurons/graph-3d",
+          "/neurons/refinements",
+          "/neurons/stats",
+          "/neurons/tree",
+          "/neurons/{}",
+          "/neurons/{}/edges",
+          "/neurons/{}/scores",
+          "/queries",
+          "/queries/run-counts",
+          "/queries/{}",
+          "/queries/{}/dossier",
+          "/query",
+          "/query/stream",
+          "/query/{}/evaluate",
+          "/query/{}/followups",
+          "/query/{}/rate",
+          "/query/{}/refine",
+          "/query/{}/refine/apply",
+          "/recall",
+          "/remember",
+          "/roadmap-ledgers",
+          "/roadmap-ledgers/admission-context",
+          "/roadmap-ledgers/{}",
+          "/roadmap-ledgers/{}/admissions",
+          "/roadmap-ledgers/{}/nodes/{}/reconcile",
+          "/v1/agents",
+          "/v1/agents/runs",
+          "/v1/agents/runs/{}",
+          "/v1/agents/{}",
+          "/v1/agents/{}/run",
+          "/v1/query"
+        ]
+      },
+      "frontend/src/contracts/schema.d.ts": {
+        "path": "frontend/src/contracts/schema.d.ts",
+        "loc": 13120,
+        "imports": [],
+        "named_imports": {},
+        "urls_direct": [
+          "/admin/alerts",
+          "/admin/alerts/acknowledge-all",
+          "/admin/alerts/{}/acknowledge",
+          "/admin/architecture",
+          "/admin/architecture/module/{}",
+          "/admin/audit-log",
+          "/admin/audit-log/summary",
+          "/admin/bootstrap-firings",
+          "/admin/bootstrap-stats",
+          "/admin/checkpoint",
+          "/admin/classify-edges",
+          "/admin/compliance-audit",
+          "/admin/concept-neurons",
+          "/admin/concept-neurons/relink",
+          "/admin/concept-neurons/seed-all",
+          "/admin/concept-neurons/seed-three-horizons",
+          "/admin/concept-neurons/{}/link",
+          "/admin/cost-report",
+          "/admin/documents",
+          "/admin/documents/upload",
+          "/admin/documents/{}",
+          "/admin/documents/{}/cancel",
+          "/admin/documents/{}/structure",
+          "/admin/embed-neurons",
+          "/admin/emergent-queue",
+          "/admin/emergent-queue/{}/dismiss",
+          "/admin/eval/runs",
+          "/admin/eval/runs/{}",
+          "/admin/eval/runs/{}/certify",
+          "/admin/extract-source",
+          "/admin/governance-dashboard",
+          "/admin/health-check",
+          "/admin/ingest-source",
+          "/admin/ingest-source/apply",
+          "/admin/ingest-source/batch",
+          "/admin/ingest-source/batch/{}",
+          "/admin/ingest-source/batch/{}/cancel",
+          "/admin/ingest-source/batch/{}/resume",
+          "/admin/inhibitory-regulators",
+          "/admin/integrity/aging/scan",
+          "/admin/integrity/conflicts/scan",
+          "/admin/integrity/connections/scan",
+          "/admin/integrity/dashboard",
+          "/admin/integrity/duplicates/scan",
+          "/admin/integrity/findings",
+          "/admin/integrity/findings/bulk-resolve",
+          "/admin/integrity/findings/{}",
+          "/admin/integrity/findings/{}/dismiss",
+          "/admin/integrity/findings/{}/propose",
+          "/admin/integrity/findings/{}/resolve",
+          "/admin/integrity/homeostasis/scan",
+          "/admin/integrity/homeostasis/{}/apply",
+          "/admin/integrity/reconciler/report",
+          "/admin/integrity/reconciler/sweep",
+          "/admin/integrity/runs",
+          "/admin/integrity/scans",
+          "/admin/integrity/scans/{}",
+          "/admin/intra-department-bridge",
+          "/admin/labs/oracle-funnel",
+          "/admin/neuron-source-links",
+          "/admin/neuron-source-links/{}",
+          "/admin/neuron-source-links/{}/review",
+          "/admin/neurons/{}/provenance",
+          "/admin/performance",
+          "/admin/performance/stage-telemetry",
+          "/admin/proposals",
+          "/admin/proposals/dedup-clusters",
+          "/admin/proposals/stats",
+          "/admin/proposals/whoami",
+          "/admin/proposals/{}",
+          "/admin/proposals/{}/apply",
+          "/admin/proposals/{}/review",
+          "/admin/provenance/authority-summary",
+          "/admin/provenance/auto-link",
+          "/admin/provenance/recompute-authority",
+          "/admin/provenance/seed-sources",
+          "/admin/provenance/stale",
+          "/admin/prune-edges",
+          "/admin/purge-bootstrap",
+          "/admin/reference/documents",
+          "/admin/reference/documents/{}",
+          "/admin/reference/documents/{}/revoke",
+          "/admin/regions",
+          "/admin/regions/{}",
+          "/admin/reset",
+          "/admin/retention/purge",
+          "/admin/scan-references",
+          "/admin/scoring-health",
+          "/admin/seed",
+          "/admin/seed-inhibitory-regulators",
+          "/admin/seeding/cooccurrence-edges",
+          "/admin/seeding/discover-regions",
+          "/admin/seeding/knn-edges",
+          "/admin/seeding/retype-edges",
+          "/admin/source-documents",
+          "/admin/source-documents/{}",
+          "/admin/source-documents/{}/supersede",
+          "/admin/system-banner",
+          "/admin/tool-definitions",
+          "/auditor/audit/{}",
+          "/auditor/candidates",
+          "/auditor/run",
+          "/auditor/status",
+          "/capabilities/capsule",
+          "/capabilities/health",
+          "/capabilities/reconcile",
+          "/capabilities/verify",
+          "/chat",
+          "/chat/sessions",
+          "/chat/sessions/{}",
+          "/chat/sessions/{}/generate-title",
+          "/chat/sessions/{}/messages",
+          "/compile/run",
+          "/compile/status",
+          "/context",
+          "/distill/run",
+          "/distill/status",
+          "/engrams",
+          "/engrams/coverage/gaps",
+          "/engrams/create",
+          "/engrams/embed",
+          "/engrams/seed",
+          "/engrams/stats/summary",
+          "/engrams/{}",
+          "/engrams/{}/resolve",
+          "/eval-scores",
+          "/health",
+          "/ingest/observation",
+          "/ingest/observations",
+          "/ingest/observations/evaluate-batch",
+          "/ingest/observations/{}",
+          "/ingest/observations/{}/apply",
+          "/ingest/observations/{}/approve",
+          "/ingest/observations/{}/evaluate",
+          "/ingest/observations/{}/reject",
+          "/janitor/as-of/{}",
+          "/janitor/corpus-health",
+          "/janitor/history/{}",
+          "/janitor/run",
+          "/janitor/status",
+          "/learning-analytics",
+          "/lineage/neuron/{}/forward",
+          "/lineage/neuron/{}/overrides",
+          "/lineage/overrides/{}",
+          "/lineage/query/{}/trace",
+          "/lineage/source/{}/impact",
+          "/metrics/mind",
+          "/metrics/mind/inbox",
+          "/metrics/mind/injection-channels",
+          "/metrics/mind/locomo-run",
+          "/metrics/mind/sessions",
+          "/metrics/mind/skills",
+          "/metrics/mind/subscription",
+          "/metrics/mind/subscription/codex",
+          "/metrics/mind/trust",
+          "/models",
+          "/neurons/capacity",
+          "/neurons/children",
+          "/neurons/clusters",
+          "/neurons/edges/department-chord",
+          "/neurons/edges/layer-flow",
+          "/neurons/edges/spread-log",
+          "/neurons/edges/spread-trail",
+          "/neurons/graph-3d",
+          "/neurons/refinements",
+          "/neurons/stats",
+          "/neurons/tree",
+          "/neurons/{}",
+          "/neurons/{}/edges",
+          "/neurons/{}/scores",
+          "/queries",
+          "/queries/run-counts",
+          "/queries/{}",
+          "/queries/{}/dossier",
+          "/query",
+          "/query/stream",
+          "/query/{}/evaluate",
+          "/query/{}/followups",
+          "/query/{}/rate",
+          "/query/{}/refine",
+          "/query/{}/refine/apply",
+          "/recall",
+          "/remember",
+          "/roadmap-ledgers",
+          "/roadmap-ledgers/admission-context",
+          "/roadmap-ledgers/{}",
+          "/roadmap-ledgers/{}/admissions",
+          "/roadmap-ledgers/{}/nodes/{}/reconcile",
+          "/tenant",
+          "/tenants",
+          "/v1/agents",
+          "/v1/agents/runs",
+          "/v1/agents/runs/{}",
+          "/v1/agents/{}",
+          "/v1/agents/{}/run",
+          "/v1/query"
+        ],
+        "exports_with_urls": {},
+        "uses_fetch": false,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/admin/alerts",
+          "/admin/alerts/acknowledge-all",
+          "/admin/alerts/{}/acknowledge",
+          "/admin/architecture",
+          "/admin/architecture/module/{}",
+          "/admin/audit-log",
+          "/admin/audit-log/summary",
+          "/admin/bootstrap-firings",
+          "/admin/bootstrap-stats",
+          "/admin/checkpoint",
+          "/admin/classify-edges",
+          "/admin/compliance-audit",
+          "/admin/concept-neurons",
+          "/admin/concept-neurons/relink",
+          "/admin/concept-neurons/seed-all",
+          "/admin/concept-neurons/seed-three-horizons",
+          "/admin/concept-neurons/{}/link",
+          "/admin/cost-report",
+          "/admin/documents",
+          "/admin/documents/upload",
+          "/admin/documents/{}",
+          "/admin/documents/{}/cancel",
+          "/admin/documents/{}/structure",
+          "/admin/embed-neurons",
+          "/admin/emergent-queue",
+          "/admin/emergent-queue/{}/dismiss",
+          "/admin/eval/runs",
+          "/admin/eval/runs/{}",
+          "/admin/eval/runs/{}/certify",
+          "/admin/extract-source",
+          "/admin/governance-dashboard",
+          "/admin/health-check",
+          "/admin/ingest-source",
+          "/admin/ingest-source/apply",
+          "/admin/ingest-source/batch",
+          "/admin/ingest-source/batch/{}",
+          "/admin/ingest-source/batch/{}/cancel",
+          "/admin/ingest-source/batch/{}/resume",
+          "/admin/inhibitory-regulators",
+          "/admin/integrity/aging/scan",
+          "/admin/integrity/conflicts/scan",
+          "/admin/integrity/connections/scan",
+          "/admin/integrity/dashboard",
+          "/admin/integrity/duplicates/scan",
+          "/admin/integrity/findings",
+          "/admin/integrity/findings/bulk-resolve",
+          "/admin/integrity/findings/{}",
+          "/admin/integrity/findings/{}/dismiss",
+          "/admin/integrity/findings/{}/propose",
+          "/admin/integrity/findings/{}/resolve",
+          "/admin/integrity/homeostasis/scan",
+          "/admin/integrity/homeostasis/{}/apply",
+          "/admin/integrity/reconciler/report",
+          "/admin/integrity/reconciler/sweep",
+          "/admin/integrity/runs",
+          "/admin/integrity/scans",
+          "/admin/integrity/scans/{}",
+          "/admin/intra-department-bridge",
+          "/admin/labs/oracle-funnel",
+          "/admin/neuron-source-links",
+          "/admin/neuron-source-links/{}",
+          "/admin/neuron-source-links/{}/review",
+          "/admin/neurons/{}/provenance",
+          "/admin/performance",
+          "/admin/performance/stage-telemetry",
+          "/admin/proposals",
+          "/admin/proposals/dedup-clusters",
+          "/admin/proposals/stats",
+          "/admin/proposals/whoami",
+          "/admin/proposals/{}",
+          "/admin/proposals/{}/apply",
+          "/admin/proposals/{}/review",
+          "/admin/provenance/authority-summary",
+          "/admin/provenance/auto-link",
+          "/admin/provenance/recompute-authority",
+          "/admin/provenance/seed-sources",
+          "/admin/provenance/stale",
+          "/admin/prune-edges",
+          "/admin/purge-bootstrap",
+          "/admin/reference/documents",
+          "/admin/reference/documents/{}",
+          "/admin/reference/documents/{}/revoke",
+          "/admin/regions",
+          "/admin/regions/{}",
+          "/admin/reset",
+          "/admin/retention/purge",
+          "/admin/scan-references",
+          "/admin/scoring-health",
+          "/admin/seed",
+          "/admin/seed-inhibitory-regulators",
+          "/admin/seeding/cooccurrence-edges",
+          "/admin/seeding/discover-regions",
+          "/admin/seeding/knn-edges",
+          "/admin/seeding/retype-edges",
+          "/admin/source-documents",
+          "/admin/source-documents/{}",
+          "/admin/source-documents/{}/supersede",
+          "/admin/system-banner",
+          "/admin/tool-definitions",
+          "/auditor/audit/{}",
+          "/auditor/candidates",
+          "/auditor/run",
+          "/auditor/status",
+          "/capabilities/capsule",
+          "/capabilities/health",
+          "/capabilities/reconcile",
+          "/capabilities/verify",
+          "/chat",
+          "/chat/sessions",
+          "/chat/sessions/{}",
+          "/chat/sessions/{}/generate-title",
+          "/chat/sessions/{}/messages",
+          "/compile/run",
+          "/compile/status",
+          "/context",
+          "/distill/run",
+          "/distill/status",
+          "/engrams",
+          "/engrams/coverage/gaps",
+          "/engrams/create",
+          "/engrams/embed",
+          "/engrams/seed",
+          "/engrams/stats/summary",
+          "/engrams/{}",
+          "/engrams/{}/resolve",
+          "/eval-scores",
+          "/health",
+          "/ingest/observation",
+          "/ingest/observations",
+          "/ingest/observations/evaluate-batch",
+          "/ingest/observations/{}",
+          "/ingest/observations/{}/apply",
+          "/ingest/observations/{}/approve",
+          "/ingest/observations/{}/evaluate",
+          "/ingest/observations/{}/reject",
+          "/janitor/as-of/{}",
+          "/janitor/corpus-health",
+          "/janitor/history/{}",
+          "/janitor/run",
+          "/janitor/status",
+          "/learning-analytics",
+          "/lineage/neuron/{}/forward",
+          "/lineage/neuron/{}/overrides",
+          "/lineage/overrides/{}",
+          "/lineage/query/{}/trace",
+          "/lineage/source/{}/impact",
+          "/metrics/mind",
+          "/metrics/mind/inbox",
+          "/metrics/mind/injection-channels",
+          "/metrics/mind/locomo-run",
+          "/metrics/mind/sessions",
+          "/metrics/mind/skills",
+          "/metrics/mind/subscription",
+          "/metrics/mind/subscription/codex",
+          "/metrics/mind/trust",
+          "/models",
+          "/neurons/capacity",
+          "/neurons/children",
+          "/neurons/clusters",
+          "/neurons/edges/department-chord",
+          "/neurons/edges/layer-flow",
+          "/neurons/edges/spread-log",
+          "/neurons/edges/spread-trail",
+          "/neurons/graph-3d",
+          "/neurons/refinements",
+          "/neurons/stats",
+          "/neurons/tree",
+          "/neurons/{}",
+          "/neurons/{}/edges",
+          "/neurons/{}/scores",
+          "/queries",
+          "/queries/run-counts",
+          "/queries/{}",
+          "/queries/{}/dossier",
+          "/query",
+          "/query/stream",
+          "/query/{}/evaluate",
+          "/query/{}/followups",
+          "/query/{}/rate",
+          "/query/{}/refine",
+          "/query/{}/refine/apply",
+          "/recall",
+          "/remember",
+          "/roadmap-ledgers",
+          "/roadmap-ledgers/admission-context",
+          "/roadmap-ledgers/{}",
+          "/roadmap-ledgers/{}/admissions",
+          "/roadmap-ledgers/{}/nodes/{}/reconcile",
+          "/tenant",
+          "/tenants",
+          "/v1/agents",
+          "/v1/agents/runs",
+          "/v1/agents/runs/{}",
+          "/v1/agents/{}",
+          "/v1/agents/{}/run",
+          "/v1/query"
+        ]
+      },
       "frontend/src/demo/shim.ts": {
         "path": "frontend/src/demo/shim.ts",
         "loc": 377,
@@ -2207,354 +2986,827 @@
     "available": true,
     "totals": {
       "backend_routes": 197,
-      "routes_called_by_frontend": 115,
-      "routes_with_no_frontend_caller": 82,
+      "routes_called_by_frontend": 196,
+      "routes_with_no_frontend_caller": 1,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
       "/admin/alerts": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/alerts/acknowledge-all": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/alerts/{}/acknowledge": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/architecture": [
-        "frontend/src/components/ArchitecturePage.tsx"
+        "frontend/src/components/ArchitecturePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/architecture/module/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/audit-log": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/audit-log/summary": [
         "frontend/src/api.ts",
-        "frontend/src/components/KnowledgeGovernancePage.tsx"
+        "frontend/src/components/KnowledgeGovernancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/bootstrap-firings": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/bootstrap-stats": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/checkpoint": [
         "frontend/src/api.ts",
-        "frontend/src/components/Explorer.tsx"
+        "frontend/src/components/Explorer.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/classify-edges": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/compliance-audit": [
         "frontend/src/api.ts",
-        "frontend/src/components/KnowledgeGovernancePage.tsx"
+        "frontend/src/components/KnowledgeGovernancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/concept-neurons": [
         "frontend/src/api.ts",
-        "frontend/src/components/Explorer.tsx"
+        "frontend/src/components/Explorer.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/concept-neurons/relink": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/concept-neurons/seed-all": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/concept-neurons/seed-three-horizons": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/concept-neurons/{}/link": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/cost-report": [
         "frontend/src/api.ts",
         "frontend/src/components/Dashboard.tsx",
-        "frontend/src/components/PerformancePage.tsx"
+        "frontend/src/components/PerformancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/documents": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/upload": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/DocumentIngestPage.tsx"
+        "frontend/src/components/DocumentIngestPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/{}/cancel": [
         "frontend/src/api.ts",
-        "frontend/src/components/DocumentIngestPage.tsx"
+        "frontend/src/components/DocumentIngestPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/{}/structure": [
         "frontend/src/api.ts",
-        "frontend/src/components/DocumentIngestPage.tsx"
+        "frontend/src/components/DocumentIngestPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/embed-neurons": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/emergent-queue": [
         "frontend/src/api.ts",
-        "frontend/src/components/EmergentQueuePage.tsx"
+        "frontend/src/components/EmergentQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/emergent-queue/{}/dismiss": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/eval/runs": [
         "frontend/src/api.ts",
-        "frontend/src/components/EvalRunsPage.tsx"
+        "frontend/src/components/EvalRunsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/eval/runs/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/EvalRunsPage.tsx"
+        "frontend/src/components/EvalRunsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/eval/runs/{}/certify": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/extract-source": [
         "frontend/src/api.ts",
-        "frontend/src/components/EmergentQueuePage.tsx"
+        "frontend/src/components/EmergentQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/governance-dashboard": [
         "frontend/src/api.ts",
-        "frontend/src/components/GovernancePage.tsx"
+        "frontend/src/components/GovernancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/health-check": [
         "frontend/src/api.ts",
-        "frontend/src/components/Dashboard.tsx"
+        "frontend/src/components/Dashboard.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/apply": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/EmergentQueuePage.tsx"
+        "frontend/src/components/EmergentQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch/{}/cancel": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch/{}/resume": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/inhibitory-regulators": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/aging/scan": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/conflicts/scan": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/connections/scan": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/dashboard": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/duplicates/scan": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/integrity/findings": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/bulk-resolve": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}/dismiss": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}/propose": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}/resolve": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/homeostasis/scan": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/homeostasis/{}/apply": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/integrity/reconciler/report": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/integrity/reconciler/sweep": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/runs": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/integrity/scans": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/scans/{}": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/intra-department-bridge": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/labs/oracle-funnel": [
         "frontend/src/api.ts",
-        "frontend/src/components/OracleFunnelLabPage.tsx"
+        "frontend/src/components/OracleFunnelLabPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/neuron-source-links": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/neuron-source-links/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/neuron-source-links/{}/review": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/neurons/{}/provenance": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/performance": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/performance/stage-telemetry": [
         "frontend/src/api.ts",
-        "frontend/src/components/PerformancePage.tsx"
+        "frontend/src/components/PerformancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/proposals": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/dedup-clusters": [
         "frontend/src/api.ts",
-        "frontend/src/components/ProposalQueuePage.tsx"
+        "frontend/src/components/ProposalQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/stats": [
         "frontend/src/App.tsx",
         "frontend/src/api.ts",
-        "frontend/src/components/ProposalQueuePage.tsx"
+        "frontend/src/components/ProposalQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/whoami": [
         "frontend/src/api.ts",
-        "frontend/src/components/ProposalQueuePage.tsx"
+        "frontend/src/components/ProposalQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/ProposalQueuePage.tsx"
+        "frontend/src/components/ProposalQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/{}/apply": [
         "frontend/src/api.ts",
-        "frontend/src/components/ProposalQueuePage.tsx"
+        "frontend/src/components/ProposalQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/{}/review": [
         "frontend/src/api.ts",
-        "frontend/src/components/ProposalQueuePage.tsx"
+        "frontend/src/components/ProposalQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/provenance/authority-summary": [
         "frontend/src/api.ts",
-        "frontend/src/components/KnowledgeGovernancePage.tsx"
+        "frontend/src/components/KnowledgeGovernancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/provenance/auto-link": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/provenance/recompute-authority": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/provenance/seed-sources": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/provenance/stale": [
         "frontend/src/api.ts",
-        "frontend/src/components/KnowledgeGovernancePage.tsx"
+        "frontend/src/components/KnowledgeGovernancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/prune-edges": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/purge-bootstrap": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/reference/documents": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/reference/documents/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/reference/documents/{}/revoke": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/regions": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/regions/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/reset": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/retention/purge": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/scan-references": [
         "frontend/src/api.ts",
-        "frontend/src/components/EmergentQueuePage.tsx"
+        "frontend/src/components/EmergentQueuePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/scoring-health": [
         "frontend/src/api.ts",
         "frontend/src/components/Dashboard.tsx",
-        "frontend/src/components/PerformancePage.tsx"
+        "frontend/src/components/PerformancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/seed": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/seed-inhibitory-regulators": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/seeding/cooccurrence-edges": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/seeding/discover-regions": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/seeding/knn-edges": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/seeding/retype-edges": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/source-documents": [
         "frontend/src/api.ts",
-        "frontend/src/components/KnowledgeGovernancePage.tsx"
+        "frontend/src/components/KnowledgeGovernancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/source-documents/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/source-documents/{}/supersede": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/system-banner": [
         "frontend/src/api.ts",
-        "frontend/src/components/SystemUseBanner.tsx"
+        "frontend/src/components/SystemUseBanner.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/admin/tool-definitions": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/auditor/audit/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/auditor/candidates": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/auditor/run": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/auditor/status": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/capabilities/capsule": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/capabilities/health": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/capabilities/reconcile": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/capabilities/verify": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/chat": [
         "frontend/src/api.ts",
         "frontend/src/components/HomePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts"
       ],
       "/chat/sessions": [
         "frontend/src/api.ts",
         "frontend/src/components/ChatHistoryWindow.tsx",
         "frontend/src/components/HomePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts"
       ],
       "/chat/sessions/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/HomePage.tsx"
+        "frontend/src/components/HomePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/chat/sessions/{}/generate-title": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/chat/sessions/{}/messages": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/compile/run": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/compile/status": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/context": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/distill/run": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/distill/status": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams": [
-        "frontend/src/components/EngramPage.tsx"
+        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/coverage/gaps": [
-        "frontend/src/components/EngramPage.tsx"
+        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/create": [
-        "frontend/src/components/EngramPage.tsx"
+        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/engrams/embed": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/engrams/seed": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/stats/summary": [
-        "frontend/src/components/EngramPage.tsx"
+        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/{}": [
-        "frontend/src/components/EngramPage.tsx"
+        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/{}/resolve": [
-        "frontend/src/components/EngramPage.tsx"
+        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/eval-scores": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/health": [
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/ingest/observation": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/evaluate-batch": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/apply": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/approve": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/evaluate": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/reject": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/janitor/as-of/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/janitor/corpus-health": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/janitor/history/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/janitor/run": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/janitor/status": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/learning-analytics": [
         "frontend/src/api.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
-        "frontend/src/components/SynapticLearningPage.tsx"
+        "frontend/src/components/SynapticLearningPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/lineage/neuron/{}/forward": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/lineage/neuron/{}/overrides": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/lineage/overrides/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/lineage/query/{}/trace": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/lineage/source/{}/impact": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind": [
-        "frontend/src/components/MindMetricsPage.tsx"
+        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/inbox": [
-        "frontend/src/components/MindInboxPage.tsx"
+        "frontend/src/components/MindInboxPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/metrics/mind/injection-channels": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/locomo-run": [
-        "frontend/src/components/LocomoRunBeacon.tsx"
+        "frontend/src/components/LocomoRunBeacon.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/sessions": [
-        "frontend/src/components/MindSessionsPage.tsx"
+        "frontend/src/components/MindSessionsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/skills": [
-        "frontend/src/components/MindSkillsPage.tsx"
+        "frontend/src/components/MindSkillsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/subscription": [
-        "frontend/src/components/MindMetricsPage.tsx"
+        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/subscription/codex": [
-        "frontend/src/components/MindMetricsPage.tsx"
+        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/trust": [
-        "frontend/src/components/MindMetricsPage.tsx"
+        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/models": [
         "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts",
         "frontend/src/hooks/useModels.ts"
       ],
       "/neurons/capacity": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/children": [
         "frontend/src/api.ts",
-        "frontend/src/components/NeuronTree.tsx"
+        "frontend/src/components/NeuronTree.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/clusters": [
         "frontend/src/api.ts",
         "frontend/src/components/NeuronUniverse.tsx",
         "frontend/src/components/NexusLabPage.tsx",
-        "frontend/src/components/SigmaGraphPage.tsx"
+        "frontend/src/components/SigmaGraphPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/department-chord": [
         "frontend/src/api.ts",
-        "frontend/src/components/DeptChordDiagram.tsx"
+        "frontend/src/components/DeptChordDiagram.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/layer-flow": [
         "frontend/src/api.ts",
-        "frontend/src/components/LayerHeatmap.tsx"
+        "frontend/src/components/LayerHeatmap.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/spread-log": [
         "frontend/src/api.ts",
         "frontend/src/components/Dashboard.tsx",
-        "frontend/src/components/PerformancePage.tsx"
+        "frontend/src/components/PerformancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/spread-trail": [
         "frontend/src/api.ts",
         "frontend/src/components/ChatNeuronViz.tsx",
         "frontend/src/components/NeuronTreeViz.tsx",
-        "frontend/src/components/SpreadTrail.tsx"
+        "frontend/src/components/SpreadTrail.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/graph-3d": [
         "frontend/src/api.ts",
         "frontend/src/components/NeuronUniverse.tsx",
         "frontend/src/components/NexusLabPage.tsx",
-        "frontend/src/components/SigmaGraphPage.tsx"
+        "frontend/src/components/SigmaGraphPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/neurons/refinements": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/stats": [
         "frontend/src/App.tsx",
@@ -2563,12 +3815,16 @@
         "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
-        "frontend/src/components/PerformancePage.tsx"
+        "frontend/src/components/PerformancePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/tree": [
         "frontend/src/api.ts",
         "frontend/src/components/CirclePacking.tsx",
-        "frontend/src/components/Explorer.tsx"
+        "frontend/src/components/Explorer.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/{}": [
         "frontend/src/api.ts",
@@ -2578,176 +3834,169 @@
         "frontend/src/components/NeuronDetail.tsx",
         "frontend/src/components/NeuronTreeViz.tsx",
         "frontend/src/components/NeuronUniverse.tsx",
-        "frontend/src/components/NexusLabPage.tsx"
+        "frontend/src/components/NexusLabPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/{}/edges": [
         "frontend/src/api.ts",
-        "frontend/src/components/NeuronEgoGraph.tsx"
+        "frontend/src/components/NeuronEgoGraph.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/{}/scores": [
         "frontend/src/api.ts",
-        "frontend/src/components/NeuronDetail.tsx"
+        "frontend/src/components/NeuronDetail.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/queries": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/queries/run-counts": [
         "frontend/src/api.ts",
-        "frontend/src/components/SampleQueries.tsx"
+        "frontend/src/components/SampleQueries.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/queries/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/queries/{}/dossier": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/query": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/query/stream": [
         "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts"
       ],
       "/query/{}/evaluate": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/followups": [
         "frontend/src/api.ts",
-        "frontend/src/components/HomePage.tsx"
+        "frontend/src/components/HomePage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/rate": [
         "frontend/src/api.ts",
         "frontend/src/components/HomePage.tsx",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/refine": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/refine/apply": [
         "frontend/src/api.ts",
-        "frontend/src/components/QueryLab.tsx"
+        "frontend/src/components/QueryLab.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/recall": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/remember": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/roadmap-ledgers": [
         "frontend/src/api.ts",
-        "frontend/src/components/RoadmapLedgersPage.tsx"
+        "frontend/src/components/RoadmapLedgersPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/roadmap-ledgers/admission-context": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/roadmap-ledgers/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/roadmap-ledgers/{}/admissions": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/roadmap-ledgers/{}/nodes/{}/reconcile": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/tenant": [
         "frontend/src/App.tsx",
-        "frontend/src/config.ts"
+        "frontend/src/config.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/tenants": [
-        "frontend/src/config.ts"
+        "frontend/src/config.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/v1/agents": [
         "frontend/src/api.ts",
         "frontend/src/components/AgentsPage.tsx",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/v1/agents/runs": [
-        "frontend/src/api.ts"
+        "frontend/src/api.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ],
       "/v1/agents/runs/{}": [
         "frontend/src/api.ts",
-        "frontend/src/components/IntegrityPage.tsx"
+        "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/v1/agents/{}": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/v1/agents/{}/run": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/v1/query": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
       ]
     },
     "routes_with_no_frontend_caller": [
-      "/admin/architecture/module/{}",
-      "/admin/audit-log",
-      "/admin/bootstrap-firings",
-      "/admin/bootstrap-stats",
-      "/admin/classify-edges",
-      "/admin/concept-neurons/relink",
-      "/admin/concept-neurons/seed-all",
-      "/admin/concept-neurons/seed-three-horizons",
-      "/admin/concept-neurons/{}/link",
-      "/admin/documents",
-      "/admin/embed-neurons",
-      "/admin/inhibitory-regulators",
-      "/admin/integrity/findings",
-      "/admin/integrity/reconciler/report",
-      "/admin/integrity/reconciler/sweep",
-      "/admin/integrity/scans",
-      "/admin/intra-department-bridge",
-      "/admin/neuron-source-links",
-      "/admin/neuron-source-links/{}",
-      "/admin/neuron-source-links/{}/review",
-      "/admin/proposals",
-      "/admin/provenance/auto-link",
-      "/admin/provenance/recompute-authority",
-      "/admin/provenance/seed-sources",
-      "/admin/prune-edges",
-      "/admin/purge-bootstrap",
-      "/admin/reference/documents",
-      "/admin/reference/documents/{}",
-      "/admin/reference/documents/{}/revoke",
-      "/admin/regions",
-      "/admin/regions/{}",
-      "/admin/reset",
-      "/admin/retention/purge",
-      "/admin/seed",
-      "/admin/seed-inhibitory-regulators",
-      "/admin/seeding/cooccurrence-edges",
-      "/admin/seeding/discover-regions",
-      "/admin/seeding/knn-edges",
-      "/admin/seeding/retype-edges",
-      "/admin/source-documents/{}",
-      "/admin/source-documents/{}/supersede",
-      "/admin/tool-definitions",
-      "/auditor/audit/{}",
-      "/auditor/candidates",
-      "/auditor/run",
-      "/auditor/status",
-      "/capabilities/capsule",
-      "/capabilities/health",
-      "/capabilities/reconcile",
-      "/capabilities/verify",
-      "/compile/run",
-      "/compile/status",
-      "/context",
-      "/distill/run",
-      "/distill/status",
-      "/engrams/embed",
-      "/engrams/seed",
-      "/eval-scores",
-      "/health",
-      "/ingest/observation",
-      "/janitor/as-of/{}",
-      "/janitor/corpus-health",
-      "/janitor/history/{}",
-      "/janitor/run",
-      "/janitor/status",
-      "/lineage/neuron/{}/forward",
-      "/lineage/neuron/{}/overrides",
-      "/lineage/overrides/{}",
-      "/lineage/query/{}/trace",
-      "/lineage/source/{}/impact",
-      "/metrics/mind/injection-channels",
-      "/neurons/refinements",
-      "/recall",
-      "/remember",
-      "/roadmap-ledgers/admission-context",
-      "/roadmap-ledgers/{}",
-      "/roadmap-ledgers/{}/admissions",
-      "/roadmap-ledgers/{}/nodes/{}/reconcile",
-      "/v1/agents/{}",
-      "/v1/agents/{}/run",
-      "/v1/query",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 371,
-    "loc": 84073,
+    "modules": 374,
+    "loc": 84856,
     "routes": 212,
-    "import_edges": 1025,
-    "call_edges": 675,
+    "import_edges": 1033,
+    "call_edges": 680,
     "modules_touching_db": 113,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -9712,7 +10961,7 @@
     "app.routers.mind_metrics": {
       "path": "backend/app/routers/mind_metrics.py",
       "module": "app.routers.mind_metrics",
-      "loc": 102,
+      "loc": 128,
       "imports": [
         "app.database",
         "app.services.claude_usage",
@@ -9722,13 +10971,14 @@
         "app.services.mind_metrics"
       ],
       "external_imports": [
+        "datetime",
         "fastapi",
         "sqlalchemy"
       ],
       "functions": {
         "mind_metrics": {
           "name": "mind_metrics",
-          "line": 18,
+          "line": 20,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::collect_all"
@@ -9737,7 +10987,7 @@
         },
         "mind_sessions": {
           "name": "mind_sessions",
-          "line": 26,
+          "line": 28,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::sessions_report"
@@ -9746,16 +10996,24 @@
         },
         "mind_injection_channels": {
           "name": "mind_injection_channels",
-          "line": 35,
+          "line": 37,
           "is_async": true,
           "calls": [
-            "app.services.injection_channel::reconstruct_history"
+            "app.services.injection_channel::reconstruct_history",
+            "app.services.injection_channel::standing_volume"
           ],
           "is_route": true
         },
+        "mind_injection_channels._bound": {
+          "name": "mind_injection_channels._bound",
+          "line": 53,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "mind_trust": {
           "name": "mind_trust",
-          "line": 48,
+          "line": 74,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::trust_report"
@@ -9764,7 +11022,7 @@
         },
         "mind_inbox": {
           "name": "mind_inbox",
-          "line": 57,
+          "line": 83,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::inbox_report"
@@ -9773,7 +11031,7 @@
         },
         "mind_subscription": {
           "name": "mind_subscription",
-          "line": 66,
+          "line": 92,
           "is_async": true,
           "calls": [
             "app.services.claude_usage::subscription_report"
@@ -9782,7 +11040,7 @@
         },
         "mind_codex_subscription": {
           "name": "mind_codex_subscription",
-          "line": 75,
+          "line": 101,
           "is_async": true,
           "calls": [
             "app.services.codex_usage::subscription_report"
@@ -9791,7 +11049,7 @@
         },
         "mind_locomo_run": {
           "name": "mind_locomo_run",
-          "line": 84,
+          "line": 110,
           "is_async": true,
           "calls": [
             "app.services.locomo_run_status::run_status"
@@ -9800,7 +11058,7 @@
         },
         "mind_skills": {
           "name": "mind_skills",
-          "line": 93,
+          "line": 119,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::skills_report",
@@ -9817,7 +11075,7 @@
           "full_path": "/metrics/mind",
           "mounted_on": "router",
           "handler": "mind_metrics",
-          "line": 18
+          "line": 20
         },
         {
           "method": "GET",
@@ -9826,7 +11084,7 @@
           "full_path": "/metrics/mind/sessions",
           "mounted_on": "router",
           "handler": "mind_sessions",
-          "line": 26
+          "line": 28
         },
         {
           "method": "GET",
@@ -9835,7 +11093,7 @@
           "full_path": "/metrics/mind/injection-channels",
           "mounted_on": "router",
           "handler": "mind_injection_channels",
-          "line": 35
+          "line": 37
         },
         {
           "method": "GET",
@@ -9844,7 +11102,7 @@
           "full_path": "/metrics/mind/trust",
           "mounted_on": "router",
           "handler": "mind_trust",
-          "line": 48
+          "line": 74
         },
         {
           "method": "GET",
@@ -9853,7 +11111,7 @@
           "full_path": "/metrics/mind/inbox",
           "mounted_on": "router",
           "handler": "mind_inbox",
-          "line": 57
+          "line": 83
         },
         {
           "method": "GET",
@@ -9862,7 +11120,7 @@
           "full_path": "/metrics/mind/subscription",
           "mounted_on": "router",
           "handler": "mind_subscription",
-          "line": 66
+          "line": 92
         },
         {
           "method": "GET",
@@ -9871,7 +11129,7 @@
           "full_path": "/metrics/mind/subscription/codex",
           "mounted_on": "router",
           "handler": "mind_codex_subscription",
-          "line": 75
+          "line": 101
         },
         {
           "method": "GET",
@@ -9880,7 +11138,7 @@
           "full_path": "/metrics/mind/locomo-run",
           "mounted_on": "router",
           "handler": "mind_locomo_run",
-          "line": 84
+          "line": 110
         },
         {
           "method": "GET",
@@ -9889,7 +11147,7 @@
           "full_path": "/metrics/mind/skills",
           "mounted_on": "router",
           "handler": "mind_skills",
-          "line": 93
+          "line": 119
         }
       ],
       "db_writes": [],
@@ -17151,7 +18409,7 @@
     "app.services.injection_channel": {
       "path": "backend/app/services/injection_channel.py",
       "module": "app.services.injection_channel",
-      "loc": 290,
+      "loc": 421,
       "imports": [
         "app.services.mind_janitors"
       ],
@@ -17163,70 +18421,91 @@
       "functions": {
         "channel_for_trigger": {
           "name": "channel_for_trigger",
-          "line": 64,
+          "line": 69,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_parse_ts": {
           "name": "_parse_ts",
-          "line": 72,
+          "line": 77,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_session_injections": {
           "name": "_session_injections",
-          "line": 79,
+          "line": 84,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_scan_sessions": {
           "name": "_scan_sessions",
-          "line": 103,
+          "line": 140,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_attribution_lines": {
           "name": "_attribution_lines",
-          "line": 129,
+          "line": 168,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_triggers_by_neuron": {
           "name": "_triggers_by_neuron",
-          "line": 161,
+          "line": 200,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_tools_by_neuron": {
+          "name": "_tools_by_neuron",
+          "line": 211,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_tools_for_line": {
+          "name": "_tools_for_line",
+          "line": 220,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_blank": {
           "name": "_blank",
-          "line": 172,
+          "line": 238,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_rate": {
           "name": "_rate",
-          "line": 176,
+          "line": 242,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "reconstruct_history": {
           "name": "reconstruct_history",
-          "line": 182,
+          "line": 248,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_as_utc": {
+          "name": "_as_utc",
+          "line": 360,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "standing_volume": {
           "name": "standing_volume",
-          "line": 267,
+          "line": 370,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -17236,15 +18515,29 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 97,
+          "line": 132,
           "in": "_session_injections",
           "target": "bucket",
           "model": null
         },
         {
           "kind": "add",
-          "line": 168,
+          "line": 134,
+          "in": "_session_injections",
+          "target": "tool_bucket",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 207,
           "in": "_triggers_by_neuron",
+          "target": "<expr>",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 216,
+          "in": "_tools_by_neuron",
           "target": "<expr>",
           "model": null
         }
@@ -27235,7 +28528,7 @@
     "harness.claude-code.memory_inject_hook": {
       "path": "harness/claude-code/memory_inject_hook.py",
       "module": "harness.claude-code.memory_inject_hook",
-      "loc": 386,
+      "loc": 403,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -27290,63 +28583,63 @@
         },
         "_log_pointers": {
           "name": "_log_pointers",
-          "line": 135,
+          "line": 150,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_pointer_lines": {
           "name": "_pointer_lines",
-          "line": 160,
+          "line": 175,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_format_context": {
           "name": "_format_context",
-          "line": 171,
+          "line": 186,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_capsule_hits": {
           "name": "_capsule_hits",
-          "line": 208,
+          "line": 223,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_read_capsule": {
           "name": "_read_capsule",
-          "line": 233,
+          "line": 248,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_self_capsule": {
           "name": "_self_capsule",
-          "line": 251,
+          "line": 266,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_charter_capsule": {
           "name": "_charter_capsule",
-          "line": 259,
+          "line": 274,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_project_from_cwd": {
           "name": "_project_from_cwd",
-          "line": 268,
+          "line": 283,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 276,
+          "line": 291,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -28696,7 +29989,7 @@
     "scripts.run_test_lane": {
       "path": "backend/scripts/run_test_lane.py",
       "module": "scripts.run_test_lane",
-      "loc": 212,
+      "loc": 249,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -28715,21 +30008,21 @@
       "functions": {
         "_preflight": {
           "name": "_preflight",
-          "line": 84,
+          "line": 112,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_terminate_with_stacks": {
           "name": "_terminate_with_stacks",
-          "line": 102,
+          "line": 139,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 124,
+          "line": 161,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -29238,6 +30531,40 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.kernel_matrix_fixtures": {
+      "path": "backend/tests/kernel_matrix_fixtures.py",
+      "module": "tests.kernel_matrix_fixtures",
+      "loc": 242,
+      "imports": [
+        "app.models",
+        "tests.golden_frames"
+      ],
+      "external_imports": [
+        "__future__",
+        "dataclasses"
+      ],
+      "functions": {
+        "build_neuron": {
+          "name": "build_neuron",
+          "line": 60,
+          "is_async": false,
+          "calls": [
+            "app.models::Neuron"
+          ],
+          "is_route": false
+        },
+        "case": {
+          "name": "case",
+          "line": 237,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.replay_auditor_honeypot": {
       "path": "backend/tests/replay_auditor_honeypot.py",
       "module": "tests.replay_auditor_honeypot",
@@ -29514,7 +30841,7 @@
     "tests.replay_nvm_throwaway": {
       "path": "backend/tests/replay_nvm_throwaway.py",
       "module": "tests.replay_nvm_throwaway",
-      "loc": 545,
+      "loc": 522,
       "imports": [
         "app.database",
         "app.models",
@@ -29524,7 +30851,8 @@
         "app.services.proposal_apply_service",
         "app.services.reconsolidation.lifecycle",
         "app.services.reconsolidation.loaders",
-        "app.services.reconsolidation.review"
+        "app.services.reconsolidation.review",
+        "tests.kernel_matrix_fixtures"
       ],
       "external_imports": [
         "asyncio",
@@ -29542,28 +30870,28 @@
       "functions": {
         "_load": {
           "name": "_load",
-          "line": 40,
+          "line": 64,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_dt": {
           "name": "_dt",
-          "line": 44,
+          "line": 68,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_recreate_database": {
           "name": "_recreate_database",
-          "line": 48,
+          "line": 72,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_seed": {
           "name": "_seed",
-          "line": 61,
+          "line": 86,
           "is_async": true,
           "calls": [
             "app.models::Query",
@@ -29577,18 +30905,9 @@
           ],
           "is_route": false
         },
-        "_matrix_neuron": {
-          "name": "_matrix_neuron",
-          "line": 152,
-          "is_async": false,
-          "calls": [
-            "app.models::Neuron"
-          ],
-          "is_route": false
-        },
         "_queue_with_packet": {
           "name": "_queue_with_packet",
-          "line": 162,
+          "line": 177,
           "is_async": true,
           "calls": [
             "app.services.mind_janitors::_queue_component_proposal"
@@ -29597,37 +30916,39 @@
         },
         "_queue_with_packet._mock_review": {
           "name": "_queue_with_packet._mock_review",
-          "line": 167,
+          "line": 182,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_phase5_matrix": {
           "name": "_phase5_matrix",
-          "line": 179,
+          "line": 203,
           "is_async": true,
           "calls": [
+            "tests.kernel_matrix_fixtures::case",
+            "tests.kernel_matrix_fixtures::build_neuron",
             "app.services.reconsolidation.lifecycle::approve_and_apply"
           ],
           "is_route": false
         },
         "_phase5_matrix._planted_failure": {
           "name": "_phase5_matrix._planted_failure",
-          "line": 293,
+          "line": 270,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_golden_packet": {
           "name": "_golden_packet",
-          "line": 335,
+          "line": 312,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 341,
+          "line": 318,
           "is_async": true,
           "calls": [
             "app.database::begin",
@@ -29644,7 +30965,7 @@
         },
         "main._mock_review": {
           "name": "main._mock_review",
-          "line": 376,
+          "line": 353,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -29654,245 +30975,245 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 68,
+          "line": 93,
           "in": "_seed",
           "target": "db",
           "model": "Query"
         },
         {
           "kind": "add",
-          "line": 73,
+          "line": 98,
           "in": "_seed",
           "target": "db",
           "model": "Neuron"
         },
         {
           "kind": "add",
-          "line": 88,
+          "line": 113,
           "in": "_seed",
           "target": "db",
           "model": "Neuron"
         },
         {
           "kind": "flush",
-          "line": 91,
+          "line": 116,
           "in": "_seed",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 97,
+          "line": 122,
           "in": "_seed",
           "target": "db",
           "model": "NeuronEdge"
         },
         {
           "kind": "add",
-          "line": 104,
+          "line": 129,
           "in": "_seed",
           "target": "db",
           "model": "NeuronFiring"
         },
         {
           "kind": "add",
-          "line": 114,
+          "line": 139,
           "in": "_seed",
           "target": "db",
           "model": "NeuronFiring"
         },
         {
           "kind": "add",
-          "line": 116,
+          "line": 141,
           "in": "_seed",
           "target": "db",
           "model": "SynapticLearningEvent"
         },
         {
           "kind": "add",
-          "line": 127,
+          "line": 152,
           "in": "_seed",
           "target": "proposal_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 128,
+          "line": 153,
           "in": "_seed",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 133,
+          "line": 158,
           "in": "_seed",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 137,
+          "line": 162,
           "in": "_seed",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "add",
-          "line": 144,
+          "line": 169,
           "in": "_seed",
           "target": "db",
           "model": "MindPairVerdict"
         },
         {
           "kind": "commit",
-          "line": 149,
+          "line": 174,
           "in": "_seed",
           "target": "db",
           "model": null
         },
         {
           "kind": "add_all",
-          "line": 193,
+          "line": 214,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 194,
+          "line": 215,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 205,
+          "line": 219,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 209,
+          "line": 223,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "add_all",
-          "line": 221,
+          "line": 231,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 222,
+          "line": 232,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "add_all",
-          "line": 249,
+          "line": 243,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 250,
+          "line": 244,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "add_all",
-          "line": 271,
+          "line": 255,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 272,
+          "line": 256,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 283,
+          "line": 260,
           "in": "_phase5_matrix",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 404,
+          "line": 381,
           "in": "main",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 405,
+          "line": 382,
           "in": "main",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 406,
+          "line": 383,
           "in": "main",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "commit",
-          "line": 410,
+          "line": 387,
           "in": "main",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 420,
+          "line": 397,
           "in": "main",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 522,
+          "line": 499,
           "in": "main",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 523,
+          "line": 500,
           "in": "main",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 524,
+          "line": 501,
           "in": "main",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "flush",
-          "line": 527,
+          "line": 504,
           "in": "main",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 533,
+          "line": 510,
           "in": "main",
           "target": "db",
           "model": null
@@ -35880,20 +37201,21 @@
     "tests.test_injection_channel": {
       "path": "backend/tests/test_injection_channel.py",
       "module": "tests.test_injection_channel",
-      "loc": 317,
+      "loc": 498,
       "imports": [
         "app.services.distiller",
         "app.services.injection_channel",
         "app.services.mind_janitors"
       ],
       "external_imports": [
+        "datetime",
         "json",
         "pytest"
       ],
       "functions": {
         "test_channel_for_trigger": {
           "name": "test_channel_for_trigger",
-          "line": 35,
+          "line": 36,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::channel_for_trigger"
@@ -35902,28 +37224,28 @@
         },
         "_session": {
           "name": "_session",
-          "line": 43,
+          "line": 44,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_actions": {
           "name": "_actions",
-          "line": 58,
+          "line": 78,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "corpus": {
           "name": "corpus",
-          "line": 66,
+          "line": 86,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_split_separates_the_two_channels": {
           "name": "test_split_separates_the_two_channels",
-          "line": 74,
+          "line": 94,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35932,7 +37254,7 @@
         },
         "test_marker_may_be_stamped_before_its_own_attribution_lines": {
           "name": "test_marker_may_be_stamped_before_its_own_attribution_lines",
-          "line": 95,
+          "line": 115,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35941,7 +37263,7 @@
         },
         "test_join_requires_the_session_to_have_injected_that_neuron": {
           "name": "test_join_requires_the_session_to_have_injected_that_neuron",
-          "line": 111,
+          "line": 131,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35950,7 +37272,7 @@
         },
         "test_disagreeing_candidates_are_unresolved_not_guessed": {
           "name": "test_disagreeing_candidates_are_unresolved_not_guessed",
-          "line": 125,
+          "line": 145,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35959,7 +37281,7 @@
         },
         "test_repeat_delivery_is_one_attribution_unit": {
           "name": "test_repeat_delivery_is_one_attribution_unit",
-          "line": 142,
+          "line": 162,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35968,7 +37290,7 @@
         },
         "test_undistilled_sessions_are_excluded_from_denominators": {
           "name": "test_undistilled_sessions_are_excluded_from_denominators",
-          "line": 159,
+          "line": 179,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35977,7 +37299,7 @@
         },
         "test_stamped_channel_is_preferred_over_reconstruction": {
           "name": "test_stamped_channel_is_preferred_over_reconstruction",
-          "line": 175,
+          "line": 195,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35986,7 +37308,7 @@
         },
         "test_penalties_do_not_count_as_load_bearing": {
           "name": "test_penalties_do_not_count_as_load_bearing",
-          "line": 192,
+          "line": 212,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -35995,7 +37317,52 @@
         },
         "test_empty_corpus_reports_none_not_zero": {
           "name": "test_empty_corpus_reports_none_not_zero",
-          "line": 204,
+          "line": 224,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history"
+          ],
+          "is_route": false
+        },
+        "test_legacy_records_without_a_tool_field_read_as_bash": {
+          "name": "test_legacy_records_without_a_tool_field_read_as_bash",
+          "line": 234,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history"
+          ],
+          "is_route": false
+        },
+        "test_bash_sub_rate_survives_a_widened_gate": {
+          "name": "test_bash_sub_rate_survives_a_widened_gate",
+          "line": 252,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history"
+          ],
+          "is_route": false
+        },
+        "test_tool_sub_split_sums_to_the_trigger_row_it_splits": {
+          "name": "test_tool_sub_split_sums_to_the_trigger_row_it_splits",
+          "line": 273,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history"
+          ],
+          "is_route": false
+        },
+        "test_neuron_delivered_by_two_tools_is_not_credited_to_either": {
+          "name": "test_neuron_delivered_by_two_tools_is_not_credited_to_either",
+          "line": 292,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history"
+          ],
+          "is_route": false
+        },
+        "test_other_triggers_are_absent_from_the_tool_split": {
+          "name": "test_other_triggers_are_absent_from_the_tool_split",
+          "line": 309,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::reconstruct_history"
@@ -36004,7 +37371,50 @@
         },
         "test_standing_volume_counts_all_sessions": {
           "name": "test_standing_volume_counts_all_sessions",
-          "line": 214,
+          "line": 322,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::standing_volume"
+          ],
+          "is_route": false
+        },
+        "_cutover_corpus": {
+          "name": "_cutover_corpus",
+          "line": 339,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_volume_window_isolates_each_side_of_a_cutover": {
+          "name": "test_volume_window_isolates_each_side_of_a_cutover",
+          "line": 357,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::standing_volume"
+          ],
+          "is_route": false
+        },
+        "test_volume_window_accepts_tz_aware_bounds": {
+          "name": "test_volume_window_accepts_tz_aware_bounds",
+          "line": 378,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::standing_volume"
+          ],
+          "is_route": false
+        },
+        "test_undated_sessions_are_excluded_from_a_window_not_absorbed": {
+          "name": "test_undated_sessions_are_excluded_from_a_window_not_absorbed",
+          "line": 387,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::standing_volume"
+          ],
+          "is_route": false
+        },
+        "test_empty_window_reports_no_sessions_rather_than_dividing_by_zero": {
+          "name": "test_empty_window_reports_no_sessions_rather_than_dividing_by_zero",
+          "line": 402,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::standing_volume"
@@ -36013,7 +37423,7 @@
         },
         "test_load_log_stamps_channel_on_every_injection": {
           "name": "test_load_log_stamps_channel_on_every_injection",
-          "line": 230,
+          "line": 411,
           "is_async": false,
           "calls": [
             "app.services.distiller::_load_log"
@@ -36022,35 +37432,35 @@
         },
         "_Neuron.__init__": {
           "name": "_Neuron.__init__",
-          "line": 242,
+          "line": 423,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_Db.__init__": {
           "name": "_Db.__init__",
-          "line": 250,
+          "line": 431,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_Db.get": {
           "name": "_Db.get",
-          "line": 254,
+          "line": 435,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_Db.add": {
           "name": "_Db.add",
-          "line": 257,
+          "line": 438,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_attribution_tallies_verdicts_per_channel": {
           "name": "test_attribution_tallies_verdicts_per_channel",
-          "line": 262,
+          "line": 443,
           "is_async": true,
           "calls": [
             "app.services.distiller::_apply_attributions"
@@ -36059,7 +37469,7 @@
         },
         "test_label_delivered_by_both_channels_is_not_credited_to_one": {
           "name": "test_label_delivered_by_both_channels_is_not_credited_to_one",
-          "line": 299,
+          "line": 480,
           "is_async": true,
           "calls": [
             "app.services.distiller::_apply_attributions"
@@ -36555,6 +37965,94 @@
           "calls": [
             "app.models::IntegrityFinding",
             "app.services.integrity.proposals::_create_proposal_record"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_kernel_replay_endtoend": {
+      "path": "backend/tests/test_kernel_replay_endtoend.py",
+      "module": "tests.test_kernel_replay_endtoend",
+      "loc": 71,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "os",
+        "pathlib",
+        "pytest",
+        "subprocess",
+        "sys"
+      ],
+      "functions": {
+        "test_kernel_replay_end_to_end": {
+          "name": "test_kernel_replay_end_to_end",
+          "line": 35,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_kernel_replay_fixture_guard": {
+      "path": "backend/tests/test_kernel_replay_fixture_guard.py",
+      "module": "tests.test_kernel_replay_fixture_guard",
+      "loc": 101,
+      "imports": [
+        "app.services.evidence_frame",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "tests.golden_frames",
+        "tests.kernel_matrix_fixtures"
+      ],
+      "external_imports": [
+        "__future__",
+        "pytest"
+      ],
+      "functions": {
+        "test_matrix_packet_is_still_admissible": {
+          "name": "test_matrix_packet_is_still_admissible",
+          "line": 40,
+          "is_async": false,
+          "calls": [
+            "tests.kernel_matrix_fixtures::build_neuron",
+            "app.services.reconsolidation.review::validate_packet"
+          ],
+          "is_route": false
+        },
+        "test_matrix_case_still_implies_its_asserted_outcome": {
+          "name": "test_matrix_case_still_implies_its_asserted_outcome",
+          "line": 57,
+          "is_async": false,
+          "calls": [
+            "tests.kernel_matrix_fixtures::build_neuron",
+            "app.services.reconsolidation.review::parse_facets",
+            "app.services.reconsolidation.review::decide_disposition",
+            "app.services.reconsolidation.review::compute_coverage_delta"
+          ],
+          "is_route": false
+        },
+        "test_stale_plaintext_packet_is_refused": {
+          "name": "test_stale_plaintext_packet_is_refused",
+          "line": 73,
+          "is_async": false,
+          "calls": [
+            "tests.kernel_matrix_fixtures::build_neuron",
+            "app.services.reconsolidation.review::validate_packet"
+          ],
+          "is_route": false
+        },
+        "test_shared_golden_frames_remain_valid_fusion_frames": {
+          "name": "test_shared_golden_frames_remain_valid_fusion_frames",
+          "line": 94,
+          "is_async": false,
+          "calls": [
+            "app.services.evidence_frame::validate_fusion_frame"
           ],
           "is_route": false
         }
@@ -43541,6 +45039,7 @@
       "scripts.record_roadmap_strategic_plasticity",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
+      "tests.kernel_matrix_fixtures",
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway",
       "tests.test_citation_hopping",
@@ -43838,6 +45337,7 @@
       "app.services.reconsolidation.review",
       "eval.locomo.run_locomo",
       "tests.test_evidence_frame",
+      "tests.test_kernel_replay_fixture_guard",
       "tests.test_memory_quality_auditor"
     ],
     "app.services.executor": [
@@ -44262,6 +45762,7 @@
       "app.services.reconsolidation.review",
       "app.services.reconsolidation.validators",
       "tests.test_fusion_plan",
+      "tests.test_kernel_replay_fixture_guard",
       "tests.test_maintenance_substrate",
       "tests.test_reconsolidation_apply",
       "tests.test_reconsolidation_contract",
@@ -44277,6 +45778,7 @@
       "app.services.reconsolidation.loaders",
       "tests.replay_nvm_throwaway",
       "tests.test_fusionplan_render",
+      "tests.test_kernel_replay_fixture_guard",
       "tests.test_maintenance_substrate",
       "tests.test_reconsolidation_apply",
       "tests.test_reconsolidation_kernel"
@@ -44483,10 +45985,16 @@
       "tests.test_composition_snapshot"
     ],
     "tests.golden_frames": [
+      "tests.kernel_matrix_fixtures",
       "tests.test_fusionplan_render",
+      "tests.test_kernel_replay_fixture_guard",
       "tests.test_reconsolidation_apply",
       "tests.test_reconsolidation_contract",
       "tests.test_reconsolidation_kernel"
+    ],
+    "tests.kernel_matrix_fixtures": [
+      "tests.replay_nvm_throwaway",
+      "tests.test_kernel_replay_fixture_guard"
     ],
     "tests.test_reconsolidation_apply": [
       "tests.test_reconsolidation_contract"
@@ -45239,6 +46747,9 @@
     "tests.fixtures.auditor_golden.freeze_golden": [
       "app.database"
     ],
+    "tests.kernel_matrix_fixtures": [
+      "app.models"
+    ],
     "tests.replay_auditor_honeypot": [
       "app.database",
       "app.models",
@@ -45255,7 +46766,8 @@
       "app.services.actions.init_registry",
       "app.services.mind_janitors",
       "app.services.reconsolidation.lifecycle",
-      "app.services.reconsolidation.loaders"
+      "app.services.reconsolidation.loaders",
+      "tests.kernel_matrix_fixtures"
     ],
     "tests.test_agents_execute_loop": [
       "app.agents.registry",
@@ -45418,6 +46930,11 @@
       "app.models",
       "app.schemas",
       "app.services.integrity.proposals"
+    ],
+    "tests.test_kernel_replay_fixture_guard": [
+      "app.services.evidence_frame",
+      "app.services.reconsolidation.review",
+      "tests.kernel_matrix_fixtures"
     ],
     "tests.test_live_provider": [
       "app.services.llm_provider"
@@ -52025,7 +53542,7 @@
       "full_path": "/metrics/mind",
       "mounted_on": "router",
       "handler": "mind_metrics",
-      "line": 18,
+      "line": 20,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52139,7 +53656,7 @@
       "full_path": "/metrics/mind/inbox",
       "mounted_on": "router",
       "handler": "mind_inbox",
-      "line": 57,
+      "line": 83,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52253,7 +53770,7 @@
       "full_path": "/metrics/mind/injection-channels",
       "mounted_on": "router",
       "handler": "mind_injection_channels",
-      "line": 35,
+      "line": 37,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52367,7 +53884,7 @@
       "full_path": "/metrics/mind/locomo-run",
       "mounted_on": "router",
       "handler": "mind_locomo_run",
-      "line": 84,
+      "line": 110,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52481,7 +53998,7 @@
       "full_path": "/metrics/mind/sessions",
       "mounted_on": "router",
       "handler": "mind_sessions",
-      "line": 26,
+      "line": 28,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52595,7 +54112,7 @@
       "full_path": "/metrics/mind/skills",
       "mounted_on": "router",
       "handler": "mind_skills",
-      "line": 93,
+      "line": 119,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52709,7 +54226,7 @@
       "full_path": "/metrics/mind/subscription",
       "mounted_on": "router",
       "handler": "mind_subscription",
-      "line": 66,
+      "line": 92,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52823,7 +54340,7 @@
       "full_path": "/metrics/mind/subscription/codex",
       "mounted_on": "router",
       "handler": "mind_codex_subscription",
-      "line": 75,
+      "line": 101,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -52937,7 +54454,7 @@
       "full_path": "/metrics/mind/trust",
       "mounted_on": "router",
       "handler": "mind_trust",
-      "line": 48,
+      "line": 74,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [

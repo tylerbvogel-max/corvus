@@ -3139,6 +3139,12 @@ export interface paths {
          *     Standing content succeeds by being present and retrieved content by
          *     being relevant, so the pooled rate judges neither. This is the
          *     before/after instrument for any change to charter membership.
+         *
+         *     `since`/`until` are ISO-8601 bounds on injection VOLUME only, bucketing
+         *     sessions by their first injection. Load-bearing rates stay lifetime:
+         *     they depend on attribution verdicts that arrive whenever a session is
+         *     distilled, so windowing them by session start would mix a windowed
+         *     numerator with an unwindowed denominator.
          */
         get: operations["mind_injection_channels_metrics_mind_injection_channels_get"];
         put?: never;
@@ -11596,7 +11602,10 @@ export interface operations {
     };
     mind_injection_channels_metrics_mind_injection_channels_get: {
         parameters: {
-            query?: never;
+            query?: {
+                since?: string | null;
+                until?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11610,6 +11619,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

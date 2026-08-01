@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 371,
-    "frontend_files": 72,
-    "units": 443,
-    "classified": 443,
+    "modules": 374,
+    "frontend_files": 74,
+    "units": 448,
+    "classified": 448,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "2b93628a1a956777741ea6ebfba880a9b2d3286c88e9f5963ab744fa556f9954",
-    "current_fingerprint": "2b93628a1a956777741ea6ebfba880a9b2d3286c88e9f5963ab744fa556f9954",
-    "stored_files": 443,
-    "current_files": 443
+    "stored_fingerprint": "f453300697d985112d234877a9f3c96facebbc73cb003d09e633d76d7dd73e16",
+    "current_fingerprint": "f453300697d985112d234877a9f3c96facebbc73cb003d09e633d76d7dd73e16",
+    "stored_files": 448,
+    "current_files": 448
   },
   "manifest_problems": [],
   "boxes": [
@@ -88,7 +88,7 @@
       "confidence": "reviewed",
       "module_count": 13,
       "frontend_file_count": 0,
-      "loc": 2648,
+      "loc": 2796,
       "routes": 4,
       "modules": [
         "app.mcp_http",
@@ -114,8 +114,8 @@
       "purpose": "Provide optional observation plus real review, roadmap, agent, document, and integrity controls in desktop and mobile shells.",
       "confidence": "reviewed",
       "module_count": 0,
-      "frontend_file_count": 72,
-      "loc": 31145,
+      "frontend_file_count": 74,
+      "loc": 44571,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -181,6 +181,8 @@
         "frontend/src/components/pipelineDetail.tsx",
         "frontend/src/config.ts",
         "frontend/src/constants.ts",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts",
         "frontend/src/hooks/useListKeyboardNav.ts",
         "frontend/src/hooks/useModels.ts",
@@ -495,7 +497,7 @@
       "confidence": "reviewed",
       "module_count": 31,
       "frontend_file_count": 0,
-      "loc": 6235,
+      "loc": 6261,
       "routes": 16,
       "modules": [
         "app.routers.eval_runs",
@@ -637,9 +639,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 97,
+      "module_count": 100,
       "frontend_file_count": 0,
-      "loc": 19895,
+      "loc": 20504,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -654,6 +656,7 @@
         "tests.eval_auditor_golden",
         "tests.fixtures.auditor_golden.freeze_golden",
         "tests.golden_frames",
+        "tests.kernel_matrix_fixtures",
         "tests.replay_auditor_honeypot",
         "tests.replay_nvm_throwaway",
         "tests.test_agents_execute_loop",
@@ -695,6 +698,8 @@
         "tests.test_injection_channel",
         "tests.test_input_guard",
         "tests.test_integrity_reconciler_tools",
+        "tests.test_kernel_replay_endtoend",
+        "tests.test_kernel_replay_fixture_guard",
         "tests.test_live_provider",
         "tests.test_llm_fallback",
         "tests.test_maintenance_substrate",
