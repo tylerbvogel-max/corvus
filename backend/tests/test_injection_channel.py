@@ -11,6 +11,7 @@ No DB, no LLM, no network.
 """
 
 import json
+from datetime import datetime, timezone
 
 import pytest
 
@@ -40,14 +41,22 @@ def test_channel_for_trigger(trigger, expected):
 
 # ── corpus fixture ───────────────────────────────────────────────────
 
-def _session(tmp_path, sid, injections, distilled_at=None):
-    """injections: [(trigger, [neuron_id, ...])]"""
+def _session(tmp_path, sid, injections, distilled_at=None, ts=None):
+    """injections: [(trigger, [neuron_id, ...])]
+
+    `ts` stamps every injection line, which is what buckets the session
+    into a volume window. Left None the session is undated, exactly like
+    the older episodes that predate timestamped injection lines.
+    """
     path = tmp_path / f"{sid}.jsonl"
     lines = []
     for trigger, ids in injections:
-        lines.append(json.dumps({
+        rec = {
             "event": "Injection", "session_id": sid, "trigger": trigger,
-            "neuron_ids": ids, "labels": [f"lesson {n}" for n in ids]}))
+            "neuron_ids": ids, "labels": [f"lesson {n}" for n in ids]}
+        if ts:
+            rec["ts"] = ts
+        lines.append(json.dumps(rec))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     if distilled_at:
         (tmp_path / f"{sid}.jsonl.distilled").write_text(
@@ -223,6 +232,79 @@ def test_standing_volume_counts_all_sessions(corpus):
     assert volume["standing_total"] == 5
     assert volume["retrieved_total"] == 1
     assert volume["standing_per_session"] == 2.5
+    assert "window" not in volume, "unwindowed report must stay unchanged"
+
+
+# ── volume windowing (reading one side of a charter cutover) ─────────
+
+def _cutover_corpus(corpus):
+    """Two heavy pre-cutover sessions and two light post-cutover ones —
+    the shape of a charter demotion."""
+    _session(corpus, "old1", [("capsule:mind-charter", [1, 2, 3, 4]),
+                              ("PreToolUse", [7])],
+             ts="2026-07-28T09:00:00+00:00")
+    _session(corpus, "old2", [("capsule:mind-charter", [1, 2, 3, 4])],
+             ts="2026-07-28T23:00:00+00:00")
+    _session(corpus, "new1", [("capsule:mind-charter", [1]),
+                              ("PreToolUse", [7, 8])],
+             ts="2026-07-29T06:00:00+00:00")
+    _session(corpus, "new2", [("capsule:mind-charter", [1])],
+             ts="2026-07-30T06:00:00+00:00")
+
+
+CUTOVER = datetime(2026, 7, 29, 0, 52, 15)
+
+
+def test_volume_window_isolates_each_side_of_a_cutover(corpus):
+    """The lifetime average blends both sides and understates the change;
+    the windowed reads must separate them."""
+    _cutover_corpus(corpus)
+
+    lifetime = standing_volume(str(corpus))
+    assert lifetime["sessions"] == 4
+    assert lifetime["standing_per_session"] == 2.5  # (4+4+1+1)/4 — the blend
+
+    before = standing_volume(str(corpus), until=CUTOVER)
+    assert before["sessions"] == 2
+    assert before["standing_per_session"] == 4.0
+    assert before["retrieved_per_session"] == 0.5
+
+    after = standing_volume(str(corpus), since=CUTOVER)
+    assert after["sessions"] == 2
+    assert after["standing_per_session"] == 1.0
+    assert after["retrieved_per_session"] == 1.0
+    assert after["window"]["since"] == CUTOVER.isoformat()
+
+
+def test_volume_window_accepts_tz_aware_bounds(corpus):
+    """Episode timestamps carry +00:00; a caller passing an aware bound
+    must not blow up on naive/aware comparison."""
+    _cutover_corpus(corpus)
+    aware = datetime(2026, 7, 29, 0, 52, 15, tzinfo=timezone.utc)
+    assert (standing_volume(str(corpus), since=aware)["sessions"]
+            == standing_volume(str(corpus), since=CUTOVER)["sessions"] == 2)
+
+
+def test_undated_sessions_are_excluded_from_a_window_not_absorbed(corpus):
+    """A session with no injection timestamp cannot be placed on either
+    side of a cutover, so a window must drop it and say so rather than
+    quietly counting it."""
+    _cutover_corpus(corpus)
+    _session(corpus, "undated", [("capsule:mind-charter", [1, 2, 3, 4, 5])])
+
+    assert standing_volume(str(corpus))["sessions"] == 5  # lifetime keeps it
+
+    after = standing_volume(str(corpus), since=CUTOVER)
+    assert after["sessions"] == 2, "undated session must not leak in"
+    assert after["window"]["sessions_excluded_undated"] == 1
+    assert after["standing_per_session"] == 1.0
+
+
+def test_empty_window_reports_no_sessions_rather_than_dividing_by_zero(corpus):
+    _cutover_corpus(corpus)
+    empty = standing_volume(str(corpus), since=datetime(2030, 1, 1))
+    assert empty["sessions"] == 0
+    assert empty["standing_per_session"] is None
 
 
 # ── forward stamping (distiller writes the channel, nothing infers it) ─

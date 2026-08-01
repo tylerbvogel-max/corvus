@@ -13847,8 +13847,42 @@
     },
     "/metrics/mind/injection-channels": {
       "get": {
-        "description": "Load-bearing rate split by delivery channel (standing vs retrieved).\n\nStanding content succeeds by being present and retrieved content by\nbeing relevant, so the pooled rate judges neither. This is the\nbefore/after instrument for any change to charter membership.",
+        "description": "Load-bearing rate split by delivery channel (standing vs retrieved).\n\nStanding content succeeds by being present and retrieved content by\nbeing relevant, so the pooled rate judges neither. This is the\nbefore/after instrument for any change to charter membership.\n\n`since`/`until` are ISO-8601 bounds on injection VOLUME only, bucketing\nsessions by their first injection. Load-bearing rates stay lifetime:\nthey depend on attribution verdicts that arrive whenever a session is\ndistilled, so windowing them by session start would mix a windowed\nnumerator with an unwindowed denominator.",
         "operationId": "mind_injection_channels_metrics_mind_injection_channels_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -13857,6 +13891,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Mind Injection Channels",

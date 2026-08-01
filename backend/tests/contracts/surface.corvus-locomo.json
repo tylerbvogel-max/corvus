@@ -373,7 +373,7 @@
       "method": "GET",
       "operation_id": "mind_injection_channels_metrics_mind_injection_channels_get",
       "path": "/metrics/mind/injection-channels",
-      "schema_fingerprint": "40c4d67816e48621",
+      "schema_fingerprint": "1098ca3c1d25b524",
       "tags": [
         "memory"
       ]
