@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 374,
+    "modules": 377,
     "frontend_files": 74,
-    "units": 448,
-    "classified": 448,
+    "units": 451,
+    "classified": 451,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "f453300697d985112d234877a9f3c96facebbc73cb003d09e633d76d7dd73e16",
-    "current_fingerprint": "f453300697d985112d234877a9f3c96facebbc73cb003d09e633d76d7dd73e16",
-    "stored_files": 448,
-    "current_files": 448
+    "stored_fingerprint": "8e473dcf2f5b53c0d9a419a0ea2f782fe23b2b08fbb0c24de04a8aa5e860e0af",
+    "current_fingerprint": "8e473dcf2f5b53c0d9a419a0ea2f782fe23b2b08fbb0c24de04a8aa5e860e0af",
+    "stored_files": 451,
+    "current_files": 451
   },
   "manifest_problems": [],
   "boxes": [
@@ -115,7 +115,7 @@
       "confidence": "reviewed",
       "module_count": 0,
       "frontend_file_count": 74,
-      "loc": 44571,
+      "loc": 44589,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -221,7 +221,7 @@
       "confidence": "reviewed",
       "module_count": 39,
       "frontend_file_count": 0,
-      "loc": 9247,
+      "loc": 9273,
       "routes": 24,
       "modules": [
         "app.governance",
@@ -639,17 +639,20 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 100,
+      "module_count": 103,
       "frontend_file_count": 0,
-      "loc": 20504,
+      "loc": 21199,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
         "scripts.add_token_pressure_maintenance_record",
         "scripts.capability_snapshot",
         "scripts.import_roadmap_ledger",
+        "scripts.lock_dependencies",
         "scripts.record_roadmap_strategic_plasticity",
         "scripts.run_test_lane",
+        "scripts.supply_chain",
+        "scripts.verify_deployment",
         "tests",
         "tests.benchmarks.eval_token_assembly_triangle",
         "tests.conftest",

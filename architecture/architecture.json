@@ -3,14 +3,14 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "f453300697d985112d234877a9f3c96facebbc73cb003d09e633d76d7dd73e16",
-    "files": 448
+    "fingerprint": "8e473dcf2f5b53c0d9a419a0ea2f782fe23b2b08fbb0c24de04a8aa5e860e0af",
+    "files": 451
   },
   "frontend": {
     "available": true,
     "totals": {
       "files": 74,
-      "loc": 44571,
+      "loc": 44589,
       "files_calling_api": 46,
       "files_using_fetch": 14,
       "distinct_urls": 201
@@ -2430,7 +2430,7 @@
       },
       "frontend/src/contracts/schema.d.ts": {
         "path": "frontend/src/contracts/schema.d.ts",
-        "loc": 13120,
+        "loc": 13138,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -3992,12 +3992,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 374,
-    "loc": 84856,
+    "modules": 377,
+    "loc": 85577,
     "routes": 212,
     "import_edges": 1033,
     "call_edges": 680,
-    "modules_touching_db": 113,
+    "modules_touching_db": 114,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -19823,7 +19823,7 @@
     "app.services.llm_provider": {
       "path": "backend/app/services/llm_provider.py",
       "module": "app.services.llm_provider",
-      "loc": 918,
+      "loc": 944,
       "imports": [
         "app.config",
         "app.services.model_usage_ledger"
@@ -19832,152 +19832,161 @@
         "asyncio",
         "contextvars",
         "dataclasses",
+        "glob",
         "google",
         "groq",
         "json",
         "logging",
         "openai",
         "os",
+        "shutil",
         "time",
         "types"
       ],
       "functions": {
+        "_resolve_claude_cli": {
+          "name": "_resolve_claude_cli",
+          "line": 36,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "_provider_available": {
           "name": "_provider_available",
-          "line": 265,
+          "line": 291,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "get_available_models": {
           "name": "get_available_models",
-          "line": 280,
+          "line": 306,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "get_valid_model_names": {
           "name": "get_valid_model_names",
-          "line": 308,
+          "line": 334,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_anthropic_args": {
           "name": "_build_anthropic_args",
-          "line": 318,
+          "line": 344,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_anthropic_chat": {
           "name": "_anthropic_chat",
-          "line": 356,
+          "line": 382,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_build_codex_args": {
           "name": "_build_codex_args",
-          "line": 425,
+          "line": 451,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_parse_codex_events": {
           "name": "_parse_codex_events",
-          "line": 446,
+          "line": 472,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_codex_chat": {
           "name": "_codex_chat",
-          "line": 464,
+          "line": 490,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_google_chat": {
           "name": "_google_chat",
-          "line": 529,
+          "line": 555,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_groq_chat": {
           "name": "_groq_chat",
-          "line": 573,
+          "line": 599,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_azure_deployment_name": {
           "name": "_azure_deployment_name",
-          "line": 614,
+          "line": 640,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_azure_messages": {
           "name": "_build_azure_messages",
-          "line": 629,
+          "line": 655,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_azure_openai_chat": {
           "name": "_azure_openai_chat",
-          "line": 651,
+          "line": 677,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_resolve_alias": {
           "name": "_resolve_alias",
-          "line": 704,
+          "line": 730,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_is_lapse_error": {
           "name": "_is_lapse_error",
-          "line": 737,
+          "line": 763,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_provider_in_cooldown": {
           "name": "_provider_in_cooldown",
-          "line": 744,
+          "line": 770,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mark_provider_down": {
           "name": "_mark_provider_down",
-          "line": 749,
+          "line": 775,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_fallback_candidates": {
           "name": "_fallback_candidates",
-          "line": 756,
+          "line": 782,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_call_provider": {
           "name": "_call_provider",
-          "line": 761,
+          "line": 787,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "llm_chat": {
           "name": "llm_chat",
-          "line": 779,
+          "line": 805,
           "is_async": true,
           "calls": [
             "app.services.model_usage_ledger::record_model_usage"
@@ -19986,21 +19995,21 @@
         },
         "_chat_with_fallback": {
           "name": "_chat_with_fallback",
-          "line": 843,
+          "line": 869,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "estimate_cost": {
           "name": "estimate_cost",
-          "line": 879,
+          "line": 905,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_estimate_cost_anthropic": {
           "name": "_estimate_cost_anthropic",
-          "line": 895,
+          "line": 921,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -29946,6 +29955,40 @@
       ],
       "llm_sites": []
     },
+    "scripts.lock_dependencies": {
+      "path": "backend/scripts/lock_dependencies.py",
+      "module": "scripts.lock_dependencies",
+      "loc": 147,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "argparse",
+        "os",
+        "pathlib",
+        "shutil",
+        "subprocess",
+        "sys"
+      ],
+      "functions": {
+        "_run": {
+          "name": "_run",
+          "line": 52,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 57,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "scripts.record_roadmap_strategic_plasticity": {
       "path": "backend/scripts/record_roadmap_strategic_plasticity.py",
       "module": "scripts.record_roadmap_strategic_plasticity",
@@ -30023,6 +30066,176 @@
         "main": {
           "name": "main",
           "line": 161,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "scripts.supply_chain": {
+      "path": "backend/scripts/supply_chain.py",
+      "module": "scripts.supply_chain",
+      "loc": 423,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "argparse",
+        "datetime",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "re",
+        "shutil",
+        "subprocess",
+        "sys"
+      ],
+      "functions": {
+        "_load_allowlist": {
+          "name": "_load_allowlist",
+          "line": 41,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_artifact_dir": {
+          "name": "_artifact_dir",
+          "line": 67,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_tool": {
+          "name": "_tool",
+          "line": 72,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_run": {
+          "name": "_run",
+          "line": 76,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "cmd_audit": {
+          "name": "cmd_audit",
+          "line": 83,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "cmd_sbom": {
+          "name": "cmd_sbom",
+          "line": 147,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_pragma_above": {
+          "name": "_pragma_above",
+          "line": 208,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_scan_tree": {
+          "name": "_scan_tree",
+          "line": 226,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "cmd_secrets": {
+          "name": "cmd_secrets",
+          "line": 253,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "cmd_artifact": {
+          "name": "cmd_artifact",
+          "line": 274,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "cmd_provenance": {
+          "name": "cmd_provenance",
+          "line": 342,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "cmd_provenance._git": {
+          "name": "cmd_provenance._git",
+          "line": 345,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 393,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 60,
+          "in": "_load_allowlist",
+          "target": "accepted",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "scripts.verify_deployment": {
+      "path": "backend/scripts/verify_deployment.py",
+      "module": "scripts.verify_deployment",
+      "loc": 123,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "argparse",
+        "json",
+        "subprocess",
+        "sys",
+        "urllib"
+      ],
+      "functions": {
+        "_check_health": {
+          "name": "_check_health",
+          "line": 32,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_check_revision": {
+          "name": "_check_revision",
+          "line": 47,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_check_provenance": {
+          "name": "_check_provenance",
+          "line": 65,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 83,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -30568,7 +30781,7 @@
     "tests.replay_auditor_honeypot": {
       "path": "backend/tests/replay_auditor_honeypot.py",
       "module": "tests.replay_auditor_honeypot",
-      "loc": 966,
+      "loc": 968,
       "imports": [
         "app.config",
         "app.database",
@@ -30597,35 +30810,35 @@
       "functions": {
         "check": {
           "name": "check",
-          "line": 71,
+          "line": 73,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_specimens": {
           "name": "_specimens",
-          "line": 84,
+          "line": 86,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_recreate_schema": {
           "name": "_recreate_schema",
-          "line": 294,
+          "line": 296,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_write_episode": {
           "name": "_write_episode",
-          "line": 306,
+          "line": 308,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_seed": {
           "name": "_seed",
-          "line": 331,
+          "line": 333,
           "is_async": true,
           "calls": [
             "app.services.reconsolidation.inheritance::embedding_input",
@@ -30638,7 +30851,7 @@
         },
         "_snapshot": {
           "name": "_snapshot",
-          "line": 376,
+          "line": 378,
           "is_async": true,
           "calls": [
             "app.database::async_session"
@@ -30647,70 +30860,70 @@
         },
         "_install_spies": {
           "name": "_install_spies",
-          "line": 397,
+          "line": 399,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_install_spies.spy_llm_chat": {
           "name": "_install_spies.spy_llm_chat",
-          "line": 403,
+          "line": 405,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_install_spies.spy_critique": {
           "name": "_install_spies.spy_critique",
-          "line": 419,
+          "line": 421,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_install_spies.spy_cse": {
           "name": "_install_spies.spy_cse",
-          "line": 435,
+          "line": 437,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_install_spies.spy_ucache": {
           "name": "_install_spies.spy_ucache",
-          "line": 443,
+          "line": 445,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_install_spies.spy_inval": {
           "name": "_install_spies.spy_inval",
-          "line": 451,
+          "line": 453,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_actions_log_rows": {
           "name": "_actions_log_rows",
-          "line": 458,
+          "line": 460,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_open_quality_proposals": {
           "name": "_open_quality_proposals",
-          "line": 472,
+          "line": 474,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_cosine_rank": {
           "name": "_cosine_rank",
-          "line": 488,
+          "line": 490,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "gate_a_surveillance": {
           "name": "gate_a_surveillance",
-          "line": 504,
+          "line": 506,
           "is_async": true,
           "calls": [
             "app.database::async_session",
@@ -30723,14 +30936,14 @@
         },
         "_verdict_of": {
           "name": "_verdict_of",
-          "line": 563,
+          "line": 565,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "gate_b_critic_honesty": {
           "name": "gate_b_critic_honesty",
-          "line": 570,
+          "line": 572,
           "is_async": false,
           "calls": [
             "app.services.memory_quality_auditor::_normalized",
@@ -30740,7 +30953,7 @@
         },
         "gate_c_no_premature_mutation": {
           "name": "gate_c_no_premature_mutation",
-          "line": 653,
+          "line": 655,
           "is_async": true,
           "calls": [
             "app.database::async_session"
@@ -30749,7 +30962,7 @@
         },
         "gate_d_idempotency": {
           "name": "gate_d_idempotency",
-          "line": 681,
+          "line": 683,
           "is_async": true,
           "calls": [
             "app.database::async_session",
@@ -30759,7 +30972,7 @@
         },
         "gate_e_end_to_end": {
           "name": "gate_e_end_to_end",
-          "line": 721,
+          "line": 723,
           "is_async": true,
           "calls": [
             "app.database::async_session",
@@ -30770,7 +30983,7 @@
         },
         "gate_f_secret_hygiene": {
           "name": "gate_f_secret_hygiene",
-          "line": 822,
+          "line": 824,
           "is_async": true,
           "calls": [
             "app.database::async_session"
@@ -30779,7 +30992,7 @@
         },
         "main": {
           "name": "main",
-          "line": 855,
+          "line": 857,
           "is_async": true,
           "calls": [
             "app.database::begin",
@@ -30795,42 +31008,42 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 343,
+          "line": 345,
           "in": "_seed",
           "target": "db",
           "model": "Neuron"
         },
         {
           "kind": "add",
-          "line": 359,
+          "line": 361,
           "in": "_seed",
           "target": "db",
           "model": "IntegrityScan"
         },
         {
           "kind": "flush",
-          "line": 360,
+          "line": 362,
           "in": "_seed",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 363,
+          "line": 365,
           "in": "_seed",
           "target": "db",
           "model": "IntegrityFinding"
         },
         {
           "kind": "commit",
-          "line": 368,
+          "line": 370,
           "in": "_seed",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 758,
+          "line": 760,
           "in": "gate_e_end_to_end",
           "target": "db",
           "model": null
