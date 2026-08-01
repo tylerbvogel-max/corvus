@@ -126,12 +126,33 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - name: Type-check and build
+      # Contract drift gate. The generated types and capability table are
+      # derived from backend/tests/contracts/openapi.*.json — the same
+      # artifacts capability_snapshot.py --check guards on the backend side.
+      # Together the two make drift a merge failure in both directions: the
+      # backend cannot change its surface without updating the snapshot, and
+      # the frontend cannot fall behind the snapshot without failing here.
+      - name: Generated API contracts are current
         shell: bash
         run: |
           mkdir -p ../.artifacts
           set -o pipefail
+          npm run check:contracts 2>&1 | tee ../.artifacts/frontend-contracts.log
+      - name: Type-check and build
+        shell: bash
+        run: |
+          set -o pipefail
           npm run build 2>&1 | tee ../.artifacts/frontend-type-build.log
+      # Runs against the build above rather than rebuilding: it reads
+      # dist/.vite/manifest.json, so the "initial route" is the entry's real
+      # static import graph, not a filename pattern. Budgets and their
+      # justifications are committed in frontend/bundle-budget.json; raising
+      # one is a reviewable diff, which is the whole point.
+      - name: Bundle budget
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check:bundle 2>&1 | tee ../.artifacts/frontend-bundle-budget.log
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

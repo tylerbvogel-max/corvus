@@ -7,42 +7,59 @@ import corvusLogo from './assets/corvus-logo.png'
 import corvusLogo128 from './assets/corvus-logo-128.png'
 import AppWindow, { MIN_W, MIN_H, type WinState, type WinRect } from './components/AppWindow'
 import AsciiWake from './components/AsciiWake'
-import ChatHistoryWindow from './components/ChatHistoryWindow'
 import DemoHelper, { OPEN_WINDOW_EVENT, START_TOUR_EVENT } from './components/DemoHelper'
 import MobileShell, { useIsMobile } from './components/MobileShell'
-import NeuronGraphWindow from './components/NeuronGraphWindow'
 import { CHAT_STARTED_EVENT, CHAT_NEW_EVENT, CHAT_LOAD_SESSION_EVENT } from './chatBus'
-import { SingleAgentPane, friendlyName } from './components/AgentsPage'
+import AgentsPage, { SingleAgentPane, friendlyName } from './components/AgentsPage'
 import WakeSettingsPanel from './components/WakeSettingsPanel'
-import Explorer from './components/Explorer'
-import QueryLab from './components/QueryLab'
-import MindMetricsPage from './components/MindMetricsPage'
-import ArchitecturePage from './components/ArchitecturePage'
-import MindSessionsPage from './components/MindSessionsPage'
-import MindInboxPage from './components/MindInboxPage'
-import MindSkillsPage from './components/MindSkillsPage'
-import EvaluationPage from './components/EvaluationPage'
-import EvalRunsPage from './components/EvalRunsPage'
-import RefinementHistory from './components/RefinementHistory'
-import CirclePacking from './components/CirclePacking'
-import SampleQueries from './components/SampleQueries'
-import PerformancePage from './components/PerformancePage'
-import EmergentQueuePage from './components/EmergentQueuePage'
-import SynapticLearningPage from './components/SynapticLearningPage'
-import LayerHeatmap from './components/LayerHeatmap'
-import NeuronUniverse from './components/NeuronUniverse'
-import KnowledgeGovernancePage from './components/KnowledgeGovernancePage'
-import HomePage from './components/HomePage'
 import SystemUseBanner from './components/SystemUseBanner'
-import EngramPage from './components/EngramPage'
-import AgentsPage from './components/AgentsPage'
-import ProposalQueuePage, { type ProposalProducerTarget, type OriginFilter } from './components/ProposalQueuePage'
-import DocumentIngestPage from './components/DocumentIngestPage'
-import IntegrityPage from './components/IntegrityPage'
 import GroupLandingPage from './components/GroupLandingPage'
-import RoadmapLedgersPage from './components/RoadmapLedgersPage'
-import NexusLabPage from './components/NexusLabPage'
-import OracleFunnelLabPage from './components/OracleFunnelLabPage'
+import type { ProposalProducerTarget, OriginFilter } from './components/ProposalQueuePage'
+
+// ── Lazy page surfaces ──────────────────────────────────────────────────────
+// Every window body below is code-split. These are page-sized leaves: the
+// shell (AppWindow, MobileShell, the nav, SystemUseBanner) stays static
+// because it renders before any page is chosen, and GroupLandingPage stays
+// static because it is the default branch of the dispatch below.
+//
+// NeuronUniverse is the reason this list exists. It is the ONLY importer of
+// `three` anywhere in src/, and it renders as the desktop backdrop by default
+// (desktopGraphVisible defaults true), so before this split every first paint
+// paid for a WebGL engine it might never show. Its Suspense fallback is null
+// on purpose — it is decorative and behind the windows, so streaming it in
+// causes no layout shift.
+//
+// AgentsPage is deliberately NOT lazy: friendlyName() is called synchronously
+// while computing window titles, so the module must be resident anyway.
+// Making the default export lazy would split nothing and only add a boundary.
+const Explorer = lazy(() => import('./components/Explorer'))
+const QueryLab = lazy(() => import('./components/QueryLab'))
+const MindMetricsPage = lazy(() => import('./components/MindMetricsPage'))
+const ArchitecturePage = lazy(() => import('./components/ArchitecturePage'))
+const MindSessionsPage = lazy(() => import('./components/MindSessionsPage'))
+const MindInboxPage = lazy(() => import('./components/MindInboxPage'))
+const MindSkillsPage = lazy(() => import('./components/MindSkillsPage'))
+const EvaluationPage = lazy(() => import('./components/EvaluationPage'))
+const EvalRunsPage = lazy(() => import('./components/EvalRunsPage'))
+const RefinementHistory = lazy(() => import('./components/RefinementHistory'))
+const CirclePacking = lazy(() => import('./components/CirclePacking'))
+const SampleQueries = lazy(() => import('./components/SampleQueries'))
+const PerformancePage = lazy(() => import('./components/PerformancePage'))
+const EmergentQueuePage = lazy(() => import('./components/EmergentQueuePage'))
+const SynapticLearningPage = lazy(() => import('./components/SynapticLearningPage'))
+const LayerHeatmap = lazy(() => import('./components/LayerHeatmap'))
+const NeuronUniverse = lazy(() => import('./components/NeuronUniverse'))
+const KnowledgeGovernancePage = lazy(() => import('./components/KnowledgeGovernancePage'))
+const HomePage = lazy(() => import('./components/HomePage'))
+const EngramPage = lazy(() => import('./components/EngramPage'))
+const ProposalQueuePage = lazy(() => import('./components/ProposalQueuePage'))
+const DocumentIngestPage = lazy(() => import('./components/DocumentIngestPage'))
+const IntegrityPage = lazy(() => import('./components/IntegrityPage'))
+const RoadmapLedgersPage = lazy(() => import('./components/RoadmapLedgersPage'))
+const NexusLabPage = lazy(() => import('./components/NexusLabPage'))
+const OracleFunnelLabPage = lazy(() => import('./components/OracleFunnelLabPage'))
+const ChatHistoryWindow = lazy(() => import('./components/ChatHistoryWindow'))
+const NeuronGraphWindow = lazy(() => import('./components/NeuronGraphWindow'))
 
 import { fetchTenantConfig } from './config'
 import type { Capability, TenantConfig } from './config'
@@ -660,7 +677,7 @@ export default function App() {
     const goToProducer = (target: ProposalProducerTarget) => {
       open(ORIGIN_TO_TAB[target.origin as OriginKey] ?? 'proposal-queue');
     };
-    return (key: string): ReactNode => {
+    const pickPage = (key: string): ReactNode => {
     if (key.startsWith('agent:')) return <SingleAgentPane name={key.slice(6)} />;
     switch (key as Tab) {
       case 'home': return <HomePage onNavigate={k => open(k)} />;
@@ -709,6 +726,14 @@ export default function App() {
       }
     }
     };
+    // One Suspense boundary per window body rather than one per case. The
+    // fallback deliberately reuses the window's own empty-state colour so a
+    // page arriving a frame late reads as loading, not as broken.
+    return (key: string): ReactNode => (
+      <Suspense fallback={<div style={{ padding: 24, color: 'var(--text-dim)' }}>Loading…</div>}>
+        {pickPage(key)}
+      </Suspense>
+    );
   }, [explorerNeuronId, queueInitialOrigin, navGroups]);
 
   const renderPage = useMemo(() => makeRenderPage(openWindow), [makeRenderPage, openWindow]);
@@ -797,12 +822,17 @@ export default function App() {
         </div>
       </div>
       {desktopGraphVisible && <div className="desktop-neuron-layer" data-testid="desktop-neuron-layer">
-        <NeuronUniverse transparent
-          controlPosition={{ left: navPos.x, top: navPos.y + navHeight + 8, width: navWidth }}
-          onControlPointerDown={startNavDrag}
-          controlDragMoved={() => navDragMovedRef.current}
-          onControlHeightChange={setGraphControlsHeight}
-        />
+        {/* fallback is null: this is the decorative backdrop behind every
+            window, so streaming `three` in a moment late must not reserve
+            space or flash text. */}
+        <Suspense fallback={null}>
+          <NeuronUniverse transparent
+            controlPosition={{ left: navPos.x, top: navPos.y + navHeight + 8, width: navWidth }}
+            onControlPointerDown={startNavDrag}
+            controlDragMoved={() => navDragMovedRef.current}
+            onControlHeightChange={setGraphControlsHeight}
+          />
+        </Suspense>
       </div>}
       <aside
         ref={navRef}
