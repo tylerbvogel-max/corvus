@@ -1,4 +1,7 @@
-version: "3.9"
+# Local composition for running the built Corvus artifact.
+#
+# `version:` was removed — it has been ignored by Compose v2 for years and only
+# produced a deprecation warning on every invocation.
 
 services:
   db:
@@ -8,7 +11,12 @@ services:
       POSTGRES_PASSWORD: corvus
       POSTGRES_DB: corvus_mind
     ports:
-      - "5432:5432"
+      # Host 5433, not 5432. This box already runs a local PostgreSQL serving
+      # corvus_mind on 5432; publishing the container on the same host port
+      # either fails to bind or shadows the real database depending on start
+      # order. The container-internal port is unchanged, so `db:5432` below
+      # still resolves normally.
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,27 +26,39 @@ services:
       retries: 5
 
   backend:
-    build: .
+    build:
+      context: .
+      args:
+        CORVUS_REVISION: ${CORVUS_REVISION:-unknown}
+        CORVUS_VERSION: ${CORVUS_VERSION:-0.0.0-dev}
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: "postgresql+asyncpg://corvus:corvus@db:5432/corvus_mind"
-      # LLM Providers - at least one required
-      # Anthropic via Claude CLI (uses your personal subscription - RECOMMENDED)
-      CLAUDE_CLI_PATH: "/root/.config/nvm/versions/node/v20.20.0/bin/claude"
-      # Or use API keys instead:
-      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
-      # GROQ_API_KEY: ${GROQ_API_KEY}
       TENANT_ID: "corvus-mind"
       PORT: "8005"
+
+      # ── LLM provider: opt-in, nothing baked in ──
+      #
+      # This file used to mount the host's ~/.claude into /root/.claude and set
+      # CLAUDE_CLI_PATH to /root/.config/nvm/.../claude. That never worked: the
+      # container runs as the unprivileged user `corvus`, which cannot read
+      # /root, and the image does not install the Claude CLI in the first place.
+      # It also mounted personal credentials into an artifact by default.
+      #
+      # The host-CLI posture (personal subscription, no API credits) is a LOCAL
+      # DEV arrangement — run the backend directly on the host with
+      # CLAUDE_CLI_PATH set, per README. Inside a container, bring a key:
+      #
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # GROQ_API_KEY: ${GROQ_API_KEY:-}
+      #
+      # With none of these set the graph runs with no LLM provider, which is the
+      # intended default: zero server-side LLM spend.
     ports:
       - "8005:8005"
-    # Mount your local Claude CLI auth so the container uses your personal subscription
-    # (run `claude auth login` on host first)
-    volumes:
-      - ~/.claude:/root/.claude:ro
 
 volumes:
   pgdata:

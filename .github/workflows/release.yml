@@ -4,100 +4,124 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build, scan, and verify without creating a GitHub release
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
 
 jobs:
+  # The release path runs the SAME gate as merge. It used to run its own
+  # `pytest tests/ -q` directly, which bypassed the deterministic lane contract
+  # in backend/scripts/run_test_lane.py: no marker selection, no per-lane
+  # timeout, no artifact capture, and no architecture, migration, frontend, or
+  # supply-chain component at all. A tag could therefore be cut on evidence
+  # strictly weaker than what any pull request had to clear.
+  gate:
+    uses: ./.github/workflows/required-merge-gate.yml
+
   build:
+    needs: gate
     runs-on: ubuntu-latest
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
+
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
-      - name: Install backend deps
+      - run: pip install uv pip-audit cyclonedx-bom
+
+      - name: Build the release artifact
+        id: build
+        env:
+          # A fixed epoch keeps timestamp-derived layer content stable between
+          # builds of the same commit.
+          SOURCE_DATE_EPOCH: '0'
+          DOCKER_BUILDKIT: '1'
         run: |
-          cd backend
-          pip install -r requirements.txt
-      
-      - name: Run tests
+          VERSION="${GITHUB_REF_NAME#v}"
+          docker build \
+            --build-arg CORVUS_REVISION="$GITHUB_SHA" \
+            --build-arg CORVUS_VERSION="$VERSION" \
+            --build-arg CORVUS_BUILD_ID="$GITHUB_RUN_ID" \
+            -t "corvus-mind:$GITHUB_SHA" .
+          echo "digest=$(docker image inspect --format '{{.Id}}' corvus-mind:$GITHUB_SHA)" >> "$GITHUB_OUTPUT"
+
+      # Scans run on source AND on the built artifact. The artifact check is the
+      # one that catches baked credentials and unreachable provider paths, which
+      # source scanning cannot see.
+      - name: Secret scan (source)
+        run: python backend/scripts/supply_chain.py secrets
+      - name: Dependency vulnerability audit
+        run: python backend/scripts/supply_chain.py audit
+      - name: Artifact scan (built image)
+        run: python backend/scripts/supply_chain.py artifact "corvus-mind:$GITHUB_SHA"
+
+      - name: SBOM and provenance
         run: |
-          cd backend
-          python -m pytest tests/ -q --tb=short
-      
-      - name: Build Docker image
-        run: |
-          docker build -t corvus-mind:${{ github.ref_name }} .
-      
-      - name: Build MCP server package
-        run: |
-          cd harness/claude-code
-          # Create a standalone entry point
-          cat > mind_mcp_server_entry.py << 'EOF'
-#!/usr/bin/env python3
-"""Standalone MCP server entry point for pipx/pip install."""
-import sys
-sys.path.insert(0, '/usr/local/lib/corvus-mind')
-from mind_mcp_server import main
-if __name__ == '__main__':
-    main()
-EOF
+          python backend/scripts/supply_chain.py sbom
+          python backend/scripts/supply_chain.py provenance --image "corvus-mind:$GITHUB_SHA"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-supply-chain
+          path: .artifacts/supply-chain/
+          retention-days: 90
 
   release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v') && !inputs.dry_run
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-supply-chain
+          path: .artifacts/supply-chain/
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             install.sh
             config.example.json
+            .artifacts/supply-chain/sbom.cdx.json
+            .artifacts/supply-chain/provenance.json
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-pypi:
-    needs: build
-    if: github.repository == 'tylerbvogel/corvus'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build MCP package
-        run: |
-          mkdir -p dist/corvus_mind_mcp
-          cp harness/claude-code/mind_mcp_server.py dist/corvus_mind_mcp/__main__.py
-          cat > dist/corvus_mind_mcp/__init__.py << 'EOF'
-__version__ = "0.1.0"
-EOF
-          cat > dist/pyproject.toml << 'EOF'
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "corvus-mind-mcp"
-version = "0.1.0"
-description = "Corvus-Mind MCP server for agentic institutional memory"
-readme = "README.md"
-requires-python = ">=3.11"
-dependencies = ["mcp>=1.26.0", "httpx>=0.28"]
-entry-points = {console_scripts = ["corvus-mind-mcp = corvus_mind_mcp.__main__:main"]}
-classifiers = [
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.11",
-]
-EOF
-          cd dist && python -m build --wheel
-      
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+# ─────────────────────────────────────────────────────────────────────────────
+# RETIRED: publish-pypi
+#
+# This workflow previously carried a `publish-pypi` job gated on
+#   if: github.repository == 'tylerbvogel/corvus'
+# and a `Build MCP server package` step that wrote mind_mcp_server_entry.py into
+# the runner and then never referenced it again.
+#
+# Both are retired rather than silently deleted, with the evidence that retired
+# them (measured 2026-08-01):
+#
+#   * The only configured remote is `private` ->
+#     https://github.com/tylerbvogel-max/corvus.git. `github.repository` can
+#     therefore never equal 'tylerbvogel/corvus', so the job has never run once.
+#     It was not a working publisher that needed fixing; it was dead code that
+#     read as coverage.
+#   * The package it would have published was assembled from a pyproject
+#     heredoc inlined in this file, declaring unpinned `mcp>=1.26.0` and
+#     `httpx>=0.28` — the opposite of the lock-driven contract this record
+#     establishes for everything else.
+#   * Current product direction is a hosted graph with a user-supplied brain,
+#     not a PyPI-distributed MCP shim.
+#
+# To revive it: add a real packaging manifest under harness/claude-code/ (not a
+# heredoc), give it its own lock, correct the condition to
+# 'tylerbvogel-max/corvus', and add a publish gate that requires the artifact
+# scan above to pass. See docs/SUPPLY-CHAIN.md, "Retired publishing paths".
+# ─────────────────────────────────────────────────────────────────────────────

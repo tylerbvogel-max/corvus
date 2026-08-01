@@ -57,6 +57,8 @@ os.environ["CORVUS_MIND_MODEL_LEDGER"] = os.path.join(
     ISOLATION_DIR, "model-usage.jsonl")
 
 CANARY_PATH = os.path.join(ISOLATION_DIR, "CANARY_EXECUTED")
+# supply-chain: allow — deliberate canary. This string is planted so the replay
+# auditor can prove it never exfiltrates a secret-shaped value; it is not a key.
 FAKE_SECRET = "sk-ant-honeypotCANARY0123456789abcdef"
 
 SPECIMEN_IDS = [9001, 9002, 9003, 9004, 9005, 9006, 9007, 9008, 9009]

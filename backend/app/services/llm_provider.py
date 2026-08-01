@@ -15,7 +15,9 @@ Free-tier models are prioritized in the registry ordering for UI display.
 import asyncio
 import json
 import logging
+import glob
 import os
+import shutil
 from contextvars import ContextVar
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -23,10 +25,34 @@ from types import MappingProxyType
 from app.config import settings
 
 # Claude CLI path — personal subscription, no API credits consumed.
-_CLAUDE_CLI_PATH = os.environ.get(
-    "CLAUDE_CLI_PATH",
-    os.path.expanduser("~/.config/nvm/versions/node/v20.20.0/bin/claude"),
-)
+#
+# The default used to hardcode ~/.config/nvm/versions/node/v20.20.0/bin/claude.
+# That baked one machine's Node version into the application: it broke whenever
+# nvm moved (the machine convention is now 22.22.0), and inside the container it
+# resolved under the runtime user's home where nothing is installed. Resolve
+# instead, and fall back to "" — os.path.exists("") is False, so an unresolved
+# CLI reports the provider as simply unavailable rather than crashing at call
+# time or silently pointing at a stale interpreter.
+def _resolve_claude_cli() -> str:
+    explicit = os.environ.get("CLAUDE_CLI_PATH")
+    if explicit:
+        return os.path.expanduser(explicit)
+    on_path = shutil.which("claude")
+    if on_path:
+        return on_path
+    # Legacy nvm layout: prefer the highest Node version that has the CLI, so a
+    # machine carrying several nvm installs does not get pinned to an old one.
+    candidates = sorted(
+        glob.glob(os.path.expanduser("~/.config/nvm/versions/node/*/bin/claude")),
+        key=lambda p: [
+            int(part) if part.isdigit() else part
+            for part in p.split("/node/v")[-1].split("/")[0].split(".")
+        ],
+    )
+    return candidates[-1] if candidates else ""
+
+
+_CLAUDE_CLI_PATH = _resolve_claude_cli()
 
 # Codex CLI path — OpenAI personal subscription (same posture as the Claude
 # CLI: no API credits). Shared with codex_usage.py's CODEX_PATH convention.

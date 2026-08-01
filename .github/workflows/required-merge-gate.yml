@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Callable so the release path runs the SAME gate as merge, rather than a
+  # second, weaker copy of it. See .github/workflows/release.yml.
+  workflow_call:
 
 permissions:
   contents: read
@@ -160,6 +163,40 @@ jobs:
           path: .artifacts/
           retention-days: 14
 
+  # Browser evidence, reusing demo-smoke.yml rather than copying its steps.
+  frontend-browser-smoke:
+    uses: ./.github/workflows/demo-smoke.yml
+
+  # Added alongside the existing components; the four test lanes in
+  # backend/scripts/run_test_lane.py are untouched by this job.
+  supply-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install supply-chain tooling
+        run: pip install uv pip-audit cyclonedx-bom
+      # The lock is only an authority if it provably still describes
+      # pyproject.toml. Without this, a dependency added to pyproject would
+      # install in dev and vanish from the artifact.
+      - name: Dependency lock is current
+        run: python backend/scripts/lock_dependencies.py --check
+      - name: Secret scan (source)
+        run: python backend/scripts/supply_chain.py secrets
+      - name: Dependency vulnerability audit
+        run: python backend/scripts/supply_chain.py audit
+      - name: Generate SBOM
+        run: python backend/scripts/supply_chain.py sbom
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: supply-chain
+          path: .artifacts/supply-chain/
+          retention-days: 14
+
   required-merge-gate:
     if: always()
     needs:
@@ -167,9 +204,28 @@ jobs:
       - backend-deterministic
       - migration-smoke
       - frontend-type-build
+      - frontend-browser-smoke
+      - supply-chain
     runs-on: ubuntu-latest
     steps:
+      # Count-independent by design. This was an equality test against the
+      # literal string "success,success,success,success", which meant every
+      # branch that added a gate component had to edit this one line — so two
+      # branches adding a component each would conflict here by construction.
+      # Asserting "nothing is non-success" instead scales without edits.
       - name: Require every gate component
         env:
           RESULTS: ${{ join(needs.*.result, ',') }}
-        run: test "$RESULTS" = "success,success,success,success"
+        run: |
+          echo "component results: $RESULTS"
+          if [ -z "$RESULTS" ]; then
+            echo "no gate components reported a result" >&2
+            exit 1
+          fi
+          case ",$RESULTS," in
+            *,failure,*|*,cancelled,*|*,skipped,*)
+              echo "a required gate component did not succeed" >&2
+              exit 1
+              ;;
+          esac
+          echo "every gate component succeeded"

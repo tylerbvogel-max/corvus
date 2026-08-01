@@ -17,7 +17,28 @@ export PYTHONPATH=. TENANT_ID=corvus-locomo
 # carry the nvm PATH — a bare `claude` probe failed for 16h on 2026-07-19
 # while the CLI was healthy the whole time), and strip the nested-session
 # markers exactly like the real call path does.
-CLAUDE_CLI="${CLAUDE_CLI_PATH:-$HOME/.config/nvm/versions/node/v20.20.0/bin/claude}"
+#
+# Resolution order mirrors llm_provider._resolve_claude_cli exactly — env, then
+# PATH, then the HIGHEST nvm-installed CLI. The old default hardcoded v20.20.0,
+# which silently probed a different binary than the app called once the machine
+# convention moved to 22.22.0.
+resolve_claude_cli() {
+  if [[ -n "${CLAUDE_CLI_PATH:-}" ]]; then
+    printf '%s\n' "${CLAUDE_CLI_PATH/#\~/$HOME}"
+    return
+  fi
+  if command -v claude >/dev/null 2>&1; then
+    command -v claude
+    return
+  fi
+  ls -1 "$HOME"/.config/nvm/versions/node/*/bin/claude 2>/dev/null \
+    | sort -V | tail -n 1
+}
+CLAUDE_CLI="$(resolve_claude_cli)"
+if [[ -z "$CLAUDE_CLI" ]]; then
+  echo "no Claude CLI resolved (set CLAUDE_CLI_PATH)" >&2
+  exit 2
+fi
 
 wait_for_cli() {
   # bounded: 96 probes x 10 min = 16h max (JPL-2)

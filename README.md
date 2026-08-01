@@ -286,47 +286,20 @@ results = await recall_neurons(db, "port conflict on 8005", tenant_id="corvus-mi
 
 ## Docker Deployment
 
-```yaml
-# docker-compose.yml
-version: "3.9"
-services:
-  db:
-    image: pgvector/pgvector:pg16
-    environment:
-      POSTGRES_USER: corvus
-      POSTGRES_PASSWORD: corvus
-      POSTGRES_DB: corvus_mind
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U corvus"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+The composition lives in [`docker-compose.yml`](docker-compose.yml) — it is not
+duplicated here, because the copy that used to sit in this section had drifted
+from the real file (it still advertised a `~/.claude` mount into `/root`, which
+the container's unprivileged runtime user could never read).
 
-  backend:
-    build: .
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: "postgresql+asyncpg://corvus:corvus@db:5432/corvus_mind"
-      CLAUDE_CLI_PATH: "/root/.config/nvm/versions/node/v20.20.0/bin/claude"
-      # Add your API keys here if not using Claude CLI:
-      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      # GOOGLE_API_KEY: ${GOOGLE_API_KEY}
-      TENANT_ID: "corvus-mind"
-      PORT: "8005"
-    ports:
-      - "8005:8005"
-    volumes:
-      - ~/.claude:/root/.claude:ro  # Mount Claude CLI auth for personal subscription
+Two things worth knowing before you run it:
 
-volumes:
-  pgdata:
-```
+- **The image ships with no LLM provider.** `CLAUDE_CLI_PATH` is not baked in.
+  The Claude-CLI posture is a *local dev* arrangement (see below); in a
+  container, supply `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` / `GROQ_API_KEY`, or
+  run with none and accept a graph with no LLM calls. That default is
+  deliberate: zero server-side LLM spend.
+- **Postgres publishes on host port 5433**, not 5432, so it cannot collide with
+  a PostgreSQL already serving `corvus_mind` on the host.
 
 ```bash
 # Build and run
@@ -391,9 +364,12 @@ TENANT_ID=corvus-mind
 PORT=8005
 DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/corvus_mind
 
-# LLM Providers (at least one required)
-# Anthropic via Claude CLI (personal sub — no API credits)
-CLAUDE_CLI_PATH=~/.config/nvm/versions/node/v20.20.0/bin/claude
+# LLM Providers (optional — with none set, the graph runs without LLM calls)
+# Anthropic via Claude CLI (personal sub — no API credits). Usually you can
+# leave this unset: the app resolves `claude` from PATH, then falls back to the
+# highest nvm-installed CLI. Set it explicitly only to pin a specific binary,
+# or for systemd units, whose PATH does not carry nvm.
+# CLAUDE_CLI_PATH=~/.local/bin/claude
 # Or API keys for other providers
 GOOGLE_API_KEY=...
 GROQ_API_KEY=...
