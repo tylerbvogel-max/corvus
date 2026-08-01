@@ -40,7 +40,7 @@ from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
-REPLAY_DB = os.environ.get("REPLAY_DB", "corvus_mind_kernel_replay")
+REPLAY_DB = os.environ.get("REPLAY_DB", "corvus_test_kernel_replay")
 assert REPLAY_DB != "corvus_mind", "refusing to run against the live database"
 # Connection parameters are overridable so this can run somewhere other than
 # one developer's laptop. The defaults are the local yggdrasil role, so the
