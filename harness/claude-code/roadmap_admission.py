@@ -293,6 +293,22 @@ def append_event(session_id: str, event: dict[str, Any]) -> None:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def _capture_excluded(cwd: str) -> bool:
+    """The work/personal wall (config.json excluded_cwd_prefixes) applies to
+    THIS hook's episode writes too. Found 2026-08-02: CLI subprocesses run
+    from /tmp were captured as sessions — the inject and episode hooks
+    honored the wall, this module didn't, and a distill-of-a-subprocess-
+    spawns-a-subprocess loop filled the queue with 1,181 junk sessions.
+    Only capture is silenced here; the admission gate itself still runs."""
+    try:
+        with open(Path("~/.corvus-mind/config.json").expanduser(), encoding="utf-8") as fh:
+            prefixes = json.load(fh).get("excluded_cwd_prefixes", [])
+        return any(isinstance(p, str) and cwd.startswith(os.path.expanduser(p))
+                   for p in prefixes)
+    except (OSError, ValueError):
+        return False
+
+
 def log_pending(
     session_id: str,
     cwd: str,
@@ -300,6 +316,8 @@ def log_pending(
     *,
     harness: str,
 ) -> None:
+    if _capture_excluded(cwd):
+        return
     prior = _episode_events(session_id)
     if any(event.get("event") == "PlanningAdmissionPending" for event in prior):
         return
