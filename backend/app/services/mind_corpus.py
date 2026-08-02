@@ -85,6 +85,42 @@ def _log_action(action: str, detail: dict) -> None:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+# ── deeds-corroborated token discipline ─────────────────────────────────
+# Substrate for two gates that must agree on what "concrete" means: the
+# distiller's agent-assertion backstop (mind-deeds-corroborated-words) and
+# the recurrence admission gate (mind-recurrence-watch). Generic vocabulary
+# would let "the command failed with an error" corroborate almost any
+# session — matches must be concrete tokens.
+
+_CORROBORATION_STOPWORDS = frozenset({
+    "failed", "error", "errors", "exit", "command", "output", "session",
+    "event", "events", "message", "because", "with", "that", "this",
+    "then", "after", "when", "which", "from", "tool", "success",
+})
+
+
+def _corroborated(corroboration: str, events: list[dict]) -> bool:
+    """Deterministic backstop behind a prompt-level citation gate: the cited
+    event must share concrete tokens (paths, commands, error fragments,
+    names) with an event actually present in the log. The model is told to
+    cite the event; this catches citations naming nothing the log contains."""
+    import re
+    tokens = set(re.findall(r"[a-z0-9_./-]{4,}", corroboration.casefold()))
+    tokens -= _CORROBORATION_STOPWORDS
+    if not tokens:
+        return False
+    parts: list[str] = []
+    for e in events:
+        inp = e.get("input") or {}
+        parts.extend(str(x) for x in (
+            e.get("tool"), e.get("error"), inp.get("command"),
+            inp.get("description"), inp.get("file_path"),
+        ) if x)
+    haystack = " ".join(parts).casefold()
+    hits = sum(1 for t in tokens if t in haystack)
+    return hits >= min(2, len(tokens))
+
+
 # ── corpus census ───────────────────────────────────────────────────────
 
 async def _load_lessons(db: AsyncSession) -> list[Neuron]:

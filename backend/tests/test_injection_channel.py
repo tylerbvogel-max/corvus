@@ -443,10 +443,13 @@ class _Db:
 async def test_attribution_tallies_verdicts_per_channel(monkeypatch, tmp_path):
     """A charter reward and a tool-warning reward must be separable at
     the moment the verdict is applied, not reconstructed later."""
-    from app.services import distiller, mind_janitors
+    from app.services import distiller, mind_corpus
 
     logged = []
-    monkeypatch.setattr(mind_janitors, "_log_action",
+    # The distiller resolves _log_action from the substrate module
+    # (mind_corpus) since the recurrence-watch cycle break; the test
+    # seam patches where the callee actually looks.
+    monkeypatch.setattr(mind_corpus, "_log_action",
                         lambda action, payload: logged.append((action, payload)))
     injections = [
         {"label": "lesson 1", "neuron_id": 1, "query_id": None,
@@ -481,9 +484,9 @@ async def test_label_delivered_by_both_channels_is_not_credited_to_one(
         monkeypatch, tmp_path):
     """One verdict covers every delivery of a label, so a label that
     crossed channels has no honest single owner."""
-    from app.services import distiller, mind_janitors
+    from app.services import distiller, mind_corpus
 
-    monkeypatch.setattr(mind_janitors, "_log_action", lambda a, p: None)
+    monkeypatch.setattr(mind_corpus, "_log_action", lambda a, p: None)
     injections = [
         {"label": "lesson 1", "neuron_id": 1, "query_id": None,
          "trigger": "capsule:mind-charter", "channel": STANDING},

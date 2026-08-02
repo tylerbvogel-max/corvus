@@ -254,35 +254,15 @@ def _extract_assistant_messages(transcript_path: str | None) -> list[str]:
     return (adjacent + pure)[:MAX_ASSISTANT_MESSAGES]
 
 
-# Generic vocabulary that would let "the command failed with an error"
-# corroborate almost any session — matches must be concrete tokens.
-_CORROBORATION_STOPWORDS = frozenset({
-    "failed", "error", "errors", "exit", "command", "output", "session",
-    "event", "events", "message", "because", "with", "that", "this",
-    "then", "after", "when", "which", "from", "tool", "success",
-})
-
-
-def _corroborated(corroboration: str, events: list[dict]) -> bool:
-    """Deterministic backstop behind the prompt-level gate: the cited
-    corroborating event must share concrete tokens (paths, commands,
-    error fragments, names) with an event actually present in the log.
-    The model is told to cite the corroborating event; this catches
-    citations that name nothing the log contains."""
-    tokens = set(re.findall(r"[a-z0-9_./-]{4,}", corroboration.casefold()))
-    tokens -= _CORROBORATION_STOPWORDS
-    if not tokens:
-        return False
-    parts: list[str] = []
-    for e in events:
-        inp = e.get("input") or {}
-        parts.extend(str(x) for x in (
-            e.get("tool"), e.get("error"), inp.get("command"),
-            inp.get("description"), inp.get("file_path"),
-        ) if x)
-    haystack = " ".join(parts).casefold()
-    hits = sum(1 for t in tokens if t in haystack)
-    return hits >= min(2, len(tokens))
+# The deterministic corroboration backstop lives in mind_corpus (substrate,
+# record 04b direction) so the recurrence admission gate can share the exact
+# token discipline without importing this module — importing the distiller
+# from recurrence_watch braided a six-module cycle the budget refuses.
+# Re-imported here so existing callers and tests keep resolving unchanged.
+from app.services.mind_corpus import (  # noqa: E402
+    _CORROBORATION_STOPWORDS,
+    _corroborated,
+)
 
 
 def _condense(events: list[dict], user_msgs: list[str], injected: list[str],
@@ -455,7 +435,7 @@ async def _apply_attributions(
     A SynapticLearningEvent is written when the injection recorded its
     recall query_id, so the Evaluate pages see the reinforcement."""
     from app.models import Neuron, SynapticLearningEvent
-    from app.services.mind_janitors import _log_action
+    from app.services.mind_corpus import _log_action
 
     # One verdict per label per session, so repeat deliveries of a label
     # collapse to a single attribution unit. Its channel is unambiguous

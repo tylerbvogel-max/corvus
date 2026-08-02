@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "8e473dcf2f5b53c0d9a419a0ea2f782fe23b2b08fbb0c24de04a8aa5e860e0af",
-    "files": 451
+    "fingerprint": "d80e5cc58df61c7b8d9364b55918f7171ee09dd5e7d86657cbd5028f85c4712d",
+    "files": 457
   },
   "frontend": {
     "available": true,
@@ -2985,9 +2985,9 @@
   "route_join": {
     "available": true,
     "totals": {
-      "backend_routes": 197,
+      "backend_routes": 198,
       "routes_called_by_frontend": 196,
-      "routes_with_no_frontend_caller": 1,
+      "routes_with_no_frontend_caller": 2,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
@@ -3987,17 +3987,18 @@
       ]
     },
     "routes_with_no_frontend_caller": [
+      "/metrics/mind/delivery-pathways",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 377,
-    "loc": 85577,
-    "routes": 212,
-    "import_edges": 1033,
-    "call_edges": 680,
-    "modules_touching_db": 114,
+    "modules": 383,
+    "loc": 87799,
+    "routes": 213,
+    "import_edges": 1052,
+    "call_edges": 695,
+    "modules_touching_db": 116,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -4940,6 +4941,42 @@
         "downgrade": {
           "name": "downgrade",
           "line": 43,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "alembic.versions.026_delivery_pathways": {
+      "path": "backend/alembic/versions/026_delivery_pathways.py",
+      "module": "alembic.versions.026_delivery_pathways",
+      "loc": 65,
+      "imports": [],
+      "external_imports": [
+        "alembic",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "_table_exists": {
+          "name": "_table_exists",
+          "line": 20,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "upgrade": {
+          "name": "upgrade",
+          "line": 36,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "downgrade": {
+          "name": "downgrade",
+          "line": 60,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -7165,7 +7202,7 @@
     "app.models": {
       "path": "backend/app/models.py",
       "module": "app.models",
-      "loc": 1290,
+      "loc": 1333,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -8136,13 +8173,14 @@
     "app.routers.admin_graph_maintenance": {
       "path": "backend/app/routers/admin_graph_maintenance.py",
       "module": "app.routers.admin_graph_maintenance",
-      "loc": 175,
+      "loc": 184,
       "imports": [
         "app.config",
         "app.database",
         "app.models",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.mind_corpus",
         "app.services.semantic_prefilter"
       ],
       "external_imports": [
@@ -8171,7 +8209,7 @@
         },
         "embed_neurons": {
           "name": "embed_neurons",
-          "line": 121,
+          "line": 130,
           "is_async": true,
           "calls": [
             "app.services.semantic_prefilter::invalidate_cache"
@@ -8205,7 +8243,7 @@
           "full_path": "/admin/embed-neurons",
           "mounted_on": "router",
           "handler": "embed_neurons",
-          "line": 121
+          "line": 130
         }
       ],
       "db_writes": [
@@ -8218,14 +8256,14 @@
         },
         {
           "kind": "commit",
-          "line": 107,
+          "line": 116,
           "in": "classify_edges",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 164,
+          "line": 173,
           "in": "embed_neurons",
           "target": "db",
           "model": null
@@ -10642,7 +10680,7 @@
     "app.routers.janitor": {
       "path": "backend/app/routers/janitor.py",
       "module": "app.routers.janitor",
-      "loc": 166,
+      "loc": 167,
       "imports": [
         "app.database",
         "app.models",
@@ -10674,7 +10712,7 @@
         },
         "corpus_health_report": {
           "name": "corpus_health_report",
-          "line": 65,
+          "line": 66,
           "is_async": true,
           "calls": [
             "app.services.mind_lint::corpus_health"
@@ -10683,21 +10721,21 @@
         },
         "_event_dict": {
           "name": "_event_dict",
-          "line": 74,
+          "line": 75,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "memory_history": {
           "name": "memory_history",
-          "line": 82,
+          "line": 83,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "memory_as_of": {
           "name": "memory_as_of",
-          "line": 124,
+          "line": 125,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -10729,7 +10767,7 @@
           "full_path": "/janitor/corpus-health",
           "mounted_on": "router",
           "handler": "corpus_health_report",
-          "line": 65
+          "line": 66
         },
         {
           "method": "GET",
@@ -10738,7 +10776,7 @@
           "full_path": "/janitor/history/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_history",
-          "line": 82
+          "line": 83
         },
         {
           "method": "GET",
@@ -10747,7 +10785,7 @@
           "full_path": "/janitor/as-of/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_as_of",
-          "line": 124
+          "line": 125
         }
       ],
       "db_writes": [],
@@ -10961,11 +10999,13 @@
     "app.routers.mind_metrics": {
       "path": "backend/app/routers/mind_metrics.py",
       "module": "app.routers.mind_metrics",
-      "loc": 128,
+      "loc": 182,
       "imports": [
         "app.database",
+        "app.models",
         "app.services.claude_usage",
         "app.services.codex_usage",
+        "app.services.delivery_plasticity",
         "app.services.injection_channel",
         "app.services.locomo_run_status",
         "app.services.mind_metrics"
@@ -10973,6 +11013,8 @@
       "external_imports": [
         "datetime",
         "fastapi",
+        "json",
+        "os",
         "sqlalchemy"
       ],
       "functions": {
@@ -11056,9 +11098,18 @@
           ],
           "is_route": true
         },
+        "mind_delivery_pathways": {
+          "name": "mind_delivery_pathways",
+          "line": 119,
+          "is_async": true,
+          "calls": [
+            "app.services.delivery_plasticity::false_kill_receipts"
+          ],
+          "is_route": true
+        },
         "mind_skills": {
           "name": "mind_skills",
-          "line": 119,
+          "line": 173,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::skills_report",
@@ -11142,12 +11193,21 @@
         },
         {
           "method": "GET",
+          "path": "/mind/delivery-pathways",
+          "prefix": "/metrics",
+          "full_path": "/metrics/mind/delivery-pathways",
+          "mounted_on": "router",
+          "handler": "mind_delivery_pathways",
+          "line": 119
+        },
+        {
+          "method": "GET",
           "path": "/mind/skills",
           "prefix": "/metrics",
           "full_path": "/metrics/mind/skills",
           "mounted_on": "router",
           "handler": "mind_skills",
-          "line": 119
+          "line": 173
         }
       ],
       "db_writes": [],
@@ -16313,17 +16373,196 @@
         }
       ]
     },
+    "app.services.delivery_plasticity": {
+      "path": "backend/app/services/delivery_plasticity.py",
+      "module": "app.services.delivery_plasticity",
+      "loc": 647,
+      "imports": [
+        "app.models",
+        "app.services.injection_channel",
+        "app.services.mind_corpus",
+        "app.services.recurrence_watch"
+      ],
+      "external_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "_utc_naive": {
+          "name": "_utc_naive",
+          "line": 120,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_scan_delivery_units": {
+          "name": "_scan_delivery_units",
+          "line": 130,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::_parse_ts"
+          ],
+          "is_route": false
+        },
+        "_blank_unit": {
+          "name": "_blank_unit",
+          "line": 199,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "pathway_units": {
+          "name": "pathway_units",
+          "line": 203,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::_attribution_lines"
+          ],
+          "is_route": false
+        },
+        "base_rate_for": {
+          "name": "base_rate_for",
+          "line": 289,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "survival_tail": {
+          "name": "survival_tail",
+          "line": 300,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "decide": {
+          "name": "decide",
+          "line": 311,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_transition": {
+          "name": "_transition",
+          "line": 420,
+          "is_async": false,
+          "calls": [
+            "app.services.mind_corpus::_log_action"
+          ],
+          "is_route": false
+        },
+        "trial_claim": {
+          "name": "trial_claim",
+          "line": 438,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_queue_retire_proposal": {
+          "name": "_queue_retire_proposal",
+          "line": 459,
+          "is_async": true,
+          "calls": [
+            "app.models::AutopilotProposal",
+            "app.models::ProposalItem"
+          ],
+          "is_route": false
+        },
+        "write_projection": {
+          "name": "write_projection",
+          "line": 492,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "false_kill_receipts": {
+          "name": "false_kill_receipts",
+          "line": 515,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "run_plasticity": {
+          "name": "run_plasticity",
+          "line": 538,
+          "is_async": true,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history",
+            "app.services.recurrence_watch::recurrence_events",
+            "app.models::DeliveryPathway",
+            "app.services.mind_corpus::_log_action"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 168,
+          "in": "_scan_delivery_units",
+          "target": "<expr>",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 170,
+          "in": "_scan_delivery_units",
+          "target": "<expr>",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 478,
+          "in": "_queue_retire_proposal",
+          "target": "db",
+          "model": "AutopilotProposal"
+        },
+        {
+          "kind": "flush",
+          "line": 479,
+          "in": "_queue_retire_proposal",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 480,
+          "in": "_queue_retire_proposal",
+          "target": "db",
+          "model": "ProposalItem"
+        },
+        {
+          "kind": "add",
+          "line": 576,
+          "in": "run_plasticity",
+          "target": "db",
+          "model": "DeliveryPathway"
+        },
+        {
+          "kind": "commit",
+          "line": 626,
+          "in": "run_plasticity",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "app.services.distiller": {
       "path": "backend/app/services/distiller.py",
       "module": "app.services.distiller",
-      "loc": 573,
+      "loc": 620,
       "imports": [
         "app.models",
         "app.services.evidence_frame",
         "app.services.injection_channel",
         "app.services.lesson_store",
         "app.services.llm_provider",
-        "app.services.mind_janitors"
+        "app.services.mind_corpus",
+        "app.services.recurrence_watch"
       ],
       "external_imports": [
         "datetime",
@@ -16344,14 +16583,14 @@
         },
         "find_ready_logs": {
           "name": "find_ready_logs",
-          "line": 125,
+          "line": 128,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_load_log": {
           "name": "_load_log",
-          "line": 159,
+          "line": 162,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::channel_for_trigger"
@@ -16360,44 +16599,38 @@
         },
         "_extract_user_messages": {
           "name": "_extract_user_messages",
-          "line": 194,
+          "line": 197,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_extract_assistant_messages": {
           "name": "_extract_assistant_messages",
-          "line": 216,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_corroborated": {
-          "name": "_corroborated",
-          "line": 263,
+          "line": 219,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_condense": {
           "name": "_condense",
-          "line": 285,
+          "line": 268,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_parse_candidates": {
           "name": "_parse_candidates",
-          "line": 313,
+          "line": 307,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_validate_and_save": {
           "name": "_validate_and_save",
-          "line": 341,
+          "line": 337,
           "is_async": true,
           "calls": [
+            "app.services.mind_corpus::_corroborated",
             "app.services.lesson_store::label_exists",
             "app.services.lesson_store::save_lesson"
           ],
@@ -16405,26 +16638,29 @@
         },
         "_apply_attributions": {
           "name": "_apply_attributions",
-          "line": 426,
+          "line": 429,
           "is_async": true,
           "calls": [
             "app.models::SynapticLearningEvent",
-            "app.services.mind_janitors::_log_action"
+            "app.services.mind_corpus::_log_action"
           ],
           "is_route": false
         },
         "distill_log": {
           "name": "distill_log",
-          "line": 502,
+          "line": 505,
           "is_async": true,
           "calls": [
-            "app.services.llm_provider::llm_chat"
+            "app.services.recurrence_watch::withheld_for_trial",
+            "app.services.llm_provider::llm_chat",
+            "app.services.recurrence_watch::verify_recurrence",
+            "app.services.recurrence_watch::log_recurrence"
           ],
           "is_route": false
         },
         "run_distillation": {
           "name": "run_distillation",
-          "line": 558,
+          "line": 605,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -16434,21 +16670,21 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 445,
+          "line": 448,
           "in": "_apply_attributions",
           "target": "<expr>",
           "model": null
         },
         {
           "kind": "add",
-          "line": 481,
+          "line": 484,
           "in": "_apply_attributions",
           "target": "db",
           "model": "SynapticLearningEvent"
         },
         {
           "kind": "commit",
-          "line": 543,
+          "line": 571,
           "in": "distill_log",
           "target": "db",
           "model": null
@@ -16457,7 +16693,7 @@
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 526,
+          "line": 554,
           "in": "distill_log"
         }
       ]
@@ -18409,9 +18645,9 @@
     "app.services.injection_channel": {
       "path": "backend/app/services/injection_channel.py",
       "module": "app.services.injection_channel",
-      "loc": 421,
+      "loc": 425,
       "imports": [
-        "app.services.mind_janitors"
+        "app.services.mind_corpus"
       ],
       "external_imports": [
         "datetime",
@@ -18421,91 +18657,91 @@
       "functions": {
         "channel_for_trigger": {
           "name": "channel_for_trigger",
-          "line": 69,
+          "line": 73,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_parse_ts": {
           "name": "_parse_ts",
-          "line": 77,
+          "line": 81,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_session_injections": {
           "name": "_session_injections",
-          "line": 84,
+          "line": 88,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_scan_sessions": {
           "name": "_scan_sessions",
-          "line": 140,
+          "line": 144,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_attribution_lines": {
           "name": "_attribution_lines",
-          "line": 168,
+          "line": 172,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_triggers_by_neuron": {
           "name": "_triggers_by_neuron",
-          "line": 200,
+          "line": 204,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_tools_by_neuron": {
           "name": "_tools_by_neuron",
-          "line": 211,
+          "line": 215,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_tools_for_line": {
           "name": "_tools_for_line",
-          "line": 220,
+          "line": 224,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_blank": {
           "name": "_blank",
-          "line": 238,
+          "line": 242,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_rate": {
           "name": "_rate",
-          "line": 242,
+          "line": 246,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "reconstruct_history": {
           "name": "reconstruct_history",
-          "line": 248,
+          "line": 252,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_as_utc": {
           "name": "_as_utc",
-          "line": 360,
+          "line": 364,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "standing_volume": {
           "name": "standing_volume",
-          "line": 370,
+          "line": 374,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -18515,28 +18751,28 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 132,
+          "line": 136,
           "in": "_session_injections",
           "target": "bucket",
           "model": null
         },
         {
           "kind": "add",
-          "line": 134,
+          "line": 138,
           "in": "_session_injections",
           "target": "tool_bucket",
           "model": null
         },
         {
           "kind": "add",
-          "line": 207,
+          "line": 211,
           "in": "_triggers_by_neuron",
           "target": "<expr>",
           "model": null
         },
         {
           "kind": "add",
-          "line": 216,
+          "line": 220,
           "in": "_tools_by_neuron",
           "target": "<expr>",
           "model": null
@@ -20483,7 +20719,7 @@
     "app.services.mind_corpus": {
       "path": "backend/app/services/mind_corpus.py",
       "module": "app.services.mind_corpus",
-      "loc": 173,
+      "loc": 221,
       "imports": [
         "app.config",
         "app.middleware.rbac",
@@ -20497,19 +20733,27 @@
         "json",
         "numpy",
         "os",
+        "re",
         "sqlalchemy"
       ],
       "functions": {
         "_log_action": {
           "name": "_log_action",
-          "line": 63,
+          "line": 75,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_corroborated": {
+          "name": "_corroborated",
+          "line": 102,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_load_lessons": {
           "name": "_load_lessons",
-          "line": 78,
+          "line": 126,
           "is_async": true,
           "calls": [
             "app.services.reference_class::reference_exclusion_filters"
@@ -20518,21 +20762,21 @@
         },
         "_similar_pairs": {
           "name": "_similar_pairs",
-          "line": 94,
+          "line": 142,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "content_hash": {
           "name": "content_hash",
-          "line": 115,
+          "line": 163,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_memory_edge": {
           "name": "_add_memory_edge",
-          "line": 130,
+          "line": 178,
           "is_async": true,
           "calls": [
             "app.middleware.rbac::UserIdentity",
@@ -20548,11 +20792,12 @@
     "app.services.mind_janitors": {
       "path": "backend/app/services/mind_janitors.py",
       "module": "app.services.mind_janitors",
-      "loc": 1058,
+      "loc": 1064,
       "imports": [
         "app.config",
         "app.models",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.integrity.conflict_monitor",
         "app.services.llm_provider",
         "app.services.mind_corpus",
@@ -20793,7 +21038,8 @@
           "is_async": true,
           "calls": [
             "app.services.mind_lint::corpus_health",
-            "app.services.delivery_mode::classify_delivery"
+            "app.services.delivery_mode::classify_delivery",
+            "app.services.delivery_plasticity::run_plasticity"
           ],
           "is_route": false
         }
@@ -24525,6 +24771,76 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "app.services.recurrence_watch": {
+      "path": "backend/app/services/recurrence_watch.py",
+      "module": "app.services.recurrence_watch",
+      "loc": 157,
+      "imports": [
+        "app.services.injection_channel",
+        "app.services.mind_corpus"
+      ],
+      "external_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "os",
+        "re"
+      ],
+      "functions": {
+        "_concrete_tokens": {
+          "name": "_concrete_tokens",
+          "line": 54,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "verify_recurrence": {
+          "name": "verify_recurrence",
+          "line": 61,
+          "is_async": false,
+          "calls": [
+            "app.services.mind_corpus::_corroborated"
+          ],
+          "is_route": false
+        },
+        "withheld_for_trial": {
+          "name": "withheld_for_trial",
+          "line": 86,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "log_recurrence": {
+          "name": "log_recurrence",
+          "line": 120,
+          "is_async": false,
+          "calls": [
+            "app.services.mind_corpus::_log_action"
+          ],
+          "is_route": false
+        },
+        "recurrence_events": {
+          "name": "recurrence_events",
+          "line": 131,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::_parse_ts"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 115,
+          "in": "withheld_for_trial",
+          "target": "seen",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "app.services.redaction": {
       "path": "backend/app/services/redaction.py",
       "module": "app.services.redaction",
@@ -26090,7 +26406,7 @@
     "app.services.skill_compiler": {
       "path": "backend/app/services/skill_compiler.py",
       "module": "app.services.skill_compiler",
-      "loc": 557,
+      "loc": 575,
       "imports": [
         "app.middleware.rbac",
         "app.models",
@@ -26136,49 +26452,49 @@
         },
         "_reconcile_manifest": {
           "name": "_reconcile_manifest",
-          "line": 179,
+          "line": 197,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_load_manifest": {
           "name": "_load_manifest",
-          "line": 194,
+          "line": 212,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_save_manifest": {
           "name": "_save_manifest",
-          "line": 203,
+          "line": 221,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_components": {
           "name": "_components",
-          "line": 214,
+          "line": 232,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_components.find": {
           "name": "_components.find",
-          "line": 219,
+          "line": 237,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "find_clusters": {
           "name": "find_clusters",
-          "line": 235,
+          "line": 253,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_compose": {
           "name": "_compose",
-          "line": 270,
+          "line": 288,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::llm_chat"
@@ -26187,7 +26503,7 @@
         },
         "_write_skill": {
           "name": "_write_skill",
-          "line": 298,
+          "line": 316,
           "is_async": false,
           "calls": [
             "app.services.skill_projection::project_skill"
@@ -26196,7 +26512,7 @@
         },
         "_remove_skill": {
           "name": "_remove_skill",
-          "line": 321,
+          "line": 339,
           "is_async": false,
           "calls": [
             "app.services.skill_projection::remove_projected_skill"
@@ -26205,14 +26521,14 @@
         },
         "_stale_entries": {
           "name": "_stale_entries",
-          "line": 338,
+          "line": 356,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_emit_skill_node": {
           "name": "_emit_skill_node",
-          "line": 365,
+          "line": 383,
           "is_async": true,
           "calls": [
             "app.middleware.rbac::UserIdentity",
@@ -26223,14 +26539,14 @@
         },
         "_retract_skill_node": {
           "name": "_retract_skill_node",
-          "line": 409,
+          "line": 427,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_self_model_growth_check": {
           "name": "_self_model_growth_check",
-          "line": 421,
+          "line": 439,
           "is_async": true,
           "calls": [
             "app.services.reference_class::reference_exclusion_filters",
@@ -26240,7 +26556,7 @@
         },
         "refresh_projections_after_reconsolidation": {
           "name": "refresh_projections_after_reconsolidation",
-          "line": 453,
+          "line": 471,
           "is_async": true,
           "calls": [
             "app.services.mind_corpus::_log_action"
@@ -26249,7 +26565,7 @@
         },
         "run_compile": {
           "name": "run_compile",
-          "line": 499,
+          "line": 517,
           "is_async": true,
           "calls": [
             "app.services.mind_corpus::_load_lessons",
@@ -26262,14 +26578,14 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 544,
+          "line": 562,
           "in": "run_compile",
           "target": "compiled_sets",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 551,
+          "line": 569,
           "in": "run_compile",
           "target": "db",
           "model": null
@@ -26278,7 +26594,7 @@
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 275,
+          "line": 293,
           "in": "_compose"
         }
       ]
@@ -28537,10 +28853,11 @@
     "harness.claude-code.memory_inject_hook": {
       "path": "harness/claude-code/memory_inject_hook.py",
       "module": "harness.claude-code.memory_inject_hook",
-      "loc": 403,
+      "loc": 483,
       "imports": [],
       "external_imports": [
         "datetime",
+        "hashlib",
         "json",
         "os",
         "re",
@@ -28550,105 +28867,112 @@
       "functions": {
         "_load_excludes": {
           "name": "_load_excludes",
-          "line": 38,
+          "line": 45,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_recall": {
           "name": "_recall",
-          "line": 48,
+          "line": 55,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_safe_recall": {
           "name": "_safe_recall",
-          "line": 69,
+          "line": 76,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_already_injected": {
           "name": "_already_injected",
-          "line": 79,
+          "line": 86,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_already_pointed": {
           "name": "_already_pointed",
-          "line": 97,
+          "line": 104,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_pathway_gate": {
+          "name": "_pathway_gate",
+          "line": 123,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_log_injection": {
           "name": "_log_injection",
-          "line": 116,
+          "line": 172,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_log_pointers": {
           "name": "_log_pointers",
-          "line": 150,
+          "line": 220,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_pointer_lines": {
           "name": "_pointer_lines",
-          "line": 175,
+          "line": 245,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_format_context": {
           "name": "_format_context",
-          "line": 186,
+          "line": 256,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_capsule_hits": {
           "name": "_capsule_hits",
-          "line": 223,
+          "line": 293,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_read_capsule": {
           "name": "_read_capsule",
-          "line": 248,
+          "line": 318,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_self_capsule": {
           "name": "_self_capsule",
-          "line": 266,
+          "line": 336,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_charter_capsule": {
           "name": "_charter_capsule",
-          "line": 274,
+          "line": 344,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_project_from_cwd": {
           "name": "_project_from_cwd",
-          "line": 283,
+          "line": 353,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 291,
+          "line": 361,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -34454,7 +34778,7 @@
     "tests.test_delivery_mode": {
       "path": "backend/tests/test_delivery_mode.py",
       "module": "tests.test_delivery_mode",
-      "loc": 272,
+      "loc": 301,
       "imports": [
         "app.models",
         "app.services.delivery_mode",
@@ -34594,9 +34918,18 @@
           ],
           "is_route": false
         },
+        "test_a_countersign_retired_capsule_pathway_is_compiled_out": {
+          "name": "test_a_countersign_retired_capsule_pathway_is_compiled_out",
+          "line": 189,
+          "is_async": true,
+          "calls": [
+            "app.services.skill_compiler::compile_charter"
+          ],
+          "is_route": false
+        },
         "test_skipped_compile_preserves_the_existing_manifest_entry": {
           "name": "test_skipped_compile_preserves_the_existing_manifest_entry",
-          "line": 188,
+          "line": 217,
           "is_async": false,
           "calls": [
             "app.services.skill_compiler::_apply_charter_entry"
@@ -34605,7 +34938,7 @@
         },
         "test_successful_compile_replaces_the_entry": {
           "name": "test_successful_compile_replaces_the_entry",
-          "line": 199,
+          "line": 228,
           "is_async": false,
           "calls": [
             "app.services.skill_compiler::_apply_charter_entry"
@@ -34614,92 +34947,453 @@
         },
         "_record": {
           "name": "_record",
-          "line": 211,
+          "line": 240,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_must_not_write": {
           "name": "_must_not_write",
-          "line": 218,
+          "line": 247,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_QueryResult.__init__": {
           "name": "_QueryResult.__init__",
-          "line": 223,
+          "line": 252,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_QueryResult.scalars": {
           "name": "_QueryResult.scalars",
-          "line": 226,
+          "line": 255,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_QueryResult.all": {
           "name": "_QueryResult.all",
-          "line": 229,
+          "line": 258,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_QueryResult.scalar": {
           "name": "_QueryResult.scalar",
-          "line": 232,
+          "line": 261,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_QueryDb.__init__": {
           "name": "_QueryDb.__init__",
-          "line": 239,
+          "line": 268,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_QueryDb.execute": {
           "name": "_QueryDb.execute",
-          "line": 242,
+          "line": 271,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_QueryDb.commit": {
           "name": "_QueryDb.commit",
-          "line": 245,
+          "line": 274,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_FakeNeuron.__init__": {
           "name": "_FakeNeuron.__init__",
-          "line": 250,
+          "line": 279,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_FakeDb.commit": {
           "name": "_FakeDb.commit",
-          "line": 264,
+          "line": 293,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_async_return": {
           "name": "_async_return",
-          "line": 268,
+          "line": 297,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_async_return._inner": {
           "name": "_async_return._inner",
-          "line": 269,
+          "line": 298,
           "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_delivery_plasticity": {
+      "path": "backend/tests/test_delivery_plasticity.py",
+      "module": "tests.test_delivery_plasticity",
+      "loc": 629,
+      "imports": [
+        "app.models",
+        "app.services.delivery_plasticity",
+        "app.services.injection_channel"
+      ],
+      "external_imports": [
+        "__future__",
+        "datetime",
+        "importlib",
+        "json",
+        "pathlib",
+        "pytest"
+      ],
+      "functions": {
+        "_ts": {
+          "name": "_ts",
+          "line": 50,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_naive": {
+          "name": "_naive",
+          "line": 54,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_write_session": {
+          "name": "_write_session",
+          "line": 58,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_write_verdict": {
+          "name": "_write_verdict",
+          "line": 86,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "corpus": {
+          "name": "corpus",
+          "line": 97,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_no_silent_kill_every_state_keeps_a_positive_floor": {
+          "name": "test_no_silent_kill_every_state_keeps_a_positive_floor",
+          "line": 107,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::items"
+          ],
+          "is_route": false
+        },
+        "test_projection_carries_the_probe_intervals_and_omits_active": {
+          "name": "test_projection_carries_the_probe_intervals_and_omits_active",
+          "line": 118,
+          "is_async": false,
+          "calls": [
+            "app.models::DeliveryPathway",
+            "app.services.delivery_plasticity::write_projection"
+          ],
+          "is_route": false
+        },
+        "test_decision_rule_thresholds_match_the_2026_08_01_channel_rates": {
+          "name": "test_decision_rule_thresholds_match_the_2026_08_01_channel_rates",
+          "line": 139,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::survival_tail"
+          ],
+          "is_route": false
+        },
+        "test_a_channel_that_rewards_nobody_can_never_condemn": {
+          "name": "test_a_channel_that_rewards_nobody_can_never_condemn",
+          "line": 152,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::survival_tail",
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_immunity_a_young_pathway_cannot_habituate": {
+          "name": "test_immunity_a_young_pathway_cannot_habituate",
+          "line": 162,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_hysteresis_any_single_reward_resets_the_clock": {
+          "name": "test_hysteresis_any_single_reward_resets_the_clock",
+          "line": 173,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_dishabituation_a_probe_reward_restores_an_attenuated_pathway": {
+          "name": "test_dishabituation_a_probe_reward_restores_an_attenuated_pathway",
+          "line": 184,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_hysteresis_exit_threshold_is_distinct_from_entry": {
+          "name": "test_hysteresis_exit_threshold_is_distinct_from_entry",
+          "line": 194,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_retire_proposal_needs_failed_probes_and_the_stricter_alpha": {
+          "name": "test_retire_proposal_needs_failed_probes_and_the_stricter_alpha",
+          "line": 211,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide",
+            "app.services.delivery_plasticity::survival_tail"
+          ],
+          "is_route": false
+        },
+        "test_a_rejected_proposal_blocks_reproposal_and_returns_to_attenuated": {
+          "name": "test_a_rejected_proposal_blocks_reproposal_and_returns_to_attenuated",
+          "line": 232,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_retirement_happens_only_through_an_applied_countersign": {
+          "name": "test_retirement_happens_only_through_an_applied_countersign",
+          "line": 244,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_honeypot_a_planted_auto_retirement_attempt_is_refused": {
+          "name": "test_honeypot_a_planted_auto_retirement_attempt_is_refused",
+          "line": 255,
+          "is_async": false,
+          "calls": [
+            "app.models::DeliveryPathway",
+            "app.services.delivery_plasticity::_transition"
+          ],
+          "is_route": false
+        },
+        "test_a_reward_on_a_retired_pathway_reopens_the_loop": {
+          "name": "test_a_reward_on_a_retired_pathway_reopens_the_loop",
+          "line": 266,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "_build_live_channel": {
+          "name": "_build_live_channel",
+          "line": 278,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_dead_pathway_in_a_live_channel_habituates_in_replay": {
+          "name": "test_honeypot_a_dead_pathway_in_a_live_channel_habituates_in_replay",
+          "line": 302,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history",
+            "app.services.delivery_plasticity::pathway_units",
+            "app.services.delivery_plasticity::base_rate_for",
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_honeypot_a_rewarded_pathway_never_habituates_in_replay": {
+          "name": "test_honeypot_a_rewarded_pathway_never_habituates_in_replay",
+          "line": 326,
+          "is_async": false,
+          "calls": [
+            "app.services.injection_channel::reconstruct_history",
+            "app.services.delivery_plasticity::pathway_units",
+            "app.services.delivery_plasticity::base_rate_for",
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_fold_drops_ambiguous_units_from_both_sides": {
+          "name": "test_fold_drops_ambiguous_units_from_both_sides",
+          "line": 352,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::pathway_units"
+          ],
+          "is_route": false
+        },
+        "test_fold_splits_pretooluse_by_tool_and_legacy_records_count_as_bash": {
+          "name": "test_fold_splits_pretooluse_by_tool_and_legacy_records_count_as_bash",
+          "line": 368,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::pathway_units"
+          ],
+          "is_route": false
+        },
+        "test_fold_ignores_undistilled_sessions": {
+          "name": "test_fold_ignores_undistilled_sessions",
+          "line": 380,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::pathway_units"
+          ],
+          "is_route": false
+        },
+        "_load_hook": {
+          "name": "_load_hook",
+          "line": 391,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_hook_gate_suppresses_but_the_probe_slot_still_fires": {
+          "name": "test_hook_gate_suppresses_but_the_probe_slot_still_fires",
+          "line": 399,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_hook_gate_fails_open": {
+          "name": "test_hook_gate_fails_open",
+          "line": 435,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_hook_gate_keys_pathways_by_tool_for_pretooluse": {
+          "name": "test_hook_gate_keys_pathways_by_tool_for_pretooluse",
+          "line": 456,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_attenuation_stats": {
+          "name": "_attenuation_stats",
+          "line": 477,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_recurrence_in_a_withheld_trial_restores_and_books_a_false_kill": {
+          "name": "test_recurrence_in_a_withheld_trial_restores_and_books_a_false_kill",
+          "line": 487,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_a_recurrence_anchors_the_clock_so_restore_is_not_undone": {
+          "name": "test_a_recurrence_anchors_the_clock_so_restore_is_not_undone",
+          "line": 499,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_no_withholding_means_no_trial_means_no_retire_proposal": {
+          "name": "test_no_withholding_means_no_trial_means_no_retire_proposal",
+          "line": 512,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_retire_proposal_carries_the_trial_as_evidence": {
+          "name": "test_retire_proposal_carries_the_trial_as_evidence",
+          "line": 525,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide",
+            "app.services.delivery_plasticity::trial_claim"
+          ],
+          "is_route": false
+        },
+        "test_trial_claim_refuses_verdict_shaped_proposals": {
+          "name": "test_trial_claim_refuses_verdict_shaped_proposals",
+          "line": 542,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::trial_claim"
+          ],
+          "is_route": false
+        },
+        "test_recurrence_during_retire_proposed_restores_for_supersede": {
+          "name": "test_recurrence_during_retire_proposed_restores_for_supersede",
+          "line": 553,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_recurrence_after_a_countersigned_retirement_reopens_not_overturns": {
+          "name": "test_recurrence_after_a_countersigned_retirement_reopens_not_overturns",
+          "line": 563,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::decide"
+          ],
+          "is_route": false
+        },
+        "test_fold_counts_withheld_units_in_distilled_sessions_only": {
+          "name": "test_fold_counts_withheld_units_in_distilled_sessions_only",
+          "line": 574,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::pathway_units"
+          ],
+          "is_route": false
+        },
+        "test_false_kill_receipts_count_only_recurrence_grounded_incidents": {
+          "name": "test_false_kill_receipts_count_only_recurrence_grounded_incidents",
+          "line": 594,
+          "is_async": false,
+          "calls": [
+            "app.services.delivery_plasticity::false_kill_receipts"
+          ],
+          "is_route": false
+        },
+        "test_hook_logs_withheld_as_a_sibling_list_outside_neuron_ids": {
+          "name": "test_hook_logs_withheld_as_a_sibling_list_outside_neuron_ids",
+          "line": 612,
+          "is_async": false,
           "calls": [],
           "is_route": false
         }
@@ -37414,11 +38108,11 @@
     "tests.test_injection_channel": {
       "path": "backend/tests/test_injection_channel.py",
       "module": "tests.test_injection_channel",
-      "loc": 498,
+      "loc": 501,
       "imports": [
         "app.services.distiller",
         "app.services.injection_channel",
-        "app.services.mind_janitors"
+        "app.services.mind_corpus"
       ],
       "external_imports": [
         "datetime",
@@ -37682,7 +38376,7 @@
         },
         "test_label_delivered_by_both_channels_is_not_credited_to_one": {
           "name": "test_label_delivered_by_both_channels_is_not_credited_to_one",
-          "line": 480,
+          "line": 483,
           "is_async": true,
           "calls": [
             "app.services.distiller::_apply_attributions"
@@ -38466,8 +39160,10 @@
     "tests.test_maintenance_substrate": {
       "path": "backend/tests/test_maintenance_substrate.py",
       "module": "tests.test_maintenance_substrate",
-      "loc": 232,
+      "loc": 279,
       "imports": [
+        "app.services.actions.edge_link",
+        "app.services.adjacency_cache",
         "app.services.mind_corpus",
         "app.services.mind_janitors",
         "app.services.mind_lint",
@@ -38567,6 +39263,22 @@
           "calls": [
             "app.services.mind_corpus::_add_memory_edge"
           ],
+          "is_route": false
+        },
+        "test_non_conducting_class_is_the_single_definition": {
+          "name": "test_non_conducting_class_is_the_single_definition",
+          "line": 237,
+          "is_async": false,
+          "calls": [
+            "app.services.adjacency_cache::items"
+          ],
+          "is_route": false
+        },
+        "test_classify_edges_excludes_the_class_not_a_hand_list": {
+          "name": "test_classify_edges_excludes_the_class_not_a_hand_list",
+          "line": 265,
+          "is_async": false,
+          "calls": [],
           "is_route": false
         }
       },
@@ -39795,6 +40507,116 @@
           "name": "test_run_guards_redacts_and_submits_action._fake_submit",
           "line": 228,
           "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_pathway_writers": {
+      "path": "backend/tests/test_pathway_writers.py",
+      "module": "tests.test_pathway_writers",
+      "loc": 158,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "ast",
+        "json",
+        "pathlib",
+        "pytest",
+        "re"
+      ],
+      "functions": {
+        "_register": {
+          "name": "_register",
+          "line": 31,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_allowed": {
+          "name": "_allowed",
+          "line": 35,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_modules": {
+          "name": "_modules",
+          "line": 39,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_rel": {
+          "name": "_rel",
+          "line": 43,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_writes_in": {
+          "name": "_writes_in",
+          "line": 47,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "scan": {
+          "name": "scan",
+          "line": 68,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_only_the_sole_writer_touches_delivery_pathways": {
+          "name": "test_only_the_sole_writer_touches_delivery_pathways",
+          "line": 82,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_register_has_no_stale_entries": {
+          "name": "test_register_has_no_stale_entries",
+          "line": 95,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_the_sole_writer_is_exactly_one_module": {
+          "name": "test_the_sole_writer_is_exactly_one_module",
+          "line": 103,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_planted_ungoverned_writer_is_caught": {
+          "name": "test_honeypot_a_planted_ungoverned_writer_is_caught",
+          "line": 114,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_planted_raw_sql_update_is_caught": {
+          "name": "test_honeypot_a_planted_raw_sql_update_is_caught",
+          "line": 124,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_honeypot_a_read_is_not_a_write": {
+          "name": "test_honeypot_a_read_is_not_a_write",
+          "line": 133,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_the_apply_dispatcher_never_learned_to_retire_pathways": {
+          "name": "test_the_apply_dispatcher_never_learned_to_retire_pathways",
+          "line": 144,
+          "is_async": false,
           "calls": [],
           "is_route": false
         }
@@ -41964,6 +42786,115 @@
           "model": null
         }
       ],
+      "llm_sites": []
+    },
+    "tests.test_recurrence_watch": {
+      "path": "backend/tests/test_recurrence_watch.py",
+      "module": "tests.test_recurrence_watch",
+      "loc": 177,
+      "imports": [
+        "app.services.distiller",
+        "app.services.mind_corpus",
+        "app.services.recurrence_watch"
+      ],
+      "external_imports": [
+        "__future__",
+        "json",
+        "pytest"
+      ],
+      "functions": {
+        "test_gate_admits_a_cited_recurrence_of_the_documented_failure": {
+          "name": "test_gate_admits_a_cited_recurrence_of_the_documented_failure",
+          "line": 48,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::verify_recurrence"
+          ],
+          "is_route": false
+        },
+        "test_gate_refuses_an_uncited_nomination": {
+          "name": "test_gate_refuses_an_uncited_nomination",
+          "line": 53,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::verify_recurrence"
+          ],
+          "is_route": false
+        },
+        "test_gate_refuses_harm_that_is_not_this_lessons_failure_mode": {
+          "name": "test_gate_refuses_harm_that_is_not_this_lessons_failure_mode",
+          "line": 64,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::verify_recurrence"
+          ],
+          "is_route": false
+        },
+        "test_gate_protects_lessons_with_no_concrete_tokens": {
+          "name": "test_gate_protects_lessons_with_no_concrete_tokens",
+          "line": 75,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::verify_recurrence"
+          ],
+          "is_route": false
+        },
+        "test_withheld_for_trial_excludes_neurons_delivered_in_the_session": {
+          "name": "test_withheld_for_trial_excludes_neurons_delivered_in_the_session",
+          "line": 86,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::withheld_for_trial"
+          ],
+          "is_route": false
+        },
+        "test_withheld_for_trial_dedupes_pathways_and_defaults_pretooluse_tool": {
+          "name": "test_withheld_for_trial_dedupes_pathways_and_defaults_pretooluse_tool",
+          "line": 105,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::withheld_for_trial"
+          ],
+          "is_route": false
+        },
+        "test_log_recurrence_round_trips_through_recurrence_events": {
+          "name": "test_log_recurrence_round_trips_through_recurrence_events",
+          "line": 120,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::log_recurrence",
+            "app.services.recurrence_watch::recurrence_events"
+          ],
+          "is_route": false
+        },
+        "test_recurrence_events_ignores_attribution_and_garbage_lines": {
+          "name": "test_recurrence_events_ignores_attribution_and_garbage_lines",
+          "line": 139,
+          "is_async": false,
+          "calls": [
+            "app.services.recurrence_watch::recurrence_events"
+          ],
+          "is_route": false
+        },
+        "test_distiller_parses_recurrence_nominations": {
+          "name": "test_distiller_parses_recurrence_nominations",
+          "line": 157,
+          "is_async": false,
+          "calls": [
+            "app.services.distiller::_parse_candidates"
+          ],
+          "is_route": false
+        },
+        "test_distiller_prompt_carries_the_third_task_and_failure_signature": {
+          "name": "test_distiller_prompt_carries_the_third_task_and_failure_signature",
+          "line": 171,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
       "llm_sites": []
     },
     "tests.test_reference_class": {
@@ -45162,6 +46093,7 @@
       "app.routers.integrity",
       "app.routers.janitor",
       "app.routers.lineage",
+      "app.routers.mind_metrics",
       "app.routers.neurons",
       "app.routers.proposals",
       "app.routers.provenance",
@@ -45190,6 +46122,7 @@
       "app.services.concept_service",
       "app.services.consolidation",
       "app.services.delivery_mode",
+      "app.services.delivery_plasticity",
       "app.services.distiller",
       "app.services.document_extractor",
       "app.services.edge_tier",
@@ -45258,6 +46191,7 @@
       "tests.test_citation_hopping",
       "tests.test_dedup_tools",
       "tests.test_delivery_mode",
+      "tests.test_delivery_plasticity",
       "tests.test_document_extractor",
       "tests.test_fusion_plan",
       "tests.test_fusionplan_render",
@@ -45357,7 +46291,8 @@
     ],
     "app.services.actions.edge_link": [
       "app.services.actions.init_registry",
-      "tests.test_edge_link_action"
+      "tests.test_edge_link_action",
+      "tests.test_maintenance_substrate"
     ],
     "app.services.actions.edge_rescale": [
       "app.services.actions.init_registry"
@@ -45411,6 +46346,7 @@
       "app.services.reconsolidation.apply",
       "app.services.seeding_service",
       "tests.test_horizontal_scaling",
+      "tests.test_maintenance_substrate",
       "tests.test_spread_overrides",
       "tests.test_spread_vectorized"
     ],
@@ -45469,11 +46405,17 @@
       "tests.test_delivery_mode",
       "tests.test_reference_class"
     ],
+    "app.services.delivery_plasticity": [
+      "app.routers.mind_metrics",
+      "app.services.mind_janitors",
+      "tests.test_delivery_plasticity"
+    ],
     "app.services.distiller": [
       "app.routers.distill",
       "app.services.memory_quality_auditor",
       "tests.test_distiller",
-      "tests.test_injection_channel"
+      "tests.test_injection_channel",
+      "tests.test_recurrence_watch"
     ],
     "app.services.document_extractor": [
       "app.routers.document_ingest",
@@ -45582,8 +46524,11 @@
     ],
     "app.services.injection_channel": [
       "app.routers.mind_metrics",
+      "app.services.delivery_plasticity",
       "app.services.distiller",
       "app.services.mind_metrics",
+      "app.services.recurrence_watch",
+      "tests.test_delivery_plasticity",
       "tests.test_injection_channel"
     ],
     "app.services.input_guard": [
@@ -45699,20 +46644,25 @@
       "tests.test_memory_quality_auditor"
     ],
     "app.services.mind_corpus": [
+      "app.routers.admin_graph_maintenance",
       "app.services.delivery_mode",
+      "app.services.delivery_plasticity",
+      "app.services.distiller",
+      "app.services.injection_channel",
       "app.services.mind_janitors",
       "app.services.mind_lint",
       "app.services.reconsolidation.plan",
+      "app.services.recurrence_watch",
       "app.services.skill_compiler",
+      "tests.test_injection_channel",
       "tests.test_maintenance_substrate",
+      "tests.test_recurrence_watch",
       "tests.test_reference_class"
     ],
     "app.services.mind_janitors": [
       "app.routers.auditor",
       "app.routers.compile",
       "app.routers.janitor",
-      "app.services.distiller",
-      "app.services.injection_channel",
       "app.services.lesson_store",
       "app.services.memory_quality_auditor",
       "app.services.mind_metrics",
@@ -45720,7 +46670,6 @@
       "eval.locomo.analysis.step04_live_janitor_probe2",
       "eval.locomo.run_locomo",
       "tests.replay_nvm_throwaway",
-      "tests.test_injection_channel",
       "tests.test_maintenance_substrate",
       "tests.test_memory_quality_auditor",
       "tests.test_reconsolidation_apply",
@@ -46011,6 +46960,11 @@
       "tests.test_maintenance_substrate",
       "tests.test_reconsolidation_apply",
       "tests.test_reconsolidation_kernel"
+    ],
+    "app.services.recurrence_watch": [
+      "app.services.delivery_plasticity",
+      "app.services.distiller",
+      "tests.test_recurrence_watch"
     ],
     "app.services.redaction": [
       "app.services.memory_quality_auditor",
@@ -46381,6 +47335,7 @@
     "app.routers.mind_metrics": [
       "app.services.claude_usage",
       "app.services.codex_usage",
+      "app.services.delivery_plasticity",
       "app.services.injection_channel",
       "app.services.locomo_run_status",
       "app.services.mind_metrics"
@@ -46532,12 +47487,19 @@
       "app.services.mind_corpus",
       "app.services.reference_class"
     ],
+    "app.services.delivery_plasticity": [
+      "app.models",
+      "app.services.injection_channel",
+      "app.services.mind_corpus",
+      "app.services.recurrence_watch"
+    ],
     "app.services.distiller": [
       "app.models",
       "app.services.injection_channel",
       "app.services.lesson_store",
       "app.services.llm_provider",
-      "app.services.mind_janitors"
+      "app.services.mind_corpus",
+      "app.services.recurrence_watch"
     ],
     "app.services.document_extractor": [
       "app.agents",
@@ -46665,6 +47627,7 @@
     "app.services.mind_janitors": [
       "app.models",
       "app.services.delivery_mode",
+      "app.services.delivery_plasticity",
       "app.services.integrity.conflict_monitor",
       "app.services.llm_provider",
       "app.services.mind_corpus",
@@ -46811,6 +47774,10 @@
     ],
     "app.services.reconsolidation.validators": [
       "app.services.reconsolidation.plan"
+    ],
+    "app.services.recurrence_watch": [
+      "app.services.injection_channel",
+      "app.services.mind_corpus"
     ],
     "app.services.reference_hooks": [
       "app.models",
@@ -47063,6 +48030,11 @@
       "app.services.delivery_mode",
       "app.services.skill_compiler"
     ],
+    "tests.test_delivery_plasticity": [
+      "app.models",
+      "app.services.delivery_plasticity",
+      "app.services.injection_channel"
+    ],
     "tests.test_distiller": [
       "app.services.distiller"
     ],
@@ -47157,6 +48129,7 @@
       "app.services.llm_provider"
     ],
     "tests.test_maintenance_substrate": [
+      "app.services.adjacency_cache",
       "app.services.mind_corpus",
       "app.services.reconsolidation.inheritance",
       "app.services.reconsolidation.plan",
@@ -47259,6 +48232,10 @@
       "app.services.reconsolidation.plan",
       "app.services.reconsolidation.review",
       "app.services.reconsolidation.validators"
+    ],
+    "tests.test_recurrence_watch": [
+      "app.services.distiller",
+      "app.services.recurrence_watch"
     ],
     "tests.test_reference_class": [
       "app.routers.admin",
@@ -49275,9 +50252,13 @@
       "imports_reachable": [
         "app.config",
         "app.database",
+        "app.middleware.rbac",
         "app.models",
+        "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.mind_corpus",
+        "app.services.reference_class",
         "app.services.semantic_prefilter"
       ],
       "calls_reachable": [
@@ -49292,15 +50273,19 @@
       "full_path": "/admin/embed-neurons",
       "mounted_on": "router",
       "handler": "embed_neurons",
-      "line": 121,
+      "line": 130,
       "module": "app.routers.admin_graph_maintenance",
       "file": "backend/app/routers/admin_graph_maintenance.py",
       "imports_reachable": [
         "app.config",
         "app.database",
+        "app.middleware.rbac",
         "app.models",
+        "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.mind_corpus",
+        "app.services.reference_class",
         "app.services.semantic_prefilter"
       ],
       "calls_reachable": [
@@ -49321,9 +50306,13 @@
       "imports_reachable": [
         "app.config",
         "app.database",
+        "app.middleware.rbac",
         "app.models",
+        "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.mind_corpus",
+        "app.services.reference_class",
         "app.services.semantic_prefilter"
       ],
       "calls_reachable": [
@@ -49758,6 +50747,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -49786,6 +50776,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -49804,6 +50795,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -49832,6 +50824,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -49862,6 +50855,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -49890,6 +50884,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -49908,6 +50903,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -49936,6 +50932,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -49966,6 +50963,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -49994,6 +50992,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -50012,6 +51011,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -50040,6 +51040,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -50070,6 +51071,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -50098,6 +51100,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -50116,6 +51119,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -50144,6 +51148,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -50175,9 +51180,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50200,6 +51207,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50218,9 +51226,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50243,6 +51253,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50273,9 +51284,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50298,6 +51311,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50316,9 +51330,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50341,6 +51357,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50371,9 +51388,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50396,6 +51415,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50414,9 +51434,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50439,6 +51461,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50469,9 +51492,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50494,6 +51519,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50512,9 +51538,11 @@
         "app.services.capability_capsule",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50537,6 +51565,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50732,9 +51761,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50755,6 +51786,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50768,9 +51800,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50791,6 +51825,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50817,9 +51852,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50840,6 +51877,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50853,9 +51891,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -50876,6 +51916,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50904,6 +51945,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -50931,6 +51973,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -50948,6 +51991,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -50975,6 +52019,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -51004,6 +52049,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -51031,6 +52077,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -51048,6 +52095,7 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -51075,6 +52123,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53216,7 +54265,7 @@
       "full_path": "/janitor/as-of/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_as_of",
-      "line": 124,
+      "line": 125,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -53227,9 +54276,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53250,6 +54301,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53261,9 +54313,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53284,6 +54338,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53297,7 +54352,7 @@
       "full_path": "/janitor/corpus-health",
       "mounted_on": "router",
       "handler": "corpus_health_report",
-      "line": 65,
+      "line": 66,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -53308,9 +54363,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53331,6 +54388,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53342,9 +54400,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53365,6 +54425,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53378,7 +54439,7 @@
       "full_path": "/janitor/history/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_history",
-      "line": 82,
+      "line": 83,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -53389,9 +54450,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53412,6 +54475,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53423,9 +54487,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53446,6 +54512,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53470,9 +54537,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53493,6 +54562,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53504,9 +54574,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53527,6 +54599,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53551,9 +54624,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53574,6 +54649,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53585,9 +54661,11 @@
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -53608,6 +54686,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
@@ -53770,6 +54849,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -53800,6 +54880,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -53822,6 +54903,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -53852,6 +54934,125 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
+        "app.services.redaction",
+        "app.services.reference_class",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.seeding_service",
+        "app.services.semantic_prefilter",
+        "app.services.synaptic_learning",
+        "app.services.write_gate"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/mind/delivery-pathways",
+      "prefix": "/metrics",
+      "full_path": "/metrics/mind/delivery-pathways",
+      "mounted_on": "router",
+      "handler": "mind_delivery_pathways",
+      "line": 119,
+      "module": "app.routers.mind_metrics",
+      "file": "backend/app/routers/mind_metrics.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.bootstrap_service",
+        "app.services.claude_usage",
+        "app.services.clustering",
+        "app.services.codex_usage",
+        "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
+        "app.services.distiller",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.evidence_frame",
+        "app.services.injection_channel",
+        "app.services.integrity",
+        "app.services.integrity.conflict_monitor",
+        "app.services.integrity.similarity",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.locomo_run_status",
+        "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
+        "app.services.mind_janitors",
+        "app.services.mind_lint",
+        "app.services.mind_metrics",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.proposal_apply_service",
+        "app.services.recall_lanes",
+        "app.services.reconsolidation.fingerprints",
+        "app.services.reconsolidation.inheritance",
+        "app.services.reconsolidation.lifecycle",
+        "app.services.reconsolidation.loaders",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "app.services.reconsolidation.rewiring",
+        "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
+        "app.services.redaction",
+        "app.services.reference_class",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.seeding_service",
+        "app.services.semantic_prefilter",
+        "app.services.skill_compiler",
+        "app.services.skill_projection",
+        "app.services.synaptic_learning",
+        "app.services.write_gate",
+        "app.tenant"
+      ],
+      "calls_reachable": [
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.bootstrap_service",
+        "app.services.claude_usage",
+        "app.services.clustering",
+        "app.services.codex_usage",
+        "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
+        "app.services.distiller",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.evidence_frame",
+        "app.services.injection_channel",
+        "app.services.integrity",
+        "app.services.integrity.conflict_monitor",
+        "app.services.integrity.similarity",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.locomo_run_status",
+        "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
+        "app.services.mind_janitors",
+        "app.services.mind_lint",
+        "app.services.mind_metrics",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.proposal_apply_service",
+        "app.services.recall_lanes",
+        "app.services.reconsolidation.fingerprints",
+        "app.services.reconsolidation.inheritance",
+        "app.services.reconsolidation.lifecycle",
+        "app.services.reconsolidation.loaders",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "app.services.reconsolidation.rewiring",
+        "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -53884,6 +55085,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -53914,6 +55116,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -53936,6 +55139,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -53966,6 +55170,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -53998,6 +55203,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54028,6 +55234,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54050,6 +55257,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54080,6 +55288,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54112,6 +55321,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54142,6 +55352,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54164,6 +55375,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54194,6 +55406,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54226,6 +55439,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54256,6 +55470,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54278,6 +55493,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54308,6 +55524,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54325,7 +55542,7 @@
       "full_path": "/metrics/mind/skills",
       "mounted_on": "router",
       "handler": "mind_skills",
-      "line": 119,
+      "line": 173,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -54340,6 +55557,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54370,6 +55588,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54392,6 +55611,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54422,6 +55642,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54454,6 +55675,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54484,6 +55706,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54506,6 +55729,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54536,6 +55760,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54568,6 +55793,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54598,6 +55824,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54620,6 +55847,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54650,6 +55878,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54682,6 +55911,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54712,6 +55942,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -54734,6 +55965,7 @@
         "app.services.clustering",
         "app.services.codex_usage",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -54764,6 +55996,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.redaction",
         "app.services.reference_class",
         "app.services.region_policy",
@@ -58325,6 +59558,7 @@
         "app.services.clustering",
         "app.services.concept_service",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_parser",
         "app.services.ecfr_client",
         "app.services.edge_tier",
@@ -58334,6 +59568,7 @@
         "app.services.evidence_frame",
         "app.services.executor",
         "app.services.inhibitory_service",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58378,6 +59613,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_detector",
         "app.services.reference_ingest",
@@ -58408,6 +59644,7 @@
         "app.services.clustering",
         "app.services.concept_service",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_parser",
         "app.services.ecfr_client",
         "app.services.edge_tier",
@@ -58417,6 +59654,7 @@
         "app.services.evidence_frame",
         "app.services.executor",
         "app.services.inhibitory_service",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58458,6 +59696,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_detector",
         "app.services.reference_ingest",
@@ -58497,6 +59736,7 @@
         "app.services.clustering",
         "app.services.concept_service",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_parser",
         "app.services.ecfr_client",
         "app.services.edge_tier",
@@ -58506,6 +59746,7 @@
         "app.services.evidence_frame",
         "app.services.executor",
         "app.services.inhibitory_service",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58550,6 +59791,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_detector",
         "app.services.reference_ingest",
@@ -58580,6 +59822,7 @@
         "app.services.clustering",
         "app.services.concept_service",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_parser",
         "app.services.ecfr_client",
         "app.services.edge_tier",
@@ -58589,6 +59832,7 @@
         "app.services.evidence_frame",
         "app.services.executor",
         "app.services.inhibitory_service",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58630,6 +59874,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_detector",
         "app.services.reference_ingest",
@@ -58675,11 +59920,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.proposals",
@@ -58703,6 +59950,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -58724,11 +59972,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58751,6 +60001,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -58790,11 +60041,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.proposals",
@@ -58818,6 +60071,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -58839,11 +60093,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58866,6 +60122,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -58905,11 +60162,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.proposals",
@@ -58933,6 +60192,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -58954,11 +60214,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -58981,6 +60243,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -59020,11 +60283,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.proposals",
@@ -59048,6 +60313,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -59069,11 +60335,13 @@
         "app.services.bootstrap_service",
         "app.services.clustering",
         "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
         "app.services.document_extractor",
         "app.services.document_parser",
         "app.services.edge_tier",
         "app.services.embedding_service",
         "app.services.evidence_frame",
+        "app.services.injection_channel",
         "app.services.integrity",
         "app.services.integrity.conflict_monitor",
         "app.services.integrity.similarity",
@@ -59096,6 +60364,7 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
         "app.services.reference_class",
         "app.services.reference_ingest",
         "app.services.region_policy",
@@ -60062,6 +61331,7 @@
     {
       "module": "tests.test_delivery_mode",
       "entrypoints": [
+        "test_a_countersign_retired_capsule_pathway_is_compiled_out",
         "test_all_retrievable_is_a_real_verdict_not_a_skip",
         "test_charter_renders_only_standing_neurons",
         "test_classification_never_touches_authority_or_activity",

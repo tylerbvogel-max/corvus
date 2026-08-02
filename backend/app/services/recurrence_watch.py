@@ -36,13 +36,17 @@ import os
 import re
 from datetime import datetime
 
-from app.services.distiller import _CORROBORATION_STOPWORDS, _corroborated
 from app.services.injection_channel import (
     LEGACY_PRE_TOOL,
     PRE_TOOL_TRIGGER,
     _parse_ts,
 )
-from app.services.mind_corpus import ACTIONS_LOG, _log_action
+from app.services.mind_corpus import (
+    ACTIONS_LOG,
+    _CORROBORATION_STOPWORDS,
+    _corroborated,
+    _log_action,
+)
 
 RECURRENCE_ACTION = "recurrence.verified"
 
@@ -59,8 +63,8 @@ def verify_recurrence(citation: str, lesson_text: str,
     """The deterministic admission gate. TWO checks, both required:
 
     1. The cited event really happened — concrete tokens from the citation
-       appear in the session's actual tool events (the distiller's
-       _corroborated backstop, reused verbatim).
+       appear in the session's actual tool events (the shared
+       deeds-corroborated backstop from mind_corpus, reused verbatim).
     2. The event is THIS lesson's documented failure mode — the citation
        shares concrete tokens with the lesson's own text (label + content,
        which carries the failure signature on post-ship lessons).

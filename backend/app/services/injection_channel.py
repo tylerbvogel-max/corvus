@@ -39,7 +39,11 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from app.services.mind_janitors import ACTIONS_LOG, EPISODE_DIR
+# Substrate names come from the substrate module (record 04b): importing
+# them through the mind_janitors re-export dragged the whole scheduler —
+# and, since delivery plasticity, its lazy edge back into this module's
+# importers — into an import cycle the budget refuses.
+from app.services.mind_corpus import ACTIONS_LOG, EPISODE_DIR
 
 STANDING = "standing"
 RETRIEVED = "retrieved"

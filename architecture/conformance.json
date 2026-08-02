@@ -28,36 +28,36 @@
     ]
   },
   "totals": {
-    "modules": 377,
+    "modules": 383,
     "frontend_files": 74,
-    "units": 451,
-    "classified": 451,
+    "units": 457,
+    "classified": 457,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
     "coverage_pct": 100.0,
-    "boxes": 17,
+    "boxes": 18,
     "phantom_boxes": 0,
-    "invariants": 15,
+    "invariants": 17,
     "violated": 0,
-    "unchecked": 5,
-    "processes": 22,
+    "unchecked": 6,
+    "processes": 23,
     "process_evidence_errors": 0,
     "authored_evidence_errors": 0,
     "runtime_nodes": 10,
     "memory_engine_zones": 6,
     "bounded_contexts": 9,
-    "decisions": 11,
+    "decisions": 12,
     "deployments": 3,
     "fitness_regressions": 0,
     "parse_errors": 0
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "8e473dcf2f5b53c0d9a419a0ea2f782fe23b2b08fbb0c24de04a8aa5e860e0af",
-    "current_fingerprint": "8e473dcf2f5b53c0d9a419a0ea2f782fe23b2b08fbb0c24de04a8aa5e860e0af",
-    "stored_files": 451,
-    "current_files": 451
+    "stored_fingerprint": "d80e5cc58df61c7b8d9364b55918f7171ee09dd5e7d86657cbd5028f85c4712d",
+    "current_fingerprint": "d80e5cc58df61c7b8d9364b55918f7171ee09dd5e7d86657cbd5028f85c4712d",
+    "stored_files": 457,
+    "current_files": 457
   },
   "manifest_problems": [],
   "boxes": [
@@ -88,7 +88,7 @@
       "confidence": "reviewed",
       "module_count": 13,
       "frontend_file_count": 0,
-      "loc": 2796,
+      "loc": 2880,
       "routes": 4,
       "modules": [
         "app.mcp_http",
@@ -311,7 +311,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 1514,
+      "loc": 1561,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -386,7 +386,7 @@
       "confidence": "reviewed",
       "module_count": 33,
       "frontend_file_count": 0,
-      "loc": 10692,
+      "loc": 10756,
       "routes": 57,
       "modules": [
         "app.routers.admin",
@@ -426,6 +426,22 @@
       "frontend_files": []
     },
     {
+      "id": "delivery-plasticity",
+      "name": "Delivery plasticity and recurrence watch",
+      "tier": "background",
+      "purpose": "Close the attribution loop as a reflex \u2014 habituate unrewarded delivery pathways as controlled trials of absence, restore on exogenous evidence (probe rewards, verified recurrences), and refuse tier-2 retirement without trial evidence.",
+      "confidence": "reviewed",
+      "module_count": 2,
+      "frontend_file_count": 0,
+      "loc": 804,
+      "routes": 0,
+      "modules": [
+        "app.services.delivery_plasticity",
+        "app.services.recurrence_watch"
+      ],
+      "frontend_files": []
+    },
+    {
       "id": "skill-projection",
       "name": "Skill, charter, and self-model projection",
       "tier": "background",
@@ -433,7 +449,7 @@
       "confidence": "reviewed",
       "module_count": 4,
       "frontend_file_count": 0,
-      "loc": 776,
+      "loc": 794,
       "routes": 2,
       "modules": [
         "app.routers.compile",
@@ -497,8 +513,8 @@
       "confidence": "reviewed",
       "module_count": 31,
       "frontend_file_count": 0,
-      "loc": 6261,
-      "routes": 16,
+      "loc": 6315,
+      "routes": 17,
       "modules": [
         "app.routers.eval_runs",
         "app.routers.labs",
@@ -540,9 +556,9 @@
       "tier": "infra",
       "purpose": "Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.",
       "confidence": "reviewed",
-      "module_count": 66,
+      "module_count": 67,
       "frontend_file_count": 0,
-      "loc": 7890,
+      "loc": 7998,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -570,6 +586,7 @@
         "alembic.versions.023_drop_agency_lab",
         "alembic.versions.024_cache_coherence",
         "alembic.versions.025_standard_date_seed",
+        "alembic.versions.026_delivery_pathways",
         "alembic.versions.ae144af9c1e1_initial_schema_baseline",
         "app",
         "app.config",
@@ -639,9 +656,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 103,
+      "module_count": 106,
       "frontend_file_count": 0,
-      "loc": 21199,
+      "loc": 22242,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -682,6 +699,7 @@
         "tests.test_concept_governance",
         "tests.test_dedup_tools",
         "tests.test_delivery_mode",
+        "tests.test_delivery_plasticity",
         "tests.test_distiller",
         "tests.test_document_extractor",
         "tests.test_edge_link_action",
@@ -715,6 +733,7 @@
         "tests.test_operations_audit_log",
         "tests.test_oracle_funnel_artifacts",
         "tests.test_output_guard",
+        "tests.test_pathway_writers",
         "tests.test_pipeline_runner",
         "tests.test_primary_answer_overrides",
         "tests.test_prompt_assembler",
@@ -728,6 +747,7 @@
         "tests.test_reconsolidation_apply",
         "tests.test_reconsolidation_contract",
         "tests.test_reconsolidation_kernel",
+        "tests.test_recurrence_watch",
         "tests.test_reference_class",
         "tests.test_region_policy",
         "tests.test_regulatory_coverage",
@@ -755,6 +775,10 @@
   "unclassified": [],
   "violations": [],
   "unchecked_invariants": [
+    {
+      "id": "trial-before-retirement",
+      "statement": "The distiller's attribution verdicts only nominate; no automatic outcome acts on them alone. Suppressed pathways keep a positive delivery floor (probe 1-in-k, never zero), zero-false-kills is computed from token-verified recurrence events rather than reward absence, and a tier-2 retirement proposal is refused unless it carries withheld-trial evidence with zero recurrences. Enforced executably by test_delivery_plasticity.py and test_recurrence_watch.py."
+    },
     {
       "id": "horizontal-cache-coherence",
       "statement": "Horizontal recall uses PostgreSQL-canonical firing aggregates and bounded graph frontiers; its only retained graph-derived replica is revision-checked and history-bounded, and canonical startup mutations are serialized across workers."
@@ -889,7 +913,7 @@
       "kind": "datastore",
       "status": "active",
       "when": "Hook delivery/capture, maintenance ledgers, eval artifacts, and cache projection",
-      "purpose": "Fast harness-facing episode logs, attribution receipts, compiled manifest, reports, and planning cache.",
+      "purpose": "Fast harness-facing episode logs, attribution receipts, compiled manifest, reports, planning cache, and the delivery-pathway suppression projection the inject hook reads at delivery time.",
       "technology": "JSONL, JSON, atomic file replacement under ~/.corvus-mind",
       "evidence": [
         "harness/claude-code/episode_hook.py",
@@ -1127,7 +1151,8 @@
         "details": [
           "SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, and Stop hooks drive delivery and capture.",
           "PostToolUse and Stop append redacted episode JSONL under the local Corvus memory directory.",
-          "Thin MCP clients call backend HTTP endpoints; capture itself is not performed inside FastAPI."
+          "Thin MCP clients call backend HTTP endpoints; capture itself is not performed inside FastAPI.",
+          "Retrieved-lane hits pass a habituation pathway gate read from a filesystem projection \u2014 suppressed pathways deliver a deterministic 1-in-k probe and log everything else on the Injection record's `withheld` sibling list, keeping the hot path filesystem-only."
         ],
         "evidence": [
           "harness/claude-code/memory_inject_hook.py",
@@ -1255,13 +1280,16 @@
         "details": [
           "Janitors prune firing history, decay utility, inspect staleness, classify delivery, and queue reviewable deduplication or reconsolidation work.",
           "Pair and cross-scope judgment request the sonnet capability grade, which resolves to Codex Terra by default; canonical synthesis and the doubt auditor request the opus grade.",
-          "Deduplication and reconsolidation remain human-gated; successful graph changes refresh skills and standing-policy projections."
+          "Deduplication and reconsolidation remain human-gated; successful graph changes refresh skills and standing-policy projections.",
+          "Delivery plasticity folds episode deliveries, withholdings, attribution verdicts, and verified recurrences into per-pathway habituation state; attenuation is a controlled trial of absence with a probe floor, and retirement is human-countersigned with causal trial evidence."
         ],
         "evidence": [
           "backend/app/services/consolidation.py",
           "backend/app/services/mind_janitors.py",
           "backend/app/services/reconsolidation/review.py",
           "backend/app/services/memory_quality_auditor.py",
+          "backend/app/services/delivery_plasticity.py",
+          "backend/app/services/recurrence_watch.py",
           "backend/app/services/skill_compiler.py",
           "backend/app/services/llm_provider.py"
         ],
@@ -1280,6 +1308,14 @@
           },
           {
             "evidence": "backend/app/services/memory_quality_auditor.py",
+            "exists": true
+          },
+          {
+            "evidence": "backend/app/services/delivery_plasticity.py",
+            "exists": true
+          },
+          {
+            "evidence": "backend/app/services/recurrence_watch.py",
             "exists": true
           },
           {
@@ -1417,6 +1453,26 @@
           },
           {
             "evidence": "backend/app/services/llm_provider.py",
+            "exists": true
+          }
+        ],
+        "evidence_ok": true
+      },
+      {
+        "id": "pathway-habituation",
+        "label": "Delivery habituation",
+        "value": "Attenuation is a controlled trial of absence, not a verdict \u2014 the binomial tail nominates, exogenous evidence (probe rewards, token-verified recurrences of the suppressed lesson's failure) decides, and zero-false-kills is recurrence-grounded so the attribution proxy never grades itself.",
+        "evidence": [
+          "backend/app/services/delivery_plasticity.py",
+          "backend/app/services/recurrence_watch.py"
+        ],
+        "evidence_results": [
+          {
+            "evidence": "backend/app/services/delivery_plasticity.py",
+            "exists": true
+          },
+          {
+            "evidence": "backend/app/services/recurrence_watch.py",
             "exists": true
           }
         ],
@@ -1838,12 +1894,13 @@
       "name": "Learning, maintenance, and projection",
       "kind": "core",
       "purpose": "Convert situated evidence into reusable lessons, measure use, repair memory health, and project trusted clusters into harness capabilities.",
-      "ownership": "Owns distillation, lesson construction, attribution, janitors, doubt audits, reconsolidation, skill compilation, charter, and self-model projection.",
+      "ownership": "Owns distillation, lesson construction, attribution, janitors, doubt audits, reconsolidation, delivery plasticity, skill compilation, charter, and self-model projection.",
       "concepts": [
         "Distillation candidate",
         "Lesson evidence frame",
         "Reinforcement / contradiction",
         "Consolidation and reconsolidation",
+        "Delivery-pathway trial of absence",
         "Compiled skill and standing capsule"
       ],
       "canonical_state": [
@@ -1853,11 +1910,13 @@
       "invariants": [
         "Injected lessons are not re-extracted as new evidence.",
         "Skills compile only from eligible active lesson clusters.",
-        "Filesystem projections are generated from canonical graph state and remain retractable."
+        "Filesystem projections are generated from canonical graph state and remain retractable.",
+        "No delivery-pathway state reaches zero probability; pathway retirement requires human countersign plus withheld-trial evidence with zero recurrences."
       ],
       "components": [
         "memory-ingestion",
         "maintenance-integrity",
+        "delivery-plasticity",
         "skill-projection"
       ],
       "integrates_with": [
@@ -2833,6 +2892,59 @@
         }
       ],
       "evidence_ok": true
+    },
+    {
+      "id": "ADR-012",
+      "title": "Demote the attribution proxy to triage; trials of absence decide",
+      "status": "accepted",
+      "recorded": "2026-08-02",
+      "context": "Delivery plasticity wired distiller verdicts (which see only VISIBLE reliance) to an actuator \u2014 a survivor-bias ratchet tightened its own threshold, exculpatory evidence accrued at probe speed while condemnation ran full speed, and \"zero false kills\" was audited against the proxy's own rewards; prevention-style value is invisible in transcripts.",
+      "decision": "The binomial tail only nominates. Attenuation is a controlled trial of absence with exogenous endpoints \u2014 probe rewards restore, and token-verified recurrences of a withheld lesson's documented failure restore plus book verified-false-kill receipts. Zero-false-kills is recurrence-grounded, tier-2 retirement requires causal trial evidence, and the contemplated base-rate drift monitor is deliberately not built.",
+      "consequences": [
+        "A biased nomination wastes a cheap reversible trial instead of farming cobras; the ratchet becomes benign.",
+        "Withheld logging on Injection records is load-bearing infrastructure \u2014 without the denominator the trial is theater.",
+        "Nothing retires without observed withholding and zero recurrences; the human countersigns an experiment's result, not the distiller's opinion.",
+        "A missed recurrence is the safe direction \u2014 trial continues, exploration floor intact; vague legacy lessons simply enjoy stronger protection."
+      ],
+      "alternatives": [
+        "Keep verdict-driven retirement and bolt on a base-rate drift monitor.",
+        "Give up on habituation and leave delivery-yield improvement human-driven.",
+        "Judge recurrences with a second model instead of a deterministic token gate."
+      ],
+      "record": "architecture/decisions/ADR-012-trial-of-absence.md",
+      "bounded_contexts": [
+        "learning-maintenance",
+        "trust-governance"
+      ],
+      "evidence": [
+        "backend/app/services/delivery_plasticity.py",
+        "backend/app/services/recurrence_watch.py",
+        "harness/claude-code/memory_inject_hook.py",
+        "backend/tests/test_recurrence_watch.py"
+      ],
+      "evidence_results": [
+        {
+          "evidence": "backend/app/services/delivery_plasticity.py",
+          "exists": true
+        },
+        {
+          "evidence": "backend/app/services/recurrence_watch.py",
+          "exists": true
+        },
+        {
+          "evidence": "harness/claude-code/memory_inject_hook.py",
+          "exists": true
+        },
+        {
+          "evidence": "backend/tests/test_recurrence_watch.py",
+          "exists": true
+        },
+        {
+          "evidence": "architecture/decisions/ADR-012-trial-of-absence.md",
+          "exists": true
+        }
+      ],
+      "evidence_ok": true
     }
   ],
   "processes": [
@@ -3246,16 +3358,38 @@
           "evidence_ok": true
         },
         {
+          "actor": "habituation pathway gate",
+          "component": "harness-transport",
+          "does": "Check each hit's (neuron, trigger, tool) pathway against the plasticity suppression projection; withhold suppressed pathways except the deterministic 1-in-k probe slot hashed from (session, pathway).",
+          "state_change": "Probe deliveries are stamped on the Injection record's `probes` list; suppressed hits land on its `withheld` sibling list \u2014 the denominator of the trial of absence, logged even when every hit was withheld.",
+          "guardrail": "A missing or corrupt projection fails open (deliver); no pathway state may reduce delivery probability to zero, and capsule standing content is never gated here.",
+          "evidence": [
+            "harness/claude-code/memory_inject_hook.py::_pathway_gate"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_pathway_gate",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
           "actor": "memory injection hook",
           "component": "harness-transport",
           "does": "Dedupe against prior injections/pointers in the episode log and render summaries as background facts, not instructions.",
-          "state_change": "Injection and SkillPointer JSONL events link delivered neurons to the recall query id.",
+          "state_change": "Injection and SkillPointer JSONL events link delivered neurons to the recall query id; withheld ids stay out of neuron_ids, dedupe, and attribution.",
           "guardrail": "Full memory bodies are never ambiently injected; detail stays pull-based.",
           "evidence": [
             "harness/claude-code/memory_inject_hook.py::_format_context",
             "harness/claude-code/memory_inject_hook.py::_log_injection"
           ],
-          "index": 5,
+          "index": 6,
           "evidence_results": [
             {
               "evidence": "harness/claude-code/memory_inject_hook.py::_format_context",
@@ -3296,16 +3430,25 @@
         {
           "actor": "memory injection hook",
           "component": "harness-transport",
-          "does": "Recall on the first 400 command characters with source=hook_pre_tool and project context.",
-          "state_change": "Successful delivery is appended to the episode log.",
-          "guardrail": "Non-Bash tools, short commands, low-score hits, and prior-session duplicates are ignored.",
+          "does": "Recall on the first 400 command characters with source=hook_pre_tool and project context, then apply the habituation pathway gate keyed per (neuron, PreToolUse, tool).",
+          "state_change": "Successful delivery is appended to the episode log; suppressed hits are logged withheld, probes stamped \u2014 same trial ledger as prompt delivery.",
+          "guardrail": "Non-Bash tools, short commands, low-score hits, and prior-session duplicates are ignored; the gate fails open.",
           "evidence": [
-            "harness/claude-code/memory_inject_hook.py::main"
+            "harness/claude-code/memory_inject_hook.py::main",
+            "harness/claude-code/memory_inject_hook.py::_pathway_gate"
           ],
           "index": 1,
           "evidence_results": [
             {
               "evidence": "harness/claude-code/memory_inject_hook.py::main",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_pathway_gate",
               "exists": true,
               "actual_component": "harness-transport",
               "component_ok": true,
@@ -3763,11 +3906,12 @@
       "trigger": "corvus-mind-distill.timer POSTs /distill/run",
       "cadence": "Timer opportunity every 30 minutes; only quiescent undistilled logs run, max five sessions by default",
       "why": "Convert noisy tool evidence and user corrections into durable, future-useful lessons while preventing self-reinforcement and agent-assertion pollution.",
-      "outcome": "Gate-passed candidates traverse the same lesson write path; attribution rewards/penalizes previously injected memories; successful logs receive markers.",
+      "outcome": "Gate-passed candidates traverse the same lesson write path; attribution rewards/penalizes previously injected memories; recurrence nominations for withheld lessons pass a deterministic admission gate; successful logs receive markers.",
       "through": [
         "harness-transport",
         "memory-ingestion",
-        "write-governance"
+        "write-governance",
+        "delivery-plasticity"
       ],
       "steps": [
         {
@@ -3877,6 +4021,59 @@
           "evidence_ok": true
         },
         {
+          "actor": "distiller recurrence check (third task)",
+          "component": "memory-ingestion",
+          "does": "Present lessons a delivery trial withheld from this session and ask whether each one's documented failure actually recurred in the log.",
+          "state_change": "None \u2014 nominations are model output, not decisions; refused ones are counted and dropped.",
+          "guardrail": "Only lessons never delivered anywhere in the session qualify; delivered-and-failed is contradiction evidence for the attribution lane, not trial harm.",
+          "evidence": [
+            "backend/app/services/distiller.py::distill_log"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/distiller.py::distill_log",
+              "exists": true,
+              "actual_component": "memory-ingestion",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "recurrence admission gate",
+          "component": "delivery-plasticity",
+          "does": "Admit a nomination only when its cited event token-matches both the actual episode events and the withheld lesson's own failure text, then log recurrence.verified per withheld pathway.",
+          "state_change": "Ground-truth false-kill evidence lands in the actions log for the plasticity fold to consume.",
+          "guardrail": "Uncited or unrelated nominations are refused (deeds-corroborated pattern); a missed match leaves the trial running with the pathway's floor intact \u2014 the safe failure direction.",
+          "evidence": [
+            "backend/app/services/recurrence_watch.py::verify_recurrence",
+            "backend/app/services/recurrence_watch.py::withheld_for_trial"
+          ],
+          "index": 6,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/recurrence_watch.py::verify_recurrence",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/recurrence_watch.py::withheld_for_trial",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
           "actor": "distiller",
           "component": "memory-ingestion",
           "does": "Commit and write a .distilled marker only after the session completes successfully.",
@@ -3885,7 +4082,7 @@
           "evidence": [
             "backend/app/services/distiller.py::run_distillation"
           ],
-          "index": 5,
+          "index": 7,
           "evidence_results": [
             {
               "evidence": "backend/app/services/distiller.py::run_distillation",
@@ -4055,10 +4252,11 @@
       "trigger": "corvus-mind-janitor.timer POSTs /janitor/run",
       "cadence": "Timer opportunity every 6 hours; decay and similar cadence-sensitive work use distilled-session evidence time",
       "why": "Prevent duplicate mass, stale facts, warm zombies, scope drift, stale approvals, and standing-policy drift from accumulating.",
-      "outcome": "Safe low-risk metadata changes apply; destructive/synthesis/reference promotion decisions become proposals; reports and change logs remain auditable.",
+      "outcome": "Safe low-risk metadata changes apply; destructive/synthesis/reference promotion decisions become proposals; delivery pathways habituate/restore with zero-false-kill accounting; reports and change logs remain auditable.",
       "through": [
         "maintenance-integrity",
         "write-governance",
+        "delivery-plasticity",
         "skill-projection"
       ],
       "steps": [
@@ -4178,6 +4376,46 @@
           "evidence_ok": true
         },
         {
+          "actor": "delivery plasticity fold",
+          "component": "delivery-plasticity",
+          "does": "Run last so it folds this cycle's attribution \u2014 episode deliveries, withholdings, verdicts, and verified recurrences become per-pathway counters; attenuate statistically dead pathways in rewarding channels, restore on probe rewards or recurrences (booking verified-false-kill incident receipts), and queue tier-2 retirement proposals carrying the trial as a causal claim.",
+          "state_change": "delivery_pathways states, the hot-path suppression projection, and false-kill receipts in the actions log update; the neuron itself is never touched.",
+          "guardrail": "Sole writer; binomial tail is triage only; young pathways are immune; no state reaches zero delivery probability; retirement requires an applied human countersign and trial_claim refuses proposals without withheld-trial evidence.",
+          "evidence": [
+            "backend/app/services/delivery_plasticity.py::run_plasticity",
+            "backend/app/services/delivery_plasticity.py::decide",
+            "backend/app/services/delivery_plasticity.py::trial_claim"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::run_plasticity",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::decide",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::trial_claim",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
           "actor": "post-reconsolidation projection refresh",
           "component": "skill-projection",
           "does": "Retract skills citing retired sources, deactivate graph shadows, and rebuild the charter when required.",
@@ -4186,7 +4424,7 @@
           "evidence": [
             "backend/app/services/skill_compiler.py::refresh_projections_after_reconsolidation"
           ],
-          "index": 5,
+          "index": 6,
           "evidence_results": [
             {
               "evidence": "backend/app/services/skill_compiler.py::refresh_projections_after_reconsolidation",
@@ -4194,6 +4432,162 @@
               "actual_component": "skill-projection",
               "component_ok": true,
               "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        }
+      ],
+      "evidence_errors": 0,
+      "evidence_ok": true
+    },
+    {
+      "id": "pathway-habituation-trial",
+      "name": "Run a delivery-pathway trial of absence",
+      "availability": "active",
+      "trigger": "The plasticity fold attenuates a (neuron, trigger, tool) pathway whose deliveries earn no rewards in a channel that rewards others",
+      "cadence": "Continuous once attenuated; one trial spans hook deliveries, distill cycles, and janitor passes until it resolves",
+      "why": "Attribution verdicts only see VISIBLE reliance, so unrewarded is not the same as useless \u2014 a prevented mistake leaves no transcript trace. Withholding is the only mechanism that can make prevention-value visible; the proxy nominates, the trial decides (mind-delivery-plasticity + mind-recurrence-watch).",
+      "outcome": "The pathway either earns restoration \u2014 a probe reward, or a verified recurrence of its lesson's documented failure that also books a first-class false-kill incident receipt \u2014 or accumulates clean trial evidence toward a human-countersigned retirement that still keeps a probe floor.",
+      "through": [
+        "delivery-plasticity",
+        "harness-transport",
+        "memory-ingestion",
+        "write-governance"
+      ],
+      "steps": [
+        {
+          "actor": "plasticity fold (nomination)",
+          "component": "delivery-plasticity",
+          "does": "Attenuate when P(0 rewards in n deliveries | channel base reward rate) falls below alpha, with n counted since the last exculpation and immunity for young pathways; project suppression state to the file the hook reads.",
+          "state_change": "Pathway state and the suppression projection change; the neuron itself keeps full graph standing and MCP recallability.",
+          "guardrail": "The binomial tail is triage, never a verdict \u2014 a channel that rewards nobody can never condemn (dead and starved must not look alike), and every transition is audit-logged.",
+          "evidence": [
+            "backend/app/services/delivery_plasticity.py::decide",
+            "backend/app/services/delivery_plasticity.py::write_projection"
+          ],
+          "index": 1,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::decide",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::write_projection",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "hook pathway gate (the experiment)",
+          "component": "harness-transport",
+          "does": "Withhold the suppressed pathway from most sessions and deliver a deterministic 1-in-k probe on the rest, logging both outcomes on the Injection record.",
+          "state_change": "The `withheld` sibling list accumulates the trial's denominator; `probes` marks deliveries that can earn dishabituation.",
+          "guardrail": "Fail open on missing projection; withheld ids never enter neuron_ids, session dedupe, or attribution; a trial without logged withholding is not evidence.",
+          "evidence": [
+            "harness/claude-code/memory_inject_hook.py::_pathway_gate",
+            "harness/claude-code/memory_inject_hook.py::_log_injection"
+          ],
+          "index": 2,
+          "evidence_results": [
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_pathway_gate",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_log_injection",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "distiller recurrence check",
+          "component": "memory-ingestion",
+          "does": "On each distill of a session that withheld the lesson, look for its documented failure mode actually recurring in the tool events.",
+          "state_change": "Nominations only \u2014 the model proposes, it never decides.",
+          "guardrail": "Lessons delivered anywhere in the session are excluded; delivered-and-failed routes to the contradiction lane instead.",
+          "evidence": [
+            "backend/app/services/distiller.py::distill_log"
+          ],
+          "index": 3,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/distiller.py::distill_log",
+              "exists": true,
+              "actual_component": "memory-ingestion",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "recurrence admission and fold actuation",
+          "component": "delivery-plasticity",
+          "does": "Token-verify each nomination against the episode log AND the lesson's own failure text; on admission the next fold restores the pathway, books a plasticity.false_kill receipt, anchors the exculpation clock so the restore is not undone, and supersedes any pending retirement proposal.",
+          "state_change": "Verified false kills surface first-class in the janitor report and the delivery-pathways metrics \u2014 computed from recurrence events, never reward absence.",
+          "guardrail": "The proxy that nominates never grades its own outcomes; a missed recurrence is the safe direction (trial continues, floor intact). The base-rate drift monitor was deliberately not built \u2014 triage-only nomination makes that ratchet benign.",
+          "evidence": [
+            "backend/app/services/recurrence_watch.py::verify_recurrence",
+            "backend/app/services/delivery_plasticity.py::run_plasticity"
+          ],
+          "index": 4,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/recurrence_watch.py::verify_recurrence",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::run_plasticity",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "tier-2 countersign",
+          "component": "write-governance",
+          "does": "Review a retirement proposal whose body is a causal claim \u2014 sessions withheld with window, probes fired and their outcomes, recurrence count zero \u2014 rather than a verdict-shaped statistical argument.",
+          "state_change": "Only an APPLIED proposal lets the sole writer retire the pathway; even retired keeps a small probe floor and reopens on new evidence.",
+          "guardrail": "Proposals without trial evidence are refused before staging; a rejected proposal blocks re-proposal; a recurrence during retire-proposed supersedes it.",
+          "evidence": [
+            "backend/app/services/proposal_apply_service.py"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/proposal_apply_service.py",
+              "exists": true,
+              "actual_component": "write-governance",
+              "component_ok": true,
+              "symbol_ok": null,
               "ok": true
             }
           ],
@@ -5902,16 +6296,38 @@
           "evidence_ok": true
         },
         {
+          "actor": "habituation pathway gate",
+          "component": "harness-transport",
+          "does": "Check each hit's (neuron, trigger, tool) pathway against the plasticity suppression projection; withhold suppressed pathways except the deterministic 1-in-k probe slot hashed from (session, pathway).",
+          "state_change": "Probe deliveries are stamped on the Injection record's `probes` list; suppressed hits land on its `withheld` sibling list \u2014 the denominator of the trial of absence, logged even when every hit was withheld.",
+          "guardrail": "A missing or corrupt projection fails open (deliver); no pathway state may reduce delivery probability to zero, and capsule standing content is never gated here.",
+          "evidence": [
+            "harness/claude-code/memory_inject_hook.py::_pathway_gate"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_pathway_gate",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
           "actor": "memory injection hook",
           "component": "harness-transport",
           "does": "Dedupe against prior injections/pointers in the episode log and render summaries as background facts, not instructions.",
-          "state_change": "Injection and SkillPointer JSONL events link delivered neurons to the recall query id.",
+          "state_change": "Injection and SkillPointer JSONL events link delivered neurons to the recall query id; withheld ids stay out of neuron_ids, dedupe, and attribution.",
           "guardrail": "Full memory bodies are never ambiently injected; detail stays pull-based.",
           "evidence": [
             "harness/claude-code/memory_inject_hook.py::_format_context",
             "harness/claude-code/memory_inject_hook.py::_log_injection"
           ],
-          "index": 5,
+          "index": 6,
           "evidence_results": [
             {
               "evidence": "harness/claude-code/memory_inject_hook.py::_format_context",
@@ -5952,16 +6368,25 @@
         {
           "actor": "memory injection hook",
           "component": "harness-transport",
-          "does": "Recall on the first 400 command characters with source=hook_pre_tool and project context.",
-          "state_change": "Successful delivery is appended to the episode log.",
-          "guardrail": "Non-Bash tools, short commands, low-score hits, and prior-session duplicates are ignored.",
+          "does": "Recall on the first 400 command characters with source=hook_pre_tool and project context, then apply the habituation pathway gate keyed per (neuron, PreToolUse, tool).",
+          "state_change": "Successful delivery is appended to the episode log; suppressed hits are logged withheld, probes stamped \u2014 same trial ledger as prompt delivery.",
+          "guardrail": "Non-Bash tools, short commands, low-score hits, and prior-session duplicates are ignored; the gate fails open.",
           "evidence": [
-            "harness/claude-code/memory_inject_hook.py::main"
+            "harness/claude-code/memory_inject_hook.py::main",
+            "harness/claude-code/memory_inject_hook.py::_pathway_gate"
           ],
           "index": 1,
           "evidence_results": [
             {
               "evidence": "harness/claude-code/memory_inject_hook.py::main",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_pathway_gate",
               "exists": true,
               "actual_component": "harness-transport",
               "component_ok": true,
@@ -6419,11 +6844,12 @@
       "trigger": "corvus-mind-distill.timer POSTs /distill/run",
       "cadence": "Timer opportunity every 30 minutes; only quiescent undistilled logs run, max five sessions by default",
       "why": "Convert noisy tool evidence and user corrections into durable, future-useful lessons while preventing self-reinforcement and agent-assertion pollution.",
-      "outcome": "Gate-passed candidates traverse the same lesson write path; attribution rewards/penalizes previously injected memories; successful logs receive markers.",
+      "outcome": "Gate-passed candidates traverse the same lesson write path; attribution rewards/penalizes previously injected memories; recurrence nominations for withheld lessons pass a deterministic admission gate; successful logs receive markers.",
       "through": [
         "harness-transport",
         "memory-ingestion",
-        "write-governance"
+        "write-governance",
+        "delivery-plasticity"
       ],
       "steps": [
         {
@@ -6533,6 +6959,59 @@
           "evidence_ok": true
         },
         {
+          "actor": "distiller recurrence check (third task)",
+          "component": "memory-ingestion",
+          "does": "Present lessons a delivery trial withheld from this session and ask whether each one's documented failure actually recurred in the log.",
+          "state_change": "None \u2014 nominations are model output, not decisions; refused ones are counted and dropped.",
+          "guardrail": "Only lessons never delivered anywhere in the session qualify; delivered-and-failed is contradiction evidence for the attribution lane, not trial harm.",
+          "evidence": [
+            "backend/app/services/distiller.py::distill_log"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/distiller.py::distill_log",
+              "exists": true,
+              "actual_component": "memory-ingestion",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "recurrence admission gate",
+          "component": "delivery-plasticity",
+          "does": "Admit a nomination only when its cited event token-matches both the actual episode events and the withheld lesson's own failure text, then log recurrence.verified per withheld pathway.",
+          "state_change": "Ground-truth false-kill evidence lands in the actions log for the plasticity fold to consume.",
+          "guardrail": "Uncited or unrelated nominations are refused (deeds-corroborated pattern); a missed match leaves the trial running with the pathway's floor intact \u2014 the safe failure direction.",
+          "evidence": [
+            "backend/app/services/recurrence_watch.py::verify_recurrence",
+            "backend/app/services/recurrence_watch.py::withheld_for_trial"
+          ],
+          "index": 6,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/recurrence_watch.py::verify_recurrence",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/recurrence_watch.py::withheld_for_trial",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
           "actor": "distiller",
           "component": "memory-ingestion",
           "does": "Commit and write a .distilled marker only after the session completes successfully.",
@@ -6541,7 +7020,7 @@
           "evidence": [
             "backend/app/services/distiller.py::run_distillation"
           ],
-          "index": 5,
+          "index": 7,
           "evidence_results": [
             {
               "evidence": "backend/app/services/distiller.py::run_distillation",
@@ -6711,10 +7190,11 @@
       "trigger": "corvus-mind-janitor.timer POSTs /janitor/run",
       "cadence": "Timer opportunity every 6 hours; decay and similar cadence-sensitive work use distilled-session evidence time",
       "why": "Prevent duplicate mass, stale facts, warm zombies, scope drift, stale approvals, and standing-policy drift from accumulating.",
-      "outcome": "Safe low-risk metadata changes apply; destructive/synthesis/reference promotion decisions become proposals; reports and change logs remain auditable.",
+      "outcome": "Safe low-risk metadata changes apply; destructive/synthesis/reference promotion decisions become proposals; delivery pathways habituate/restore with zero-false-kill accounting; reports and change logs remain auditable.",
       "through": [
         "maintenance-integrity",
         "write-governance",
+        "delivery-plasticity",
         "skill-projection"
       ],
       "steps": [
@@ -6834,6 +7314,46 @@
           "evidence_ok": true
         },
         {
+          "actor": "delivery plasticity fold",
+          "component": "delivery-plasticity",
+          "does": "Run last so it folds this cycle's attribution \u2014 episode deliveries, withholdings, verdicts, and verified recurrences become per-pathway counters; attenuate statistically dead pathways in rewarding channels, restore on probe rewards or recurrences (booking verified-false-kill incident receipts), and queue tier-2 retirement proposals carrying the trial as a causal claim.",
+          "state_change": "delivery_pathways states, the hot-path suppression projection, and false-kill receipts in the actions log update; the neuron itself is never touched.",
+          "guardrail": "Sole writer; binomial tail is triage only; young pathways are immune; no state reaches zero delivery probability; retirement requires an applied human countersign and trial_claim refuses proposals without withheld-trial evidence.",
+          "evidence": [
+            "backend/app/services/delivery_plasticity.py::run_plasticity",
+            "backend/app/services/delivery_plasticity.py::decide",
+            "backend/app/services/delivery_plasticity.py::trial_claim"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::run_plasticity",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::decide",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::trial_claim",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
           "actor": "post-reconsolidation projection refresh",
           "component": "skill-projection",
           "does": "Retract skills citing retired sources, deactivate graph shadows, and rebuild the charter when required.",
@@ -6842,7 +7362,7 @@
           "evidence": [
             "backend/app/services/skill_compiler.py::refresh_projections_after_reconsolidation"
           ],
-          "index": 5,
+          "index": 6,
           "evidence_results": [
             {
               "evidence": "backend/app/services/skill_compiler.py::refresh_projections_after_reconsolidation",
@@ -6850,6 +7370,162 @@
               "actual_component": "skill-projection",
               "component_ok": true,
               "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        }
+      ],
+      "evidence_errors": 0,
+      "evidence_ok": true
+    },
+    {
+      "id": "pathway-habituation-trial",
+      "name": "Run a delivery-pathway trial of absence",
+      "availability": "active",
+      "trigger": "The plasticity fold attenuates a (neuron, trigger, tool) pathway whose deliveries earn no rewards in a channel that rewards others",
+      "cadence": "Continuous once attenuated; one trial spans hook deliveries, distill cycles, and janitor passes until it resolves",
+      "why": "Attribution verdicts only see VISIBLE reliance, so unrewarded is not the same as useless \u2014 a prevented mistake leaves no transcript trace. Withholding is the only mechanism that can make prevention-value visible; the proxy nominates, the trial decides (mind-delivery-plasticity + mind-recurrence-watch).",
+      "outcome": "The pathway either earns restoration \u2014 a probe reward, or a verified recurrence of its lesson's documented failure that also books a first-class false-kill incident receipt \u2014 or accumulates clean trial evidence toward a human-countersigned retirement that still keeps a probe floor.",
+      "through": [
+        "delivery-plasticity",
+        "harness-transport",
+        "memory-ingestion",
+        "write-governance"
+      ],
+      "steps": [
+        {
+          "actor": "plasticity fold (nomination)",
+          "component": "delivery-plasticity",
+          "does": "Attenuate when P(0 rewards in n deliveries | channel base reward rate) falls below alpha, with n counted since the last exculpation and immunity for young pathways; project suppression state to the file the hook reads.",
+          "state_change": "Pathway state and the suppression projection change; the neuron itself keeps full graph standing and MCP recallability.",
+          "guardrail": "The binomial tail is triage, never a verdict \u2014 a channel that rewards nobody can never condemn (dead and starved must not look alike), and every transition is audit-logged.",
+          "evidence": [
+            "backend/app/services/delivery_plasticity.py::decide",
+            "backend/app/services/delivery_plasticity.py::write_projection"
+          ],
+          "index": 1,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::decide",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::write_projection",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "hook pathway gate (the experiment)",
+          "component": "harness-transport",
+          "does": "Withhold the suppressed pathway from most sessions and deliver a deterministic 1-in-k probe on the rest, logging both outcomes on the Injection record.",
+          "state_change": "The `withheld` sibling list accumulates the trial's denominator; `probes` marks deliveries that can earn dishabituation.",
+          "guardrail": "Fail open on missing projection; withheld ids never enter neuron_ids, session dedupe, or attribution; a trial without logged withholding is not evidence.",
+          "evidence": [
+            "harness/claude-code/memory_inject_hook.py::_pathway_gate",
+            "harness/claude-code/memory_inject_hook.py::_log_injection"
+          ],
+          "index": 2,
+          "evidence_results": [
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_pathway_gate",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "harness/claude-code/memory_inject_hook.py::_log_injection",
+              "exists": true,
+              "actual_component": "harness-transport",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "distiller recurrence check",
+          "component": "memory-ingestion",
+          "does": "On each distill of a session that withheld the lesson, look for its documented failure mode actually recurring in the tool events.",
+          "state_change": "Nominations only \u2014 the model proposes, it never decides.",
+          "guardrail": "Lessons delivered anywhere in the session are excluded; delivered-and-failed routes to the contradiction lane instead.",
+          "evidence": [
+            "backend/app/services/distiller.py::distill_log"
+          ],
+          "index": 3,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/distiller.py::distill_log",
+              "exists": true,
+              "actual_component": "memory-ingestion",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "recurrence admission and fold actuation",
+          "component": "delivery-plasticity",
+          "does": "Token-verify each nomination against the episode log AND the lesson's own failure text; on admission the next fold restores the pathway, books a plasticity.false_kill receipt, anchors the exculpation clock so the restore is not undone, and supersedes any pending retirement proposal.",
+          "state_change": "Verified false kills surface first-class in the janitor report and the delivery-pathways metrics \u2014 computed from recurrence events, never reward absence.",
+          "guardrail": "The proxy that nominates never grades its own outcomes; a missed recurrence is the safe direction (trial continues, floor intact). The base-rate drift monitor was deliberately not built \u2014 triage-only nomination makes that ratchet benign.",
+          "evidence": [
+            "backend/app/services/recurrence_watch.py::verify_recurrence",
+            "backend/app/services/delivery_plasticity.py::run_plasticity"
+          ],
+          "index": 4,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/recurrence_watch.py::verify_recurrence",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/delivery_plasticity.py::run_plasticity",
+              "exists": true,
+              "actual_component": "delivery-plasticity",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "tier-2 countersign",
+          "component": "write-governance",
+          "does": "Review a retirement proposal whose body is a causal claim \u2014 sessions withheld with window, probes fired and their outcomes, recurrence count zero \u2014 rather than a verdict-shaped statistical argument.",
+          "state_change": "Only an APPLIED proposal lets the sole writer retire the pathway; even retired keeps a small probe floor and reopens on new evidence.",
+          "guardrail": "Proposals without trial evidence are refused before staging; a rejected proposal blocks re-proposal; a recurrence during retire-proposed supersedes it.",
+          "evidence": [
+            "backend/app/services/proposal_apply_service.py"
+          ],
+          "index": 5,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/proposal_apply_service.py",
+              "exists": true,
+              "actual_component": "write-governance",
+              "component_ok": true,
+              "symbol_ok": null,
               "ok": true
             }
           ],
