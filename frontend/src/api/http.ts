@@ -42,10 +42,12 @@ export class ComposedAwayError extends Error {
 
 /**
  * Match a concrete request URL back to its route contract. Path parameters
- * make this a segment walk, not a lookup: `/chat/sessions/5` must find
- * `/chat/sessions/{session_id}`. When a literal segment and a parameter
+ * make this a segment walk, not a lookup: chat/sessions/5 must find
+ * chat/sessions/{session_id}. When a literal segment and a parameter
  * segment both match, the contract with more literal matches wins
- * (`/admin/documents/upload` beats `/admin/documents/{job_id}`).
+ * (documents/upload beats documents/{job_id}). Paths here are written
+ * without their leading slash so the architecture extractor's URL regex
+ * does not mistake this comment for a route call.
  */
 export function matchRouteContract(method: string, url: string): RouteContract | null {
   const path = url.split('?')[0];

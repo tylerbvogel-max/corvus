@@ -3,24 +3,24 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "d80e5cc58df61c7b8d9364b55918f7171ee09dd5e7d86657cbd5028f85c4712d",
-    "files": 457
+    "fingerprint": "9be75abee1af179133897da16f7435e1952a49b58f172fafea7beae7f147a81d",
+    "files": 462
   },
   "frontend": {
     "available": true,
     "totals": {
-      "files": 74,
-      "loc": 44589,
-      "files_calling_api": 46,
-      "files_using_fetch": 14,
-      "distinct_urls": 201
+      "files": 79,
+      "loc": 44473,
+      "files_calling_api": 50,
+      "files_using_fetch": 17,
+      "distinct_urls": 202
     },
     "files": {
       "frontend/src/App.tsx": {
         "path": "frontend/src/App.tsx",
         "loc": 1104,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/governance.ts",
           "frontend/src/assets/corvus-logo-128.png",
           "frontend/src/assets/corvus-logo.png",
           "frontend/src/auth.ts",
@@ -44,7 +44,7 @@
           "checkAccess": "frontend/src/auth.ts",
           "setAccessKey": "frontend/src/auth.ts",
           "getAccessKey": "frontend/src/auth.ts",
-          "fetchProposalStats": "frontend/src/api.ts"
+          "fetchProposalStats": "frontend/src/api/governance.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -60,35 +60,52 @@
           "/tenant"
         ]
       },
-      "frontend/src/api.ts": {
-        "path": "frontend/src/api.ts",
-        "loc": 2203,
+      "frontend/src/api/evaluation.ts": {
+        "path": "frontend/src/api/evaluation.ts",
+        "loc": 103,
         "imports": [
-          "frontend/src/auth.ts",
+          "frontend/src/api/http.ts"
+        ],
+        "named_imports": {
+          "json": "frontend/src/api/http.ts"
+        },
+        "urls_direct": [
+          "/admin/eval/runs",
+          "/admin/eval/runs/{}",
+          "/admin/eval/runs/{}/certify",
+          "/admin/labs/oracle-funnel"
+        ],
+        "exports_with_urls": {
+          "fetchLatestOracleFunnel": [
+            "/admin/labs/oracle-funnel"
+          ],
+          "listEvalRuns": [
+            "/admin/eval/runs"
+          ],
+          "getEvalRun": [
+            "/admin/eval/runs/{}"
+          ],
+          "startEvalRun": [
+            "/admin/eval/runs"
+          ]
+        },
+        "uses_fetch": false,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/admin/eval/runs",
+          "/admin/eval/runs/{}",
+          "/admin/eval/runs/{}/certify",
+          "/admin/labs/oracle-funnel"
+        ]
+      },
+      "frontend/src/api/governance.ts": {
+        "path": "frontend/src/api/governance.ts",
+        "loc": 514,
+        "imports": [
+          "frontend/src/api/http.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "TreeNode": "frontend/src/types.ts",
-          "NeuronDetail": "frontend/src/types.ts",
-          "NeuronScores": "frontend/src/types.ts",
-          "NeuronStats": "frontend/src/types.ts",
-          "CostReport": "frontend/src/types.ts",
-          "QueryResponse": "frontend/src/types.ts",
-          "QuerySummary": "frontend/src/types.ts",
-          "QueryDetail": "frontend/src/types.ts",
-          "EvalResponse": "frontend/src/types.ts",
-          "RatingResponse": "frontend/src/types.ts",
-          "RefineResponse": "frontend/src/types.ts",
-          "ApplyRefineResponse": "frontend/src/types.ts",
-          "NeuronRefinementEntry": "frontend/src/types.ts",
-          "DeptChordEntry": "frontend/src/types.ts",
-          "EgoGraphResponse": "frontend/src/types.ts",
-          "SpreadTrailResponse": "frontend/src/types.ts",
-          "ObservationSummary": "frontend/src/types.ts",
-          "ObservationDetail": "frontend/src/types.ts",
-          "ObservationEvalResponse": "frontend/src/types.ts",
-          "ObservationApplyResponse": "frontend/src/types.ts",
-          "NeuronScoreResponse": "frontend/src/types.ts",
           "IntegrityDashboard": "frontend/src/types.ts",
           "IntegrityScanSummary": "frontend/src/types.ts",
           "IntegrityScanDetail": "frontend/src/types.ts",
@@ -98,35 +115,9 @@
           "IntegrityApplyResult": "frontend/src/types.ts",
           "IntegrityBulkResolveResult": "frontend/src/types.ts",
           "IntegrityProposeResult": "frontend/src/types.ts",
-          "getAuthHeaders": "frontend/src/auth.ts"
+          "json": "frontend/src/api/http.ts"
         },
         "urls_direct": [
-          "/admin/alerts/acknowledge-all",
-          "/admin/alerts/{}/acknowledge",
-          "/admin/alerts{}",
-          "/admin/audit-log/summary{}",
-          "/admin/checkpoint",
-          "/admin/compliance-audit",
-          "/admin/concept-neurons",
-          "/admin/cost-report",
-          "/admin/documents/upload",
-          "/admin/documents/{}",
-          "/admin/documents/{}/cancel",
-          "/admin/documents/{}/structure",
-          "/admin/emergent-queue/{}/dismiss",
-          "/admin/emergent-queue{}",
-          "/admin/eval/runs",
-          "/admin/eval/runs/{}",
-          "/admin/eval/runs/{}/certify",
-          "/admin/extract-source",
-          "/admin/governance-dashboard",
-          "/admin/health-check",
-          "/admin/ingest-source",
-          "/admin/ingest-source/apply",
-          "/admin/ingest-source/batch",
-          "/admin/ingest-source/batch/{}",
-          "/admin/ingest-source/batch/{}/cancel",
-          "/admin/ingest-source/batch/{}/resume",
           "/admin/integrity/aging/scan",
           "/admin/integrity/conflicts/scan",
           "/admin/integrity/connections/scan",
@@ -141,10 +132,7 @@
           "/admin/integrity/homeostasis/{}/apply",
           "/admin/integrity/runs",
           "/admin/integrity/scans/{}",
-          "/admin/labs/oracle-funnel",
           "/admin/neurons/{}/provenance",
-          "/admin/performance",
-          "/admin/performance/stage-telemetry",
           "/admin/proposals/dedup-clusters",
           "/admin/proposals/stats",
           "/admin/proposals/whoami",
@@ -153,22 +141,239 @@
           "/admin/proposals/{}/review",
           "/admin/provenance/authority-summary",
           "/admin/provenance/stale",
-          "/admin/scan-references",
-          "/admin/scoring-health",
           "/admin/source-documents",
-          "/admin/system-banner",
-          "/chat",
-          "/chat/sessions",
-          "/chat/sessions/{}",
-          "/chat/sessions/{}/generate-title",
-          "/chat/sessions/{}/messages",
+          "/v1/agents",
+          "/v1/agents/runs",
+          "/v1/agents/runs/{}"
+        ],
+        "exports_with_urls": {
+          "fetchSourceDocuments": [
+            "/admin/source-documents"
+          ],
+          "fetchAuthoritySummary": [
+            "/admin/provenance/authority-summary"
+          ],
+          "fetchProvenanceStale": [
+            "/admin/provenance/stale"
+          ],
+          "fetchDedupClusters": [
+            "/admin/proposals/dedup-clusters"
+          ],
+          "fetchProposals": [
+            "/admin/proposals/{}"
+          ],
+          "fetchProposalDetail": [
+            "/admin/proposals/{}"
+          ],
+          "reviewProposal": [
+            "/admin/proposals/{}/review"
+          ],
+          "applyProposal": [
+            "/admin/proposals/{}/apply"
+          ],
+          "fetchProposalStats": [
+            "/admin/proposals/stats"
+          ],
+          "fetchWhoami": [
+            "/admin/proposals/whoami"
+          ],
+          "fetchNeuronProvenance": [
+            "/admin/neurons/{}/provenance"
+          ],
+          "fetchIntegrityDashboard": [
+            "/admin/integrity/dashboard"
+          ],
+          "applyHomeostasisScan": [
+            "/admin/integrity/homeostasis/{}/apply"
+          ],
+          "fetchIntegrityScanDetail": [
+            "/admin/integrity/scans/{}"
+          ],
+          "fetchIntegrityFindingDetail": [
+            "/admin/integrity/findings/{}"
+          ],
+          "resolveIntegrityFinding": [
+            "/admin/integrity/findings/{}/resolve"
+          ],
+          "dismissIntegrityFinding": [
+            "/admin/integrity/findings/{}/dismiss"
+          ],
+          "proposeIntegrityFinding": [
+            "/admin/integrity/findings/{}/propose"
+          ],
+          "bulkResolveIntegrityFindings": [
+            "/admin/integrity/findings/bulk-resolve"
+          ],
+          "listAgents": [
+            "/v1/agents"
+          ],
+          "listAgentRuns": [
+            "/v1/agents/runs"
+          ],
+          "getAgentRun": [
+            "/v1/agents/runs/{}"
+          ],
+          "listIntegrityRuns": [
+            "/admin/integrity/runs"
+          ]
+        },
+        "uses_fetch": false,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/admin/integrity/aging/scan",
+          "/admin/integrity/conflicts/scan",
+          "/admin/integrity/connections/scan",
+          "/admin/integrity/dashboard",
+          "/admin/integrity/duplicates/scan",
+          "/admin/integrity/findings/bulk-resolve",
+          "/admin/integrity/findings/{}",
+          "/admin/integrity/findings/{}/dismiss",
+          "/admin/integrity/findings/{}/propose",
+          "/admin/integrity/findings/{}/resolve",
+          "/admin/integrity/homeostasis/scan",
+          "/admin/integrity/homeostasis/{}/apply",
+          "/admin/integrity/runs",
+          "/admin/integrity/scans/{}",
+          "/admin/neurons/{}/provenance",
+          "/admin/proposals/dedup-clusters",
+          "/admin/proposals/stats",
+          "/admin/proposals/whoami",
+          "/admin/proposals/{}",
+          "/admin/proposals/{}/apply",
+          "/admin/proposals/{}/review",
+          "/admin/provenance/authority-summary",
+          "/admin/provenance/stale",
+          "/admin/source-documents",
+          "/v1/agents",
+          "/v1/agents/runs",
+          "/v1/agents/runs/{}"
+        ]
+      },
+      "frontend/src/api/http.ts": {
+        "path": "frontend/src/api/http.ts",
+        "loc": 132,
+        "imports": [
+          "frontend/src/auth.ts",
+          "frontend/src/config.ts",
+          "frontend/src/contracts/capabilities.ts"
+        ],
+        "named_imports": {
+          "getAuthHeaders": "frontend/src/auth.ts",
+          "getTenantConfig": "frontend/src/config.ts",
+          "ROUTE_CONTRACTS": "frontend/src/contracts/capabilities.ts",
+          "TENANT_CAPABILITIES": "frontend/src/contracts/capabilities.ts",
+          "isComposedAway": "frontend/src/contracts/capabilities.ts",
+          "type RouteContract": "frontend/src/contracts/capabilities.ts",
+          "type TenantId": "frontend/src/contracts/capabilities.ts"
+        },
+        "urls_direct": [],
+        "exports_with_urls": {},
+        "uses_fetch": true,
+        "urls_via_imports": [],
+        "urls_all": []
+      },
+      "frontend/src/api/ingestion.ts": {
+        "path": "frontend/src/api/ingestion.ts",
+        "loc": 157,
+        "imports": [
+          "frontend/src/api/http.ts",
+          "frontend/src/auth.ts",
+          "frontend/src/types.ts"
+        ],
+        "named_imports": {
+          "ObservationSummary": "frontend/src/types.ts",
+          "ObservationDetail": "frontend/src/types.ts",
+          "ObservationEvalResponse": "frontend/src/types.ts",
+          "ObservationApplyResponse": "frontend/src/types.ts",
+          "json": "frontend/src/api/http.ts",
+          "getAuthHeaders": "frontend/src/auth.ts"
+        },
+        "urls_direct": [
+          "/admin/documents/upload",
+          "/admin/documents/{}",
+          "/admin/documents/{}/cancel",
+          "/admin/documents/{}/structure",
           "/ingest/observations",
           "/ingest/observations/evaluate-batch",
           "/ingest/observations/{}",
           "/ingest/observations/{}/apply",
           "/ingest/observations/{}/approve",
           "/ingest/observations/{}/evaluate",
-          "/ingest/observations/{}/reject",
+          "/ingest/observations/{}/reject"
+        ],
+        "exports_with_urls": {
+          "fetchObservations": [
+            "/ingest/observations"
+          ],
+          "fetchObservationDetail": [
+            "/ingest/observations/{}"
+          ],
+          "evaluateObservation": [
+            "/ingest/observations/{}/evaluate"
+          ],
+          "evaluateObservationBatch": [
+            "/ingest/observations/evaluate-batch"
+          ],
+          "applyObservation": [
+            "/ingest/observations/{}/apply"
+          ],
+          "fetchDocumentJobs": [
+            "/admin/documents/{}"
+          ],
+          "fetchDocumentJobStatus": [
+            "/admin/documents/{}"
+          ],
+          "fetchDocumentStructure": [
+            "/admin/documents/{}/structure"
+          ],
+          "cancelDocumentJob": [
+            "/admin/documents/{}/cancel"
+          ]
+        },
+        "uses_fetch": true,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/admin/documents/upload",
+          "/admin/documents/{}",
+          "/admin/documents/{}/cancel",
+          "/admin/documents/{}/structure",
+          "/ingest/observations",
+          "/ingest/observations/evaluate-batch",
+          "/ingest/observations/{}",
+          "/ingest/observations/{}/apply",
+          "/ingest/observations/{}/approve",
+          "/ingest/observations/{}/evaluate",
+          "/ingest/observations/{}/reject"
+        ]
+      },
+      "frontend/src/api/knowledge_graph.ts": {
+        "path": "frontend/src/api/knowledge_graph.ts",
+        "loc": 486,
+        "imports": [
+          "frontend/src/api/http.ts",
+          "frontend/src/types.ts"
+        ],
+        "named_imports": {
+          "TreeNode": "frontend/src/types.ts",
+          "NeuronDetail": "frontend/src/types.ts",
+          "NeuronScores": "frontend/src/types.ts",
+          "NeuronStats": "frontend/src/types.ts",
+          "QueryResponse": "frontend/src/types.ts",
+          "QuerySummary": "frontend/src/types.ts",
+          "QueryDetail": "frontend/src/types.ts",
+          "EvalResponse": "frontend/src/types.ts",
+          "RatingResponse": "frontend/src/types.ts",
+          "RefineResponse": "frontend/src/types.ts",
+          "ApplyRefineResponse": "frontend/src/types.ts",
+          "NeuronRefinementEntry": "frontend/src/types.ts",
+          "DeptChordEntry": "frontend/src/types.ts",
+          "EgoGraphResponse": "frontend/src/types.ts",
+          "SpreadTrailResponse": "frontend/src/types.ts",
+          "NeuronScoreResponse": "frontend/src/types.ts",
+          "json": "frontend/src/api/http.ts"
+        },
+        "urls_direct": [
+          "/chat",
           "/learning-analytics",
           "/models",
           "/neurons/capacity",
@@ -194,24 +399,11 @@
           "/query/{}/followups",
           "/query/{}/rate",
           "/query/{}/refine",
-          "/query/{}/refine/apply",
-          "/roadmap-ledgers",
-          "/v1/agents",
-          "/v1/agents/runs",
-          "/v1/agents/runs/{}"
+          "/query/{}/refine/apply"
         ],
         "exports_with_urls": {
           "fetchAvailableModels": [
             "/models"
-          ],
-          "listSessions": [
-            "/chat/sessions"
-          ],
-          "getSession": [
-            "/chat/sessions/{}"
-          ],
-          "listRoadmapLedgers": [
-            "/roadmap-ledgers"
           ],
           "sendChat": [
             "/chat"
@@ -231,20 +423,11 @@
           "fetchStats": [
             "/neurons/stats"
           ],
-          "fetchConceptNeurons": [
-            "/admin/concept-neurons"
-          ],
           "fetchGraph3D": [
             "/neurons/graph-3d"
           ],
           "fetchSemanticClusters": [
             "/neurons/clusters"
-          ],
-          "fetchLatestOracleFunnel": [
-            "/admin/labs/oracle-funnel"
-          ],
-          "fetchCostReport": [
-            "/admin/cost-report"
           ],
           "fetchQueryHistory": [
             "/queries"
@@ -296,6 +479,98 @@
           ],
           "fetchSpreadLog": [
             "/neurons/edges/spread-log"
+          ]
+        },
+        "uses_fetch": true,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/chat",
+          "/learning-analytics",
+          "/models",
+          "/neurons/capacity",
+          "/neurons/children{}",
+          "/neurons/clusters",
+          "/neurons/edges/department-chord",
+          "/neurons/edges/layer-flow",
+          "/neurons/edges/spread-log",
+          "/neurons/edges/spread-trail",
+          "/neurons/graph-3d",
+          "/neurons/stats",
+          "/neurons/tree{}",
+          "/neurons/{}",
+          "/neurons/{}/edges",
+          "/neurons/{}/scores",
+          "/queries",
+          "/queries/run-counts",
+          "/queries/{}",
+          "/queries/{}/dossier",
+          "/query",
+          "/query/stream",
+          "/query/{}/evaluate",
+          "/query/{}/followups",
+          "/query/{}/rate",
+          "/query/{}/refine",
+          "/query/{}/refine/apply"
+        ]
+      },
+      "frontend/src/api/operator.ts": {
+        "path": "frontend/src/api/operator.ts",
+        "loc": 863,
+        "imports": [
+          "frontend/src/api/http.ts",
+          "frontend/src/types.ts"
+        ],
+        "named_imports": {
+          "CostReport": "frontend/src/types.ts",
+          "NeuronScoreResponse": "frontend/src/types.ts",
+          "json": "frontend/src/api/http.ts"
+        },
+        "urls_direct": [
+          "/admin/alerts/acknowledge-all",
+          "/admin/alerts/{}/acknowledge",
+          "/admin/alerts{}",
+          "/admin/audit-log/summary{}",
+          "/admin/checkpoint",
+          "/admin/compliance-audit",
+          "/admin/concept-neurons",
+          "/admin/cost-report",
+          "/admin/emergent-queue/{}/dismiss",
+          "/admin/emergent-queue{}",
+          "/admin/extract-source",
+          "/admin/governance-dashboard",
+          "/admin/health-check",
+          "/admin/ingest-source",
+          "/admin/ingest-source/apply",
+          "/admin/ingest-source/batch",
+          "/admin/ingest-source/batch/{}",
+          "/admin/ingest-source/batch/{}/cancel",
+          "/admin/ingest-source/batch/{}/resume",
+          "/admin/performance",
+          "/admin/performance/stage-telemetry",
+          "/admin/scan-references",
+          "/admin/scoring-health",
+          "/admin/system-banner",
+          "/chat/sessions",
+          "/chat/sessions/{}",
+          "/chat/sessions/{}/generate-title",
+          "/chat/sessions/{}/messages",
+          "/roadmap-ledgers"
+        ],
+        "exports_with_urls": {
+          "listSessions": [
+            "/chat/sessions"
+          ],
+          "getSession": [
+            "/chat/sessions/{}"
+          ],
+          "listRoadmapLedgers": [
+            "/roadmap-ledgers"
+          ],
+          "fetchConceptNeurons": [
+            "/admin/concept-neurons"
+          ],
+          "fetchCostReport": [
+            "/admin/cost-report"
           ],
           "createCheckpoint": [
             "/admin/checkpoint"
@@ -336,116 +611,11 @@
           "fetchAuditLogSummary": [
             "/admin/audit-log/summary{}"
           ],
-          "fetchSourceDocuments": [
-            "/admin/source-documents"
-          ],
-          "fetchAuthoritySummary": [
-            "/admin/provenance/authority-summary"
-          ],
-          "fetchProvenanceStale": [
-            "/admin/provenance/stale"
-          ],
           "fetchComplianceAudit": [
             "/admin/compliance-audit"
           ],
           "fetchSystemBanner": [
             "/admin/system-banner"
-          ],
-          "fetchObservations": [
-            "/ingest/observations"
-          ],
-          "fetchObservationDetail": [
-            "/ingest/observations/{}"
-          ],
-          "evaluateObservation": [
-            "/ingest/observations/{}/evaluate"
-          ],
-          "evaluateObservationBatch": [
-            "/ingest/observations/evaluate-batch"
-          ],
-          "applyObservation": [
-            "/ingest/observations/{}/apply"
-          ],
-          "fetchDedupClusters": [
-            "/admin/proposals/dedup-clusters"
-          ],
-          "fetchProposals": [
-            "/admin/proposals/{}"
-          ],
-          "fetchProposalDetail": [
-            "/admin/proposals/{}"
-          ],
-          "reviewProposal": [
-            "/admin/proposals/{}/review"
-          ],
-          "applyProposal": [
-            "/admin/proposals/{}/apply"
-          ],
-          "fetchProposalStats": [
-            "/admin/proposals/stats"
-          ],
-          "fetchWhoami": [
-            "/admin/proposals/whoami"
-          ],
-          "fetchNeuronProvenance": [
-            "/admin/neurons/{}/provenance"
-          ],
-          "fetchDocumentJobs": [
-            "/admin/documents/{}"
-          ],
-          "fetchDocumentJobStatus": [
-            "/admin/documents/{}"
-          ],
-          "fetchDocumentStructure": [
-            "/admin/documents/{}/structure"
-          ],
-          "cancelDocumentJob": [
-            "/admin/documents/{}/cancel"
-          ],
-          "fetchIntegrityDashboard": [
-            "/admin/integrity/dashboard"
-          ],
-          "applyHomeostasisScan": [
-            "/admin/integrity/homeostasis/{}/apply"
-          ],
-          "fetchIntegrityScanDetail": [
-            "/admin/integrity/scans/{}"
-          ],
-          "fetchIntegrityFindingDetail": [
-            "/admin/integrity/findings/{}"
-          ],
-          "resolveIntegrityFinding": [
-            "/admin/integrity/findings/{}/resolve"
-          ],
-          "dismissIntegrityFinding": [
-            "/admin/integrity/findings/{}/dismiss"
-          ],
-          "proposeIntegrityFinding": [
-            "/admin/integrity/findings/{}/propose"
-          ],
-          "bulkResolveIntegrityFindings": [
-            "/admin/integrity/findings/bulk-resolve"
-          ],
-          "listEvalRuns": [
-            "/admin/eval/runs"
-          ],
-          "getEvalRun": [
-            "/admin/eval/runs/{}"
-          ],
-          "startEvalRun": [
-            "/admin/eval/runs"
-          ],
-          "listAgents": [
-            "/v1/agents"
-          ],
-          "listAgentRuns": [
-            "/v1/agents/runs"
-          ],
-          "getAgentRun": [
-            "/v1/agents/runs/{}"
-          ],
-          "listIntegrityRuns": [
-            "/admin/integrity/runs"
           ]
         },
         "uses_fetch": true,
@@ -459,15 +629,8 @@
           "/admin/compliance-audit",
           "/admin/concept-neurons",
           "/admin/cost-report",
-          "/admin/documents/upload",
-          "/admin/documents/{}",
-          "/admin/documents/{}/cancel",
-          "/admin/documents/{}/structure",
           "/admin/emergent-queue/{}/dismiss",
           "/admin/emergent-queue{}",
-          "/admin/eval/runs",
-          "/admin/eval/runs/{}",
-          "/admin/eval/runs/{}/certify",
           "/admin/extract-source",
           "/admin/governance-dashboard",
           "/admin/health-check",
@@ -477,78 +640,16 @@
           "/admin/ingest-source/batch/{}",
           "/admin/ingest-source/batch/{}/cancel",
           "/admin/ingest-source/batch/{}/resume",
-          "/admin/integrity/aging/scan",
-          "/admin/integrity/conflicts/scan",
-          "/admin/integrity/connections/scan",
-          "/admin/integrity/dashboard",
-          "/admin/integrity/duplicates/scan",
-          "/admin/integrity/findings/bulk-resolve",
-          "/admin/integrity/findings/{}",
-          "/admin/integrity/findings/{}/dismiss",
-          "/admin/integrity/findings/{}/propose",
-          "/admin/integrity/findings/{}/resolve",
-          "/admin/integrity/homeostasis/scan",
-          "/admin/integrity/homeostasis/{}/apply",
-          "/admin/integrity/runs",
-          "/admin/integrity/scans/{}",
-          "/admin/labs/oracle-funnel",
-          "/admin/neurons/{}/provenance",
           "/admin/performance",
           "/admin/performance/stage-telemetry",
-          "/admin/proposals/dedup-clusters",
-          "/admin/proposals/stats",
-          "/admin/proposals/whoami",
-          "/admin/proposals/{}",
-          "/admin/proposals/{}/apply",
-          "/admin/proposals/{}/review",
-          "/admin/provenance/authority-summary",
-          "/admin/provenance/stale",
           "/admin/scan-references",
           "/admin/scoring-health",
-          "/admin/source-documents",
           "/admin/system-banner",
-          "/chat",
           "/chat/sessions",
           "/chat/sessions/{}",
           "/chat/sessions/{}/generate-title",
           "/chat/sessions/{}/messages",
-          "/ingest/observations",
-          "/ingest/observations/evaluate-batch",
-          "/ingest/observations/{}",
-          "/ingest/observations/{}/apply",
-          "/ingest/observations/{}/approve",
-          "/ingest/observations/{}/evaluate",
-          "/ingest/observations/{}/reject",
-          "/learning-analytics",
-          "/models",
-          "/neurons/capacity",
-          "/neurons/children{}",
-          "/neurons/clusters",
-          "/neurons/edges/department-chord",
-          "/neurons/edges/layer-flow",
-          "/neurons/edges/spread-log",
-          "/neurons/edges/spread-trail",
-          "/neurons/graph-3d",
-          "/neurons/stats",
-          "/neurons/tree{}",
-          "/neurons/{}",
-          "/neurons/{}/edges",
-          "/neurons/{}/scores",
-          "/queries",
-          "/queries/run-counts",
-          "/queries/{}",
-          "/queries/{}/dossier",
-          "/query",
-          "/query/stream",
-          "/query/{}/evaluate",
-          "/query/{}/followups",
-          "/query/{}/rate",
-          "/query/{}/refine",
-          "/query/{}/refine/apply",
-          "/roadmap-ledgers",
-          "/v1/agents",
-          "/v1/agents/runs",
-          "/v1/agents/runs/{}"
+          "/roadmap-ledgers"
         ]
       },
       "frontend/src/auth.ts": {
@@ -589,14 +690,14 @@
         "path": "frontend/src/components/AgentsPage.tsx",
         "loc": 381,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/governance.ts"
         ],
         "named_imports": {
-          "listAgents": "frontend/src/api.ts",
-          "getAgent": "frontend/src/api.ts",
-          "triggerAgentRun": "frontend/src/api.ts",
-          "AgentSummary": "frontend/src/api.ts",
-          "AgentDetail": "frontend/src/api.ts"
+          "listAgents": "frontend/src/api/governance.ts",
+          "getAgent": "frontend/src/api/governance.ts",
+          "triggerAgentRun": "frontend/src/api/governance.ts",
+          "AgentSummary": "frontend/src/api/governance.ts",
+          "AgentDetail": "frontend/src/api/governance.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -669,15 +770,15 @@
         "path": "frontend/src/components/ChatHistoryWindow.tsx",
         "loc": 88,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/chatBus.ts",
           "frontend/src/components/HomePage.tsx"
         ],
         "named_imports": {
-          "listSessions": "frontend/src/api.ts",
-          "deleteSession": "frontend/src/api.ts",
-          "updateSessionTitle": "frontend/src/api.ts",
-          "type SessionSummary": "frontend/src/api.ts",
+          "listSessions": "frontend/src/api/operator.ts",
+          "deleteSession": "frontend/src/api/operator.ts",
+          "updateSessionTitle": "frontend/src/api/operator.ts",
+          "type SessionSummary": "frontend/src/api/operator.ts",
           "SessionTitle": "frontend/src/components/HomePage.tsx",
           "relativeTime": "frontend/src/components/HomePage.tsx",
           "CHAT_SESSIONS_CHANGED_EVENT": "frontend/src/chatBus.ts",
@@ -699,14 +800,14 @@
         "path": "frontend/src/components/ChatNeuronViz.tsx",
         "loc": 243,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/components/SigmaGraph.tsx",
           "frontend/src/constants.ts",
           "frontend/src/types.ts",
           "frontend/src/utils/graphology-adapter.ts"
         ],
         "named_imports": {
-          "fetchSpreadTrail": "frontend/src/api.ts",
+          "fetchSpreadTrail": "frontend/src/api/knowledge_graph.ts",
           "NeuronScoreResponse": "frontend/src/types.ts",
           "SpreadTrailResponse": "frontend/src/types.ts",
           "DEPT_COLORS": "frontend/src/constants.ts",
@@ -729,14 +830,14 @@
         "path": "frontend/src/components/CirclePacking.tsx",
         "loc": 402,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/constants.ts",
           "frontend/src/types.ts",
           "frontend/src/utils.ts"
         ],
         "named_imports": {
-          "fetchTree": "frontend/src/api.ts",
-          "fetchNeuron": "frontend/src/api.ts",
+          "fetchTree": "frontend/src/api/knowledge_graph.ts",
+          "fetchNeuron": "frontend/src/api/knowledge_graph.ts",
           "TreeNode": "frontend/src/types.ts",
           "DEPT_COLORS": "frontend/src/constants.ts",
           "escapeHtml": "frontend/src/utils.ts"
@@ -755,23 +856,24 @@
       },
       "frontend/src/components/Dashboard.tsx": {
         "path": "frontend/src/components/Dashboard.tsx",
-        "loc": 549,
+        "loc": 551,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/components/DeptChordDiagram.tsx",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchStats": "frontend/src/api.ts",
-          "fetchCostReport": "frontend/src/api.ts",
-          "fetchSpreadLog": "frontend/src/api.ts",
-          "fetchScoringHealth": "frontend/src/api.ts",
-          "fetchHealthCheck": "frontend/src/api.ts",
-          "acknowledgeAlert": "frontend/src/api.ts",
-          "acknowledgeAllAlerts": "frontend/src/api.ts",
-          "SpreadLogResponse": "frontend/src/api.ts",
-          "ScoringHealthResponse": "frontend/src/api.ts",
-          "HealthCheckResponse": "frontend/src/api.ts",
+          "fetchStats": "frontend/src/api/knowledge_graph.ts",
+          "fetchSpreadLog": "frontend/src/api/knowledge_graph.ts",
+          "fetchCostReport": "frontend/src/api/operator.ts",
+          "fetchScoringHealth": "frontend/src/api/operator.ts",
+          "fetchHealthCheck": "frontend/src/api/operator.ts",
+          "acknowledgeAlert": "frontend/src/api/operator.ts",
+          "acknowledgeAllAlerts": "frontend/src/api/operator.ts",
+          "SpreadLogResponse": "frontend/src/api/knowledge_graph.ts",
+          "ScoringHealthResponse": "frontend/src/api/operator.ts",
+          "HealthCheckResponse": "frontend/src/api/operator.ts",
           "NeuronStats": "frontend/src/types.ts",
           "CostReport": "frontend/src/types.ts"
         },
@@ -829,13 +931,13 @@
         "path": "frontend/src/components/DeptChordDiagram.tsx",
         "loc": 463,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/constants.ts",
           "frontend/src/types.ts",
           "frontend/src/utils.ts"
         ],
         "named_imports": {
-          "fetchDeptChord": "frontend/src/api.ts",
+          "fetchDeptChord": "frontend/src/api/knowledge_graph.ts",
           "DeptChordEntry": "frontend/src/types.ts",
           "DEPT_COLORS": "frontend/src/constants.ts",
           "escapeHtml": "frontend/src/utils.ts"
@@ -852,18 +954,18 @@
       },
       "frontend/src/components/DocumentIngestPage.tsx": {
         "path": "frontend/src/components/DocumentIngestPage.tsx",
-        "loc": 541,
+        "loc": 535,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/ingestion.ts"
         ],
         "named_imports": {
-          "uploadDocument": "frontend/src/api.ts",
-          "fetchDocumentJobs": "frontend/src/api.ts",
-          "fetchDocumentJobStatus": "frontend/src/api.ts",
-          "fetchDocumentStructure": "frontend/src/api.ts",
-          "cancelDocumentJob": "frontend/src/api.ts",
-          "DocumentIngestJob": "frontend/src/api.ts",
-          "DocumentStructure": "frontend/src/api.ts"
+          "uploadDocument": "frontend/src/api/ingestion.ts",
+          "fetchDocumentJobs": "frontend/src/api/ingestion.ts",
+          "fetchDocumentJobStatus": "frontend/src/api/ingestion.ts",
+          "fetchDocumentStructure": "frontend/src/api/ingestion.ts",
+          "cancelDocumentJob": "frontend/src/api/ingestion.ts",
+          "DocumentIngestJob": "frontend/src/api/ingestion.ts",
+          "DocumentStructure": "frontend/src/api/ingestion.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -881,9 +983,9 @@
       },
       "frontend/src/components/EmergentQueuePage.tsx": {
         "path": "frontend/src/components/EmergentQueuePage.tsx",
-        "loc": 1187,
+        "loc": 1167,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/constants.ts",
           "frontend/src/hooks/useModels.ts"
         ],
@@ -891,25 +993,25 @@
           "DEPARTMENTS": "frontend/src/constants.ts",
           "DEPT_ROLES": "frontend/src/constants.ts",
           "useModels": "frontend/src/hooks/useModels.ts",
-          "fetchEmergentQueue": "frontend/src/api.ts",
-          "dismissEmergentEntry": "frontend/src/api.ts",
-          "scanReferences": "frontend/src/api.ts",
-          "ingestSource": "frontend/src/api.ts",
-          "applyIngestSource": "frontend/src/api.ts",
-          "extractSourceFromFile": "frontend/src/api.ts",
-          "extractSourceFromUrl": "frontend/src/api.ts",
-          "startBatchIngest": "frontend/src/api.ts",
-          "pollBatchIngest": "frontend/src/api.ts",
-          "cancelBatchIngest": "frontend/src/api.ts",
-          "listBatchJobs": "frontend/src/api.ts",
-          "resumeBatchIngest": "frontend/src/api.ts",
-          "type EmergentQueueEntry": "frontend/src/api.ts",
-          "type ScanReferencesResponse": "frontend/src/api.ts",
-          "type IngestProposal": "frontend/src/api.ts",
-          "type IngestSourceResponse": "frontend/src/api.ts",
-          "type IngestApplyResponse": "frontend/src/api.ts",
-          "type BatchIngestStatusResponse": "frontend/src/api.ts",
-          "type BatchJobSummary": "frontend/src/api.ts"
+          "fetchEmergentQueue": "frontend/src/api/operator.ts",
+          "dismissEmergentEntry": "frontend/src/api/operator.ts",
+          "scanReferences": "frontend/src/api/operator.ts",
+          "ingestSource": "frontend/src/api/operator.ts",
+          "applyIngestSource": "frontend/src/api/operator.ts",
+          "extractSourceFromFile": "frontend/src/api/operator.ts",
+          "extractSourceFromUrl": "frontend/src/api/operator.ts",
+          "startBatchIngest": "frontend/src/api/operator.ts",
+          "pollBatchIngest": "frontend/src/api/operator.ts",
+          "cancelBatchIngest": "frontend/src/api/operator.ts",
+          "listBatchJobs": "frontend/src/api/operator.ts",
+          "resumeBatchIngest": "frontend/src/api/operator.ts",
+          "type EmergentQueueEntry": "frontend/src/api/operator.ts",
+          "type ScanReferencesResponse": "frontend/src/api/operator.ts",
+          "type IngestProposal": "frontend/src/api/operator.ts",
+          "type IngestSourceResponse": "frontend/src/api/operator.ts",
+          "type IngestApplyResponse": "frontend/src/api/operator.ts",
+          "type BatchIngestStatusResponse": "frontend/src/api/operator.ts",
+          "type BatchJobSummary": "frontend/src/api/operator.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -954,17 +1056,17 @@
       },
       "frontend/src/components/EvalRunsPage.tsx": {
         "path": "frontend/src/components/EvalRunsPage.tsx",
-        "loc": 284,
+        "loc": 277,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/evaluation.ts"
         ],
         "named_imports": {
-          "certifyEvalRun": "frontend/src/api.ts",
-          "getEvalRun": "frontend/src/api.ts",
-          "listEvalRuns": "frontend/src/api.ts",
-          "startEvalRun": "frontend/src/api.ts",
-          "type EvalRunDetail": "frontend/src/api.ts",
-          "type EvalRunSummary": "frontend/src/api.ts"
+          "certifyEvalRun": "frontend/src/api/evaluation.ts",
+          "getEvalRun": "frontend/src/api/evaluation.ts",
+          "listEvalRuns": "frontend/src/api/evaluation.ts",
+          "startEvalRun": "frontend/src/api/evaluation.ts",
+          "type EvalRunDetail": "frontend/src/api/evaluation.ts",
+          "type EvalRunSummary": "frontend/src/api/evaluation.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -991,18 +1093,19 @@
       },
       "frontend/src/components/Explorer.tsx": {
         "path": "frontend/src/components/Explorer.tsx",
-        "loc": 221,
+        "loc": 222,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/components/NeuronDetail.tsx",
           "frontend/src/components/NeuronTree.tsx",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchTree": "frontend/src/api.ts",
-          "createCheckpoint": "frontend/src/api.ts",
-          "fetchConceptNeurons": "frontend/src/api.ts",
-          "type ConceptNeuron": "frontend/src/api.ts",
+          "fetchTree": "frontend/src/api/knowledge_graph.ts",
+          "createCheckpoint": "frontend/src/api/operator.ts",
+          "fetchConceptNeurons": "frontend/src/api/operator.ts",
+          "type ConceptNeuron": "frontend/src/api/operator.ts",
           "TreeNode": "frontend/src/types.ts"
         },
         "urls_direct": [],
@@ -1023,12 +1126,12 @@
         "path": "frontend/src/components/GovernancePage.tsx",
         "loc": 683,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/config.ts"
         ],
         "named_imports": {
-          "fetchGovernanceDashboard": "frontend/src/api.ts",
-          "GovernanceDashboardResponse": "frontend/src/api.ts",
+          "fetchGovernanceDashboard": "frontend/src/api/operator.ts",
+          "GovernanceDashboardResponse": "frontend/src/api/operator.ts",
           "getTenantConfig": "frontend/src/config.ts"
         },
         "urls_direct": [],
@@ -1054,9 +1157,10 @@
       },
       "frontend/src/components/HomePage.tsx": {
         "path": "frontend/src/components/HomePage.tsx",
-        "loc": 1291,
+        "loc": 1287,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/assets/corvus-logo.png",
           "frontend/src/chatBus.ts",
           "frontend/src/config.ts",
@@ -1066,23 +1170,23 @@
         "named_imports": {
           "getTenantConfig": "frontend/src/config.ts",
           "type SeedPrompt": "frontend/src/config.ts",
-          "sendChat": "frontend/src/api.ts",
-          "submitQueryStream": "frontend/src/api.ts",
-          "createSession": "frontend/src/api.ts",
-          "listSessions": "frontend/src/api.ts",
-          "getSession": "frontend/src/api.ts",
-          "appendMessage": "frontend/src/api.ts",
-          "generateSessionTitle": "frontend/src/api.ts",
-          "deleteSession": "frontend/src/api.ts",
-          "fetchNeuron": "frontend/src/api.ts",
-          "updateSessionTitle": "frontend/src/api.ts",
-          "submitRating": "frontend/src/api.ts",
-          "fetchFollowUps": "frontend/src/api.ts",
-          "type ChatMessage": "frontend/src/api.ts",
-          "type ChatResponse": "frontend/src/api.ts",
-          "type StageEvent": "frontend/src/api.ts",
-          "type SlotSpec": "frontend/src/api.ts",
-          "type SessionSummary": "frontend/src/api.ts",
+          "sendChat": "frontend/src/api/knowledge_graph.ts",
+          "submitQueryStream": "frontend/src/api/knowledge_graph.ts",
+          "fetchNeuron": "frontend/src/api/knowledge_graph.ts",
+          "submitRating": "frontend/src/api/knowledge_graph.ts",
+          "fetchFollowUps": "frontend/src/api/knowledge_graph.ts",
+          "type ChatMessage": "frontend/src/api/knowledge_graph.ts",
+          "type ChatResponse": "frontend/src/api/knowledge_graph.ts",
+          "type StageEvent": "frontend/src/api/knowledge_graph.ts",
+          "type SlotSpec": "frontend/src/api/knowledge_graph.ts",
+          "createSession": "frontend/src/api/operator.ts",
+          "listSessions": "frontend/src/api/operator.ts",
+          "getSession": "frontend/src/api/operator.ts",
+          "appendMessage": "frontend/src/api/operator.ts",
+          "generateSessionTitle": "frontend/src/api/operator.ts",
+          "deleteSession": "frontend/src/api/operator.ts",
+          "updateSessionTitle": "frontend/src/api/operator.ts",
+          "type SessionSummary": "frontend/src/api/operator.ts",
           "NeuronScoreResponse": "frontend/src/types.ts",
           "CitationSource": "frontend/src/types.ts",
           "useModels": "frontend/src/hooks/useModels.ts",
@@ -1115,39 +1219,40 @@
       },
       "frontend/src/components/IntegrityPage.tsx": {
         "path": "frontend/src/components/IntegrityPage.tsx",
-        "loc": 1422,
+        "loc": 1404,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/governance.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/hooks/useListKeyboardNav.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchIntegrityDashboard": "frontend/src/api.ts",
-          "fetchIntegrityFindings": "frontend/src/api.ts",
-          "fetchIntegrityFindingDetail": "frontend/src/api.ts",
-          "resolveIntegrityFinding": "frontend/src/api.ts",
-          "dismissIntegrityFinding": "frontend/src/api.ts",
-          "bulkResolveIntegrityFindings": "frontend/src/api.ts",
-          "proposeIntegrityFinding": "frontend/src/api.ts",
-          "runHomeostasisScan": "frontend/src/api.ts",
-          "runDuplicatesScan": "frontend/src/api.ts",
-          "runConnectionsScan": "frontend/src/api.ts",
-          "runConflictsScan": "frontend/src/api.ts",
-          "runAgingScan": "frontend/src/api.ts",
-          "applyHomeostasisScan": "frontend/src/api.ts",
-          "fetchStats": "frontend/src/api.ts",
-          "listIntegrityRuns": "frontend/src/api.ts",
-          "listAgents": "frontend/src/api.ts",
-          "getAgentRun": "frontend/src/api.ts",
-          "triggerAgentRun": "frontend/src/api.ts",
+          "fetchIntegrityDashboard": "frontend/src/api/governance.ts",
+          "fetchIntegrityFindings": "frontend/src/api/governance.ts",
+          "fetchIntegrityFindingDetail": "frontend/src/api/governance.ts",
+          "resolveIntegrityFinding": "frontend/src/api/governance.ts",
+          "dismissIntegrityFinding": "frontend/src/api/governance.ts",
+          "bulkResolveIntegrityFindings": "frontend/src/api/governance.ts",
+          "proposeIntegrityFinding": "frontend/src/api/governance.ts",
+          "runHomeostasisScan": "frontend/src/api/governance.ts",
+          "runDuplicatesScan": "frontend/src/api/governance.ts",
+          "runConnectionsScan": "frontend/src/api/governance.ts",
+          "runConflictsScan": "frontend/src/api/governance.ts",
+          "runAgingScan": "frontend/src/api/governance.ts",
+          "applyHomeostasisScan": "frontend/src/api/governance.ts",
+          "listIntegrityRuns": "frontend/src/api/governance.ts",
+          "listAgents": "frontend/src/api/governance.ts",
+          "getAgentRun": "frontend/src/api/governance.ts",
+          "triggerAgentRun": "frontend/src/api/governance.ts",
+          "fetchStats": "frontend/src/api/knowledge_graph.ts",
           "IntegrityDashboard": "frontend/src/types.ts",
           "IntegrityFinding": "frontend/src/types.ts",
           "IntegrityFindingDetail": "frontend/src/types.ts",
           "IntegrityScanResponse": "frontend/src/types.ts",
           "IntegrityWeightDistribution": "frontend/src/types.ts",
-          "IntegrityRun": "frontend/src/api.ts",
-          "AgentSummary": "frontend/src/api.ts",
-          "AgentRunDetail": "frontend/src/api.ts",
+          "IntegrityRun": "frontend/src/api/governance.ts",
+          "AgentSummary": "frontend/src/api/governance.ts",
+          "AgentRunDetail": "frontend/src/api/governance.ts",
           "useListKeyboardNav": "frontend/src/hooks/useListKeyboardNav.ts"
         },
         "urls_direct": [],
@@ -1182,25 +1287,27 @@
       },
       "frontend/src/components/KnowledgeGovernancePage.tsx": {
         "path": "frontend/src/components/KnowledgeGovernancePage.tsx",
-        "loc": 475,
+        "loc": 463,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/governance.ts",
+          "frontend/src/api/knowledge_graph.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchStats": "frontend/src/api.ts",
-          "fetchSourceDocuments": "frontend/src/api.ts",
-          "fetchAuthoritySummary": "frontend/src/api.ts",
-          "fetchProvenanceStale": "frontend/src/api.ts",
-          "fetchLearningAnalytics": "frontend/src/api.ts",
-          "fetchRefinementHistory": "frontend/src/api.ts",
-          "fetchAuditLogSummary": "frontend/src/api.ts",
-          "fetchComplianceAudit": "frontend/src/api.ts",
-          "SourceDocumentOut": "frontend/src/api.ts",
-          "AuthoritySummaryItem": "frontend/src/api.ts",
-          "StaleProvenanceNeuron": "frontend/src/api.ts",
-          "ComplianceAuditResponse": "frontend/src/api.ts",
-          "AuditLogSummary": "frontend/src/api.ts",
+          "fetchStats": "frontend/src/api/knowledge_graph.ts",
+          "fetchLearningAnalytics": "frontend/src/api/knowledge_graph.ts",
+          "fetchRefinementHistory": "frontend/src/api/knowledge_graph.ts",
+          "fetchSourceDocuments": "frontend/src/api/governance.ts",
+          "fetchAuthoritySummary": "frontend/src/api/governance.ts",
+          "fetchProvenanceStale": "frontend/src/api/governance.ts",
+          "fetchAuditLogSummary": "frontend/src/api/operator.ts",
+          "fetchComplianceAudit": "frontend/src/api/operator.ts",
+          "SourceDocumentOut": "frontend/src/api/governance.ts",
+          "AuthoritySummaryItem": "frontend/src/api/governance.ts",
+          "StaleProvenanceNeuron": "frontend/src/api/governance.ts",
+          "ComplianceAuditResponse": "frontend/src/api/operator.ts",
+          "AuditLogSummary": "frontend/src/api/operator.ts",
           "NeuronStats": "frontend/src/types.ts",
           "LearningAnalytics": "frontend/src/types.ts",
           "LearningEventOut": "frontend/src/types.ts",
@@ -1232,13 +1339,13 @@
         "path": "frontend/src/components/LayerHeatmap.tsx",
         "loc": 346,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/constants.ts"
         ],
         "named_imports": {
-          "fetchLayerFlow": "frontend/src/api.ts",
-          "type LayerFlowNode": "frontend/src/api.ts",
-          "type LayerFlowLink": "frontend/src/api.ts",
+          "fetchLayerFlow": "frontend/src/api/knowledge_graph.ts",
+          "type LayerFlowNode": "frontend/src/api/knowledge_graph.ts",
+          "type LayerFlowLink": "frontend/src/api/knowledge_graph.ts",
           "DEPT_COLORS": "frontend/src/constants.ts"
         },
         "urls_direct": [],
@@ -1381,14 +1488,14 @@
         "path": "frontend/src/components/NeuronDetail.tsx",
         "loc": 82,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/components/NeuronEgoGraph.tsx",
           "frontend/src/components/ScoreBars.tsx",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchNeuron": "frontend/src/api.ts",
-          "fetchScores": "frontend/src/api.ts",
+          "fetchNeuron": "frontend/src/api/knowledge_graph.ts",
+          "fetchScores": "frontend/src/api/knowledge_graph.ts",
           "NeuronDetailType": "frontend/src/types.ts",
           "NeuronScores": "frontend/src/types.ts"
         },
@@ -1408,12 +1515,12 @@
         "path": "frontend/src/components/NeuronEgoGraph.tsx",
         "loc": 277,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/constants.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchNeuronEdges": "frontend/src/api.ts",
+          "fetchNeuronEdges": "frontend/src/api/knowledge_graph.ts",
           "EgoGraphResponse": "frontend/src/types.ts",
           "DEPT_COLORS": "frontend/src/constants.ts"
         },
@@ -1458,15 +1565,16 @@
       },
       "frontend/src/components/NeuronTree.tsx": {
         "path": "frontend/src/components/NeuronTree.tsx",
-        "loc": 189,
+        "loc": 190,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
           "TreeNode": "frontend/src/types.ts",
-          "fetchChildren": "frontend/src/api.ts",
-          "type ConceptNeuron": "frontend/src/api.ts"
+          "fetchChildren": "frontend/src/api/knowledge_graph.ts",
+          "ConceptNeuron": "frontend/src/api/operator.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -1482,12 +1590,12 @@
         "path": "frontend/src/components/NeuronTreeViz.tsx",
         "loc": 982,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/constants.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchSpreadTrail": "frontend/src/api.ts",
+          "fetchSpreadTrail": "frontend/src/api/knowledge_graph.ts",
           "NeuronScoreResponse": "frontend/src/types.ts",
           "SpreadTrailResponse": "frontend/src/types.ts",
           "DEPT_COLORS": "frontend/src/constants.ts"
@@ -1507,18 +1615,18 @@
       },
       "frontend/src/components/NeuronUniverse.tsx": {
         "path": "frontend/src/components/NeuronUniverse.tsx",
-        "loc": 2488,
+        "loc": 2481,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/components/NeuronRadarControls.tsx"
         ],
         "named_imports": {
-          "fetchGraph3D": "frontend/src/api.ts",
-          "fetchNeuron": "frontend/src/api.ts",
-          "fetchSemanticClusters": "frontend/src/api.ts",
-          "type Graph3DNode": "frontend/src/api.ts",
-          "type Graph3DReplayTrace": "frontend/src/api.ts",
-          "type SemanticCluster": "frontend/src/api.ts"
+          "fetchGraph3D": "frontend/src/api/knowledge_graph.ts",
+          "fetchNeuron": "frontend/src/api/knowledge_graph.ts",
+          "fetchSemanticClusters": "frontend/src/api/knowledge_graph.ts",
+          "type Graph3DNode": "frontend/src/api/knowledge_graph.ts",
+          "type Graph3DReplayTrace": "frontend/src/api/knowledge_graph.ts",
+          "type SemanticCluster": "frontend/src/api/knowledge_graph.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -1536,18 +1644,18 @@
       },
       "frontend/src/components/NexusLabPage.tsx": {
         "path": "frontend/src/components/NexusLabPage.tsx",
-        "loc": 583,
+        "loc": 576,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchGraph3D": "frontend/src/api.ts",
-          "fetchNeuron": "frontend/src/api.ts",
-          "fetchSemanticClusters": "frontend/src/api.ts",
-          "type Graph3DEdge": "frontend/src/api.ts",
-          "type Graph3DNode": "frontend/src/api.ts",
-          "type SemanticCluster": "frontend/src/api.ts",
+          "fetchGraph3D": "frontend/src/api/knowledge_graph.ts",
+          "fetchNeuron": "frontend/src/api/knowledge_graph.ts",
+          "fetchSemanticClusters": "frontend/src/api/knowledge_graph.ts",
+          "type Graph3DEdge": "frontend/src/api/knowledge_graph.ts",
+          "type Graph3DNode": "frontend/src/api/knowledge_graph.ts",
+          "type SemanticCluster": "frontend/src/api/knowledge_graph.ts",
           "NeuronDetail": "frontend/src/types.ts"
         },
         "urls_direct": [],
@@ -1566,13 +1674,13 @@
       },
       "frontend/src/components/OracleFunnelLabPage.tsx": {
         "path": "frontend/src/components/OracleFunnelLabPage.tsx",
-        "loc": 160,
+        "loc": 157,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/evaluation.ts"
         ],
         "named_imports": {
-          "fetchLatestOracleFunnel": "frontend/src/api.ts",
-          "type OracleFunnelArtifact": "frontend/src/api.ts"
+          "fetchLatestOracleFunnel": "frontend/src/api/evaluation.ts",
+          "type OracleFunnelArtifact": "frontend/src/api/evaluation.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -1586,20 +1694,21 @@
       },
       "frontend/src/components/PerformancePage.tsx": {
         "path": "frontend/src/components/PerformancePage.tsx",
-        "loc": 380,
+        "loc": 377,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchStats": "frontend/src/api.ts",
-          "fetchCostReport": "frontend/src/api.ts",
-          "fetchSpreadLog": "frontend/src/api.ts",
-          "fetchScoringHealth": "frontend/src/api.ts",
-          "fetchStageTelemetry": "frontend/src/api.ts",
-          "type StageTelemetryReport": "frontend/src/api.ts",
-          "type SpreadLogResponse": "frontend/src/api.ts",
-          "type ScoringHealthResponse": "frontend/src/api.ts",
+          "fetchStats": "frontend/src/api/knowledge_graph.ts",
+          "fetchSpreadLog": "frontend/src/api/knowledge_graph.ts",
+          "type SpreadLogResponse": "frontend/src/api/knowledge_graph.ts",
+          "fetchCostReport": "frontend/src/api/operator.ts",
+          "fetchScoringHealth": "frontend/src/api/operator.ts",
+          "fetchStageTelemetry": "frontend/src/api/operator.ts",
+          "type StageTelemetryReport": "frontend/src/api/operator.ts",
+          "type ScoringHealthResponse": "frontend/src/api/operator.ts",
           "NeuronStats": "frontend/src/types.ts",
           "CostReport": "frontend/src/types.ts"
         },
@@ -1623,30 +1732,30 @@
       },
       "frontend/src/components/ProposalQueuePage.tsx": {
         "path": "frontend/src/components/ProposalQueuePage.tsx",
-        "loc": 1720,
+        "loc": 1702,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/governance.ts",
           "frontend/src/auth.ts",
           "frontend/src/hooks/useListKeyboardNav.ts"
         ],
         "named_imports": {
-          "fetchProposals": "frontend/src/api.ts",
-          "fetchDedupClusters": "frontend/src/api.ts",
-          "fetchProposalDetail": "frontend/src/api.ts",
-          "reviewProposal": "frontend/src/api.ts",
-          "applyProposal": "frontend/src/api.ts",
-          "fetchProposalStats": "frontend/src/api.ts",
-          "fetchWhoami": "frontend/src/api.ts",
-          "type ProposalSummary": "frontend/src/api.ts",
-          "type ProposalDetail": "frontend/src/api.ts",
-          "type ProposalStats": "frontend/src/api.ts",
-          "type ProposalItem": "frontend/src/api.ts",
-          "type GapEvidence": "frontend/src/api.ts",
-          "type DocumentEvidence": "frontend/src/api.ts",
-          "type Whoami": "frontend/src/api.ts",
-          "type RenderedFusionPlan": "frontend/src/api.ts",
-          "type RenderedFusionMember": "frontend/src/api.ts",
-          "type RenderedFieldReceipt": "frontend/src/api.ts",
+          "fetchProposals": "frontend/src/api/governance.ts",
+          "fetchDedupClusters": "frontend/src/api/governance.ts",
+          "fetchProposalDetail": "frontend/src/api/governance.ts",
+          "reviewProposal": "frontend/src/api/governance.ts",
+          "applyProposal": "frontend/src/api/governance.ts",
+          "fetchProposalStats": "frontend/src/api/governance.ts",
+          "fetchWhoami": "frontend/src/api/governance.ts",
+          "type ProposalSummary": "frontend/src/api/governance.ts",
+          "type ProposalDetail": "frontend/src/api/governance.ts",
+          "type ProposalStats": "frontend/src/api/governance.ts",
+          "type ProposalItem": "frontend/src/api/governance.ts",
+          "type GapEvidence": "frontend/src/api/governance.ts",
+          "type DocumentEvidence": "frontend/src/api/governance.ts",
+          "type Whoami": "frontend/src/api/governance.ts",
+          "type RenderedFusionPlan": "frontend/src/api/governance.ts",
+          "type RenderedFusionMember": "frontend/src/api/governance.ts",
+          "type RenderedFieldReceipt": "frontend/src/api/governance.ts",
           "getReviewerName": "frontend/src/auth.ts",
           "setReviewerName": "frontend/src/auth.ts",
           "useListKeyboardNav": "frontend/src/hooks/useListKeyboardNav.ts"
@@ -1675,7 +1784,7 @@
         "path": "frontend/src/components/QueryLab.tsx",
         "loc": 2130,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/components/NeuronTreeViz.tsx",
           "frontend/src/components/TokenCharts.tsx",
           "frontend/src/components/pipelineDetail.tsx",
@@ -1684,19 +1793,19 @@
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "submitQueryStream": "frontend/src/api.ts",
-          "submitRating": "frontend/src/api.ts",
-          "fetchQueryHistory": "frontend/src/api.ts",
-          "fetchQueryDetail": "frontend/src/api.ts",
-          "evaluateQuery": "frontend/src/api.ts",
-          "refineQuery": "frontend/src/api.ts",
-          "applyRefinements": "frontend/src/api.ts",
-          "fetchGraphCapacity": "frontend/src/api.ts",
-          "fetchQueryDossier": "frontend/src/api.ts",
-          "SlotSpec": "frontend/src/api.ts",
-          "GraphCapacity": "frontend/src/api.ts",
-          "StageEvent": "frontend/src/api.ts",
-          "ModelOption": "frontend/src/api.ts",
+          "submitQueryStream": "frontend/src/api/knowledge_graph.ts",
+          "submitRating": "frontend/src/api/knowledge_graph.ts",
+          "fetchQueryHistory": "frontend/src/api/knowledge_graph.ts",
+          "fetchQueryDetail": "frontend/src/api/knowledge_graph.ts",
+          "evaluateQuery": "frontend/src/api/knowledge_graph.ts",
+          "refineQuery": "frontend/src/api/knowledge_graph.ts",
+          "applyRefinements": "frontend/src/api/knowledge_graph.ts",
+          "fetchGraphCapacity": "frontend/src/api/knowledge_graph.ts",
+          "fetchQueryDossier": "frontend/src/api/knowledge_graph.ts",
+          "SlotSpec": "frontend/src/api/knowledge_graph.ts",
+          "GraphCapacity": "frontend/src/api/knowledge_graph.ts",
+          "StageEvent": "frontend/src/api/knowledge_graph.ts",
+          "ModelOption": "frontend/src/api/knowledge_graph.ts",
           "QueryResponse": "frontend/src/types.ts",
           "QuerySummary": "frontend/src/types.ts",
           "QueryDetail": "frontend/src/types.ts",
@@ -1744,11 +1853,11 @@
         "path": "frontend/src/components/RefinementHistory.tsx",
         "loc": 416,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchRefinementHistory": "frontend/src/api.ts",
+          "fetchRefinementHistory": "frontend/src/api/knowledge_graph.ts",
           "NeuronRefinementEntry": "frontend/src/types.ts"
         },
         "urls_direct": [],
@@ -1759,29 +1868,29 @@
       },
       "frontend/src/components/RoadmapLedgersPage.tsx": {
         "path": "frontend/src/components/RoadmapLedgersPage.tsx",
-        "loc": 1093,
+        "loc": 1085,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/operator.ts",
           "frontend/src/components/RoadmapLedgersPage.tsx"
         ],
         "named_imports": {
-          "createRoadmapLedger": "frontend/src/api.ts",
-          "getRoadmapLedger": "frontend/src/api.ts",
-          "listRoadmapAdmissions": "frontend/src/api.ts",
-          "listRoadmapLedgers": "frontend/src/api.ts",
-          "reconcileRoadmapNode": "frontend/src/api.ts",
-          "saveRoadmapLedger": "frontend/src/api.ts",
-          "type RoadmapAdmissionEvent": "frontend/src/api.ts",
-          "type RoadmapAssumption": "frontend/src/api.ts",
-          "type RoadmapAssumptionStatus": "frontend/src/api.ts",
-          "type RoadmapHorizon": "frontend/src/api.ts",
-          "type RoadmapLedger": "frontend/src/api.ts",
-          "type RoadmapLedgerSummary": "frontend/src/api.ts",
-          "type RoadmapNode": "frontend/src/api.ts",
-          "type RoadmapReviewCadence": "frontend/src/api.ts",
-          "type RoadmapSection": "frontend/src/api.ts",
-          "type RoadmapState": "frontend/src/api.ts",
-          "type RoadmapStatus": "frontend/src/api.ts"
+          "createRoadmapLedger": "frontend/src/api/operator.ts",
+          "getRoadmapLedger": "frontend/src/api/operator.ts",
+          "listRoadmapAdmissions": "frontend/src/api/operator.ts",
+          "listRoadmapLedgers": "frontend/src/api/operator.ts",
+          "reconcileRoadmapNode": "frontend/src/api/operator.ts",
+          "saveRoadmapLedger": "frontend/src/api/operator.ts",
+          "type RoadmapAdmissionEvent": "frontend/src/api/operator.ts",
+          "type RoadmapAssumption": "frontend/src/api/operator.ts",
+          "type RoadmapAssumptionStatus": "frontend/src/api/operator.ts",
+          "type RoadmapHorizon": "frontend/src/api/operator.ts",
+          "type RoadmapLedger": "frontend/src/api/operator.ts",
+          "type RoadmapLedgerSummary": "frontend/src/api/operator.ts",
+          "type RoadmapNode": "frontend/src/api/operator.ts",
+          "type RoadmapReviewCadence": "frontend/src/api/operator.ts",
+          "type RoadmapSection": "frontend/src/api/operator.ts",
+          "type RoadmapState": "frontend/src/api/operator.ts",
+          "type RoadmapStatus": "frontend/src/api/operator.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -1797,10 +1906,10 @@
         "path": "frontend/src/components/SampleQueries.tsx",
         "loc": 712,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/knowledge_graph.ts"
         ],
         "named_imports": {
-          "fetchQueryRunCounts": "frontend/src/api.ts"
+          "fetchQueryRunCounts": "frontend/src/api/knowledge_graph.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -1878,14 +1987,14 @@
         "path": "frontend/src/components/SpreadTrail.tsx",
         "loc": 69,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/components/SigmaGraph.tsx",
           "frontend/src/constants.ts",
           "frontend/src/types.ts",
           "frontend/src/utils/graphology-adapter.ts"
         ],
         "named_imports": {
-          "fetchSpreadTrail": "frontend/src/api.ts",
+          "fetchSpreadTrail": "frontend/src/api/knowledge_graph.ts",
           "NeuronScoreResponse": "frontend/src/types.ts",
           "SpreadTrailResponse": "frontend/src/types.ts",
           "DEPT_COLORS": "frontend/src/constants.ts",
@@ -1905,11 +2014,11 @@
         "path": "frontend/src/components/SynapticLearningPage.tsx",
         "loc": 179,
         "imports": [
-          "frontend/src/api.ts",
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/types.ts"
         ],
         "named_imports": {
-          "fetchLearningAnalytics": "frontend/src/api.ts",
+          "fetchLearningAnalytics": "frontend/src/api/knowledge_graph.ts",
           "LearningAnalytics": "frontend/src/types.ts",
           "LearningEventOut": "frontend/src/types.ts"
         },
@@ -1927,10 +2036,10 @@
         "path": "frontend/src/components/SystemUseBanner.tsx",
         "loc": 69,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/operator.ts"
         ],
         "named_imports": {
-          "fetchSystemBanner": "frontend/src/api.ts"
+          "fetchSystemBanner": "frontend/src/api/operator.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -2031,7 +2140,7 @@
       },
       "frontend/src/contracts/capabilities.ts": {
         "path": "frontend/src/contracts/capabilities.ts",
-        "loc": 272,
+        "loc": 273,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -2181,6 +2290,7 @@
           "/lineage/query/{}/trace",
           "/lineage/source/{}/impact",
           "/metrics/mind",
+          "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
           "/metrics/mind/locomo-run",
@@ -2379,6 +2489,7 @@
           "/lineage/query/{}/trace",
           "/lineage/source/{}/impact",
           "/metrics/mind",
+          "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
           "/metrics/mind/locomo-run",
@@ -2430,7 +2541,7 @@
       },
       "frontend/src/contracts/schema.d.ts": {
         "path": "frontend/src/contracts/schema.d.ts",
-        "loc": 13138,
+        "loc": 13181,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -2581,6 +2692,7 @@
           "/lineage/query/{}/trace",
           "/lineage/source/{}/impact",
           "/metrics/mind",
+          "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
           "/metrics/mind/locomo-run",
@@ -2782,6 +2894,7 @@
           "/lineage/query/{}/trace",
           "/lineage/source/{}/impact",
           "/metrics/mind",
+          "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
           "/metrics/mind/locomo-run",
@@ -2878,11 +2991,11 @@
         "path": "frontend/src/hooks/useModels.ts",
         "loc": 51,
         "imports": [
-          "frontend/src/api.ts"
+          "frontend/src/api/knowledge_graph.ts"
         ],
         "named_imports": {
-          "fetchAvailableModels": "frontend/src/api.ts",
-          "type ModelOption": "frontend/src/api.ts"
+          "fetchAvailableModels": "frontend/src/api/knowledge_graph.ts",
+          "type ModelOption": "frontend/src/api/knowledge_graph.ts"
         },
         "urls_direct": [],
         "exports_with_urls": {},
@@ -2920,7 +3033,7 @@
       },
       "frontend/src/types.ts": {
         "path": "frontend/src/types.ts",
-        "loc": 726,
+        "loc": 623,
         "imports": [],
         "named_imports": {},
         "urls_direct": [],
@@ -2986,23 +3099,23 @@
     "available": true,
     "totals": {
       "backend_routes": 198,
-      "routes_called_by_frontend": 196,
-      "routes_with_no_frontend_caller": 2,
+      "routes_called_by_frontend": 197,
+      "routes_with_no_frontend_caller": 1,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
       "/admin/alerts": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/alerts/acknowledge-all": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/alerts/{}/acknowledge": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3020,7 +3133,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/audit-log/summary": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3034,7 +3147,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/checkpoint": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/Explorer.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3044,13 +3157,13 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/compliance-audit": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/concept-neurons": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/Explorer.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3072,7 +3185,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/cost-report": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
@@ -3083,24 +3196,24 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/upload": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/components/DocumentIngestPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/{}/cancel": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/components/DocumentIngestPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/documents/{}/structure": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/components/DocumentIngestPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3110,79 +3223,79 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/emergent-queue": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/EmergentQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/emergent-queue/{}/dismiss": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/eval/runs": [
-        "frontend/src/api.ts",
+        "frontend/src/api/evaluation.ts",
         "frontend/src/components/EvalRunsPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/eval/runs/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/evaluation.ts",
         "frontend/src/components/EvalRunsPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/eval/runs/{}/certify": [
-        "frontend/src/api.ts",
+        "frontend/src/api/evaluation.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/extract-source": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/EmergentQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/governance-dashboard": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/GovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/health-check": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/Dashboard.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/apply": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/EmergentQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch/{}/cancel": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/ingest-source/batch/{}/resume": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3191,28 +3304,28 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/aging/scan": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/conflicts/scan": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/connections/scan": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/dashboard": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/duplicates/scan": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3221,42 +3334,42 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/bulk-resolve": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}/dismiss": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}/propose": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/findings/{}/resolve": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/homeostasis/scan": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/homeostasis/{}/apply": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3270,7 +3383,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/runs": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3280,7 +3393,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/integrity/scans/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3289,7 +3402,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/labs/oracle-funnel": [
-        "frontend/src/api.ts",
+        "frontend/src/api/evaluation.ts",
         "frontend/src/components/OracleFunnelLabPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3307,17 +3420,17 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/neurons/{}/provenance": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/performance": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/performance/stage-telemetry": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3327,44 +3440,44 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/dedup-clusters": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/ProposalQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/stats": [
         "frontend/src/App.tsx",
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/ProposalQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/whoami": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/ProposalQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/ProposalQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/{}/apply": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/ProposalQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/proposals/{}/review": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/ProposalQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/provenance/authority-summary": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3382,7 +3495,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/provenance/stale": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3424,13 +3537,13 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/scan-references": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/EmergentQueuePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/scoring-health": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
@@ -3461,7 +3574,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/source-documents": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3475,7 +3588,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/system-banner": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/SystemUseBanner.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3517,14 +3630,14 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/chat": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts"
       ],
       "/chat/sessions": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/ChatHistoryWindow.tsx",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/contracts/capabilities.ts",
@@ -3532,18 +3645,18 @@
         "frontend/src/demo/shim.ts"
       ],
       "/chat/sessions/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/chat/sessions/{}/generate-title": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/chat/sessions/{}/messages": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3617,37 +3730,37 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/evaluate-batch": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/apply": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/approve": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/evaluate": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/ingest/observations/{}/reject": [
-        "frontend/src/api.ts",
+        "frontend/src/api/ingestion.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3672,7 +3785,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/learning-analytics": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/components/SynapticLearningPage.tsx",
         "frontend/src/contracts/capabilities.ts",
@@ -3700,6 +3813,10 @@
       ],
       "/metrics/mind": [
         "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/metrics/mind/delivery-pathways": [
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3743,26 +3860,26 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/models": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts",
         "frontend/src/hooks/useModels.ts"
       ],
       "/neurons/capacity": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/children": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronTree.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/clusters": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronUniverse.tsx",
         "frontend/src/components/NexusLabPage.tsx",
         "frontend/src/components/SigmaGraphPage.tsx",
@@ -3770,26 +3887,26 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/department-chord": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/DeptChordDiagram.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/layer-flow": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/LayerHeatmap.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/spread-log": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/spread-trail": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/ChatNeuronViz.tsx",
         "frontend/src/components/NeuronTreeViz.tsx",
         "frontend/src/components/SpreadTrail.tsx",
@@ -3797,7 +3914,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/graph-3d": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronUniverse.tsx",
         "frontend/src/components/NexusLabPage.tsx",
         "frontend/src/components/SigmaGraphPage.tsx",
@@ -3810,7 +3927,7 @@
       ],
       "/neurons/stats": [
         "frontend/src/App.tsx",
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/auth.ts",
         "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/IntegrityPage.tsx",
@@ -3820,14 +3937,14 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/tree": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/CirclePacking.tsx",
         "frontend/src/components/Explorer.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/ChatNeuronViz.tsx",
         "frontend/src/components/CirclePacking.tsx",
         "frontend/src/components/HomePage.tsx",
@@ -3839,79 +3956,79 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/{}/edges": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronEgoGraph.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/{}/scores": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronDetail.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/queries": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/queries/run-counts": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/SampleQueries.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/queries/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/queries/{}/dossier": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/query": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/query/stream": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts",
         "frontend/src/demo/shim.ts"
       ],
       "/query/{}/evaluate": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/followups": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/rate": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/refine": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/query/{}/refine/apply": [
-        "frontend/src/api.ts",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/QueryLab.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3925,7 +4042,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/roadmap-ledgers": [
-        "frontend/src/api.ts",
+        "frontend/src/api/operator.ts",
         "frontend/src/components/RoadmapLedgersPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3956,19 +4073,19 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/v1/agents": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/AgentsPage.tsx",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/v1/agents/runs": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/v1/agents/runs/{}": [
-        "frontend/src/api.ts",
+        "frontend/src/api/governance.ts",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3987,14 +4104,13 @@
       ]
     },
     "routes_with_no_frontend_caller": [
-      "/metrics/mind/delivery-pathways",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
     "modules": 383,
-    "loc": 87799,
+    "loc": 87817,
     "routes": 213,
     "import_edges": 1052,
     "call_edges": 695,
@@ -29118,7 +29234,7 @@
     "harness.claude-code.roadmap_admission": {
       "path": "harness/claude-code/roadmap_admission.py",
       "module": "harness.claude-code.roadmap_admission",
-      "loc": 474,
+      "loc": 492,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -29229,30 +29345,37 @@
           "calls": [],
           "is_route": false
         },
+        "_capture_excluded": {
+          "name": "_capture_excluded",
+          "line": 296,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "log_pending": {
           "name": "log_pending",
-          "line": 296,
+          "line": 312,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "format_session_context": {
           "name": "format_session_context",
-          "line": 319,
+          "line": 337,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "gate": {
           "name": "gate",
-          "line": 382,
+          "line": 400,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "planning_return": {
           "name": "planning_return",
-          "line": 430,
+          "line": 448,
           "is_async": false,
           "calls": [],
           "is_route": false
