@@ -51,8 +51,10 @@ _PREFACTORY_ROUTE_COUNT = 242
 # operator, compliance, governance, ingestion, evaluation, and external
 # surfaces are composed away. corvus-mind dropped compliance on 2026-08-01.
 _EXPECTED_ROUTE_COUNTS = {
-    "corvus-mind": 212,
-    "corvus-locomo": 79,
+    # +1 on 2026-08-02: GET /ready, the readiness half of the liveness/readiness
+    # split (record durability-operational-envelope). Core route, every profile.
+    "corvus-mind": 213,
+    "corvus-locomo": 80,
 }
 
 # Re-homed out of routers/compliance.py into app/operations/ by record 04.

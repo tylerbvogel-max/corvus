@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "ff3669b367fe9e7b8ad043b317a53e1a59c2047074da88b6e906ce02607de9ee",
-    "files": 471
+    "fingerprint": "fecd498ddf03f9f86151bb0cb260d8ee799e2a6dd4cdcc14b3c1d363736a1e5c",
+    "files": 473
   },
   "frontend": {
     "available": true,
@@ -3098,9 +3098,9 @@
   "route_join": {
     "available": true,
     "totals": {
-      "backend_routes": 198,
+      "backend_routes": 199,
       "routes_called_by_frontend": 197,
-      "routes_with_no_frontend_caller": 1,
+      "routes_with_no_frontend_caller": 2,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
@@ -4104,17 +4104,18 @@
       ]
     },
     "routes_with_no_frontend_caller": [
+      "/ready",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 392,
-    "loc": 90050,
-    "routes": 213,
-    "import_edges": 1074,
-    "call_edges": 708,
-    "modules_touching_db": 120,
+    "modules": 394,
+    "loc": 90423,
+    "routes": 214,
+    "import_edges": 1078,
+    "call_edges": 712,
+    "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -6026,7 +6027,7 @@
     "app.composition.factory": {
       "path": "backend/app/composition/factory.py",
       "module": "app.composition.factory",
-      "loc": 310,
+      "loc": 345,
       "imports": [
         "app.composition.capabilities",
         "app.composition.profiles",
@@ -6038,6 +6039,7 @@
         "app.middleware.audit",
         "app.middleware.security_headers",
         "app.models",
+        "app.services.readiness",
         "app.tenant"
       ],
       "external_imports": [
@@ -6054,21 +6056,21 @@
       "functions": {
         "_load": {
           "name": "_load",
-          "line": 54,
+          "line": 55,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_lifespan": {
           "name": "_build_lifespan",
-          "line": 71,
+          "line": 72,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_lifespan.lifespan": {
           "name": "_build_lifespan.lifespan",
-          "line": 76,
+          "line": 77,
           "is_async": true,
           "calls": [
             "app.composition.startup::canonical_startup_lock",
@@ -6078,28 +6080,28 @@
         },
         "_all_steps": {
           "name": "_all_steps",
-          "line": 117,
+          "line": 118,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_index": {
           "name": "_index",
-          "line": 122,
+          "line": 123,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_run_step": {
           "name": "_run_step",
-          "line": 126,
+          "line": 127,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "create_app": {
           "name": "create_app",
-          "line": 136,
+          "line": 137,
           "is_async": false,
           "calls": [
             "app.composition.profiles::resolve_profile"
@@ -6108,86 +6110,94 @@
         },
         "_add_middleware": {
           "name": "_add_middleware",
-          "line": 170,
+          "line": 178,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_error_contract": {
           "name": "_add_error_contract",
-          "line": 192,
+          "line": 200,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_error_contract.global_exception_handler": {
           "name": "_add_error_contract.global_exception_handler",
-          "line": 194,
+          "line": 202,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_mount_mcp": {
           "name": "_mount_mcp",
-          "line": 210,
+          "line": 218,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_mcp._mcp_slash_redirect": {
           "name": "_mount_mcp._mcp_slash_redirect",
-          "line": 226,
+          "line": 234,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_add_core_routes": {
           "name": "_add_core_routes",
-          "line": 231,
+          "line": 239,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_core_routes.get_tenant": {
           "name": "_add_core_routes.get_tenant",
-          "line": 235,
+          "line": 243,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_add_core_routes.list_tenants": {
           "name": "_add_core_routes.list_tenants",
-          "line": 250,
+          "line": 258,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_add_core_routes.health": {
           "name": "_add_core_routes.health",
-          "line": 270,
+          "line": 278,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "_add_core_routes.ready": {
+          "name": "_add_core_routes.ready",
+          "line": 289,
           "is_async": true,
           "calls": [
+            "app.services.readiness::evaluate_readiness",
             "app.database::async_session"
           ],
           "is_route": true
         },
         "_mount_frontend": {
           "name": "_mount_frontend",
-          "line": 284,
+          "line": 319,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_frontend._is_api_path": {
           "name": "_mount_frontend._is_api_path",
-          "line": 294,
+          "line": 329,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_frontend.serve_spa": {
           "name": "_mount_frontend.serve_spa",
-          "line": 298,
+          "line": 333,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -6201,7 +6211,7 @@
           "full_path": "/tenant",
           "mounted_on": "app",
           "handler": "_add_core_routes.get_tenant",
-          "line": 235
+          "line": 243
         },
         {
           "method": "GET",
@@ -6210,7 +6220,7 @@
           "full_path": "/tenants",
           "mounted_on": "app",
           "handler": "_add_core_routes.list_tenants",
-          "line": 250
+          "line": 258
         },
         {
           "method": "GET",
@@ -6219,7 +6229,16 @@
           "full_path": "/health",
           "mounted_on": "app",
           "handler": "_add_core_routes.health",
-          "line": 270
+          "line": 278
+        },
+        {
+          "method": "GET",
+          "path": "/ready",
+          "prefix": "",
+          "full_path": "/ready",
+          "mounted_on": "app",
+          "handler": "_add_core_routes.ready",
+          "line": 289
         },
         {
           "method": "GET",
@@ -6228,10 +6247,18 @@
           "full_path": "/{full_path:path}",
           "mounted_on": "app",
           "handler": "_mount_frontend.serve_spa",
-          "line": 298
+          "line": 333
         }
       ],
-      "db_writes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 167,
+          "in": "create_app",
+          "target": "mounted_specs",
+          "model": null
+        }
+      ],
       "llm_sites": []
     },
     "app.composition.profiles": {
@@ -23958,6 +23985,69 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "app.services.readiness": {
+      "path": "backend/app/services/readiness.py",
+      "module": "app.services.readiness",
+      "loc": 159,
+      "imports": [
+        "app.services.schema_authority"
+      ],
+      "external_imports": [
+        "__future__",
+        "dataclasses",
+        "sqlalchemy",
+        "typing"
+      ],
+      "functions": {
+        "ReadinessCheck.as_dict": {
+          "name": "ReadinessCheck.as_dict",
+          "line": 44,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "ReadinessReport.ready": {
+          "name": "ReadinessReport.ready",
+          "line": 57,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "ReadinessReport.as_dict": {
+          "name": "ReadinessReport.as_dict",
+          "line": 60,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_schema": {
+          "name": "check_schema",
+          "line": 68,
+          "is_async": true,
+          "calls": [
+            "app.services.schema_authority::validate_schema_authority"
+          ],
+          "is_route": false
+        },
+        "check_capability_surface": {
+          "name": "check_capability_surface",
+          "line": 110,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "evaluate_readiness": {
+          "name": "evaluate_readiness",
+          "line": 142,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "app.services.recall_lanes": {
       "path": "backend/app/services/recall_lanes.py",
       "module": "app.services.recall_lanes",
@@ -35166,7 +35256,7 @@
     "tests.test_composition_snapshot": {
       "path": "backend/tests/test_composition_snapshot.py",
       "module": "tests.test_composition_snapshot",
-      "loc": 220,
+      "loc": 222,
       "imports": [
         "app.composition.capabilities",
         "app.composition.factory",
@@ -35184,21 +35274,21 @@
       "functions": {
         "_stored": {
           "name": "_stored",
-          "line": 72,
+          "line": 74,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_every_tenant_has_a_captured_baseline": {
           "name": "test_every_tenant_has_a_captured_baseline",
-          "line": 77,
+          "line": 79,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_live_surface_matches_recorded_baseline": {
           "name": "test_live_surface_matches_recorded_baseline",
-          "line": 90,
+          "line": 92,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35207,7 +35297,7 @@
         },
         "test_live_openapi_contract_matches_recorded_baseline": {
           "name": "test_live_openapi_contract_matches_recorded_baseline",
-          "line": 107,
+          "line": 109,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35216,14 +35306,14 @@
         },
         "test_tenant_surfaces_differ_by_profile": {
           "name": "test_tenant_surfaces_differ_by_profile",
-          "line": 120,
+          "line": 122,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_production_surface_is_exactly_the_full_grant": {
           "name": "test_production_surface_is_exactly_the_full_grant",
-          "line": 148,
+          "line": 150,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app",
@@ -35233,7 +35323,7 @@
         },
         "test_production_surface_is_exactly_the_full_grant.paths": {
           "name": "test_production_surface_is_exactly_the_full_grant.paths",
-          "line": 164,
+          "line": 166,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35242,7 +35332,7 @@
         },
         "test_reduced_profile_actually_drops_modules": {
           "name": "test_reduced_profile_actually_drops_modules",
-          "line": 191,
+          "line": 193,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -42232,6 +42322,193 @@
       ],
       "llm_sites": []
     },
+    "tests.test_readiness": {
+      "path": "backend/tests/test_readiness.py",
+      "module": "tests.test_readiness",
+      "loc": 177,
+      "imports": [
+        "app.services.readiness",
+        "app.services.schema_authority"
+      ],
+      "external_imports": [
+        "__future__",
+        "asyncio",
+        "pytest"
+      ],
+      "functions": {
+        "_run": {
+          "name": "_run",
+          "line": 19,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_granted_capability_whose_router_never_mounted_fails_readiness": {
+          "name": "test_granted_capability_whose_router_never_mounted_fails_readiness",
+          "line": 25,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_capability_surface"
+          ],
+          "is_route": false
+        },
+        "test_capability_intentionally_absent_produces_silence_not_an_error": {
+          "name": "test_capability_intentionally_absent_produces_silence_not_an_error",
+          "line": 37,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_capability_surface"
+          ],
+          "is_route": false
+        },
+        "test_extra_mounted_routers_do_not_fail_readiness": {
+          "name": "test_extra_mounted_routers_do_not_fail_readiness",
+          "line": 48,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_capability_surface"
+          ],
+          "is_route": false
+        },
+        "test_schema_check_reports_head_when_database_is_servable": {
+          "name": "test_schema_check_reports_head_when_database_is_servable",
+          "line": 58,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_schema"
+          ],
+          "is_route": false
+        },
+        "test_schema_check_reports_head_when_database_is_servable._ok": {
+          "name": "test_schema_check_reports_head_when_database_is_servable._ok",
+          "line": 59,
+          "is_async": true,
+          "calls": [
+            "app.services.schema_authority::SchemaAuthorityStatus"
+          ],
+          "is_route": false
+        },
+        "test_schema_mismatch_fails_readiness_with_actionable_detail": {
+          "name": "test_schema_mismatch_fails_readiness_with_actionable_detail",
+          "line": 70,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_schema"
+          ],
+          "is_route": false
+        },
+        "test_schema_mismatch_fails_readiness_with_actionable_detail._mismatch": {
+          "name": "test_schema_mismatch_fails_readiness_with_actionable_detail._mismatch",
+          "line": 71,
+          "is_async": true,
+          "calls": [
+            "app.services.schema_authority::SchemaAuthorityError"
+          ],
+          "is_route": false
+        },
+        "test_database_outage_fails_readiness": {
+          "name": "test_database_outage_fails_readiness",
+          "line": 82,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_schema"
+          ],
+          "is_route": false
+        },
+        "test_database_outage_fails_readiness._down": {
+          "name": "test_database_outage_fails_readiness._down",
+          "line": 83,
+          "is_async": true,
+          "calls": [
+            "app.services.schema_authority::SchemaAuthorityError"
+          ],
+          "is_route": false
+        },
+        "test_driver_exception_becomes_a_readiness_failure_not_a_500": {
+          "name": "test_driver_exception_becomes_a_readiness_failure_not_a_500",
+          "line": 93,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::check_schema"
+          ],
+          "is_route": false
+        },
+        "test_driver_exception_becomes_a_readiness_failure_not_a_500._driver_blows_up": {
+          "name": "test_driver_exception_becomes_a_readiness_failure_not_a_500._driver_blows_up",
+          "line": 100,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_readiness_never_raises_whatever_the_dependency_does": {
+          "name": "test_readiness_never_raises_whatever_the_dependency_does",
+          "line": 118,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::evaluate_readiness"
+          ],
+          "is_route": false
+        },
+        "test_readiness_never_raises_whatever_the_dependency_does._fails": {
+          "name": "test_readiness_never_raises_whatever_the_dependency_does._fails",
+          "line": 120,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_every_check_runs_even_after_one_fails": {
+          "name": "test_every_check_runs_even_after_one_fails",
+          "line": 133,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::evaluate_readiness"
+          ],
+          "is_route": false
+        },
+        "test_every_check_runs_even_after_one_fails._down": {
+          "name": "test_every_check_runs_even_after_one_fails._down",
+          "line": 135,
+          "is_async": true,
+          "calls": [
+            "app.services.schema_authority::SchemaAuthorityError"
+          ],
+          "is_route": false
+        },
+        "test_ready_report_serializes_status_and_checks": {
+          "name": "test_ready_report_serializes_status_and_checks",
+          "line": 149,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::ReadinessReport",
+            "app.services.readiness::ReadinessCheck"
+          ],
+          "is_route": false
+        },
+        "test_not_ready_when_any_check_fails": {
+          "name": "test_not_ready_when_any_check_fails",
+          "line": 161,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::ReadinessReport",
+            "app.services.readiness::ReadinessCheck"
+          ],
+          "is_route": false
+        },
+        "test_readiness_is_conjunctive": {
+          "name": "test_readiness_is_conjunctive",
+          "line": 175,
+          "is_async": false,
+          "calls": [
+            "app.services.readiness::ReadinessReport",
+            "app.services.readiness::ReadinessCheck"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_recall_lanes": {
       "path": "backend/tests/test_recall_lanes.py",
       "module": "tests.test_recall_lanes",
@@ -48070,6 +48347,10 @@
       "app.routers.query",
       "tests.test_query_dossier"
     ],
+    "app.services.readiness": [
+      "app.composition.factory",
+      "tests.test_readiness"
+    ],
     "app.services.recall_lanes": [
       "app.services.lesson_store",
       "app.services.pipeline.stages.retrieval_telemetry_stage",
@@ -48253,7 +48534,9 @@
       "tests.test_roadmap_ledger"
     ],
     "app.services.schema_authority": [
+      "app.services.readiness",
       "tests.test_migration_smoke",
+      "tests.test_readiness",
       "tests.test_schema_authority"
     ],
     "app.services.scoring_engine": [
@@ -48421,7 +48704,8 @@
       "app.composition.profiles",
       "app.composition.startup",
       "app.database",
-      "app.mcp_http"
+      "app.mcp_http",
+      "app.services.readiness"
     ],
     "app.composition.profiles": [
       "app.composition.capabilities"
@@ -48947,6 +49231,9 @@
     "app.services.query_dossier": [
       "app.schemas"
     ],
+    "app.services.readiness": [
+      "app.services.schema_authority"
+    ],
     "app.services.recall_lanes": [
       "app.services.scoring_engine"
     ],
@@ -49447,6 +49734,10 @@
       "app.database",
       "app.services.executor"
     ],
+    "tests.test_readiness": [
+      "app.services.readiness",
+      "app.services.schema_authority"
+    ],
     "tests.test_recall_lanes": [
       "app.services.recall_lanes",
       "app.services.scoring_engine"
@@ -49581,7 +49872,7 @@
       "full_path": "/health",
       "mounted_on": "app",
       "handler": "_add_core_routes.health",
-      "line": 270,
+      "line": 278,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -49640,12 +49931,14 @@
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
+        "app.services.readiness",
         "app.services.recall_lanes",
         "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
         "app.services.regulatory_resolve",
+        "app.services.schema_authority",
         "app.services.scoring_engine",
         "app.services.semantic_prefilter",
         "app.services.structural_resolver",
@@ -49665,6 +49958,106 @@
         "app.seed.regulatory_seed",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.readiness",
+        "app.services.schema_authority",
+        "app.services.semantic_prefilter"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/ready",
+      "prefix": "",
+      "full_path": "/ready",
+      "mounted_on": "app",
+      "handler": "_add_core_routes.ready",
+      "line": 289,
+      "module": "app.composition.factory",
+      "file": "backend/app/composition/factory.py",
+      "imports_reachable": [
+        "app.composition.capabilities",
+        "app.composition.profiles",
+        "app.composition.startup",
+        "app.config",
+        "app.database",
+        "app.mcp_http",
+        "app.mcp_server",
+        "app.middleware.access_gate",
+        "app.middleware.audit",
+        "app.middleware.rbac",
+        "app.middleware.security_headers",
+        "app.models",
+        "app.seed.engram_loader",
+        "app.seed.loader",
+        "app.seed.regulatory_seed",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.citation_hopping",
+        "app.services.citation_relevance",
+        "app.services.clustering",
+        "app.services.concept_service",
+        "app.services.ecfr_client",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.engram_service",
+        "app.services.entailment_check",
+        "app.services.executor",
+        "app.services.impact_service",
+        "app.services.inhibitory_service",
+        "app.services.llm_provider",
+        "app.services.memory_assembly",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.pipeline",
+        "app.services.pipeline.context",
+        "app.services.pipeline.runner",
+        "app.services.pipeline.stage",
+        "app.services.pipeline.stages",
+        "app.services.pipeline.stages.assemble_stage",
+        "app.services.pipeline.stages.classify_stage",
+        "app.services.pipeline.stages.continuity_boost_stage",
+        "app.services.pipeline.stages.engram_edge_boost_stage",
+        "app.services.pipeline.stages.inhibitory_stage",
+        "app.services.pipeline.stages.prefilter_score_stage",
+        "app.services.pipeline.stages.regulatory_resolve_stage",
+        "app.services.pipeline.stages.retrieval_telemetry_stage",
+        "app.services.pipeline.stages.spread_stage",
+        "app.services.pipeline.stages.structural_resolve_stage",
+        "app.services.pipeline.state",
+        "app.services.prepared_context",
+        "app.services.project_cache",
+        "app.services.prompt_assembler",
+        "app.services.propagation",
+        "app.services.readiness",
+        "app.services.recall_lanes",
+        "app.services.recall_primitives",
+        "app.services.reference_detector",
+        "app.services.region_policy",
+        "app.services.regulatory_coverage",
+        "app.services.regulatory_resolve",
+        "app.services.schema_authority",
+        "app.services.scoring_engine",
+        "app.services.semantic_prefilter",
+        "app.services.structural_resolver",
+        "app.services.tier_routing",
+        "app.tenant"
+      ],
+      "calls_reachable": [
+        "app.composition.capabilities",
+        "app.composition.profiles",
+        "app.composition.startup",
+        "app.database",
+        "app.mcp_http",
+        "app.middleware.rbac",
+        "app.models",
+        "app.seed.engram_loader",
+        "app.seed.loader",
+        "app.seed.regulatory_seed",
+        "app.services.adjacency_cache",
+        "app.services.embedding_service",
+        "app.services.readiness",
+        "app.services.schema_authority",
         "app.services.semantic_prefilter"
       ]
     },
@@ -49675,7 +50068,7 @@
       "full_path": "/tenant",
       "mounted_on": "app",
       "handler": "_add_core_routes.get_tenant",
-      "line": 235,
+      "line": 243,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -49734,12 +50127,14 @@
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
+        "app.services.readiness",
         "app.services.recall_lanes",
         "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
         "app.services.regulatory_resolve",
+        "app.services.schema_authority",
         "app.services.scoring_engine",
         "app.services.semantic_prefilter",
         "app.services.structural_resolver",
@@ -49759,6 +50154,8 @@
         "app.seed.regulatory_seed",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.readiness",
+        "app.services.schema_authority",
         "app.services.semantic_prefilter"
       ]
     },
@@ -49769,7 +50166,7 @@
       "full_path": "/tenants",
       "mounted_on": "app",
       "handler": "_add_core_routes.list_tenants",
-      "line": 250,
+      "line": 258,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -49828,12 +50225,14 @@
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
+        "app.services.readiness",
         "app.services.recall_lanes",
         "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
         "app.services.regulatory_resolve",
+        "app.services.schema_authority",
         "app.services.scoring_engine",
         "app.services.semantic_prefilter",
         "app.services.structural_resolver",
@@ -49853,6 +50252,8 @@
         "app.seed.regulatory_seed",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.readiness",
+        "app.services.schema_authority",
         "app.services.semantic_prefilter"
       ]
     },
@@ -49863,7 +50264,7 @@
       "full_path": "/{full_path:path}",
       "mounted_on": "app",
       "handler": "_mount_frontend.serve_spa",
-      "line": 298,
+      "line": 333,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -49922,12 +50323,14 @@
         "app.services.project_cache",
         "app.services.prompt_assembler",
         "app.services.propagation",
+        "app.services.readiness",
         "app.services.recall_lanes",
         "app.services.recall_primitives",
         "app.services.reference_detector",
         "app.services.region_policy",
         "app.services.regulatory_coverage",
         "app.services.regulatory_resolve",
+        "app.services.schema_authority",
         "app.services.scoring_engine",
         "app.services.semantic_prefilter",
         "app.services.structural_resolver",
@@ -49947,6 +50350,8 @@
         "app.seed.regulatory_seed",
         "app.services.adjacency_cache",
         "app.services.embedding_service",
+        "app.services.readiness",
+        "app.services.schema_authority",
         "app.services.semantic_prefilter"
       ]
     },
@@ -62442,12 +62847,6 @@
       "module": "app.services.reference_hooks",
       "entrypoints": [
         "auto_link_neuron_sources"
-      ]
-    },
-    {
-      "module": "app.services.schema_authority",
-      "entrypoints": [
-        "validate_schema_authority"
       ]
     },
     {

@@ -20,7 +20,7 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -34,6 +34,7 @@ from app.middleware.access_gate import AccessGateMiddleware
 from app.middleware.audit import AuditMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.models import Neuron, SystemState
+from app.services.readiness import evaluate_readiness
 from app.tenant import tenant as default_tenant
 
 logger = logging.getLogger(__name__)
@@ -156,8 +157,15 @@ def create_app(profile: CapabilityProfile | None = None, tenant=None) -> FastAPI
     _add_middleware(app)
     _add_error_contract(app)
 
+    # Record what actually mounted, so readiness can prove the profile's claims
+    # rather than restate them. A capability that is granted but whose router
+    # never mounted is the AC-8 banner failure class, and it is invisible
+    # unless the two sets are compared.
+    mounted_specs: set[str] = set()
     for spec in profile.routers():
         app.include_router(_load(spec.module, spec.attr))
+        mounted_specs.add(str(spec))
+    app.state.mounted_router_specs = mounted_specs
 
     if Capability.EXTERNAL_API in profile:
         _mount_mcp(app)
@@ -268,17 +276,44 @@ def _add_core_routes(app: FastAPI, tenant, profile: CapabilityProfile) -> None:
 
     @app.get("/health")
     async def health():
-        """Return system health status with neuron count and total queries."""
+        """LIVENESS. Can this process answer at all?
+
+        Deliberately touches NO dependency. This used to query the database and
+        report neuron counts, which meant a Postgres blip looked like a dead
+        process and invited a pointless restart. Dependency state lives at
+        /ready; the counts moved there, where a query is legitimate.
+        """
+        return {"status": "ok", "check": "liveness", "tenant": tenant.tenant_id}
+
+    @app.get("/ready")
+    async def ready(response: Response):
+        """READINESS. Are this build's dependencies satisfied?
+
+        Returns 503 when they are not, so a load balancer or deploy gate can
+        act on it. Reports every check even after one fails — an operator
+        debugging a bad deploy needs the whole picture at once.
+        """
+        report = await evaluate_readiness(
+            engine=engine,
+            tenant=tenant.tenant_id,
+            granted=profile.names,
+            claimed_specs={str(spec) for spec in profile.routers()},
+            mounted_specs=getattr(app.state, "mounted_router_specs", set()),
+        )
+        payload = report.as_dict()
+        if not report.ready:
+            response.status_code = 503
+            return payload
+
+        # Informational only, and only once the database is known reachable:
+        # these are the counts /health used to carry.
         async with async_session() as db:
             neuron_count = (await db.execute(select(func.count(Neuron.id)))).scalar() or 0
-            state = (await db.execute(select(SystemState).where(SystemState.id == 1))).scalar_one_or_none()
-            total_queries = state.total_queries if state else 0
-
-        return {
-            "status": "ok",
-            "neuron_count": neuron_count,
-            "total_queries": total_queries,
-        }
+            state = (await db.execute(
+                select(SystemState).where(SystemState.id == 1))).scalar_one_or_none()
+        payload["neuron_count"] = neuron_count
+        payload["total_queries"] = state.total_queries if state else 0
+        return payload
 
 
 def _mount_frontend(app: FastAPI) -> None:

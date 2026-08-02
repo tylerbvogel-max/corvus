@@ -1,5 +1,5 @@
 {
-  "app_module_count": 126,
+  "app_module_count": 129,
   "app_modules": [
     "app",
     "app.agents",
@@ -76,6 +76,7 @@
     "app.services.action_bus",
     "app.services.capability_capsule",
     "app.services.citation_hopping",
+    "app.services.commit_verification",
     "app.services.delivery_mode",
     "app.services.distiller",
     "app.services.document_parser",
@@ -103,6 +104,7 @@
     "app.services.prompt_assembler",
     "app.services.propagation",
     "app.services.provenance_service",
+    "app.services.readiness",
     "app.services.recall_primitives",
     "app.services.reconsolidation",
     "app.services.reconsolidation.apply",
@@ -120,6 +122,7 @@
     "app.services.region_policy",
     "app.services.roadmap_admission",
     "app.services.roadmap_ledger",
+    "app.services.schema_authority",
     "app.services.scoring_engine",
     "app.services.seeding_service",
     "app.services.skill_compiler",

@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 392,
+    "modules": 394,
     "frontend_files": 79,
-    "units": 471,
-    "classified": 471,
+    "units": 473,
+    "classified": 473,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "ff3669b367fe9e7b8ad043b317a53e1a59c2047074da88b6e906ce02607de9ee",
-    "current_fingerprint": "ff3669b367fe9e7b8ad043b317a53e1a59c2047074da88b6e906ce02607de9ee",
-    "stored_files": 471,
-    "current_files": 471
+    "stored_fingerprint": "fecd498ddf03f9f86151bb0cb260d8ee799e2a6dd4cdcc14b3c1d363736a1e5c",
+    "current_fingerprint": "fecd498ddf03f9f86151bb0cb260d8ee799e2a6dd4cdcc14b3c1d363736a1e5c",
+    "stored_files": 473,
+    "current_files": 473
   },
   "manifest_problems": [],
   "boxes": [
@@ -563,9 +563,9 @@
       "tier": "infra",
       "purpose": "Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.",
       "confidence": "reviewed",
-      "module_count": 68,
+      "module_count": 69,
       "frontend_file_count": 0,
-      "loc": 8082,
+      "loc": 8241,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -620,6 +620,7 @@
         "app.seed.regulatory_seed",
         "app.services",
         "app.services.bootstrap_service",
+        "app.services.readiness",
         "app.services.schema_authority",
         "app.tenant",
         "tenants.corvus-locomo.classifier_prompt",
@@ -647,8 +648,8 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 934,
-      "routes": 4,
+      "loc": 969,
+      "routes": 5,
       "modules": [
         "app.composition",
         "app.composition.capabilities",
@@ -664,9 +665,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 112,
+      "module_count": 113,
       "frontend_file_count": 0,
-      "loc": 23611,
+      "loc": 23790,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -754,6 +755,7 @@
         "tests.test_proposals_router",
         "tests.test_query_dossier",
         "tests.test_query_transaction_boundary",
+        "tests.test_readiness",
         "tests.test_recall_lanes",
         "tests.test_reconciler",
         "tests.test_reconsolidation_apply",

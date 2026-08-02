@@ -1,5 +1,5 @@
 {
-  "app_module_count": 81,
+  "app_module_count": 83,
   "app_modules": [
     "app",
     "app.composition",
@@ -64,6 +64,7 @@
     "app.services.prepared_context",
     "app.services.prompt_assembler",
     "app.services.propagation",
+    "app.services.readiness",
     "app.services.recall_primitives",
     "app.services.reconsolidation",
     "app.services.reconsolidation.apply",
@@ -76,6 +77,7 @@
     "app.services.reconsolidation.validators",
     "app.services.redaction",
     "app.services.region_policy",
+    "app.services.schema_authority",
     "app.services.scoring_engine",
     "app.services.skill_compiler",
     "app.services.skill_signpost",

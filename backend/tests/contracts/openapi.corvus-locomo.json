@@ -5030,7 +5030,7 @@
     },
     "/health": {
       "get": {
-        "description": "Return system health status with neuron count and total queries.",
+        "description": "LIVENESS. Can this process answer at all?\n\nDeliberately touches NO dependency. This used to query the database and\nreport neuron counts, which meant a Postgres blip looked like a dead\nprocess and invited a pointless restart. Dependency state lives at\n/ready; the counts moved there, where a query is legitimate.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
@@ -7129,6 +7129,23 @@
         "tags": [
           "query"
         ]
+      }
+    },
+    "/ready": {
+      "get": {
+        "description": "READINESS. Are this build's dependencies satisfied?\n\nReturns 503 when they are not, so a load balancer or deploy gate can\nact on it. Reports every check even after one fails — an operator\ndebugging a bad deploy needs the whole picture at once.",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready"
       }
     },
     "/recall": {
