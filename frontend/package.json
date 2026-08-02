@@ -17,7 +17,8 @@
     "verify:carlos-lab": "node scripts/verify-carlos-lab.mjs",
     "verify:neuron-zones": "node scripts/verify-neuron-zones.mjs",
     "verify:neuron-firings": "node scripts/verify-neuron-firings.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:journeys": "playwright test -c playwright.journeys.config.ts && playwright test -c playwright.journeys-negative.config.ts"
   },
   "dependencies": {
     "@types/d3": "^7.4.3",

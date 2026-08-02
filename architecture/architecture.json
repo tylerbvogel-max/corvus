@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "9be75abee1af179133897da16f7435e1952a49b58f172fafea7beae7f147a81d",
-    "files": 462
+    "fingerprint": "d76851ae0fe5acb4edf5245ef393e6d74f377b82bc1a5138faebaf1d5b1d0ac9",
+    "files": 464
   },
   "frontend": {
     "available": true,
@@ -4109,12 +4109,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 383,
-    "loc": 87817,
+    "modules": 385,
+    "loc": 88446,
     "routes": 213,
-    "import_edges": 1052,
-    "call_edges": 695,
-    "modules_touching_db": 116,
+    "import_edges": 1055,
+    "call_edges": 697,
+    "modules_touching_db": 117,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -16492,7 +16492,7 @@
     "app.services.delivery_plasticity": {
       "path": "backend/app/services/delivery_plasticity.py",
       "module": "app.services.delivery_plasticity",
-      "loc": 647,
+      "loc": 660,
       "imports": [
         "app.models",
         "app.services.injection_channel",
@@ -16525,14 +16525,14 @@
         },
         "_blank_unit": {
           "name": "_blank_unit",
-          "line": 199,
+          "line": 212,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "pathway_units": {
           "name": "pathway_units",
-          "line": 203,
+          "line": 216,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::_attribution_lines"
@@ -16541,28 +16541,28 @@
         },
         "base_rate_for": {
           "name": "base_rate_for",
-          "line": 289,
+          "line": 302,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "survival_tail": {
           "name": "survival_tail",
-          "line": 300,
+          "line": 313,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "decide": {
           "name": "decide",
-          "line": 311,
+          "line": 324,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_transition": {
           "name": "_transition",
-          "line": 420,
+          "line": 433,
           "is_async": false,
           "calls": [
             "app.services.mind_corpus::_log_action"
@@ -16571,14 +16571,14 @@
         },
         "trial_claim": {
           "name": "trial_claim",
-          "line": 438,
+          "line": 451,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_queue_retire_proposal": {
           "name": "_queue_retire_proposal",
-          "line": 459,
+          "line": 472,
           "is_async": true,
           "calls": [
             "app.models::AutopilotProposal",
@@ -16588,21 +16588,21 @@
         },
         "write_projection": {
           "name": "write_projection",
-          "line": 492,
+          "line": 505,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "false_kill_receipts": {
           "name": "false_kill_receipts",
-          "line": 515,
+          "line": 528,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "run_plasticity": {
           "name": "run_plasticity",
-          "line": 538,
+          "line": 551,
           "is_async": true,
           "calls": [
             "app.services.injection_channel::reconstruct_history",
@@ -16617,49 +16617,49 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 168,
+          "line": 181,
           "in": "_scan_delivery_units",
           "target": "<expr>",
           "model": null
         },
         {
           "kind": "add",
-          "line": 170,
+          "line": 183,
           "in": "_scan_delivery_units",
           "target": "<expr>",
           "model": null
         },
         {
           "kind": "add",
-          "line": 478,
+          "line": 491,
           "in": "_queue_retire_proposal",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 479,
+          "line": 492,
           "in": "_queue_retire_proposal",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 480,
+          "line": 493,
           "in": "_queue_retire_proposal",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "add",
-          "line": 576,
+          "line": 589,
           "in": "run_plasticity",
           "target": "db",
           "model": "DeliveryPathway"
         },
         {
           "kind": "commit",
-          "line": 626,
+          "line": 639,
           "in": "run_plasticity",
           "target": "db",
           "model": null
@@ -16670,7 +16670,7 @@
     "app.services.distiller": {
       "path": "backend/app/services/distiller.py",
       "module": "app.services.distiller",
-      "loc": 620,
+      "loc": 699,
       "imports": [
         "app.models",
         "app.services.evidence_frame",
@@ -16692,21 +16692,21 @@
       "functions": {
         "candidate_cap": {
           "name": "candidate_cap",
-          "line": 55,
+          "line": 61,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "find_ready_logs": {
           "name": "find_ready_logs",
-          "line": 128,
+          "line": 134,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_load_log": {
           "name": "_load_log",
-          "line": 162,
+          "line": 168,
           "is_async": false,
           "calls": [
             "app.services.injection_channel::channel_for_trigger"
@@ -16715,35 +16715,49 @@
         },
         "_extract_user_messages": {
           "name": "_extract_user_messages",
-          "line": 197,
+          "line": 203,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_extract_assistant_messages": {
           "name": "_extract_assistant_messages",
-          "line": 219,
+          "line": 225,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_extract_agent_reports": {
+          "name": "_extract_agent_reports",
+          "line": 263,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_parent_first": {
+          "name": "_parent_first",
+          "line": 299,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_condense": {
           "name": "_condense",
-          "line": 268,
+          "line": 314,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_parse_candidates": {
           "name": "_parse_candidates",
-          "line": 307,
+          "line": 376,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_validate_and_save": {
           "name": "_validate_and_save",
-          "line": 337,
+          "line": 406,
           "is_async": true,
           "calls": [
             "app.services.mind_corpus::_corroborated",
@@ -16754,7 +16768,7 @@
         },
         "_apply_attributions": {
           "name": "_apply_attributions",
-          "line": 429,
+          "line": 498,
           "is_async": true,
           "calls": [
             "app.models::SynapticLearningEvent",
@@ -16764,7 +16778,7 @@
         },
         "distill_log": {
           "name": "distill_log",
-          "line": 505,
+          "line": 574,
           "is_async": true,
           "calls": [
             "app.services.recurrence_watch::withheld_for_trial",
@@ -16776,7 +16790,7 @@
         },
         "run_distillation": {
           "name": "run_distillation",
-          "line": 605,
+          "line": 684,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -16786,21 +16800,21 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 448,
+          "line": 517,
           "in": "_apply_attributions",
           "target": "<expr>",
           "model": null
         },
         {
           "kind": "add",
-          "line": 484,
+          "line": 553,
           "in": "_apply_attributions",
           "target": "db",
           "model": "SynapticLearningEvent"
         },
         {
           "kind": "commit",
-          "line": 571,
+          "line": 645,
           "in": "distill_log",
           "target": "db",
           "model": null
@@ -16809,7 +16823,7 @@
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 554,
+          "line": 624,
           "in": "distill_log"
         }
       ]
@@ -21548,7 +21562,7 @@
     "app.services.mind_metrics": {
       "path": "backend/app/services/mind_metrics.py",
       "module": "app.services.mind_metrics",
-      "loc": 541,
+      "loc": 559,
       "imports": [
         "app.config",
         "app.models",
@@ -21625,63 +21639,63 @@
         },
         "sessions_report": {
           "name": "sessions_report",
-          "line": 252,
+          "line": 270,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_janitor_trust_events": {
           "name": "_janitor_trust_events",
-          "line": 296,
+          "line": 314,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "trust_report": {
           "name": "trust_report",
-          "line": 318,
+          "line": 336,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "inbox_report": {
           "name": "inbox_report",
-          "line": 348,
+          "line": 366,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "skill_invocation_counts": {
           "name": "skill_invocation_counts",
-          "line": 377,
+          "line": 395,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "skill_pointer_counts": {
           "name": "skill_pointer_counts",
-          "line": 412,
+          "line": 430,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "skills_report": {
           "name": "skills_report",
-          "line": 450,
+          "line": 468,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "uncompiled_skill_invocations": {
           "name": "uncompiled_skill_invocations",
-          "line": 490,
+          "line": 508,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "collect_all": {
           "name": "collect_all",
-          "line": 518,
+          "line": 536,
           "is_async": true,
           "calls": [
             "app.services.memory_quality_auditor::auditor_metrics",
@@ -21694,7 +21708,7 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 239,
+          "line": 248,
           "in": "injection_metrics",
           "target": "sessions_with",
           "model": null
@@ -28894,7 +28908,7 @@
     "harness.claude-code.episode_hook": {
       "path": "harness/claude-code/episode_hook.py",
       "module": "harness.claude-code.episode_hook",
-      "loc": 167,
+      "loc": 233,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -28907,56 +28921,70 @@
       "functions": {
         "_redact": {
           "name": "_redact",
-          "line": 52,
+          "line": 59,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_clip": {
           "name": "_clip",
-          "line": 58,
+          "line": 65,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_load_excludes": {
           "name": "_load_excludes",
-          "line": 65,
+          "line": 72,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_summarize_input": {
           "name": "_summarize_input",
-          "line": 75,
+          "line": 82,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_outcome": {
           "name": "_outcome",
-          "line": 88,
+          "line": 95,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_report_text": {
+          "name": "_report_text",
+          "line": 110,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_agent_result": {
+          "name": "_agent_result",
+          "line": 130,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_project_from_cwd": {
           "name": "_project_from_cwd",
-          "line": 103,
+          "line": 152,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "build_record": {
           "name": "build_record",
-          "line": 113,
+          "line": 162,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 143,
+          "line": 209,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -28969,7 +28997,7 @@
     "harness.claude-code.memory_inject_hook": {
       "path": "harness/claude-code/memory_inject_hook.py",
       "module": "harness.claude-code.memory_inject_hook",
-      "loc": 483,
+      "loc": 515,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -29032,63 +29060,63 @@
         },
         "_log_pointers": {
           "name": "_log_pointers",
-          "line": 220,
+          "line": 234,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_pointer_lines": {
           "name": "_pointer_lines",
-          "line": 245,
+          "line": 266,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_format_context": {
           "name": "_format_context",
-          "line": 256,
+          "line": 277,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_capsule_hits": {
           "name": "_capsule_hits",
-          "line": 293,
+          "line": 314,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_read_capsule": {
           "name": "_read_capsule",
-          "line": 318,
+          "line": 339,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_self_capsule": {
           "name": "_self_capsule",
-          "line": 336,
+          "line": 357,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_charter_capsule": {
           "name": "_charter_capsule",
-          "line": 344,
+          "line": 365,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_project_from_cwd": {
           "name": "_project_from_cwd",
-          "line": 353,
+          "line": 374,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 361,
+          "line": 382,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -31874,6 +31902,111 @@
         {
           "kind": "commit",
           "line": 510,
+          "in": "main",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "tests.seed_journey_fixture": {
+      "path": "backend/tests/seed_journey_fixture.py",
+      "module": "tests.seed_journey_fixture",
+      "loc": 117,
+      "imports": [
+        "app.database",
+        "app.models"
+      ],
+      "external_imports": [
+        "asyncio",
+        "os",
+        "urllib"
+      ],
+      "functions": {
+        "main": {
+          "name": "main",
+          "line": 38,
+          "is_async": true,
+          "calls": [
+            "app.database::async_session",
+            "app.models::Neuron",
+            "app.models::AutopilotProposal",
+            "app.models::ProposalItem",
+            "app.models::IntegrityScan",
+            "app.models::IntegrityFinding",
+            "app.models::RoadmapLedger"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 46,
+          "in": "main",
+          "target": "db",
+          "model": "Neuron"
+        },
+        {
+          "kind": "flush",
+          "line": 55,
+          "in": "main",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 63,
+          "in": "main",
+          "target": "db",
+          "model": "AutopilotProposal"
+        },
+        {
+          "kind": "flush",
+          "line": 64,
+          "in": "main",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 65,
+          "in": "main",
+          "target": "db",
+          "model": "ProposalItem"
+        },
+        {
+          "kind": "add",
+          "line": 76,
+          "in": "main",
+          "target": "db",
+          "model": "IntegrityScan"
+        },
+        {
+          "kind": "flush",
+          "line": 77,
+          "in": "main",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 78,
+          "in": "main",
+          "target": "db",
+          "model": "IntegrityFinding"
+        },
+        {
+          "kind": "add",
+          "line": 85,
+          "in": "main",
+          "target": "db",
+          "model": "RoadmapLedger"
+        },
+        {
+          "kind": "commit",
+          "line": 108,
           "in": "main",
           "target": "db",
           "model": null
@@ -45111,6 +45244,190 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_subagent_provenance": {
+      "path": "backend/tests/test_subagent_provenance.py",
+      "module": "tests.test_subagent_provenance",
+      "loc": 304,
+      "imports": [
+        "app.services.distiller"
+      ],
+      "external_imports": [
+        "__future__",
+        "importlib",
+        "json",
+        "os",
+        "pathlib",
+        "pytest",
+        "subprocess",
+        "sys"
+      ],
+      "functions": {
+        "_load_hook": {
+          "name": "_load_hook",
+          "line": 32,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_parent_and_subagent_are_distinguished_by_agent_id_alone": {
+          "name": "test_parent_and_subagent_are_distinguished_by_agent_id_alone",
+          "line": 77,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_origin_is_stamped_not_inferred_from_absence": {
+          "name": "test_origin_is_stamped_not_inferred_from_absence",
+          "line": 93,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_blank_agent_id_is_not_a_subagent": {
+          "name": "test_blank_agent_id_is_not_a_subagent",
+          "line": 105,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_agent_payload": {
+          "name": "_agent_payload",
+          "line": 112,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_returned_report_is_captured_with_the_identity_that_joins_it": {
+          "name": "test_returned_report_is_captured_with_the_identity_that_joins_it",
+          "line": 129,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_report_accepts_both_string_and_block_list_shapes": {
+          "name": "test_report_accepts_both_string_and_block_list_shapes",
+          "line": 139,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_report_is_redacted_before_it_touches_disk": {
+          "name": "test_report_is_redacted_before_it_touches_disk",
+          "line": 149,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_report_is_clipped_to_its_budget": {
+          "name": "test_report_is_clipped_to_its_budget",
+          "line": 164,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_non_agent_tools_carry_no_report_fields": {
+          "name": "test_non_agent_tools_carry_no_report_fields",
+          "line": 170,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_Stdin.__init__": {
+          "name": "_Stdin.__init__",
+          "line": 177,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_Stdin.read": {
+          "name": "_Stdin.read",
+          "line": 180,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_hook_never_breaks_a_session_on_malformed_payloads": {
+          "name": "test_hook_never_breaks_a_session_on_malformed_payloads",
+          "line": 184,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "distiller": {
+          "name": "distiller",
+          "line": 199,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_event": {
+          "name": "_event",
+          "line": 204,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_parent_deeds_survive_a_fan_out": {
+          "name": "test_parent_deeds_survive_a_fan_out",
+          "line": 213,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_subagent_events_are_labelled_in_the_prompt": {
+          "name": "test_subagent_events_are_labelled_in_the_prompt",
+          "line": 227,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_legacy_events_without_origin_are_not_treated_as_subagent": {
+          "name": "test_legacy_events_without_origin_are_not_treated_as_subagent",
+          "line": 237,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_reports_are_extracted_from_the_parent_agent_event": {
+          "name": "test_reports_are_extracted_from_the_parent_agent_event",
+          "line": 245,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_reports_are_capped": {
+          "name": "test_reports_are_capped",
+          "line": 259,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_reports_enter_last_and_as_data": {
+          "name": "test_reports_enter_last_and_as_data",
+          "line": 265,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_no_subagent_transcript_is_ever_read": {
+          "name": "test_no_subagent_transcript_is_ever_read",
+          "line": 283,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_project_vote_belongs_to_the_parent": {
+          "name": "test_project_vote_belongs_to_the_parent",
+          "line": 294,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_substrate_ontology": {
       "path": "backend/tests/test_substrate_ontology.py",
       "module": "tests.test_substrate_ontology",
@@ -46100,6 +46417,7 @@
       "tests.fixtures.auditor_golden.freeze_golden",
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway",
+      "tests.seed_journey_fixture",
       "tests.test_query_transaction_boundary"
     ],
     "app.governance.output_guard": [
@@ -46311,6 +46629,7 @@
       "tests.kernel_matrix_fixtures",
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway",
+      "tests.seed_journey_fixture",
       "tests.test_citation_hopping",
       "tests.test_dedup_tools",
       "tests.test_delivery_mode",
@@ -46538,7 +46857,8 @@
       "app.services.memory_quality_auditor",
       "tests.test_distiller",
       "tests.test_injection_channel",
-      "tests.test_recurrence_watch"
+      "tests.test_recurrence_watch",
+      "tests.test_subagent_provenance"
     ],
     "app.services.document_extractor": [
       "app.routers.document_ingest",
@@ -48071,6 +48391,10 @@
       "app.services.reconsolidation.lifecycle",
       "app.services.reconsolidation.loaders",
       "tests.kernel_matrix_fixtures"
+    ],
+    "tests.seed_journey_fixture": [
+      "app.database",
+      "app.models"
     ],
     "tests.test_agents_execute_loop": [
       "app.agents.registry",
@@ -61372,6 +61696,12 @@
         "_queue_with_packet",
         "_recreate_database",
         "_seed",
+        "main"
+      ]
+    },
+    {
+      "module": "tests.seed_journey_fixture",
+      "entrypoints": [
         "main"
       ]
     },

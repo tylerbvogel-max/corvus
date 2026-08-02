@@ -6,6 +6,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  // Operator journeys run against throwaway fixture backends under their own
+  // config (playwright.journeys.config.ts) — never against the demo bundle.
+  testIgnore: 'journeys/**',
   timeout: 60_000,
   retries: process.env.CI ? 1 : 0,
   use: {
