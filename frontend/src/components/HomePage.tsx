@@ -1,11 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getTenantConfig, type SeedPrompt } from '../config';
-import {
-  sendChat, submitQueryStream, createSession, listSessions, getSession,
-  appendMessage, generateSessionTitle, deleteSession, fetchNeuron, updateSessionTitle,
-  submitRating, fetchFollowUps,
-  type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec, type SessionSummary,
-} from '../api';
+import { sendChat, submitQueryStream, fetchNeuron, submitRating, fetchFollowUps, type ChatMessage, type ChatResponse, type StageEvent, type SlotSpec } from '../api/knowledge_graph';
+import { createSession, listSessions, getSession, appendMessage, generateSessionTitle, deleteSession, updateSessionTitle, type SessionSummary } from '../api/operator';
 import type { NeuronScoreResponse, CitationSource } from '../types';
 import { useModels } from '../hooks/useModels';
 import { marked } from 'marked';

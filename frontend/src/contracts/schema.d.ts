@@ -3105,6 +3105,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics/mind/delivery-pathways": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mind Delivery Pathways
+         * @description Habituation ledger (mind-delivery-plasticity): per-pathway counters
+         *     and states, plus the hot-path projection currently in force. Read-only —
+         *     the sole writer is the plasticity janitor pass.
+         */
+        get: operations["mind_delivery_pathways_metrics_mind_delivery_pathways_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics/mind/inbox": {
         parameters: {
             query?: never;
@@ -11302,6 +11324,7 @@ export interface operations {
                 staleness?: boolean;
                 decay?: boolean;
                 lint?: boolean;
+                plasticity?: boolean;
                 max_pairs?: number;
             };
             header?: never;
@@ -11561,6 +11584,26 @@ export interface operations {
         };
     };
     mind_metrics_metrics_mind_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    mind_delivery_pathways_metrics_mind_delivery_pathways_get: {
         parameters: {
             query?: never;
             header?: never;

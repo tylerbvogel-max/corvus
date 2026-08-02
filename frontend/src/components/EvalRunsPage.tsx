@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  certifyEvalRun,
-  getEvalRun,
-  listEvalRuns,
-  startEvalRun,
-  type EvalRunDetail,
-  type EvalRunSummary,
-} from '../api';
+import { certifyEvalRun, getEvalRun, listEvalRuns, startEvalRun, type EvalRunDetail, type EvalRunSummary } from '../api/evaluation';
 
 type AsyncStatus = 'idle' | 'loading' | 'ready' | 'error';
 

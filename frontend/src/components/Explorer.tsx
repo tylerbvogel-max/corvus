@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { fetchTree, createCheckpoint, fetchConceptNeurons, type ConceptNeuron } from '../api'
+import { fetchTree } from '../api/knowledge_graph';
+import { createCheckpoint, fetchConceptNeurons, type ConceptNeuron } from '../api/operator';
 import type { TreeNode } from '../types'
 import NeuronTree from './NeuronTree'
 import NeuronDetail from './NeuronDetail'

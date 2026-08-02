@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchAvailableModels, type ModelOption } from '../api';
+import { fetchAvailableModels, type ModelOption } from '../api/knowledge_graph';
 
 const TIER_ORDER = ['frontier', 'free'] as const;
 const TIER_LABELS: Record<string, string> = {

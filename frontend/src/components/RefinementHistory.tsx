@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchRefinementHistory } from '../api';
+import { fetchRefinementHistory } from '../api/knowledge_graph';
 import type { NeuronRefinementEntry } from '../types';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -60,8 +60,8 @@ function weekKey(iso: string | null): string {
 function groupLabel(groupBy: GroupBy, entry: NeuronRefinementEntry): string {
   if (groupBy === 'action') return entry.action;
   if (groupBy === 'field') return entry.field || '(none)';
-  if (groupBy === 'day') return dayKey(entry.created_at);
-  if (groupBy === 'week') return weekKey(entry.created_at);
+  if (groupBy === 'day') return dayKey(entry.created_at ?? null);
+  if (groupBy === 'week') return weekKey(entry.created_at ?? null);
   if (groupBy === 'neuron') return entry.neuron_label || `#${entry.neuron_id}`;
   return '';
 }

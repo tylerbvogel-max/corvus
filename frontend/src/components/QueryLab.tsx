@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
-import { submitQueryStream, submitRating, fetchQueryHistory, fetchQueryDetail, evaluateQuery, refineQuery, applyRefinements, fetchGraphCapacity, fetchQueryDossier } from '../api'
-import type { SlotSpec, GraphCapacity, StageEvent, ModelOption } from '../api'
+import { submitQueryStream, submitRating, fetchQueryHistory, fetchQueryDetail, evaluateQuery, refineQuery, applyRefinements, fetchGraphCapacity, fetchQueryDossier } from '../api/knowledge_graph';
+import type { SlotSpec, GraphCapacity, StageEvent, ModelOption } from '../api/knowledge_graph';
 import type { QueryResponse, QuerySummary, QueryDetail, SlotResult, EvalScoreOut, RefineResponse, StageTelemetry, QueryDossier, DossierActionOut, DossierOutputViolationOut, DossierEvalRunParticipation, DossierIntegrityFindingOut } from '../types'
 import { useModels } from '../hooks/useModels'
 import TokenCharts from './TokenCharts'

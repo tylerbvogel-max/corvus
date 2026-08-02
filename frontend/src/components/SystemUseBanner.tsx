@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchSystemBanner } from '../api';
+import { fetchSystemBanner } from '../api/operator';
 
 const BANNER_ACK_KEY = 'corvus-banner-ack';
 

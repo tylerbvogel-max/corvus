@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  fetchLatestOracleFunnel,
-  type OracleFunnelArtifact,
-} from '../api';
+import { fetchLatestOracleFunnel, type OracleFunnelArtifact } from '../api/evaluation';
 import CarlosLabFrame, { LAB_CYAN, LAB_MAGENTA } from './CarlosLabFrame';
 
 const STAGES = [

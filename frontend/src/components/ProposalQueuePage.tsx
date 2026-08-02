@@ -1,23 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react';
-import {
-  fetchProposals,
-  fetchDedupClusters,
-  fetchProposalDetail,
-  reviewProposal,
-  applyProposal,
-  fetchProposalStats,
-  fetchWhoami,
-  type ProposalSummary,
-  type ProposalDetail,
-  type ProposalStats,
-  type ProposalItem,
-  type GapEvidence,
-  type DocumentEvidence,
-  type Whoami,
-  type RenderedFusionPlan,
-  type RenderedFusionMember,
-  type RenderedFieldReceipt,
-} from '../api';
+import { fetchProposals, fetchDedupClusters, fetchProposalDetail, reviewProposal, applyProposal, fetchProposalStats, fetchWhoami, type ProposalSummary, type ProposalDetail, type ProposalStats, type ProposalItem, type GapEvidence, type DocumentEvidence, type Whoami, type RenderedFusionPlan, type RenderedFusionMember, type RenderedFieldReceipt } from '../api/governance';
 import { getReviewerName, setReviewerName } from '../auth';
 import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
 import { diffWords } from 'diff';

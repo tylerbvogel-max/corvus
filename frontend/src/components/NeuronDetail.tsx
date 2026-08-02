@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchNeuron, fetchScores } from '../api'
+import { fetchNeuron, fetchScores } from '../api/knowledge_graph';
 import type { NeuronDetail as NeuronDetailType, NeuronScores } from '../types'
 import ScoreBars from './ScoreBars'
 import NeuronEgoGraph from './NeuronEgoGraph'

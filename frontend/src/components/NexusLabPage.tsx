@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  fetchGraph3D,
-  fetchNeuron,
-  fetchSemanticClusters,
-  type Graph3DEdge,
-  type Graph3DNode,
-  type SemanticCluster,
-} from '../api';
+import { fetchGraph3D, fetchNeuron, fetchSemanticClusters, type Graph3DEdge, type Graph3DNode, type SemanticCluster } from '../api/knowledge_graph';
 import type { NeuronDetail } from '../types';
 import CarlosLabFrame, { LAB_CYAN, LAB_MAGENTA } from './CarlosLabFrame';
 

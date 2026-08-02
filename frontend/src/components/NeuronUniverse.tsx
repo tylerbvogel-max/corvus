@@ -6,14 +6,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import {
-  fetchGraph3D,
-  fetchNeuron,
-  fetchSemanticClusters,
-  type Graph3DNode,
-  type Graph3DReplayTrace,
-  type SemanticCluster,
-} from '../api';
+import { fetchGraph3D, fetchNeuron, fetchSemanticClusters, type Graph3DNode, type Graph3DReplayTrace, type SemanticCluster } from '../api/knowledge_graph';
 import NeuronRadarControls from './NeuronRadarControls';
 // d3-force-3d ships no TypeScript types.
 // @ts-ignore

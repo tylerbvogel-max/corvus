@@ -1,27 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DEPARTMENTS, DEPT_ROLES } from '../constants';
 import { useModels } from '../hooks/useModels';
-import {
-  fetchEmergentQueue,
-  dismissEmergentEntry,
-  scanReferences,
-  ingestSource,
-  applyIngestSource,
-  extractSourceFromFile,
-  extractSourceFromUrl,
-  startBatchIngest,
-  pollBatchIngest,
-  cancelBatchIngest,
-  listBatchJobs,
-  resumeBatchIngest,
-  type EmergentQueueEntry,
-  type ScanReferencesResponse,
-  type IngestProposal,
-  type IngestSourceResponse,
-  type IngestApplyResponse,
-  type BatchIngestStatusResponse,
-  type BatchJobSummary,
-} from '../api';
+import { fetchEmergentQueue, dismissEmergentEntry, scanReferences, ingestSource, applyIngestSource, extractSourceFromFile, extractSourceFromUrl, startBatchIngest, pollBatchIngest, cancelBatchIngest, listBatchJobs, resumeBatchIngest, type EmergentQueueEntry, type ScanReferencesResponse, type IngestProposal, type IngestSourceResponse, type IngestApplyResponse, type BatchIngestStatusResponse, type BatchJobSummary } from '../api/operator';
 
 type StatusFilter = 'all' | 'pending' | 'dismissed' | 'resolved';
 type SortKey = 'detection_count' | 'last_detected_at' | 'citation_pattern' | 'family';

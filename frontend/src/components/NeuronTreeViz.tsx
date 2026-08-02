@@ -7,7 +7,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import * as d3 from 'd3';
-import { fetchSpreadTrail } from '../api';
+import { fetchSpreadTrail } from '../api/knowledge_graph';
 import type { NeuronScoreResponse, SpreadTrailResponse } from '../types';
 import { DEPT_COLORS } from '../constants';
 

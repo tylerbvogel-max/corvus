@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fetchGovernanceDashboard } from '../api';
-import type { GovernanceDashboardResponse } from '../api';
+import { fetchGovernanceDashboard } from '../api/operator';
+import type { GovernanceDashboardResponse } from '../api/operator';
 import { getTenantConfig } from '../config';
 
 export default function GovernancePage() {
