@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { listAgents, getAgent, triggerAgentRun } from '../api';
-import type { AgentSummary, AgentDetail } from '../api';
+import { listAgents, getAgent, triggerAgentRun } from '../api/governance';
+import type { AgentSummary, AgentDetail } from '../api/governance';
 
 interface RunResult {
   action_id: number;

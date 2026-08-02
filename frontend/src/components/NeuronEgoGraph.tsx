@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { fetchNeuronEdges } from '../api'
+import { fetchNeuronEdges } from '../api/knowledge_graph';
 import type { EgoGraphResponse } from '../types'
 import { DEPT_COLORS } from '../constants'
 

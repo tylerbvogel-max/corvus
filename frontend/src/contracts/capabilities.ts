@@ -186,6 +186,7 @@ export const ROUTE_CONTRACTS: readonly RouteContract[] = [
   { method: 'GET', path: '/lineage/query/{query_id}/trace', capability: 'knowledge_graph', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/lineage/source/{source_id}/impact', capability: 'knowledge_graph', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
+  { method: 'GET', path: '/metrics/mind/delivery-pathways', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/inbox', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/injection-channels', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/locomo-run', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },

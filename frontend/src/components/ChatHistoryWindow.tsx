@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listSessions, deleteSession, updateSessionTitle, type SessionSummary } from '../api';
+import { listSessions, deleteSession, updateSessionTitle, type SessionSummary } from '../api/operator';
 import { SessionTitle, relativeTime } from './HomePage';
 import {
   CHAT_SESSIONS_CHANGED_EVENT, requestLoadSession, requestNewChat,

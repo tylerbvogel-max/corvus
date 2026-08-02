@@ -64,7 +64,7 @@ const NeuronGraphWindow = lazy(() => import('./components/NeuronGraphWindow'))
 import { fetchTenantConfig } from './config'
 import type { Capability, TenantConfig } from './config'
 import { checkAccess, setAccessKey, getAccessKey } from './auth'
-import { fetchProposalStats } from './api'
+import { fetchProposalStats } from './api/governance';
 
 // BYOK setup pill for public demo builds only — the statically-false
 // condition removes the chunk from normal builds.

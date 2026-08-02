@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchStats, fetchCostReport, fetchSpreadLog, fetchScoringHealth, fetchHealthCheck, acknowledgeAlert, acknowledgeAllAlerts } from '../api'
-import type { SpreadLogResponse, ScoringHealthResponse, HealthCheckResponse } from '../api'
+import { fetchStats, fetchSpreadLog } from '../api/knowledge_graph';
+import { fetchCostReport, fetchScoringHealth, fetchHealthCheck, acknowledgeAlert, acknowledgeAllAlerts } from '../api/operator';
+import type { SpreadLogResponse } from '../api/knowledge_graph';
+import type { ScoringHealthResponse, HealthCheckResponse } from '../api/operator';
 import type { NeuronStats, CostReport } from '../types'
 import { Chart, BarController, BarElement, BubbleController, PointElement, CategoryScale, LinearScale, LogarithmicScale, Tooltip, Legend } from 'chart.js'
 import DeptChordDiagram from './DeptChordDiagram'

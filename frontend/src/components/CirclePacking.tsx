@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { fetchTree, fetchNeuron } from '../api'
+import { fetchTree, fetchNeuron } from '../api/knowledge_graph';
 import type { TreeNode } from '../types'
 import { DEPT_COLORS } from '../constants'
 import { escapeHtml } from '../utils'

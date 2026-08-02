@@ -1,12 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  uploadDocument,
-  fetchDocumentJobs,
-  fetchDocumentJobStatus,
-  fetchDocumentStructure,
-  cancelDocumentJob,
-} from '../api';
-import type { DocumentIngestJob, DocumentStructure } from '../api';
+import { uploadDocument, fetchDocumentJobs, fetchDocumentJobStatus, fetchDocumentStructure, cancelDocumentJob } from '../api/ingestion';
+import type { DocumentIngestJob, DocumentStructure } from '../api/ingestion';
 
 type ViewMode = 'list' | 'detail';
 

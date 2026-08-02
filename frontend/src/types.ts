@@ -1,3 +1,4 @@
+import type { components } from './contracts/schema';
 export interface TreeNode {
   id: number;
   layer: number;
@@ -11,33 +12,9 @@ export interface TreeNode {
   child_count?: number;
 }
 
-export interface NeuronDetail {
-  id: number;
-  parent_id: number | null;
-  layer: number;
-  node_type: string;
-  label: string;
-  content: string | null;
-  summary: string | null;
-  department: string | null;
-  role_key: string | null;
-  invocations: number;
-  avg_utility: number;
-  is_active: boolean;
-  cross_ref_departments: string[] | null;
-  standard_date: string | null;
-}
+export type NeuronDetail = components['schemas']['NeuronDetail'];
 
-export interface NeuronScores {
-  neuron_id: number;
-  burst: number;
-  impact: number;
-  precision: number;
-  novelty: number;
-  recency: number;
-  relevance: number;
-  combined: number;
-}
+export type NeuronScores = components['schemas']['NeuronScoreDetail'];
 
 export interface RoleBubble {
   role: string;
@@ -68,17 +45,7 @@ export interface MaintenanceWorkloadCost {
   equivalent_cost_usd: number;
 }
 
-export interface CostReport {
-  total_queries: number;
-  total_cost_usd: number;
-  avg_cost_per_query: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  maintenance_cost_usd: number;
-  maintenance_per_query_usd: number;
-  maintenance_by_workload: MaintenanceWorkloadCost[];
-  maintenance_since: string | null;
-}
+export type CostReport = components['schemas']['CostReportResponse'];
 
 export interface CitationRelevanceClaim {
   claim: string;
@@ -235,15 +202,7 @@ export interface QueryResponse {
   citation_map?: Record<string, CitationSource>;
 }
 
-export interface QuerySummary {
-  id: number;
-  user_message: string;
-  classified_intent: string | null;
-  modes: string[];
-  cost_usd: number | null;
-  user_rating: number | null;
-  created_at: string | null;
-}
+export type QuerySummary = components['schemas']['QuerySummary'];
 
 export interface NeuronHit {
   neuron_id: number;
@@ -273,6 +232,8 @@ export interface RefinementOut {
   neuron_label: string | null;
 }
 
+// Kept handwritten: the generated schema under-specifies this shape
+// (dict-typed fields on the backend model). See record 05 measured addendum.
 export interface QueryDetail {
   id: number;
   user_message: string;
@@ -309,57 +270,15 @@ export interface EvalScoreOut {
   overall: number;
 }
 
-export interface SynapticLearningOut {
-  outcome: string;
-  winner_mode: string | null;
-  neurons_adjusted: number;
-  edges_adjusted: number;
-  avg_delta: number;
-  total_reward: number;
-  total_penalty: number;
-}
+export type SynapticLearningOut = components['schemas']['SynapticLearningOut'];
 
-export interface EvalResponse {
-  query_id: number;
-  eval_text: string;
-  eval_model: string;
-  eval_input_tokens: number;
-  eval_output_tokens: number;
-  scores: EvalScoreOut[];
-  winner: string | null;
-  learning: SynapticLearningOut | null;
-}
+export type EvalResponse = components['schemas']['EvalResponse'];
 
-export interface LearningEventOut {
-  id: number;
-  query_id: number;
-  neuron_id: number;
-  neuron_label: string | null;
-  event_type: string;
-  old_avg_utility: number;
-  new_avg_utility: number;
-  effective_delta: number;
-  combined_score: number;
-  attribution_weight: number;
-  outcome: string;
-  winner_mode: string | null;
-  created_at: string | null;
-}
+export type LearningEventOut = components['schemas']['LearningEventOut'];
 
-export interface LearningAnalytics {
-  total_events: number;
-  total_wins: number;
-  total_losses: number;
-  avg_reward: number;
-  avg_penalty: number;
-  recent_events: LearningEventOut[];
-}
+export type LearningAnalytics = components['schemas']['LearningAnalytics'];
 
-export interface RatingResponse {
-  query_id: number;
-  utility: number;
-  neurons_updated: number;
-}
+export type RatingResponse = components['schemas']['RatingResponse'];
 
 export interface NeuronUpdateSuggestion {
   neuron_id: number;
@@ -381,21 +300,9 @@ export interface NewNeuronSuggestion {
   reason: string;
 }
 
-export interface RefineResponse {
-  query_id: number;
-  model: string;
-  input_tokens: number;
-  output_tokens: number;
-  reasoning: string;
-  neuron_vs_raw_verdict: string;
-  updates: NeuronUpdateSuggestion[];
-  new_neurons: NewNeuronSuggestion[];
-}
+export type RefineResponse = components['schemas']['RefineResponse'];
 
-export interface ApplyRefineResponse {
-  updated: number;
-  created: number;
-}
+export type ApplyRefineResponse = components['schemas']['ApplyRefineResponse'];
 
 // ── AIP Phase 3 — Query Dossier ──────────────────────────────────────────
 
@@ -454,6 +361,8 @@ export interface DossierIntegrityFindingOut {
   created_at: string | null;
 }
 
+// Kept handwritten: the generated schema under-specifies this shape
+// (dict-typed fields on the backend model). See record 05 measured addendum.
 export interface QueryDossier {
   query_id: number;
   user_message: string;
@@ -521,19 +430,7 @@ export interface SpreadTrailResponse {
   edges: SpreadTrailEdge[];
 }
 
-export interface NeuronRefinementEntry {
-  id: number;
-  query_id: number;
-  neuron_id: number;
-  action: string;
-  field: string | null;
-  old_value: string | null;
-  new_value: string | null;
-  reason: string | null;
-  created_at: string | null;
-  neuron_label: string | null;
-  query_snippet: string | null;
-}
+export type NeuronRefinementEntry = components['schemas']['NeuronRefinementOut'];
 
 export interface ObservationSummary {
   id: number;

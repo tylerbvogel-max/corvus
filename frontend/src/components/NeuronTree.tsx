@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import type { TreeNode } from '../types'
-import { fetchChildren, type ConceptNeuron } from '../api'
+import { fetchChildren } from '../api/knowledge_graph';
+import type { ConceptNeuron } from '../api/operator';
 
 interface ConceptGroupProps {
   concepts: ConceptNeuron[];

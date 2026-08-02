@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchQueryRunCounts } from '../api';
+import { fetchQueryRunCounts } from '../api/knowledge_graph';
 
 interface SampleQuery {
   text: string;

@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import {
-  fetchStats, fetchCostReport, fetchSpreadLog, fetchScoringHealth,
-  fetchStageTelemetry, type StageTelemetryReport,
-  type SpreadLogResponse, type ScoringHealthResponse,
-} from '../api';
+import { fetchStats, fetchSpreadLog, type SpreadLogResponse } from '../api/knowledge_graph';
+import { fetchCostReport, fetchScoringHealth, fetchStageTelemetry, type StageTelemetryReport, type ScoringHealthResponse } from '../api/operator';
 import type { NeuronStats, CostReport } from '../types';
 
 /**

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { fetchSpreadTrail } from '../api';
+import { fetchSpreadTrail } from '../api/knowledge_graph';
 import type { NeuronScoreResponse, SpreadTrailResponse } from '../types';
 import { DEPT_COLORS } from '../constants';
 import SigmaGraph from './SigmaGraph';

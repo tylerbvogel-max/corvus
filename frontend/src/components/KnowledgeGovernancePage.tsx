@@ -1,21 +1,9 @@
 import { useState, useEffect } from 'react';
-import {
-  fetchStats,
-  fetchSourceDocuments,
-  fetchAuthoritySummary,
-  fetchProvenanceStale,
-  fetchLearningAnalytics,
-  fetchRefinementHistory,
-  fetchAuditLogSummary,
-  fetchComplianceAudit,
-} from '../api';
-import type {
-  SourceDocumentOut,
-  AuthoritySummaryItem,
-  StaleProvenanceNeuron,
-  ComplianceAuditResponse,
-  AuditLogSummary,
-} from '../api';
+import { fetchStats, fetchLearningAnalytics, fetchRefinementHistory } from '../api/knowledge_graph';
+import { fetchSourceDocuments, fetchAuthoritySummary, fetchProvenanceStale } from '../api/governance';
+import { fetchAuditLogSummary, fetchComplianceAudit } from '../api/operator';
+import type { SourceDocumentOut, AuthoritySummaryItem, StaleProvenanceNeuron } from '../api/governance';
+import type { ComplianceAuditResponse, AuditLogSummary } from '../api/operator';
 import type { NeuronStats, LearningAnalytics, LearningEventOut, NeuronRefinementEntry } from '../types';
 
 interface GovernanceData {
@@ -323,7 +311,7 @@ export default function KnowledgeGovernancePage() {
               <tbody>
                 {(showAllLearning ? learning.recent_events : learning.recent_events.slice(0, 20)).map((e: LearningEventOut) => (
                   <tr key={e.id}>
-                    <td style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{formatDate(e.created_at)}</td>
+                    <td style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{formatDate(e.created_at ?? null)}</td>
                     <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {e.neuron_label ?? `#${e.neuron_id}`}
                     </td>
@@ -392,7 +380,7 @@ export default function KnowledgeGovernancePage() {
               <tbody>
                 {(showAllRefinements ? refinements : refinements.slice(0, 20)).map(r => (
                   <tr key={r.id}>
-                    <td style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{formatDate(r.created_at)}</td>
+                    <td style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>{formatDate(r.created_at ?? null)}</td>
                     <td>{r.neuron_label ?? `#${r.neuron_id}`}</td>
                     <td>
                       <span style={{

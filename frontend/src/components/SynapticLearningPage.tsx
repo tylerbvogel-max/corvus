@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchLearningAnalytics } from '../api';
+import { fetchLearningAnalytics } from '../api/knowledge_graph';
 import type { LearningAnalytics, LearningEventOut } from '../types';
 
 export default function SynapticLearningPage() {

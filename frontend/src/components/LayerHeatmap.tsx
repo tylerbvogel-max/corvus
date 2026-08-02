@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchLayerFlow, type LayerFlowNode, type LayerFlowLink } from '../api';
+import { fetchLayerFlow, type LayerFlowNode, type LayerFlowLink } from '../api/knowledge_graph';
 import { DEPT_COLORS } from '../constants';
 
 const LAYER_LABELS = ['L0 Dept', 'L1 Role', 'L2 Task', 'L3 System', 'L4 Decision', 'L5 Output'];

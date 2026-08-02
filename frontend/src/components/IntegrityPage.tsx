@@ -1,24 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  fetchIntegrityDashboard,
-  fetchIntegrityFindings,
-  fetchIntegrityFindingDetail,
-  resolveIntegrityFinding,
-  dismissIntegrityFinding,
-  bulkResolveIntegrityFindings,
-  proposeIntegrityFinding,
-  runHomeostasisScan,
-  runDuplicatesScan,
-  runConnectionsScan,
-  runConflictsScan,
-  runAgingScan,
-  applyHomeostasisScan,
-  fetchStats,
-  listIntegrityRuns,
-  listAgents,
-  getAgentRun,
-  triggerAgentRun,
-} from '../api';
+import { fetchIntegrityDashboard, fetchIntegrityFindings, fetchIntegrityFindingDetail, resolveIntegrityFinding, dismissIntegrityFinding, bulkResolveIntegrityFindings, proposeIntegrityFinding, runHomeostasisScan, runDuplicatesScan, runConnectionsScan, runConflictsScan, runAgingScan, applyHomeostasisScan, listIntegrityRuns, listAgents, getAgentRun, triggerAgentRun } from '../api/governance';
+import { fetchStats } from '../api/knowledge_graph';
 import type {
   IntegrityDashboard,
   IntegrityFinding,
@@ -26,7 +8,7 @@ import type {
   IntegrityScanResponse,
   IntegrityWeightDistribution,
 } from '../types';
-import type { IntegrityRun, AgentSummary, AgentRunDetail } from '../api';
+import type { IntegrityRun, AgentSummary, AgentRunDetail } from '../api/governance';
 import { useListKeyboardNav } from '../hooks/useListKeyboardNav';
 
 type Panel = 'dashboard' | 'scan' | 'findings';

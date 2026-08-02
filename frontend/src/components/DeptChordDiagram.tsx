@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { fetchDeptChord } from '../api'
+import { fetchDeptChord } from '../api/knowledge_graph';
 import type { DeptChordEntry } from '../types'
 import { DEPT_COLORS } from '../constants'
 import { escapeHtml } from '../utils'
