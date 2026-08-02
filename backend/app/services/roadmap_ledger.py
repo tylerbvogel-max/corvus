@@ -30,6 +30,15 @@ REVIEW_CADENCE_MONTHS = {
 REVIEW_CADENCES = frozenset({*REVIEW_CADENCE_MONTHS, "event", "manual"})
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,119}$")
 RECORD_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$")
+# Commit-sha-shaped tokens in free-text evidence. Abbreviated shas start at 7
+# characters, so shorter hex (counts, sizes, dates) cannot match.  Real
+# receipts also carry non-commit hex — fixture sha256 digests, for one — so
+# this only NOMINATES candidates; resolution against the repository decides.
+COMMIT_TOKEN_RE = re.compile(r"\b[0-9a-fA-F]{7,40}\b")
+# A checked receipt says which: every claim resolved, or there was no
+# repository to resolve against.  Silence is never a pass.
+COMMIT_VERIFICATION_STATES = frozenset({"verified", "unverifiable-no-repo"})
+MAX_COMMIT_CANDIDATES = 20
 
 
 def utc_now() -> str:
@@ -317,6 +326,24 @@ def node_is_ready(state: dict[str, Any], node: dict[str, Any]) -> bool:
                for prereq in node.get("prereqs", []))
 
 
+def extract_commit_candidates(evidence: list[str]) -> list[str]:
+    """Nominate commit-sha-shaped tokens from free-text evidence, in order.
+
+    Deliberately generous: evidence is prose written by coding agents, and a
+    receipt that names its commit as "commit 8cc5db3 on wt/pretooluse-reach"
+    should not have to learn a syntax.  Over-nomination is safe because the
+    repository, not this function, decides what is real — and a receipt only
+    needs ONE claim to resolve.
+    """
+    seen: dict[str, None] = {}
+    for entry in evidence:
+        for match in COMMIT_TOKEN_RE.findall(entry or ""):
+            seen.setdefault(match.lower(), None)
+            if len(seen) >= MAX_COMMIT_CANDIDATES:
+                return list(seen)
+    return list(seen)
+
+
 def reconcile_node(
     node: dict[str, Any],
     *,
@@ -333,6 +360,8 @@ def reconcile_node(
     accepted_by: str,
     next_action: str | None = None,
     accepted_at: datetime | None = None,
+    evidence_commits: list[str] | None = None,
+    commit_verification: str | None = None,
 ) -> dict[str, Any]:
     """Attach a human-accepted verification receipt directly to one record.
 
@@ -340,6 +369,12 @@ def reconcile_node(
     harness.  The ledger keeps only the durable return contract: what was
     claimed, what evidence supports it, what remains limited, who verified it,
     and who accepted it into forward state.
+
+    ``evidence_commits`` are the commits the caller RESOLVED against the
+    ledger's repository; ``commit_verification`` says whether resolution
+    happened at all.  Callers that skip both still get the structural check —
+    verified completion must name a commit — because a naive caller must not
+    be able to mint a ``done`` that no history backs.
     """
     if disposition not in {"complete", "partial", "failed", "blocked"}:
         raise ValueError("unsupported reconciliation disposition")
@@ -351,16 +386,36 @@ def reconcile_node(
         raise ValueError("verifier must be independent from the accepting human")
     if not 0 <= confidence <= 1:
         raise ValueError("confidence must be between 0 and 1")
-    if verification_passed and disposition == "complete":
+    if commit_verification is not None and commit_verification not in COMMIT_VERIFICATION_STATES:
+        raise ValueError("unsupported commit verification state")
+
+    verified_completion = verification_passed and disposition == "complete"
+    # Only verified completion is gated.  An honest partial/failed/blocked
+    # report often has no commit precisely BECAUSE the work did not land, and
+    # filing one must stay cheap or the ledger learns to lie.
+    if verified_completion:
         checklist = node.get("verification", [])
         if not isinstance(checklist, list) or not checklist:
             raise ValueError("verified completion requires a verification checklist")
         if not evidence:
             raise ValueError("verified completion requires evidence")
+        claimed = (list(evidence_commits) if evidence_commits is not None
+                   else extract_commit_candidates(evidence))
+        if not claimed:
+            raise ValueError(
+                "verified completion must name a commit in its evidence: no "
+                "commit-sha-shaped token (7-40 hex characters) was found. A "
+                "record is not done while its work exists only in a working tree."
+            )
+    else:
+        claimed = list(evidence_commits) if evidence_commits else []
 
     timestamp = accepted_at or datetime.now(timezone.utc)
     receipt = {
-        "schema": "corvus.roadmap-reconciliation/v1",
+        # v2 adds evidenceCommits + commitVerification. Receipts are durable,
+        # so the shape names itself: a v1 receipt predates the commit gate and
+        # its silence about commits is history, not a passed check.
+        "schema": "corvus.roadmap-reconciliation/v2",
         "acceptedAt": timestamp.isoformat(),
         "acceptedBy": accepted_by.strip(),
         "verifier": verifier.strip(),
@@ -372,6 +427,8 @@ def reconcile_node(
         "limitations": copy.deepcopy(limitations),
         "disclosures": copy.deepcopy(disclosures),
         "evidence": copy.deepcopy(evidence),
+        "evidenceCommits": claimed,
+        "commitVerification": commit_verification,
         "nextAction": next_action.strip() if next_action and next_action.strip() else None,
     }
     reconciled = copy.deepcopy(node)

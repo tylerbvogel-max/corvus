@@ -11,12 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import RoadmapLedger
+from app.services.commit_verification import resolve_commits
 from app.services.roadmap_admission import (
     admit_session, recent_admissions, refresh_cache,
 )
 from app.services.roadmap_ledger import (
-    SLUG_RE, advance_state, empty_state, reconcile_node, slugify,
-    state_summary, validate_state,
+    SLUG_RE, advance_state, empty_state, extract_commit_candidates,
+    reconcile_node, slugify, state_summary, validate_state,
 )
 
 
@@ -280,6 +281,22 @@ async def reconcile_roadmap_record(
         raise HTTPException(404, "roadmap record not found")
     if nodes[index].get("status") in {"done", "deprioritized", "cancelled"}:
         raise HTTPException(409, "retired records cannot accept new reconciliation receipts")
+
+    # DONE MEANS COMMITTED (ledger-done-means-committed). Verified completion
+    # has to name a commit that exists in this ledger's own repository —
+    # otherwise `done` can describe work living only in someone's working
+    # tree, which is exactly how mind-synaptic-downscaling went unnoticed.
+    candidates = extract_commit_candidates(req.evidence)
+    resolved, unresolved, commit_status = await resolve_commits(
+        ledger.project_path, candidates)
+    if req.verification_passed and req.disposition == "complete":
+        if commit_status == "verified" and not resolved:
+            raise HTTPException(422, (
+                "verified completion must name a commit that exists in "
+                f"{ledger.project_path}: none of the claimed tokens resolved "
+                f"({', '.join(unresolved) or 'no commit-sha-shaped token found'}). "
+                "Commit the work first, then reconcile with its sha."
+            ))
     try:
         nodes[index] = reconcile_node(
             nodes[index],
@@ -295,6 +312,11 @@ async def reconcile_roadmap_record(
             verifier=req.verifier,
             accepted_by=req.accepted_by,
             next_action=req.next_action,
+            # When no repository was readable the candidates stand unchecked;
+            # commit_verification says so, so the receipt never implies a
+            # resolution that did not happen.
+            evidence_commits=resolved if commit_status == "verified" else candidates,
+            commit_verification=commit_status,
         )
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc

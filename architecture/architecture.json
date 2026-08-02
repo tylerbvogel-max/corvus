@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "e5517cf09b23e8f906b488ff3bdab73b0daa943534a9b5df9324517d06996ec1",
-    "files": 469
+    "fingerprint": "ff3669b367fe9e7b8ad043b317a53e1a59c2047074da88b6e906ce02607de9ee",
+    "files": 471
   },
   "frontend": {
     "available": true,
@@ -4109,11 +4109,11 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 390,
-    "loc": 89652,
+    "modules": 392,
+    "loc": 90050,
     "routes": 213,
-    "import_edges": 1072,
-    "call_edges": 706,
+    "import_edges": 1074,
+    "call_edges": 708,
     "modules_touching_db": 120,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -13761,10 +13761,11 @@
     "app.routers.roadmap_ledgers": {
       "path": "backend/app/routers/roadmap_ledgers.py",
       "module": "app.routers.roadmap_ledgers",
-      "loc": 309,
+      "loc": 331,
       "imports": [
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
@@ -13779,7 +13780,7 @@
       "functions": {
         "_refresh_cache_safely": {
           "name": "_refresh_cache_safely",
-          "line": 75,
+          "line": 76,
           "is_async": true,
           "calls": [
             "app.services.roadmap_admission::refresh_cache"
@@ -13788,7 +13789,7 @@
         },
         "_detail": {
           "name": "_detail",
-          "line": 83,
+          "line": 84,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::state_summary"
@@ -13797,7 +13798,7 @@
         },
         "list_ledgers": {
           "name": "list_ledgers",
-          "line": 99,
+          "line": 100,
           "is_async": true,
           "calls": [
             "app.services.roadmap_ledger::state_summary"
@@ -13806,7 +13807,7 @@
         },
         "create_ledger": {
           "name": "create_ledger",
-          "line": 116,
+          "line": 117,
           "is_async": true,
           "calls": [
             "app.services.roadmap_ledger::slugify",
@@ -13819,7 +13820,7 @@
         },
         "admission_context": {
           "name": "admission_context",
-          "line": 144,
+          "line": 145,
           "is_async": true,
           "calls": [
             "app.services.roadmap_admission::refresh_cache"
@@ -13828,14 +13829,14 @@
         },
         "get_ledger": {
           "name": "get_ledger",
-          "line": 178,
+          "line": 179,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "update_ledger": {
           "name": "update_ledger",
-          "line": 186,
+          "line": 187,
           "is_async": true,
           "calls": [
             "app.services.roadmap_ledger::advance_state"
@@ -13844,14 +13845,14 @@
         },
         "update_ledger_metadata": {
           "name": "update_ledger_metadata",
-          "line": 209,
+          "line": 210,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "create_admission": {
           "name": "create_admission",
-          "line": 233,
+          "line": 234,
           "is_async": true,
           "calls": [
             "app.services.roadmap_admission::admit_session"
@@ -13860,7 +13861,7 @@
         },
         "list_admissions": {
           "name": "list_admissions",
-          "line": 254,
+          "line": 255,
           "is_async": true,
           "calls": [
             "app.services.roadmap_admission::recent_admissions"
@@ -13869,9 +13870,11 @@
         },
         "reconcile_roadmap_record": {
           "name": "reconcile_roadmap_record",
-          "line": 265,
+          "line": 266,
           "is_async": true,
           "calls": [
+            "app.services.roadmap_ledger::extract_commit_candidates",
+            "app.services.commit_verification::resolve_commits",
             "app.services.roadmap_ledger::reconcile_node",
             "app.services.roadmap_ledger::advance_state"
           ],
@@ -13886,7 +13889,7 @@
           "full_path": "/roadmap-ledgers",
           "mounted_on": "router",
           "handler": "list_ledgers",
-          "line": 99
+          "line": 100
         },
         {
           "method": "POST",
@@ -13895,7 +13898,7 @@
           "full_path": "/roadmap-ledgers",
           "mounted_on": "router",
           "handler": "create_ledger",
-          "line": 116
+          "line": 117
         },
         {
           "method": "GET",
@@ -13904,7 +13907,7 @@
           "full_path": "/roadmap-ledgers/admission-context",
           "mounted_on": "router",
           "handler": "admission_context",
-          "line": 144
+          "line": 145
         },
         {
           "method": "GET",
@@ -13913,7 +13916,7 @@
           "full_path": "/roadmap-ledgers/{slug}",
           "mounted_on": "router",
           "handler": "get_ledger",
-          "line": 178
+          "line": 179
         },
         {
           "method": "PUT",
@@ -13922,7 +13925,7 @@
           "full_path": "/roadmap-ledgers/{slug}",
           "mounted_on": "router",
           "handler": "update_ledger",
-          "line": 186
+          "line": 187
         },
         {
           "method": "PATCH",
@@ -13931,7 +13934,7 @@
           "full_path": "/roadmap-ledgers/{slug}",
           "mounted_on": "router",
           "handler": "update_ledger_metadata",
-          "line": 209
+          "line": 210
         },
         {
           "method": "POST",
@@ -13940,7 +13943,7 @@
           "full_path": "/roadmap-ledgers/{slug}/admissions",
           "mounted_on": "router",
           "handler": "create_admission",
-          "line": 233
+          "line": 234
         },
         {
           "method": "GET",
@@ -13949,7 +13952,7 @@
           "full_path": "/roadmap-ledgers/{slug}/admissions",
           "mounted_on": "router",
           "handler": "list_admissions",
-          "line": 254
+          "line": 255
         },
         {
           "method": "POST",
@@ -13958,41 +13961,41 @@
           "full_path": "/roadmap-ledgers/{slug}/nodes/{node_id}/reconcile",
           "mounted_on": "router",
           "handler": "reconcile_roadmap_record",
-          "line": 265
+          "line": 266
         }
       ],
       "db_writes": [
         {
           "kind": "add",
-          "line": 136,
+          "line": 137,
           "in": "create_ledger",
           "target": "db",
           "model": "RoadmapLedger"
         },
         {
           "kind": "commit",
-          "line": 137,
+          "line": 138,
           "in": "create_ledger",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 202,
+          "line": 203,
           "in": "update_ledger",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 226,
+          "line": 227,
           "in": "update_ledger_metadata",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 305,
+          "line": 327,
           "in": "reconcile_roadmap_record",
           "target": "db",
           "model": null
@@ -16225,6 +16228,52 @@
         "subscription_report": {
           "name": "subscription_report",
           "line": 98,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.services.commit_verification": {
+      "path": "backend/app/services/commit_verification.py",
+      "module": "app.services.commit_verification",
+      "loc": 102,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "asyncio",
+        "logging",
+        "pathlib",
+        "shutil"
+      ],
+      "functions": {
+        "_git": {
+          "name": "_git",
+          "line": 34,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "is_git_repository": {
+          "name": "is_git_repository",
+          "line": 60,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "commit_exists": {
+          "name": "commit_exists",
+          "line": 70,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "resolve_commits": {
+          "name": "resolve_commits",
+          "line": 81,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -25869,7 +25918,7 @@
     "app.services.roadmap_ledger": {
       "path": "backend/app/services/roadmap_ledger.py",
       "module": "app.services.roadmap_ledger",
-      "loc": 390,
+      "loc": 447,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -25883,98 +25932,105 @@
       "functions": {
         "utc_now": {
           "name": "utc_now",
-          "line": 35,
+          "line": 44,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "slugify": {
           "name": "slugify",
-          "line": 39,
+          "line": 48,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "empty_state": {
           "name": "empty_state",
-          "line": 46,
+          "line": 55,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_record_id": {
           "name": "_record_id",
-          "line": 61,
+          "line": 70,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_require_label": {
           "name": "_require_label",
-          "line": 69,
+          "line": 78,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_optional_datetime": {
           "name": "_optional_datetime",
-          "line": 77,
+          "line": 86,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_validate_assumptions": {
           "name": "_validate_assumptions",
-          "line": 90,
+          "line": 99,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "validate_state": {
           "name": "validate_state",
-          "line": 135,
+          "line": 144,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "review_status": {
           "name": "review_status",
-          "line": 234,
+          "line": 243,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "next_review_at": {
           "name": "next_review_at",
-          "line": 256,
+          "line": 265,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "state_summary": {
           "name": "state_summary",
-          "line": 272,
+          "line": 281,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "advance_state": {
           "name": "advance_state",
-          "line": 305,
+          "line": 314,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "node_is_ready": {
           "name": "node_is_ready",
-          "line": 312,
+          "line": 321,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "extract_commit_candidates": {
+          "name": "extract_commit_candidates",
+          "line": 329,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "reconcile_node": {
           "name": "reconcile_node",
-          "line": 320,
+          "line": 347,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -25984,28 +26040,28 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 102,
+          "line": 111,
           "in": "_validate_assumptions",
           "target": "assumption_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 171,
+          "line": 180,
           "in": "validate_state",
           "target": "section_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 201,
+          "line": 210,
           "in": "validate_state",
           "target": "node_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 229,
+          "line": 238,
           "in": "validate_state",
           "target": "milestone_ids",
           "model": null
@@ -34985,6 +35041,120 @@
           "is_async": false,
           "calls": [
             "app.services.codex_usage::_format_report"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_commit_verification": {
+      "path": "backend/tests/test_commit_verification.py",
+      "module": "tests.test_commit_verification",
+      "loc": 118,
+      "imports": [
+        "app.services.commit_verification"
+      ],
+      "external_imports": [
+        "__future__",
+        "asyncio",
+        "pytest",
+        "subprocess"
+      ],
+      "functions": {
+        "_git": {
+          "name": "_git",
+          "line": 27,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "repo": {
+          "name": "repo",
+          "line": 35,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "head_sha": {
+          "name": "head_sha",
+          "line": 49,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_commit_that_exists_resolves_in_full_and_abbreviated_form": {
+          "name": "test_a_commit_that_exists_resolves_in_full_and_abbreviated_form",
+          "line": 53,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::commit_exists"
+          ],
+          "is_route": false
+        },
+        "test_a_commit_that_does_not_exist_is_refused": {
+          "name": "test_a_commit_that_does_not_exist_is_refused",
+          "line": 58,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::commit_exists"
+          ],
+          "is_route": false
+        },
+        "test_a_blob_hash_is_not_accepted_as_a_commit": {
+          "name": "test_a_blob_hash_is_not_accepted_as_a_commit",
+          "line": 64,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::commit_exists"
+          ],
+          "is_route": false
+        },
+        "test_resolution_splits_real_claims_from_invented_ones": {
+          "name": "test_resolution_splits_real_claims_from_invented_ones",
+          "line": 70,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::resolve_commits"
+          ],
+          "is_route": false
+        },
+        "test_a_directory_that_is_not_a_repository_is_unverifiable_not_false": {
+          "name": "test_a_directory_that_is_not_a_repository_is_unverifiable_not_false",
+          "line": 79,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::resolve_commits"
+          ],
+          "is_route": false
+        },
+        "test_missing_project_paths_are_unverifiable": {
+          "name": "test_missing_project_paths_are_unverifiable",
+          "line": 90,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::is_git_repository",
+            "app.services.commit_verification::resolve_commits"
+          ],
+          "is_route": false
+        },
+        "test_verification_works_inside_a_worktree": {
+          "name": "test_verification_works_inside_a_worktree",
+          "line": 96,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::is_git_repository",
+            "app.services.commit_verification::resolve_commits"
+          ],
+          "is_route": false
+        },
+        "test_a_commit_made_only_in_the_worktree_resolves_there": {
+          "name": "test_a_commit_made_only_in_the_worktree_resolves_there",
+          "line": 107,
+          "is_async": false,
+          "calls": [
+            "app.services.commit_verification::resolve_commits"
           ],
           "is_route": false
         }
@@ -44270,7 +44440,7 @@
     "tests.test_roadmap_ledger": {
       "path": "backend/tests/test_roadmap_ledger.py",
       "module": "tests.test_roadmap_ledger",
-      "loc": 224,
+      "loc": 323,
       "imports": [
         "app.services.roadmap_ledger"
       ],
@@ -44281,14 +44451,14 @@
       "functions": {
         "_state": {
           "name": "_state",
-          "line": 10,
+          "line": 11,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_validate_preserves_extension_fields_without_aliasing_input": {
           "name": "test_validate_preserves_extension_fields_without_aliasing_input",
-          "line": 26,
+          "line": 27,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::validate_state"
@@ -44297,7 +44467,7 @@
         },
         "test_validate_rejects_structural_corruption": {
           "name": "test_validate_rejects_structural_corruption",
-          "line": 41,
+          "line": 42,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::validate_state"
@@ -44306,7 +44476,7 @@
         },
         "test_summary_excludes_cancelled_from_delivery_denominator": {
           "name": "test_summary_excludes_cancelled_from_delivery_denominator",
-          "line": 48,
+          "line": 49,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::state_summary"
@@ -44315,7 +44485,7 @@
         },
         "test_advance_state_stamps_time_and_monotonically_advances_source_version": {
           "name": "test_advance_state_stamps_time_and_monotonically_advances_source_version",
-          "line": 71,
+          "line": 72,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::advance_state"
@@ -44324,7 +44494,7 @@
         },
         "test_empty_state_is_immediately_valid_and_slugify_is_stable": {
           "name": "test_empty_state_is_immediately_valid_and_slugify_is_stable",
-          "line": 77,
+          "line": 78,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::validate_state",
@@ -44335,7 +44505,7 @@
         },
         "test_ready_record_accepts_independently_verified_reconciliation": {
           "name": "test_ready_record_accepts_independently_verified_reconciliation",
-          "line": 84,
+          "line": 85,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::node_is_ready",
@@ -44345,7 +44515,7 @@
         },
         "test_verified_completion_requires_checklist_evidence_and_independent_acceptance": {
           "name": "test_verified_completion_requires_checklist_evidence_and_independent_acceptance",
-          "line": 110,
+          "line": 112,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::reconcile_node"
@@ -44354,7 +44524,7 @@
         },
         "test_strategic_fields_validate_and_summarize_due_reviews": {
           "name": "test_strategic_fields_validate_and_summarize_due_reviews",
-          "line": 135,
+          "line": 137,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::validate_state",
@@ -44364,7 +44534,7 @@
         },
         "test_strategic_fields_reject_invalid_values": {
           "name": "test_strategic_fields_reject_invalid_values",
-          "line": 166,
+          "line": 168,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::validate_state"
@@ -44373,7 +44543,7 @@
         },
         "test_assumption_contract_requires_bounded_confidence_and_unique_ids": {
           "name": "test_assumption_contract_requires_bounded_confidence_and_unique_ids",
-          "line": 173,
+          "line": 175,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::validate_state"
@@ -44382,7 +44552,7 @@
         },
         "test_review_schedule_uses_calendar_months_and_status_windows": {
           "name": "test_review_schedule_uses_calendar_months_and_status_windows",
-          "line": 188,
+          "line": 190,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::next_review_at",
@@ -44390,9 +44560,86 @@
           ],
           "is_route": false
         },
+        "_completion_kwargs": {
+          "name": "_completion_kwargs",
+          "line": 206,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_completable_node": {
+          "name": "_completable_node",
+          "line": 224,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_commit_candidates_ignore_short_hex_and_dedupe_case_insensitively": {
+          "name": "test_commit_candidates_ignore_short_hex_and_dedupe_case_insensitively",
+          "line": 230,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::extract_commit_candidates"
+          ],
+          "is_route": false
+        },
+        "test_commit_candidates_are_capped_so_prose_cannot_fan_out_git_calls": {
+          "name": "test_commit_candidates_are_capped_so_prose_cannot_fan_out_git_calls",
+          "line": 241,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::extract_commit_candidates"
+          ],
+          "is_route": false
+        },
+        "test_verified_completion_refuses_evidence_that_names_no_commit": {
+          "name": "test_verified_completion_refuses_evidence_that_names_no_commit",
+          "line": 246,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "test_verified_completion_records_commits_and_verification_state": {
+          "name": "test_verified_completion_records_commits_and_verification_state",
+          "line": 254,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "test_receipt_never_implies_a_check_that_did_not_run": {
+          "name": "test_receipt_never_implies_a_check_that_did_not_run",
+          "line": 267,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "test_unsupported_commit_verification_state_is_rejected": {
+          "name": "test_unsupported_commit_verification_state_is_rejected",
+          "line": 278,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "test_honest_failure_reports_need_no_commit": {
+          "name": "test_honest_failure_reports_need_no_commit",
+          "line": 289,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
         "test_partial_reconciliation_records_evidence_without_closing_record": {
           "name": "test_partial_reconciliation_records_evidence_without_closing_record",
-          "line": 204,
+          "line": 303,
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::reconcile_node"
@@ -47355,6 +47602,10 @@
       "app.routers.mind_metrics",
       "tests.test_codex_usage"
     ],
+    "app.services.commit_verification": [
+      "app.routers.roadmap_ledgers",
+      "tests.test_commit_verification"
+    ],
     "app.services.concept_service": [
       "app.routers.admin",
       "app.services.executor",
@@ -48369,6 +48620,7 @@
     ],
     "app.routers.roadmap_ledgers": [
       "app.models",
+      "app.services.commit_verification",
       "app.services.roadmap_admission",
       "app.services.roadmap_ledger"
     ],
@@ -49005,6 +49257,9 @@
     ],
     "tests.test_codex_usage": [
       "app.services.codex_usage"
+    ],
+    "tests.test_commit_verification": [
+      "app.services.commit_verification"
     ],
     "tests.test_composition_snapshot": [
       "app.composition.factory",
@@ -61507,18 +61762,20 @@
       "full_path": "/roadmap-ledgers",
       "mounted_on": "router",
       "handler": "list_ledgers",
-      "line": 99,
+      "line": 100,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61530,18 +61787,20 @@
       "full_path": "/roadmap-ledgers",
       "mounted_on": "router",
       "handler": "create_ledger",
-      "line": 116,
+      "line": 117,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61553,18 +61812,20 @@
       "full_path": "/roadmap-ledgers/admission-context",
       "mounted_on": "router",
       "handler": "admission_context",
-      "line": 144,
+      "line": 145,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61576,18 +61837,20 @@
       "full_path": "/roadmap-ledgers/{slug}",
       "mounted_on": "router",
       "handler": "get_ledger",
-      "line": 178,
+      "line": 179,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61599,18 +61862,20 @@
       "full_path": "/roadmap-ledgers/{slug}",
       "mounted_on": "router",
       "handler": "update_ledger",
-      "line": 186,
+      "line": 187,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61622,18 +61887,20 @@
       "full_path": "/roadmap-ledgers/{slug}",
       "mounted_on": "router",
       "handler": "update_ledger_metadata",
-      "line": 209,
+      "line": 210,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61645,18 +61912,20 @@
       "full_path": "/roadmap-ledgers/{slug}/admissions",
       "mounted_on": "router",
       "handler": "create_admission",
-      "line": 233,
+      "line": 234,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61668,18 +61937,20 @@
       "full_path": "/roadmap-ledgers/{slug}/admissions",
       "mounted_on": "router",
       "handler": "list_admissions",
-      "line": 254,
+      "line": 255,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]
@@ -61691,18 +61962,20 @@
       "full_path": "/roadmap-ledgers/{slug}/nodes/{node_id}/reconcile",
       "mounted_on": "router",
       "handler": "reconcile_roadmap_record",
-      "line": 265,
+      "line": 266,
       "module": "app.routers.roadmap_ledgers",
       "file": "backend/app/routers/roadmap_ledgers.py",
       "imports_reachable": [
         "app.config",
         "app.database",
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ],
       "calls_reachable": [
         "app.models",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger"
       ]

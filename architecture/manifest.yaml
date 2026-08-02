@@ -720,6 +720,7 @@ bounded_contexts:
       - Roadmap Ledgers are canonical; former static flowcharts are archival.
       - Revision drift invalidates an earlier planning admission.
       - Admission never silently closes or changes roadmap intent.
+      - Verified completion must name a commit that resolves in the ledger's own repository; a receipt records whether that check actually ran, and honest partial/failed/blocked reports stay commit-free.
     components:
       - roadmap-admission
     integrates_with:
@@ -730,6 +731,7 @@ bounded_contexts:
     evidence:
       - backend/app/services/roadmap_ledger.py
       - backend/app/services/roadmap_admission.py
+      - backend/app/services/commit_verification.py
       - backend/app/routers/roadmap_ledgers.py
 
   - id: query-answering
@@ -1083,6 +1085,9 @@ boxes:
       - harness/claude-code/roadmap_gate_hook.py
       - backend/app/services/roadmap_admission.py
       - backend/app/services/roadmap_ledger.py
+      # The impure half of the done-means-committed gate: roadmap_ledger stays
+      # a pure validator, and everything that reads a repository lives here.
+      - backend/app/services/commit_verification.py
       - backend/app/routers/roadmap_ledgers.py
 
   - id: harness-transport

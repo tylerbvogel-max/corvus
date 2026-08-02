@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 390,
+    "modules": 392,
     "frontend_files": 79,
-    "units": 469,
-    "classified": 469,
+    "units": 471,
+    "classified": 471,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "e5517cf09b23e8f906b488ff3bdab73b0daa943534a9b5df9324517d06996ec1",
-    "current_fingerprint": "e5517cf09b23e8f906b488ff3bdab73b0daa943534a9b5df9324517d06996ec1",
-    "stored_files": 469,
-    "current_files": 469
+    "stored_fingerprint": "ff3669b367fe9e7b8ad043b317a53e1a59c2047074da88b6e906ce02607de9ee",
+    "current_fingerprint": "ff3669b367fe9e7b8ad043b317a53e1a59c2047074da88b6e906ce02607de9ee",
+    "stored_files": 471,
+    "current_files": 471
   },
   "manifest_problems": [],
   "boxes": [
@@ -67,12 +67,13 @@
       "tier": "governance",
       "purpose": "Preserve forward intent and block mapped-project mutations until a revision-pinned admission exists.",
       "confidence": "reviewed",
-      "module_count": 5,
+      "module_count": 6,
       "frontend_file_count": 0,
-      "loc": 1511,
+      "loc": 1692,
       "routes": 9,
       "modules": [
         "app.routers.roadmap_ledgers",
+        "app.services.commit_verification",
         "app.services.roadmap_admission",
         "app.services.roadmap_ledger",
         "harness.claude-code.roadmap_admission",
@@ -663,9 +664,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 111,
+      "module_count": 112,
       "frontend_file_count": 0,
-      "loc": 23394,
+      "loc": 23611,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -705,6 +706,7 @@
         "tests.test_citation_relevance",
         "tests.test_clustering_zones",
         "tests.test_codex_usage",
+        "tests.test_commit_verification",
         "tests.test_composition_snapshot",
         "tests.test_concept_governance",
         "tests.test_dedup_tools",
@@ -2053,7 +2055,8 @@
       "invariants": [
         "Roadmap Ledgers are canonical; former static flowcharts are archival.",
         "Revision drift invalidates an earlier planning admission.",
-        "Admission never silently closes or changes roadmap intent."
+        "Admission never silently closes or changes roadmap intent.",
+        "Verified completion must name a commit that resolves in the ledger's own repository; a receipt records whether that check actually ran, and honest partial/failed/blocked reports stay commit-free."
       ],
       "components": [
         "roadmap-admission"
@@ -2071,6 +2074,7 @@
       "evidence": [
         "backend/app/services/roadmap_ledger.py",
         "backend/app/services/roadmap_admission.py",
+        "backend/app/services/commit_verification.py",
         "backend/app/routers/roadmap_ledgers.py"
       ],
       "evidence_results": [
@@ -2080,6 +2084,10 @@
         },
         {
           "evidence": "backend/app/services/roadmap_admission.py",
+          "exists": true
+        },
+        {
+          "evidence": "backend/app/services/commit_verification.py",
           "exists": true
         },
         {

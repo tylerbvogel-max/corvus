@@ -2,8 +2,9 @@ import pytest
 from datetime import datetime, timezone
 
 from app.services.roadmap_ledger import (
-    advance_state, empty_state, next_review_at, node_is_ready, reconcile_node,
-    review_status, slugify, state_summary, validate_state,
+    advance_state, empty_state, extract_commit_candidates, next_review_at,
+    node_is_ready, reconcile_node, review_status, slugify, state_summary,
+    validate_state,
 )
 
 
@@ -96,7 +97,7 @@ def test_ready_record_accepts_independently_verified_reconciliation():
         claims=["The implementation is live"],
         limitations=["One browser verified"],
         disclosures=[],
-        evidence=["pytest: 12 passed", "live API: HTTP 200"],
+        evidence=["pytest: 12 passed", "live API: HTTP 200", "commit 4f2a91c"],
         verifier="qa-agent",
         accepted_by="tyler",
         accepted_at=datetime(2026, 7, 26, tzinfo=timezone.utc),
@@ -105,6 +106,7 @@ def test_ready_record_accepts_independently_verified_reconciliation():
     assert reconciled["verificationResults"]["ledgerRevision"] == 4
     assert reconciled["verificationResults"]["verifier"] == "qa-agent"
     assert reconciled["reconciliationHistory"][-1]["evidence"][0] == "pytest: 12 passed"
+    assert reconciled["verificationResults"]["evidenceCommits"] == ["4f2a91c"]
 
 
 def test_verified_completion_requires_checklist_evidence_and_independent_acceptance():
@@ -199,6 +201,103 @@ def test_review_schedule_uses_calendar_months_and_status_windows():
         {"status": "planned", "nextReviewAt": "2026-08-10T00:00:00+00:00"},
         now=now,
     ) == "upcoming"
+
+
+def _completion_kwargs(**overrides):
+    base = dict(
+        ledger_revision=1,
+        disposition="complete",
+        result_recap="Shipped.",
+        verification_passed=True,
+        confidence=.9,
+        claims=["landed"],
+        limitations=[],
+        disclosures=[],
+        evidence=["commit 308d053", "1,175 tests pass"],
+        verifier="qa-agent",
+        accepted_by="tyler",
+    )
+    base.update(overrides)
+    return base
+
+
+def _completable_node():
+    node = _state()["nodes"][1]
+    node["verification"] = ["live behavior observed"]
+    return node
+
+
+def test_commit_candidates_ignore_short_hex_and_dedupe_case_insensitively():
+    found = extract_commit_candidates([
+        "commit 8CC5DB3 on wt/pretooluse-reach",
+        "commit 8cc5db3 again, plus sha256 09481a623e8e",
+        "1,175 passed in 33.62s over 469 units",   # no 7+ hex run
+    ])
+    # The sha256 digest is nominated too — over-nomination is safe because the
+    # repository decides, and a receipt only needs one claim to resolve.
+    assert found == ["8cc5db3", "09481a623e8e"]
+
+
+def test_commit_candidates_are_capped_so_prose_cannot_fan_out_git_calls():
+    noisy = [" ".join(f"{n:07x}" for n in range(200))]
+    assert len(extract_commit_candidates(noisy)) == 20
+
+
+def test_verified_completion_refuses_evidence_that_names_no_commit():
+    with pytest.raises(ValueError, match="must name a commit"):
+        reconcile_node(
+            _completable_node(),
+            **_completion_kwargs(evidence=["pytest: 12 passed", "looks good"]),
+        )
+
+
+def test_verified_completion_records_commits_and_verification_state():
+    reconciled = reconcile_node(
+        _completable_node(),
+        **_completion_kwargs(
+            evidence_commits=["308d053"], commit_verification="verified"),
+    )
+    receipt = reconciled["verificationResults"]
+    assert reconciled["status"] == "done"
+    assert receipt["evidenceCommits"] == ["308d053"]
+    assert receipt["commitVerification"] == "verified"
+    assert receipt["schema"] == "corvus.roadmap-reconciliation/v2"
+
+
+def test_receipt_never_implies_a_check_that_did_not_run():
+    """A missing repository is recorded as unverified, not silently passed."""
+    reconciled = reconcile_node(
+        _completable_node(),
+        **_completion_kwargs(commit_verification="unverifiable-no-repo"),
+    )
+    assert reconciled["status"] == "done"
+    assert reconciled["verificationResults"]["commitVerification"] == "unverifiable-no-repo"
+    assert reconciled["verificationResults"]["evidenceCommits"] == ["308d053"]
+
+
+def test_unsupported_commit_verification_state_is_rejected():
+    with pytest.raises(ValueError, match="unsupported commit verification"):
+        reconcile_node(
+            _completable_node(),
+            **_completion_kwargs(commit_verification="probably-fine"),
+        )
+
+
+@pytest.mark.parametrize("disposition, passed", [
+    ("partial", True), ("failed", False), ("blocked", False),
+])
+def test_honest_failure_reports_need_no_commit(disposition, passed):
+    """Filing an unlanded outcome must stay cheap, or the ledger learns to lie."""
+    reconciled = reconcile_node(
+        _completable_node(),
+        **_completion_kwargs(
+            disposition=disposition, verification_passed=passed,
+            evidence=["OOM killed the fixture backend; nothing shipped"],
+            next_action="Retry on a quiet machine.",
+        ),
+    )
+    assert reconciled["status"] != "done"
+    assert reconciled["verificationResults"]["evidenceCommits"] == []
 
 
 def test_partial_reconciliation_records_evidence_without_closing_record():
