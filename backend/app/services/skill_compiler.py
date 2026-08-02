@@ -517,6 +517,18 @@ async def refresh_projections_after_reconsolidation(
 async def run_compile(db: AsyncSession) -> dict:
     """Reverse check + compile eligible clusters (bounded Opus spend)."""
     lessons = await _load_lessons(db)
+    # SLEEP (mind-synaptic-downscaling): dormant lessons stop being
+    # COMPILED, which is the whole of what dormancy means — automatic
+    # delivery goes quiet, direct recall is untouched, and `_load_lessons`
+    # is deliberately left alone so consolidation and lint keep maintaining
+    # these rows. Filtered here rather than in the substrate because a
+    # dormant memory must still be deduped, judged and re-embedded; it just
+    # should not be written into a skill file nobody's use justifies.
+    dormant = {n.id for n in lessons if n.dormant_at is not None}
+    if dormant:
+        _log_action("compiler.dormant_excluded", {"count": len(dormant),
+                                                  "excluded": sorted(dormant)})
+        lessons = [n for n in lessons if n.dormant_at is None]
     clusters = find_clusters(lessons)
     manifest, ghosts = _reconcile_manifest(_load_manifest())
     for name in ghosts:

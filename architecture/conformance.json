@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 385,
+    "modules": 390,
     "frontend_files": 79,
-    "units": 464,
-    "classified": 464,
+    "units": 469,
+    "classified": 469,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "d76851ae0fe5acb4edf5245ef393e6d74f377b82bc1a5138faebaf1d5b1d0ac9",
-    "current_fingerprint": "d76851ae0fe5acb4edf5245ef393e6d74f377b82bc1a5138faebaf1d5b1d0ac9",
-    "stored_files": 464,
-    "current_files": 464
+    "stored_fingerprint": "e5517cf09b23e8f906b488ff3bdab73b0daa943534a9b5df9324517d06996ec1",
+    "current_fingerprint": "e5517cf09b23e8f906b488ff3bdab73b0daa943534a9b5df9324517d06996ec1",
+    "stored_files": 469,
+    "current_files": 469
   },
   "manifest_problems": [],
   "boxes": [
@@ -389,9 +389,9 @@
       "tier": "background",
       "purpose": "Detect duplication, staleness, conflict, low utility, scope drift, and delivery drift; propose or apply bounded repairs.",
       "confidence": "reviewed",
-      "module_count": 33,
+      "module_count": 34,
       "frontend_file_count": 0,
-      "loc": 10756,
+      "loc": 11135,
       "routes": 57,
       "modules": [
         "app.routers.admin",
@@ -426,7 +426,8 @@
         "app.services.reconsolidation.review",
         "app.services.reconsolidation.rewiring",
         "app.services.reconsolidation.validators",
-        "app.services.retention"
+        "app.services.retention",
+        "app.services.synaptic_homeostasis"
       ],
       "frontend_files": []
     },
@@ -454,7 +455,7 @@
       "confidence": "reviewed",
       "module_count": 4,
       "frontend_file_count": 0,
-      "loc": 794,
+      "loc": 806,
       "routes": 2,
       "modules": [
         "app.routers.compile",
@@ -561,9 +562,9 @@
       "tier": "infra",
       "purpose": "Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.",
       "confidence": "reviewed",
-      "module_count": 67,
+      "module_count": 68,
       "frontend_file_count": 0,
-      "loc": 7998,
+      "loc": 8082,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -592,6 +593,7 @@
         "alembic.versions.024_cache_coherence",
         "alembic.versions.025_standard_date_seed",
         "alembic.versions.026_delivery_pathways",
+        "alembic.versions.027_synaptic_homeostasis",
         "alembic.versions.ae144af9c1e1_initial_schema_baseline",
         "app",
         "app.config",
@@ -661,9 +663,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 108,
+      "module_count": 111,
       "frontend_file_count": 0,
-      "loc": 22663,
+      "loc": 23394,
       "routes": 0,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -671,7 +673,9 @@
         "scripts.capability_snapshot",
         "scripts.import_roadmap_ledger",
         "scripts.lock_dependencies",
+        "scripts.probe_homeostasis",
         "scripts.record_roadmap_strategic_plasticity",
+        "scripts.retire_false_neurons",
         "scripts.run_test_lane",
         "scripts.supply_chain",
         "scripts.verify_deployment",
@@ -771,6 +775,7 @@
         "tests.test_startup_schema_authority",
         "tests.test_subagent_provenance",
         "tests.test_substrate_ontology",
+        "tests.test_synaptic_homeostasis",
         "tests.test_tier_routing",
         "tests.test_token_bounded_pipeline",
         "tests.test_write_gate"
@@ -1288,7 +1293,8 @@
           "Janitors prune firing history, decay utility, inspect staleness, classify delivery, and queue reviewable deduplication or reconsolidation work.",
           "Pair and cross-scope judgment request the sonnet capability grade, which resolves to Codex Terra by default; canonical synthesis and the doubt auditor request the opus grade.",
           "Deduplication and reconsolidation remain human-gated; successful graph changes refresh skills and standing-policy projections.",
-          "Delivery plasticity folds episode deliveries, withholdings, attribution verdicts, and verified recurrences into per-pathway habituation state; attenuation is a controlled trial of absence with a probe floor, and retirement is human-countersigned with causal trial evidence."
+          "Delivery plasticity folds episode deliveries, withholdings, attribution verdicts, and verified recurrences into per-pathway habituation state; attenuation is a controlled trial of absence with a probe floor, and retirement is human-countersigned with causal trial evidence.",
+          "Synaptic downscaling renormalizes every neuron's homeostatic weight by a common factor on the distilled-session clock and lets a fixed floor do the selecting; it targets nothing by name, carries its own axis rather than the evidence scalar, and dormancy silences compiled delivery only, never direct recall."
         ],
         "evidence": [
           "backend/app/services/consolidation.py",
@@ -1297,6 +1303,7 @@
           "backend/app/services/memory_quality_auditor.py",
           "backend/app/services/delivery_plasticity.py",
           "backend/app/services/recurrence_watch.py",
+          "backend/app/services/synaptic_homeostasis.py",
           "backend/app/services/skill_compiler.py",
           "backend/app/services/llm_provider.py"
         ],
@@ -1323,6 +1330,10 @@
           },
           {
             "evidence": "backend/app/services/recurrence_watch.py",
+            "exists": true
+          },
+          {
+            "evidence": "backend/app/services/synaptic_homeostasis.py",
             "exists": true
           },
           {

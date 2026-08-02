@@ -103,6 +103,21 @@ class Neuron(Base):
     delivery_reason: Mapped[str | None] = mapped_column(String(400), nullable=True)
     delivery_judged_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime, nullable=True)
+    # HOMEOSTATIC AXIS (mind-synaptic-downscaling), independent of both of
+    # the above. Deliberately NOT avg_utility: that scalar is EVIDENCE —
+    # attribution writes it, charter promotion thresholds read it, and
+    # recall scores on it. Renormalizing it globally would silently move
+    # neurons across the authority ladder as a side effect, which is a
+    # per-neuron value judgment arriving through the back door. This is a
+    # separate, purely mechanical strength that sleep scales down and use
+    # restores, and nothing else reads for trust.
+    # `dormant_at` is set when the weight falls under the floor. Dormancy
+    # stops COMPILED delivery only (skills + charter); direct recall is
+    # untouched, so a dormant neuron is quiet, never lost.
+    homeostatic_weight: Mapped[float] = mapped_column(
+        Float, default=1.0, server_default="1.0", nullable=False)
+    dormant_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime, nullable=True)
     # Reverse link to the proposal item that created this neuron (if any)
     proposal_item_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("proposal_items.id"), nullable=True)
 

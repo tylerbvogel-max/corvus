@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "d76851ae0fe5acb4edf5245ef393e6d74f377b82bc1a5138faebaf1d5b1d0ac9",
-    "files": 464
+    "fingerprint": "e5517cf09b23e8f906b488ff3bdab73b0daa943534a9b5df9324517d06996ec1",
+    "files": 469
   },
   "frontend": {
     "available": true,
@@ -4109,12 +4109,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 385,
-    "loc": 88446,
+    "modules": 390,
+    "loc": 89652,
     "routes": 213,
-    "import_edges": 1055,
-    "call_edges": 697,
-    "modules_touching_db": 117,
+    "import_edges": 1072,
+    "call_edges": 706,
+    "modules_touching_db": 120,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -5093,6 +5093,42 @@
         "downgrade": {
           "name": "downgrade",
           "line": 60,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "alembic.versions.027_synaptic_homeostasis": {
+      "path": "backend/alembic/versions/027_synaptic_homeostasis.py",
+      "module": "alembic.versions.027_synaptic_homeostasis",
+      "loc": 69,
+      "imports": [],
+      "external_imports": [
+        "alembic",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "_column_exists": {
+          "name": "_column_exists",
+          "line": 25,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "upgrade": {
+          "name": "upgrade",
+          "line": 42,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "downgrade": {
+          "name": "downgrade",
+          "line": 62,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -7318,7 +7354,7 @@
     "app.models": {
       "path": "backend/app/models.py",
       "module": "app.models",
-      "loc": 1333,
+      "loc": 1348,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -20922,7 +20958,7 @@
     "app.services.mind_janitors": {
       "path": "backend/app/services/mind_janitors.py",
       "module": "app.services.mind_janitors",
-      "loc": 1064,
+      "loc": 1081,
       "imports": [
         "app.config",
         "app.models",
@@ -20936,7 +20972,8 @@
         "app.services.reconsolidation.loaders",
         "app.services.reconsolidation.plan",
         "app.services.reconsolidation.review",
-        "app.services.reference_class"
+        "app.services.reference_class",
+        "app.services.synaptic_homeostasis"
       ],
       "external_imports": [
         "datetime",
@@ -21168,6 +21205,7 @@
           "is_async": true,
           "calls": [
             "app.services.mind_lint::corpus_health",
+            "app.services.synaptic_homeostasis::run_downscaling",
             "app.services.delivery_mode::classify_delivery",
             "app.services.delivery_plasticity::run_plasticity"
           ],
@@ -26536,7 +26574,7 @@
     "app.services.skill_compiler": {
       "path": "backend/app/services/skill_compiler.py",
       "module": "app.services.skill_compiler",
-      "loc": 575,
+      "loc": 587,
       "imports": [
         "app.middleware.rbac",
         "app.models",
@@ -26708,14 +26746,14 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 562,
+          "line": 574,
           "in": "run_compile",
           "target": "compiled_sets",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 569,
+          "line": 581,
           "in": "run_compile",
           "target": "db",
           "model": null
@@ -26875,6 +26913,93 @@
           "line": 199,
           "in": "_handle_connections",
           "target": "connected_ids",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "app.services.synaptic_homeostasis": {
+      "path": "backend/app/services/synaptic_homeostasis.py",
+      "module": "app.services.synaptic_homeostasis",
+      "loc": 362,
+      "imports": [
+        "app.models",
+        "app.services.delivery_mode",
+        "app.services.mind_corpus"
+      ],
+      "external_imports": [
+        "datetime",
+        "os",
+        "re",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "apply_enabled": {
+          "name": "apply_enabled",
+          "line": 125,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_exempt_filter": {
+          "name": "_exempt_filter",
+          "line": 132,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "scale_vector": {
+          "name": "scale_vector",
+          "line": 163,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "volatility_of": {
+          "name": "volatility_of",
+          "line": 175,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "dormancy_exclusion_filters": {
+          "name": "dormancy_exclusion_filters",
+          "line": 185,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "run_downscaling": {
+          "name": "run_downscaling",
+          "line": 196,
+          "is_async": true,
+          "calls": [
+            "app.services.mind_corpus::_log_action"
+          ],
+          "is_route": false
+        },
+        "census": {
+          "name": "census",
+          "line": 329,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 293,
+          "in": "run_downscaling",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 323,
+          "in": "run_downscaling",
+          "target": "db",
           "model": null
         }
       ],
@@ -30464,6 +30589,125 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "scripts.probe_homeostasis": {
+      "path": "backend/scripts/probe_homeostasis.py",
+      "module": "scripts.probe_homeostasis",
+      "loc": 244,
+      "imports": [
+        "app.database",
+        "app.models",
+        "app.services.synaptic_homeostasis"
+      ],
+      "external_imports": [
+        "asyncio",
+        "datetime",
+        "json",
+        "os",
+        "sqlalchemy",
+        "sys"
+      ],
+      "functions": {
+        "check": {
+          "name": "check",
+          "line": 64,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_plant": {
+          "name": "_plant",
+          "line": 72,
+          "is_async": false,
+          "calls": [
+            "app.models::Neuron"
+          ],
+          "is_route": false
+        },
+        "section_a": {
+          "name": "section_a",
+          "line": 86,
+          "is_async": true,
+          "calls": [
+            "app.database::async_session",
+            "app.services.synaptic_homeostasis::census",
+            "app.services.synaptic_homeostasis::run_downscaling"
+          ],
+          "is_route": false
+        },
+        "_exempt_count": {
+          "name": "_exempt_count",
+          "line": 120,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "section_b": {
+          "name": "section_b",
+          "line": 124,
+          "is_async": true,
+          "calls": [
+            "app.services.synaptic_homeostasis::run_downscaling",
+            "app.services.synaptic_homeostasis::dormancy_exclusion_filters"
+          ],
+          "is_route": false
+        },
+        "section_c": {
+          "name": "section_c",
+          "line": 199,
+          "is_async": true,
+          "calls": [
+            "app.database::async_session"
+          ],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 214,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 75,
+          "in": "_plant",
+          "target": "db",
+          "model": "Neuron"
+        },
+        {
+          "kind": "delete",
+          "line": 128,
+          "in": "section_b",
+          "target": "Neuron.__table__",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 129,
+          "in": "section_b",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 137,
+          "in": "section_b",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 185,
+          "in": "section_b",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "scripts.record_roadmap_strategic_plasticity": {
       "path": "backend/scripts/record_roadmap_strategic_plasticity.py",
       "module": "scripts.record_roadmap_strategic_plasticity",
@@ -30498,6 +30742,78 @@
           "kind": "commit",
           "line": 95,
           "in": "run",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "scripts.retire_false_neurons": {
+      "path": "backend/scripts/retire_false_neurons.py",
+      "module": "scripts.retire_false_neurons",
+      "loc": 209,
+      "imports": [
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.services.action_bus",
+        "app.services.actions.init_registry"
+      ],
+      "external_imports": [
+        "asyncio",
+        "json",
+        "os",
+        "sqlalchemy",
+        "subprocess",
+        "sys"
+      ],
+      "functions": {
+        "_absent": {
+          "name": "_absent",
+          "line": 51,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_in_no_branch": {
+          "name": "_in_no_branch",
+          "line": 55,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_no_column": {
+          "name": "_no_column",
+          "line": 63,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "predicates": {
+          "name": "predicates",
+          "line": 71,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 121,
+          "is_async": true,
+          "calls": [
+            "app.services.actions.init_registry::init_actions_registry",
+            "app.database::async_session",
+            "app.services.action_bus::submit"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 176,
+          "in": "main",
           "target": "db",
           "model": null
         }
@@ -45675,6 +45991,203 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_synaptic_homeostasis": {
+      "path": "backend/tests/test_synaptic_homeostasis.py",
+      "module": "tests.test_synaptic_homeostasis",
+      "loc": 278,
+      "imports": [
+        "app.models",
+        "app.services.delivery_mode",
+        "app.services.mind_corpus",
+        "app.services.skill_compiler",
+        "app.services.synaptic_homeostasis"
+      ],
+      "external_imports": [
+        "inspect",
+        "os",
+        "pytest",
+        "random"
+      ],
+      "functions": {
+        "test_scaling_never_inverts_rank_order": {
+          "name": "test_scaling_never_inverts_rank_order",
+          "line": 26,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::scale_vector"
+          ],
+          "is_route": false
+        },
+        "test_scaling_preserves_ratios_exactly": {
+          "name": "test_scaling_preserves_ratios_exactly",
+          "line": 39,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::scale_vector"
+          ],
+          "is_route": false
+        },
+        "test_scaling_is_monotonic_and_bounded": {
+          "name": "test_scaling_is_monotonic_and_bounded",
+          "line": 48,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::scale_vector"
+          ],
+          "is_route": false
+        },
+        "test_floor_is_reached_in_a_sane_number_of_cycles": {
+          "name": "test_floor_is_reached_in_a_sane_number_of_cycles",
+          "line": 57,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_charter_and_self_model_are_structurally_exempt": {
+          "name": "test_charter_and_self_model_are_structurally_exempt",
+          "line": 70,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::_exempt_filter"
+          ],
+          "is_route": false
+        },
+        "test_exemption_is_applied_negated_to_the_population": {
+          "name": "test_exemption_is_applied_negated_to_the_population",
+          "line": 82,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_exemption_is_null_safe_so_the_pass_stays_global": {
+          "name": "test_exemption_is_null_safe_so_the_pass_stays_global",
+          "line": 93,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::_exempt_filter"
+          ],
+          "is_route": false
+        },
+        "test_census_reports_exempt_so_the_arithmetic_is_checkable": {
+          "name": "test_census_reports_exempt_so_the_arithmetic_is_checkable",
+          "line": 115,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_standing_delivery_is_exempt_for_a_stated_reason": {
+          "name": "test_standing_delivery_is_exempt_for_a_stated_reason",
+          "line": 123,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_no_ranking_or_limit_in_the_scaling_statement": {
+          "name": "test_no_ranking_or_limit_in_the_scaling_statement",
+          "line": 133,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_runaway_brake_refuses_whole_batches": {
+          "name": "test_runaway_brake_refuses_whole_batches",
+          "line": 143,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_dormancy_filters_compiled_delivery_only": {
+          "name": "test_dormancy_filters_compiled_delivery_only",
+          "line": 154,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::dormancy_exclusion_filters"
+          ],
+          "is_route": false
+        },
+        "test_nothing_in_the_module_deletes_or_deactivates": {
+          "name": "test_nothing_in_the_module_deletes_or_deactivates",
+          "line": 163,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_skill_compiler_excludes_dormant_but_substrate_does_not": {
+          "name": "test_skill_compiler_excludes_dormant_but_substrate_does_not",
+          "line": 173,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_re_potentiation_clears_dormancy_in_the_same_statement": {
+          "name": "test_re_potentiation_clears_dormancy_in_the_same_statement",
+          "line": 184,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_shadow_is_the_default": {
+          "name": "test_shadow_is_the_default",
+          "line": 196,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::apply_enabled"
+          ],
+          "is_route": false
+        },
+        "test_zero_cycles_is_a_no_op": {
+          "name": "test_zero_cycles_is_a_no_op",
+          "line": 216,
+          "is_async": true,
+          "calls": [
+            "app.services.synaptic_homeostasis::run_downscaling"
+          ],
+          "is_route": false
+        },
+        "test_no_llm_anywhere_in_the_pass": {
+          "name": "test_no_llm_anywhere_in_the_pass",
+          "line": 226,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_constants_are_labeled_guessed": {
+          "name": "test_constants_are_labeled_guessed",
+          "line": 233,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_volatility_is_parsed_from_the_evidence_frame": {
+          "name": "test_volatility_is_parsed_from_the_evidence_frame",
+          "line": 247,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::volatility_of"
+          ],
+          "is_route": false
+        },
+        "test_unframed_content_reports_unlabeled_not_stable": {
+          "name": "test_unframed_content_reports_unlabeled_not_stable",
+          "line": 254,
+          "is_async": false,
+          "calls": [
+            "app.services.synaptic_homeostasis::volatility_of"
+          ],
+          "is_route": false
+        },
+        "test_volatility_never_reaches_the_rate": {
+          "name": "test_volatility_never_reaches_the_rate",
+          "line": 263,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_tier_routing": {
       "path": "backend/tests/test_tier_routing.py",
       "module": "tests.test_tier_routing",
@@ -46411,7 +46924,9 @@
       "scripts.add_neuron_evidence_frame_record",
       "scripts.add_token_pressure_maintenance_record",
       "scripts.import_roadmap_ledger",
+      "scripts.probe_homeostasis",
       "scripts.record_roadmap_strategic_plasticity",
+      "scripts.retire_false_neurons",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
       "tests.fixtures.auditor_golden.freeze_golden",
@@ -46503,6 +47018,7 @@
       "app.services.reference_ingest",
       "app.services.skill_compiler",
       "app.services.write_gate",
+      "scripts.retire_false_neurons",
       "tests.test_output_guard"
     ],
     "app.middleware.security_headers": [
@@ -46615,6 +47131,7 @@
       "app.services.seeding_service",
       "app.services.skill_compiler",
       "app.services.structural_resolver",
+      "app.services.synaptic_homeostasis",
       "app.services.synaptic_learning",
       "app.services.write_gate",
       "eval.locomo.analysis.step04_live_janitor_probe",
@@ -46623,7 +47140,9 @@
       "scripts.add_neuron_evidence_frame_record",
       "scripts.add_token_pressure_maintenance_record",
       "scripts.import_roadmap_ledger",
+      "scripts.probe_homeostasis",
       "scripts.record_roadmap_strategic_plasticity",
+      "scripts.retire_false_neurons",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
       "tests.kernel_matrix_fixtures",
@@ -46652,6 +47171,7 @@
       "tests.test_regulatory_coverage",
       "tests.test_staleness_supersession",
       "tests.test_substrate_ontology",
+      "tests.test_synaptic_homeostasis",
       "tests.test_token_bounded_pipeline"
     ],
     "app.operations.router": [
@@ -46728,6 +47248,7 @@
       "app.services.reconsolidation.apply",
       "app.services.reference_ingest",
       "app.services.skill_compiler",
+      "scripts.retire_false_neurons",
       "tests.replay_nvm_throwaway",
       "tests.test_concept_governance"
     ],
@@ -46753,6 +47274,7 @@
       "eval.locomo.analysis.step03_refusal_presence",
       "eval.locomo.analysis.step04_live_janitor_probe2",
       "eval.locomo.run_locomo",
+      "scripts.retire_false_neurons",
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway"
     ],
@@ -46844,8 +47366,10 @@
     "app.services.delivery_mode": [
       "app.services.mind_janitors",
       "app.services.skill_compiler",
+      "app.services.synaptic_homeostasis",
       "tests.test_delivery_mode",
-      "tests.test_reference_class"
+      "tests.test_reference_class",
+      "tests.test_synaptic_homeostasis"
     ],
     "app.services.delivery_plasticity": [
       "app.routers.mind_metrics",
@@ -47097,10 +47621,12 @@
       "app.services.reconsolidation.plan",
       "app.services.recurrence_watch",
       "app.services.skill_compiler",
+      "app.services.synaptic_homeostasis",
       "tests.test_injection_channel",
       "tests.test_maintenance_substrate",
       "tests.test_recurrence_watch",
-      "tests.test_reference_class"
+      "tests.test_reference_class",
+      "tests.test_synaptic_homeostasis"
     ],
     "app.services.mind_janitors": [
       "app.routers.auditor",
@@ -47539,7 +48065,8 @@
       "eval.locomo.run_locomo",
       "eval.locomo.test_lifecycle",
       "tests.test_delivery_mode",
-      "tests.test_reference_class"
+      "tests.test_reference_class",
+      "tests.test_synaptic_homeostasis"
     ],
     "app.services.skill_projection": [
       "app.services.skill_compiler",
@@ -47553,6 +48080,11 @@
     ],
     "app.services.structural_resolver": [
       "app.services.pipeline.stages.structural_resolve_stage"
+    ],
+    "app.services.synaptic_homeostasis": [
+      "app.services.mind_janitors",
+      "scripts.probe_homeostasis",
+      "tests.test_synaptic_homeostasis"
     ],
     "app.services.synaptic_learning": [
       "app.routers.query",
@@ -48077,7 +48609,8 @@
       "app.services.mind_lint",
       "app.services.reconsolidation.lifecycle",
       "app.services.reconsolidation.loaders",
-      "app.services.reference_class"
+      "app.services.reference_class",
+      "app.services.synaptic_homeostasis"
     ],
     "app.services.mind_lint": [
       "app.models",
@@ -48271,6 +48804,9 @@
       "app.services.prepared_context",
       "app.services.semantic_prefilter"
     ],
+    "app.services.synaptic_homeostasis": [
+      "app.services.mind_corpus"
+    ],
     "app.services.synaptic_learning": [
       "app.models",
       "app.services.edge_tier",
@@ -48352,9 +48888,19 @@
       "app.models",
       "app.services.roadmap_ledger"
     ],
+    "scripts.probe_homeostasis": [
+      "app.database",
+      "app.models",
+      "app.services.synaptic_homeostasis"
+    ],
     "scripts.record_roadmap_strategic_plasticity": [
       "app.database",
       "app.services.roadmap_ledger"
+    ],
+    "scripts.retire_false_neurons": [
+      "app.database",
+      "app.services.action_bus",
+      "app.services.actions.init_registry"
     ],
     "tests.benchmarks.eval_token_assembly_triangle": [
       "app.database",
@@ -48752,6 +49298,9 @@
       "app.services.executor",
       "app.services.scoring_engine",
       "app.services.seeding_service"
+    ],
+    "tests.test_synaptic_homeostasis": [
+      "app.services.synaptic_homeostasis"
     ],
     "tests.test_tier_routing": [
       "app.services.executor",
@@ -51230,6 +51779,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51278,6 +51828,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51338,6 +51889,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51386,6 +51938,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51446,6 +51999,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51494,6 +52048,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51554,6 +52109,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51602,6 +52158,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51660,6 +52217,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51706,6 +52264,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51764,6 +52323,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51810,6 +52370,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51868,6 +52429,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -51914,6 +52476,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -51972,6 +52535,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -52018,6 +52582,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -52239,6 +52804,7 @@
         "app.services.scoring_engine",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -52278,6 +52844,7 @@
         "app.services.scoring_engine",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -52330,6 +52897,7 @@
         "app.services.scoring_engine",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -52369,6 +52937,7 @@
         "app.services.scoring_engine",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -52426,6 +52995,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -52472,6 +53042,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -52530,6 +53101,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -52576,6 +53148,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -54752,6 +55325,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -54789,6 +55363,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -54839,6 +55414,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -54876,6 +55452,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -54926,6 +55503,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -54963,6 +55541,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -55013,6 +55592,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -55050,6 +55630,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -55100,6 +55681,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ],
       "calls_reachable": [
@@ -55137,6 +55719,7 @@
         "app.services.reference_class",
         "app.services.region_policy",
         "app.services.scoring_engine",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning"
       ]
     },
@@ -55336,6 +55919,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -55388,6 +55972,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -55454,6 +56039,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -55506,6 +56092,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -55572,6 +56159,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -55624,6 +56212,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -55690,6 +56279,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -55742,6 +56332,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -55808,6 +56399,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -55860,6 +56452,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -55926,6 +56519,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -55978,6 +56572,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -56044,6 +56639,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -56096,6 +56692,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -56162,6 +56759,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -56214,6 +56812,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -56280,6 +56879,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -56332,6 +56932,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -56398,6 +56999,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_compiler",
         "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -56450,6 +57052,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -60074,6 +60677,7 @@
         "app.services.skill_projection",
         "app.services.skill_signpost",
         "app.services.structural_resolver",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.tier_routing",
         "app.services.write_gate",
@@ -60155,6 +60759,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_signpost",
         "app.services.structural_resolver",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.tier_routing",
         "app.services.write_gate"
@@ -60252,6 +60857,7 @@
         "app.services.skill_projection",
         "app.services.skill_signpost",
         "app.services.structural_resolver",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.tier_routing",
         "app.services.write_gate",
@@ -60333,6 +60939,7 @@
         "app.services.semantic_prefilter",
         "app.services.skill_signpost",
         "app.services.structural_resolver",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.tier_routing",
         "app.services.write_gate"
@@ -60404,6 +61011,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -60455,6 +61063,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -60525,6 +61134,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -60576,6 +61186,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -60646,6 +61257,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -60697,6 +61309,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -60767,6 +61380,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate",
         "app.tenant"
@@ -60818,6 +61432,7 @@
         "app.services.scoring_engine",
         "app.services.seeding_service",
         "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
         "app.services.synaptic_learning",
         "app.services.write_gate"
       ]
@@ -61645,9 +62260,26 @@
       ]
     },
     {
+      "module": "scripts.probe_homeostasis",
+      "entrypoints": [
+        "main",
+        "section_a",
+        "section_b",
+        "section_c"
+      ]
+    },
+    {
       "module": "scripts.record_roadmap_strategic_plasticity",
       "entrypoints": [
         "run"
+      ]
+    },
+    {
+      "module": "scripts.retire_false_neurons",
+      "entrypoints": [
+        "_no_column",
+        "main",
+        "predicates"
       ]
     },
     {
@@ -61982,6 +62614,12 @@
         "test_legacy_finding_without_hint_fails_closed",
         "test_perishable_state_update_is_still_superseded",
         "test_scan_drops_pairs_already_flagged_either_order"
+      ]
+    },
+    {
+      "module": "tests.test_synaptic_homeostasis",
+      "entrypoints": [
+        "test_zero_cycles_is_a_no_op"
       ]
     },
     {

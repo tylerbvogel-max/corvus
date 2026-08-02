@@ -125,6 +125,7 @@ memory_engine:
         - Pair and cross-scope judgment request the sonnet capability grade, which resolves to Codex Terra by default; canonical synthesis and the doubt auditor request the opus grade.
         - Deduplication and reconsolidation remain human-gated; successful graph changes refresh skills and standing-policy projections.
         - Delivery plasticity folds episode deliveries, withholdings, attribution verdicts, and verified recurrences into per-pathway habituation state; attenuation is a controlled trial of absence with a probe floor, and retirement is human-countersigned with causal trial evidence.
+        - Synaptic downscaling renormalizes every neuron's homeostatic weight by a common factor on the distilled-session clock and lets a fixed floor do the selecting; it targets nothing by name, carries its own axis rather than the evidence scalar, and dormancy silences compiled delivery only, never direct recall.
       evidence:
         - backend/app/services/consolidation.py
         - backend/app/services/mind_janitors.py
@@ -132,6 +133,7 @@ memory_engine:
         - backend/app/services/memory_quality_auditor.py
         - backend/app/services/delivery_plasticity.py
         - backend/app/services/recurrence_watch.py
+        - backend/app/services/synaptic_homeostasis.py
         - backend/app/services/skill_compiler.py
         - backend/app/services/llm_provider.py
 
@@ -1250,6 +1252,9 @@ boxes:
       - backend/app/services/delivery_mode.py
       - backend/app/services/consolidation.py
       - backend/app/services/retention.py
+      # Sleep sits with the janitors, not with plasticity: it rides the same
+      # distilled-session evidence clock as decay and targets nothing by name.
+      - backend/app/services/synaptic_homeostasis.py
       - backend/app/services/integrity/**
       - backend/app/services/reconsolidation/**
 

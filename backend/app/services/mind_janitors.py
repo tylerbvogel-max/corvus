@@ -1027,13 +1027,30 @@ async def run_janitors(
     if staleness:
         report["staleness"] = await run_staleness(db, max_pairs=max_pairs)
     if decay:
-        fresh = _sessions_distilled_since(_prior_ran_at())
+        prior = _prior_ran_at()
+        fresh = _sessions_distilled_since(prior)
         if fresh > 0:
             report["decay"] = await run_decay_audit(db)
         else:
             report["decay"] = {"demoted": [], "skipped":
                                "no sessions distilled since last run — "
                                "evidence time is frozen, so decay is too"}
+        # SLEEP (mind-synaptic-downscaling). Runs beside decay because both
+        # ride the same evidence clock, but they are opposite shapes and
+        # neither replaces the other: decay TARGETS warm zombies by name,
+        # this renormalizes EVERYTHING by a common factor and lets a fixed
+        # floor do the selecting. Shadow by default — it writes nothing
+        # until CORVUS_HOMEOSTASIS_APPLY is set and an acceptance window
+        # has shown zero false kills.
+        from app.services.synaptic_homeostasis import run_downscaling
+        since = None
+        if prior:
+            try:
+                since = datetime.fromisoformat(prior).replace(tzinfo=None)
+            except ValueError:
+                since = None
+        report["homeostasis"] = await run_downscaling(
+            db, cycles=fresh, since=since)
     if promotion:
         report["charter"] = await run_charter_promotion(db)
         # Delivery is judged AFTER authority moves, so a lesson promoted
