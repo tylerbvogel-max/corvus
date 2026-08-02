@@ -108,6 +108,8 @@ SECOND TASK — attribution: for each ALREADY-KNOWN (injected) lesson, judge fro
 - "unused": injected but nothing in the log engaged with it
 Base verdicts ONLY on observable events in the log; when in doubt, "unused".
 
+THIRD TASK — recurrence check (only when the input lists WITHHELD lessons): each WITHHELD lesson documents a known failure mode but was deliberately NOT shown to this session (a delivery trial of absence). Report a recurrence ONLY when the log shows that lesson's documented failure actually happening in THIS session — the same error, the same failing command, the same mistake the lesson warns about. In the event field quote the exact tool event (its command, error text, or value) that shows the failure. No matching event in the log = no recurrence; when in doubt, report nothing. Never report a recurrence for a lesson that is not in the WITHHELD list.
+
 EVIDENCE FRAME: each lesson is a durable memory, so you must also fill the frame fields below. A future agent has to answer a question from the stored memory alone, without this log.
 - time_scope: one of {time_scopes}. Use dated-event for something that happened at a moment (add the date in parentheses if the log shows it), stable-preference for a fact that holds until revoked, current-plan for intent, expired-fact for something now untrue, unknown when the log does not say.
 - context: why this matters or how it came about — ONLY if the log states or strongly evidences it. Write "unknown" rather than inventing a motivation.
@@ -117,8 +119,9 @@ EVIDENCE FRAME: each lesson is a durable memory, so you must also fill the frame
 - volatility: one of {volatilities}. "stable" = holds until explicitly revoked; "perishable" = state a later observation can legitimately overwrite (a running port, a current branch, an in-progress status); "uncertain" = you cannot tell. Never mark a perishable fact stable — downstream maintenance uses this to decide what recency is allowed to retire.
 
 Respond with ONLY a JSON object, no markdown fences, no prose:
-{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative, self-contained>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "origin": "<'log' normally; 'agent' when the lesson restates a conclusion the agent asserted>", "corroboration": "<agent-origin only: the exact tool event from the log that corroborates the claim — quote its command/error/value>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"], "time_scope": "<see above>", "context": "<see above>", "future_use": "<see above>", "likely_queries": "<see above>", "confidence": "<see above>", "volatility": "<see above>"}],
- "attributions": [{"label": "<the injected lesson's label>", "verdict": "load_bearing|contradicted|unused", "evidence": "<what in the log shows this>"}]}
+{"lessons": [{"label": "<max 12 words>", "lesson": "<1-3 sentences, declarative, self-contained>", "evidence": "<what in the log backs this>", "scope": "<scope>", "node_type": "<node_type>", "origin": "<'log' normally; 'agent' when the lesson restates a conclusion the agent asserted>", "corroboration": "<agent-origin only: the exact tool event from the log that corroborates the claim — quote its command/error/value>", "failure_signature": "<only for lessons documenting a failure mode: the concrete machine-matchable tokens a future session would show if the failure recurred (exact error fragment, failing command); empty string otherwise>", "entities": ["<named things the lesson is about: proper nouns, tool/project/file names, quoted titles — [] if none>"], "time_scope": "<see above>", "context": "<see above>", "future_use": "<see above>", "likely_queries": "<see above>", "confidence": "<see above>", "volatility": "<see above>"}],
+ "attributions": [{"label": "<the injected lesson's label>", "verdict": "load_bearing|contradicted|unused", "evidence": "<what in the log shows this>"}],
+ "recurrences": [{"label": "<the WITHHELD lesson's label>", "event": "<the exact tool event from the log showing its documented failure recurring — quote its command/error/value>"}]}
 Use empty arrays when there is nothing to report."""
 
 
@@ -283,8 +286,13 @@ def _corroborated(corroboration: str, events: list[dict]) -> bool:
 
 
 def _condense(events: list[dict], user_msgs: list[str], injected: list[str],
-              assistant_msgs: list[str] | None = None) -> str:
-    """Compact prompt body: errors first-class, everything capped."""
+              assistant_msgs: list[str] | None = None,
+              withheld_lessons: list[tuple[str, str]] | None = None) -> str:
+    """Compact prompt body: errors first-class, everything capped.
+
+    withheld_lessons: (label, text) pairs for lessons a delivery trial
+    suppressed from this session (mind-recurrence-watch) — the third
+    task's nomination targets."""
     errors = [e for e in events if e.get("event") == "PostToolUse" and not e.get("ok", True)]
     normal = [e for e in events if e.get("event") == "PostToolUse" and e.get("ok", True)]
     keep = errors[:40] + normal[: max(0, MAX_EVENTS_IN_PROMPT - min(len(errors), 40))]
@@ -300,6 +308,12 @@ def _condense(events: list[dict], user_msgs: list[str], injected: list[str],
     lines.extend(f"- {m}" for m in user_msgs) if user_msgs else lines.append("- (none captured)")
     lines.append("\n## ALREADY-KNOWN (injected) lessons — never re-extract these")
     lines.extend(f"- {x}" for x in injected) if injected else lines.append("- (none)")
+    if withheld_lessons:
+        lines.append("\n## WITHHELD lessons (suppressed from this session by a"
+                     " delivery trial — check the log for their documented"
+                     " failures recurring; see THIRD TASK)")
+        lines.extend(f"- {label}: {' '.join(text.split())[:300]}"
+                     for label, text in withheld_lessons)
     if assistant_msgs:
         # Last on purpose: lowest-trust input, so the MAX_PROMPT_CHARS
         # truncation eats assistant prose before events or injected list.
@@ -310,9 +324,10 @@ def _condense(events: list[dict], user_msgs: list[str], injected: list[str],
     return "\n".join(lines)[:MAX_PROMPT_CHARS]
 
 
-def _parse_candidates(text: str) -> tuple[list[dict], list[dict]]:
-    """Extract (lessons, attributions) from the reply. Tolerates both the
-    object schema and the legacy bare-array schema (lessons only)."""
+def _parse_candidates(text: str) -> tuple[list[dict], list[dict], list[dict]]:
+    """Extract (lessons, attributions, recurrence nominations) from the
+    reply. Tolerates both the object schema and the legacy bare-array
+    schema (lessons only)."""
     obj_start = text.find("{")
     arr_start = text.find("[")
     if obj_start >= 0 and (arr_start < 0 or obj_start < arr_start):
@@ -323,7 +338,8 @@ def _parse_candidates(text: str) -> tuple[list[dict], list[dict]]:
                 if isinstance(parsed, dict):
                     lessons = [c for c in parsed.get("lessons", []) if isinstance(c, dict)]
                     attribs = [a for a in parsed.get("attributions", []) if isinstance(a, dict)]
-                    return lessons, attribs
+                    recurs = [r for r in parsed.get("recurrences", []) if isinstance(r, dict)]
+                    return lessons, attribs, recurs
             except ValueError:
                 pass
     if arr_start >= 0:
@@ -332,10 +348,10 @@ def _parse_candidates(text: str) -> tuple[list[dict], list[dict]]:
             try:
                 parsed = json.loads(text[arr_start:end + 1])
                 if isinstance(parsed, list):
-                    return [c for c in parsed if isinstance(c, dict)], []
+                    return [c for c in parsed if isinstance(c, dict)], [], []
             except ValueError:
                 pass
-    return [], []
+    return [], [], []
 
 
 async def _validate_and_save(
@@ -377,6 +393,13 @@ async def _validate_and_save(
                 counts["uncorroborated"] += 1
                 continue
             evidence = f"{evidence} | corroborating event: {corroboration}"
+        # Machine-matchable failure signature (mind-recurrence-watch):
+        # rides the evidence into content, where the recurrence gate's
+        # token match reads it. Vague legacy lessons without one simply
+        # enjoy stronger trial protection (miss = no harm detected).
+        signature = str(c.get("failure_signature", "")).strip()
+        if signature:
+            evidence = f"{evidence} | failure signature: {signature}"
         if await label_exists(db, label):
             counts["duplicate"] += 1
             continue
@@ -510,7 +533,32 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     injected = [i["label"] for i in injections]
     user_msgs = _extract_user_messages(transcript)
     assistant_msgs = _extract_assistant_messages(transcript)
-    body = _condense(events, user_msgs, injected, assistant_msgs)
+
+    # Recurrence watch (mind-recurrence-watch): lessons a delivery trial
+    # withheld from this session are nomination targets for the third
+    # task. Delivered-anywhere neurons are already excluded — a failure
+    # beside a delivered copy is contradiction evidence, not trial harm.
+    from app.services import recurrence_watch
+    withheld_entries, _delivered = recurrence_watch.withheld_for_trial(events)
+    withheld_by_label: dict[str, dict] = {}
+    withheld_lessons: list[tuple[str, str]] = []
+    if withheld_entries:
+        from sqlalchemy import select
+        from app.models import Neuron
+        ids = sorted({e["neuron_id"] for e in withheld_entries})
+        rows = (await db.execute(
+            select(Neuron).where(Neuron.id.in_(ids)))).scalars().all()
+        for n in rows:
+            if not n.is_active:
+                continue
+            withheld_lessons.append((n.label, n.content or ""))
+            withheld_by_label[n.label.casefold()] = {
+                "text": f"{n.label}. {n.content or ''}",
+                "pathways": [e for e in withheld_entries
+                             if e["neuron_id"] == n.id]}
+
+    body = _condense(events, user_msgs, injected, assistant_msgs,
+                     withheld_lessons)
 
     # .replace, not .format — the prompt's JSON schema braces are literal
     from app.services.evidence_frame import (
@@ -528,7 +576,7 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
         user_message=body, max_tokens=2500, model="opus", timeout=300,
         workload="distillation",
     )
-    candidates, verdicts = _parse_candidates(reply.get("text", ""))
+    candidates, verdicts, nominations = _parse_candidates(reply.get("text", ""))
     # Dominant project of the session's events — Projects-scope lessons
     # nest under their project node (contextual truths in their context).
     project_counts: dict[str, int] = {}
@@ -542,11 +590,30 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     attribution = await _apply_attributions(db, verdicts, injections)
     await db.commit()
 
+    # THE GATE IS THE FEATURE, again: the model only NOMINATES recurrences;
+    # each is admitted solely with a cited, token-verified event that both
+    # happened in this log and matches the withheld lesson's own failure
+    # text. Refused nominations are dropped and counted, never acted on.
+    recurrence = {"nominated": len(nominations), "verified": 0, "refused": 0}
+    for nom in nominations:
+        entry = withheld_by_label.get(str(nom.get("label", "")).strip().casefold())
+        citation = str(nom.get("event", "")).strip()
+        if entry is None or not recurrence_watch.verify_recurrence(
+                citation, entry["text"], events):
+            recurrence["refused"] += 1
+            continue
+        recurrence["verified"] += 1
+        for pw in entry["pathways"]:
+            recurrence_watch.log_recurrence(
+                session_id, pw["neuron_id"], pw["trigger"], pw["tool"],
+                label=str(nom.get("label", "")), citation=citation)
+
     marker = {
         "distilled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "events": len(events), "user_messages": len(user_msgs),
         "assistant_messages": len(assistant_msgs),
         "injected_known": len(injected), "candidates": len(candidates),
+        "withheld_trial": len(withheld_entries), "recurrence": recurrence,
         "model_version": reply.get("model_version"),
         "cost_usd": reply.get("cost_usd"), "attribution": attribution, **counts,
     }

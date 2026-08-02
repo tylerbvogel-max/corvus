@@ -126,7 +126,8 @@ async def mind_delivery_pathways(db: AsyncSession = Depends(get_db)):
     from sqlalchemy import select
 
     from app.models import DeliveryPathway
-    from app.services.delivery_plasticity import PROJECTION_PATH, STATE_FLOORS
+    from app.services.delivery_plasticity import (
+        PROJECTION_PATH, STATE_FLOORS, false_kill_receipts)
 
     rows = (await db.execute(
         select(DeliveryPathway).order_by(
@@ -141,9 +142,19 @@ async def mind_delivery_pathways(db: AsyncSession = Depends(get_db)):
             projection = _json.load(fh)
     except (OSError, ValueError):
         pass
+    receipts = false_kill_receipts()
     return {
         "pathways": len(rows), "by_state": by_state,
         "floors": STATE_FLOORS,
+        # ZERO FALSE KILLS, re-grounded (mind-recurrence-watch): counted
+        # from verified recurrence events — ground-truth harm in withheld
+        # sessions — never from reward absence. The proxy that nominates
+        # trials does not grade its own outcomes.
+        "false_kills": {
+            "verified": len(receipts),
+            "grounding": "recurrence events (exogenous), not reward absence",
+            "receipts": receipts[-20:],
+        },
         "projection": projection,
         "rows": [{
             "neuron_id": r.neuron_id, "trigger": r.trigger,

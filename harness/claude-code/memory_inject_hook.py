@@ -133,7 +133,12 @@ def _pathway_gate(session_id: str, hits: list, trigger: str,
     (deliver), never closed: the invariant is that no state may reduce
     delivery probability to zero.
 
-    Returns (kept hits, probe neuron ids among them).
+    Withheld hits are RETURNED, not just dropped (mind-recurrence-watch):
+    every suppression is one delivery of a controlled trial of absence, and
+    a trial that doesn't log its denominator is theater. The caller writes
+    them onto the Injection record as a `withheld` sibling list.
+
+    Returns (kept hits, probe neuron ids among them, withheld neuron ids).
     """
     try:
         with open(PATHWAY_PROJECTION, encoding="utf-8") as fh:
@@ -141,10 +146,10 @@ def _pathway_gate(session_id: str, hits: list, trigger: str,
         suppressed = proj.get("suppressed") or {}
         intervals = proj.get("probe_intervals") or {}
     except (OSError, ValueError):
-        return hits, []
+        return hits, [], []
     if not suppressed:
-        return hits, []
-    kept, probes = [], []
+        return hits, [], []
+    kept, probes, withheld = [], [], []
     for h in hits:
         key = f"{h['neuron_id']}|{trigger}|{tool or ''}"
         state = suppressed.get(key)
@@ -159,12 +164,15 @@ def _pathway_gate(session_id: str, hits: list, trigger: str,
         if int(digest, 16) % k == 0:
             kept.append(h)
             probes.append(h["neuron_id"])
-    return kept, probes
+        else:
+            withheld.append(h["neuron_id"])
+    return kept, probes, withheld
 
 
 def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
                    query_id=None, tool: str | None = None,
-                   probes: list | None = None) -> None:
+                   probes: list | None = None,
+                   withheld: list | None = None) -> None:
     """Append one Injection episode record.
 
     `trigger` stays the bare hook event (mind-pretooluse-reach). The tempting
@@ -196,6 +204,14 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
         # Which of neuron_ids arrived via a habituation probe slot — a
         # sibling field like `tool`, absent before mind-delivery-plasticity.
         record["probes"] = probes
+    if withheld:
+        # Suppressed-and-not-probed neurons (mind-recurrence-watch): the
+        # denominator of the trial of absence. NOT in neuron_ids — these
+        # were never delivered, so they must not count as deliveries, must
+        # not dedupe future attempts, and must not enter attribution.
+        # Absent on records before this shipped; readers treat absence as
+        # no-withholding.
+        record["withheld"] = withheld
     path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -411,19 +427,25 @@ def main() -> int:
     # Capsule delivery is standing content: the reflex may not thin it;
     # that retirement is tier-2, human-countersigned, at compile time.
     hook_tool = payload.get("tool_name") if event == "PreToolUse" else None
-    hits, probe_ids = _pathway_gate(session_id, hits, event, hook_tool)
+    hits, probe_ids, withheld_ids = _pathway_gate(session_id, hits, event, hook_tool)
     pointers = [p for p in pointers
                 if p.get("name") and p["name"] not in _already_pointed(session_id)]
     capsule = _self_capsule() if event == "SessionStart" else None
     charter = _charter_capsule() if event == "SessionStart" else None
-    if not hits and not capsule and not charter and not pointers:
+    if not hits and not withheld_ids and not capsule and not charter \
+            and not pointers:
         return 0
 
-    if hits:
+    if hits or withheld_ids:
+        # An all-withheld record still logs (empty neuron_ids): the trial's
+        # denominator must exist even when nothing was delivered.
         _log_injection(session_id, cwd, event, hits, query_id,
-                       tool=hook_tool, probes=probe_ids)
+                       tool=hook_tool, probes=probe_ids,
+                       withheld=withheld_ids)
     if pointers:
         _log_pointers(session_id, cwd, event, pointers, query_id)
+    if not hits and not capsule and not charter and not pointers:
+        return 0  # withheld-only: denominator logged, nothing to inject
     # Capsule attribution (W7 fix): log the capsules' source neurons so
     # the distiller can render load_bearing/contradicted verdicts on
     # them. `seen` guards resume/compact re-fires within a session.

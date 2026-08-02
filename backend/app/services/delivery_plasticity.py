@@ -40,6 +40,23 @@ Two actuation tiers on the trust gradient:
     proposal is the countersign RECEIPT; the mutation itself happens here,
     the sole writer, on the next pass. This NEVER weakens to auto-commit.
 
+RECURRENCE REFRAME (mind-recurrence-watch, the Goodhart remedy). The
+binomial tail is TRIAGE, not judge: attenuation is a controlled trial of
+absence (withhold 4-in-5, probe the 5th, log everything), and both of the
+trial's endpoints are exogenous to the verdict loop — a probe reward
+restores (dishabituation), and a verified recurrence of the suppressed
+lesson's documented failure in a withheld session restores AND books a
+VERIFIED FALSE KILL incident receipt. Zero-false-kills is computed from
+those recurrence events, never from reward absence: the proxy that
+nominates does not get to grade itself. A recurrence also anchors the
+since-exculpation clock (like a reward), so a restored pathway is not
+re-condemned next pass on the same statistics. Tier-2 proposals carry the
+trial as a causal claim (withheld count + window, probe outcomes,
+recurrence count zero) and are REFUSED without it. The base-rate drift
+monitor contemplated in the Goodhart review is deliberately NOT built —
+with the proxy demoted to triage, a tightening threshold merely starts
+more cheap, reversible trials.
+
 Timestamps in `delivery_pathways` are naive UTC (episode logs are aware
 UTC; normalized on fold). All comparisons happen in naive UTC.
 """
@@ -127,6 +144,7 @@ def _scan_delivery_units(episode_dir: str) -> dict[str, dict]:
             continue
         path = os.path.join(episode_dir, name)
         by_neuron: dict[int, dict] = {}
+        withheld: dict[tuple[int, str, str], datetime] = {}
         try:
             with open(path, encoding="utf-8") as fh:
                 for line in fh:
@@ -153,9 +171,18 @@ def _scan_delivery_units(episode_dir: str) -> dict[str, dict]:
                         if when is not None and (
                                 entry["ts"] is None or when < entry["ts"]):
                             entry["ts"] = when
+                    # Withheld sibling list (mind-recurrence-watch): the
+                    # trial's denominator. Trigger/tool ride the record
+                    # itself, so no ambiguity rule is needed here.
+                    for nid in rec.get("withheld") or []:
+                        if not isinstance(nid, int) or when is None:
+                            continue
+                        key = (nid, trigger, tool)
+                        if key not in withheld or when < withheld[key]:
+                            withheld[key] = when
         except OSError:
             continue
-        if not by_neuron:
+        if not by_neuron and not withheld:
             continue
         marker_ts = None
         try:
@@ -164,12 +191,13 @@ def _scan_delivery_units(episode_dir: str) -> dict[str, dict]:
         except (OSError, ValueError):
             pass
         sessions[name.removesuffix(".jsonl")] = {
-            "by_neuron": by_neuron, "marker_ts": marker_ts}
+            "by_neuron": by_neuron, "withheld": withheld,
+            "marker_ts": marker_ts}
     return sessions
 
 
 def _blank_unit() -> dict:
-    return {"deliveries": [], "rewards": [], "penalties": []}
+    return {"deliveries": [], "rewards": [], "penalties": [], "withheld": []}
 
 
 def pathway_units(episode_dir: str = EPISODE_DIR,
@@ -195,6 +223,12 @@ def pathway_units(episode_dir: str = EPISODE_DIR,
         if not sess["marker_ts"]:
             continue
         diag["sessions_distilled"] += 1
+        # Withheld units count only in DISTILLED sessions, mirroring
+        # deliveries: an undistilled withheld session hasn't had its
+        # recurrence check yet, so it cannot yet stand as clean trial
+        # evidence. One unit per pathway per session.
+        for key, when in sess["withheld"].items():
+            units.setdefault(key, _blank_unit())["withheld"].append(when)
         for nid, entry in sess["by_neuron"].items():
             if len(entry["triggers"]) != 1:
                 diag["ambiguous_units"] += 1
@@ -276,24 +310,40 @@ def survival_tail(n_since_reward: int, base_rate: float) -> float:
 
 def decide(state: str, state_changed_at: datetime | None,
            deliveries: list, rewards: list, base_rate: float,
-           proposal_state: str | None) -> tuple[str, dict]:
+           proposal_state: str | None, withheld: list | tuple = (),
+           recurrences: list | tuple = ()) -> tuple[str, dict]:
     """Next state for one pathway. Pure; returns (new_state, evidence).
 
     `retired` is decided here ONLY from an applied countersign proposal —
     there is no path into it from statistics alone.
+
+    `withheld`: timestamps of withheld deliveries (the trial denominator);
+    `recurrences`: timestamps of VERIFIED recurrences of the pathway's
+    documented failure (mind-recurrence-watch) — ground-truth harm from
+    absence. A recurrence is exogenous exculpation: it restores a
+    suppressed pathway (booking a verified false kill) and anchors the
+    since-exculpation clock exactly like a reward, so the restored
+    pathway is not re-condemned next pass on unchanged statistics.
     """
     assert state in STATES, f"unknown pathway state: {state}"
     delivered_n = len(deliveries)
     last_reward = max(rewards) if rewards else None
-    n_since = (sum(1 for d in deliveries if d and last_reward and d > last_reward)
-               if last_reward else delivered_n)
+    last_recurrence = max(recurrences) if recurrences else None
+    anchors = [t for t in (last_reward, last_recurrence) if t is not None]
+    last_exculpation = max(anchors) if anchors else None
+    n_since = (sum(1 for d in deliveries if d and d > last_exculpation)
+               if last_exculpation else delivered_n)
     tail = survival_tail(n_since, base_rate)
     evidence = {"delivered_n": delivered_n, "rewarded_n": len(rewards),
+                "recurrence_n": len(recurrences),
                 "n_since_reward": n_since, "base_rate": round(base_rate, 4),
                 "tail": round(tail, 6)}
     rewarded_since_change = (
         last_reward is not None and state_changed_at is not None
         and last_reward > state_changed_at)
+    recurred_since_change = (
+        last_recurrence is not None and state_changed_at is not None
+        and last_recurrence > state_changed_at)
 
     if state == "active":
         if delivered_n < IMMUNITY_MIN_DELIVERIES:
@@ -303,6 +353,10 @@ def decide(state: str, state_changed_at: datetime | None,
         return "active", evidence
 
     if state == "attenuated":
+        if recurred_since_change:
+            # The documented failure returned while the memory was withheld:
+            # ground-truth harm, the trial ends, the kill was FALSE.
+            return "active", evidence | {"verified_false_kill": True}
         if rewarded_since_change:
             return "active", evidence | {"dishabituation": True}
         if tail > ALPHA_RESTORE:
@@ -312,10 +366,35 @@ def decide(state: str, state_changed_at: datetime | None,
         evidence["probes_since_attenuation"] = probes
         if (probes >= MIN_PROBES_BEFORE_RETIRE and tail < ALPHA_RETIRE
                 and proposal_state != "rejected"):
+            trial_withheld = sorted(
+                w for w in withheld
+                if w and (state_changed_at is None or w > state_changed_at))
+            if not trial_withheld:
+                # No withholding observed → no trial ran → no verdict to
+                # countersign. The pathway stays attenuated (floored).
+                return "attenuated", evidence | {"no_trial": True}
+            evidence["trial"] = {
+                "withheld_n": len(trial_withheld),
+                "withheld_window": [
+                    trial_withheld[0].isoformat(timespec="seconds"),
+                    trial_withheld[-1].isoformat(timespec="seconds")],
+                "probes_fired": probes,
+                "probe_rewards": sum(
+                    1 for r in rewards
+                    if r and state_changed_at and r > state_changed_at),
+                "recurrence_n": sum(
+                    1 for r in recurrences
+                    if r and state_changed_at and r > state_changed_at),
+            }
             return "retire-proposed", evidence
         return "attenuated", evidence
 
     if state == "retire-proposed":
+        if recurred_since_change:
+            # Ground-truth harm arrived while the proposal was pending:
+            # restore, book the false kill, and the caller supersedes the
+            # drifted proposal — same path as a probe reward.
+            return "active", evidence | {"verified_false_kill": True}
         if rewarded_since_change:
             # Exculpatory evidence arrived while the proposal was pending:
             # restore, and the caller supersedes the drifted proposal.
@@ -326,8 +405,11 @@ def decide(state: str, state_changed_at: datetime | None,
             return "attenuated", evidence | {"proposal_state": proposal_state}
         return "retire-proposed", evidence
 
-    # retired: a probe reward reopens the reflex loop, but does not
-    # overturn the countersign to full active on its own.
+    # retired: exculpatory evidence reopens the reflex loop, but does not
+    # overturn the countersign to full active on its own. A recurrence
+    # still books the incident — the countersigned kill was false too.
+    if recurred_since_change:
+        return "attenuated", evidence | {"verified_false_kill": True}
     if rewarded_since_change:
         return "attenuated", evidence | {"dishabituation": True}
     return "retired", evidence
@@ -353,10 +435,32 @@ def _transition(row: DeliveryPathway, new_state: str, evidence: dict,
         **evidence})
 
 
+def trial_claim(evidence: dict) -> str:
+    """Render the tier-2 proposal's CAUSAL claim (mind-recurrence-watch).
+
+    Tyler countersigns an experiment's result, not the distiller's opinion:
+    the body must carry the trial — sessions withheld (count + window),
+    probes fired and their outcomes, recurrence count ZERO — and a proposal
+    without that evidence is REFUSED here, before it can be staged."""
+    trial = evidence.get("trial") or {}
+    assert trial.get("withheld_n", 0) > 0, (
+        "REFUSED: tier-2 retirement proposal without withheld-trial "
+        "evidence — no trial ran, so there is no result to countersign")
+    assert trial.get("recurrence_n", 0) == 0, (
+        "REFUSED: tier-2 retirement proposal with a recorded recurrence — "
+        "the trial found harm; the pathway must restore, not retire")
+    window = trial.get("withheld_window") or ["?", "?"]
+    return (f"trial of absence: withheld {trial['withheld_n']} time(s) "
+            f"({window[0]} -> {window[-1]}), {trial.get('probes_fired', 0)} "
+            f"probes fired ({trial.get('probe_rewards', 0)} rewarded), "
+            f"0 recurrences of the documented failure while withheld")
+
+
 async def _queue_retire_proposal(db: AsyncSession, row: DeliveryPathway,
                                  evidence: dict) -> int:
     """Stage tier-2 retirement for HUMAN SIGN-OFF. The reflex may flinch on
     its own; it does not amputate on its own."""
+    claim = trial_claim(evidence)  # REFUSES verdict-shaped proposals
     label = (await db.execute(
         select(Neuron.label).where(Neuron.id == row.neuron_id)
     )).scalar_one_or_none() or f"#{row.neuron_id}"
@@ -364,11 +468,10 @@ async def _queue_retire_proposal(db: AsyncSession, row: DeliveryPathway,
     proposal = AutopilotProposal(
         state="proposed", gap_source=GAP_SOURCE,
         gap_description=(
-            f"retire delivery pathway '{label[:60]}' via {where}: "
+            f"retire delivery pathway '{label[:60]}' via {where}: {claim}; "
+            f"triage stats (nomination only, not the verdict): "
             f"{evidence['delivered_n']} deliveries, "
-            f"{evidence['rewarded_n']} rewards, "
-            f"{evidence['probes_since_attenuation']} failed probes since "
-            f"attenuation; P(dead|channel rate "
+            f"{evidence['rewarded_n']} rewards, P(dead|channel rate "
             f"{evidence['base_rate']:.1%}) tail {evidence['tail']:.4f}"),
         gap_evidence_json=json.dumps(evidence),
     )
@@ -409,11 +512,42 @@ def write_projection(rows: list[DeliveryPathway],
     return payload
 
 
+def false_kill_receipts(actions_log: str = ACTIONS_LOG) -> list[dict]:
+    """Verified-false-kill incident receipts — the trophy case, first-class
+    and EXOGENOUS: each one is grounded in a token-verified recurrence
+    event, never in reward absence (the proxy does not grade itself)."""
+    out: list[dict] = []
+    if not os.path.exists(actions_log):
+        return out
+    try:
+        with open(actions_log, encoding="utf-8") as fh:
+            for line in fh:
+                if '"plasticity.false_kill"' not in line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if rec.get("action") == "plasticity.false_kill":
+                    out.append(rec)
+    except OSError:
+        pass
+    return out
+
+
 async def run_plasticity(db: AsyncSession) -> dict:
     """The janitor pass: fold attribution into pathway counters, recompute
     states, queue tier-2 proposals, project for the hot path."""
+    # Lazy import: recurrence_watch pulls in the distiller module tree,
+    # which the pure decision-rule path here must not depend on.
+    from app.services.recurrence_watch import recurrence_events
+
     history = reconstruct_history()
     units, diag = pathway_units()
+    recur_by_key: dict[tuple[int, str, str], list[datetime]] = {}
+    for when, r_nid, r_trig, r_tool in recurrence_events():
+        recur_by_key.setdefault((r_nid, r_trig, r_tool), []).append(
+            _utc_naive(when))
 
     rows = (await db.execute(select(DeliveryPathway))).scalars().all()
     by_key = {(r.neuron_id, r.trigger, r.tool): r for r in rows}
@@ -429,6 +563,7 @@ async def run_plasticity(db: AsyncSession) -> dict:
 
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     transitions: list[dict] = []
+    false_kills: list[str] = []
     proposed = 0
     for key, unit in units.items():
         nid, trigger, tool = key
@@ -452,7 +587,9 @@ async def run_plasticity(db: AsyncSession) -> dict:
         old_state = row.state
         new_state, evidence = decide(
             row.state, row.state_changed_at, deliveries, rewards,
-            base_rate_for(history, trigger, tool), pstate)
+            base_rate_for(history, trigger, tool), pstate,
+            withheld=sorted(w for w in unit["withheld"] if w),
+            recurrences=recur_by_key.get(key, ()))
         if new_state == row.state:
             continue
         if new_state == "retired":
@@ -463,14 +600,25 @@ async def run_plasticity(db: AsyncSession) -> dict:
             proposed += 1
         if (old_state == "retire-proposed" and new_state == "active"
                 and pstate == "proposed"):
-            # Exculpatory reward while pending: the recorded old-state
+            # Exculpatory evidence while pending: the recorded old-state
             # drifted, so the proposal follows the kernel's terminal path.
             proposal = await db.get(AutopilotProposal, row.proposal_id)
             if proposal is not None:
                 proposal.state = "superseded"
                 proposal.review_notes = (
+                    "delivery_plasticity: a verified recurrence of the "
+                    "documented failure arrived after this was proposed — "
+                    "the trial found harm; verified false kill booked, "
+                    "restored to active"
+                    if evidence.get("verified_false_kill") else
                     "delivery_plasticity: pathway earned a reward after "
                     "this was proposed; evidence drifted, restored to active")
+        if evidence.get("verified_false_kill"):
+            # The incident receipt, kept as a trophy, never smoothed over.
+            _log_action("plasticity.false_kill", {
+                "neuron_id": nid, "trigger": trigger, "tool": tool or None,
+                "from": old_state, "to": new_state, **evidence})
+            false_kills.append(f"{nid}|{trigger}|{tool}")
         _transition(row, new_state, evidence, now)
         transitions.append({"pathway": f"{nid}|{trigger}|{tool}",
                             "from": old_state, "to": new_state})
@@ -480,6 +628,12 @@ async def run_plasticity(db: AsyncSession) -> dict:
     report = {
         "pathways": len(by_key), "transitions": transitions,
         "retire_proposed": proposed,
+        # ZERO FALSE KILLS is re-grounded (mind-recurrence-watch): counted
+        # from verified recurrence events, never from reward absence.
+        "verified_false_kills": false_kills,
+        # This pass's receipts are already on disk by now — the file IS
+        # the lifetime count, no addition.
+        "verified_false_kills_lifetime": len(false_kill_receipts()),
         "suppressed_now": len(projection["suppressed"]), **diag,
         "base_rates_used": {
             "by_trigger": {k: v.get("load_bearing_pct")

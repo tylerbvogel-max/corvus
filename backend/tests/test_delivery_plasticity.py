@@ -33,8 +33,10 @@ from app.services.delivery_plasticity import (
     _transition,
     base_rate_for,
     decide,
+    false_kill_receipts,
     pathway_units,
     survival_tail,
+    trial_claim,
     write_projection,
 )
 from app.services.injection_channel import reconstruct_history
@@ -53,8 +55,11 @@ def _naive(minutes: float) -> datetime:
     return (T0 + timedelta(minutes=minutes)).replace(tzinfo=None)
 
 
-def _write_session(episode_dir, sid, injections, distilled_at_min=None):
-    """injections: list of (minute, trigger, tool_or_None, [neuron_ids])."""
+def _write_session(episode_dir, sid, injections, distilled_at_min=None,
+                   withheld=None):
+    """injections: list of (minute, trigger, tool_or_None, [neuron_ids]).
+    withheld: same tuple shape, but the ids land on the record's `withheld`
+    sibling list (mind-recurrence-watch) — suppressed, never delivered."""
     path = episode_dir / f"{sid}.jsonl"
     with open(path, "a", encoding="utf-8") as fh:
         for minute, trigger, tool, nids in injections:
@@ -62,6 +67,14 @@ def _write_session(episode_dir, sid, injections, distilled_at_min=None):
                    "cwd": "/x", "trigger": trigger, "query_id": None,
                    "neuron_ids": nids, "labels": [f"n{v}" for v in nids],
                    "scores": [1.0] * len(nids)}
+            if tool:
+                rec["tool"] = tool
+            fh.write(json.dumps(rec) + "\n")
+        for minute, trigger, tool, nids in withheld or []:
+            rec = {"ts": _ts(minute), "event": "Injection", "session_id": sid,
+                   "cwd": "/x", "trigger": trigger, "query_id": None,
+                   "neuron_ids": [], "labels": [], "scores": [],
+                   "withheld": nids}
             if tool:
                 rec["tool"] = tool
             fh.write(json.dumps(rec) + "\n")
@@ -196,17 +209,22 @@ def test_hysteresis_exit_threshold_is_distinct_from_entry():
 
 @pytest.mark.hermetic
 def test_retire_proposal_needs_failed_probes_and_the_stricter_alpha():
+    """Updated for mind-recurrence-watch: nomination statistics alone no
+    longer reach the countersign queue — the trial (withheld deliveries,
+    zero recurrences) must exist too. See the recurrence-watch section for
+    the no-trial refusal."""
     attenuated_at = _naive(50)
     before = [_naive(i) for i in range(30)]
     probes = [_naive(60 + i) for i in range(MIN_PROBES_BEFORE_RETIRE)]
+    withheld = [_naive(55), _naive(58)]
     state, evidence = decide("attenuated", attenuated_at, before + probes,
-                             [], 0.21, None)
+                             [], 0.21, None, withheld=withheld)
     assert state == "retire-proposed"
     assert evidence["probes_since_attenuation"] == MIN_PROBES_BEFORE_RETIRE
     assert survival_tail(evidence["n_since_reward"], 0.21) < ALPHA_RETIRE
     # One probe short: still attenuated.
     state, _ = decide("attenuated", attenuated_at, before + probes[:-1],
-                      [], 0.21, None)
+                      [], 0.21, None, withheld=withheld)
     assert state == "attenuated"
 
 
@@ -391,12 +409,16 @@ def test_hook_gate_suppresses_but_the_probe_slot_still_fires(tmp_path):
 
     outcomes = {}
     for i in range(200):
-        kept, probes = hook._pathway_gate(f"sess-{i}", list(hits),
-                                          "UserPromptSubmit", None)
+        kept, probes, withheld = hook._pathway_gate(f"sess-{i}", list(hits),
+                                                    "UserPromptSubmit", None)
         assert any(h["neuron_id"] == 43 for h in kept), \
             "an unsuppressed pathway must never be touched"
         delivered_42 = any(h["neuron_id"] == 42 for h in kept)
         assert delivered_42 == (42 in probes)
+        # The trial's denominator (mind-recurrence-watch): every
+        # suppression is REPORTED, never silently dropped.
+        assert (42 in withheld) == (not delivered_42)
+        assert 43 not in withheld
         outcomes[f"sess-{i}"] = delivered_42
     fired = sum(outcomes.values())
     assert 0 < fired < 200, (
@@ -404,8 +426,8 @@ def test_hook_gate_suppresses_but_the_probe_slot_still_fires(tmp_path):
         f"suppression; 1-in-5 expects ~40")
     # Deterministic: the same session always gets the same answer.
     for i in (0, 7, 123):
-        kept, _ = hook._pathway_gate(f"sess-{i}", list(hits),
-                                     "UserPromptSubmit", None)
+        kept, _, _ = hook._pathway_gate(f"sess-{i}", list(hits),
+                                        "UserPromptSubmit", None)
         assert any(h["neuron_id"] == 42 for h in kept) == outcomes[f"sess-{i}"]
 
 
@@ -415,8 +437,9 @@ def test_hook_gate_fails_open(tmp_path):
     hits = [{"neuron_id": 42, "label": "n42", "score": 1.0}]
     # Missing projection: deliver.
     hook.PATHWAY_PROJECTION = str(tmp_path / "missing.json")
-    kept, probes = hook._pathway_gate("s", list(hits), "UserPromptSubmit", None)
-    assert kept == hits and not probes
+    kept, probes, withheld = hook._pathway_gate(
+        "s", list(hits), "UserPromptSubmit", None)
+    assert kept == hits and not probes and not withheld
     # Corrupt k (zero) — the floor may never reach zero, so deliver.
     proj = tmp_path / "bad.json"
     proj.write_text(json.dumps({
@@ -424,8 +447,9 @@ def test_hook_gate_fails_open(tmp_path):
         "suppressed": {"42|UserPromptSubmit|": "attenuated"},
     }))
     hook.PATHWAY_PROJECTION = str(proj)
-    kept, _ = hook._pathway_gate("s", list(hits), "UserPromptSubmit", None)
-    assert kept == hits
+    kept, _, withheld = hook._pathway_gate("s", list(hits), "UserPromptSubmit", None)
+    assert kept == hits and not withheld, \
+        "fail-open deliveries are deliveries, not withholdings"
 
 
 @pytest.mark.hermetic
@@ -438,7 +462,167 @@ def test_hook_gate_keys_pathways_by_tool_for_pretooluse(tmp_path):
     }))
     hook.PATHWAY_PROJECTION = str(proj)
     hits = [{"neuron_id": 42, "label": "n42", "score": 1.3}]
-    kept_bash, _ = hook._pathway_gate("s0", list(hits), "PreToolUse", "Bash")
-    kept_read, _ = hook._pathway_gate("s0", list(hits), "PreToolUse", "Read")
-    assert not kept_bash, "suppressed on Bash (probe interval set huge)"
-    assert kept_read == hits, "the SAME neuron on another tool is untouched"
+    kept_bash, _, withheld_bash = hook._pathway_gate(
+        "s0", list(hits), "PreToolUse", "Bash")
+    kept_read, _, withheld_read = hook._pathway_gate(
+        "s0", list(hits), "PreToolUse", "Read")
+    assert not kept_bash and withheld_bash == [42], \
+        "suppressed on Bash (probe interval set huge) — and logged withheld"
+    assert kept_read == hits and not withheld_read, \
+        "the SAME neuron on another tool is untouched"
+
+
+# ── Recurrence watch: the trial of absence (mind-recurrence-watch) ──
+
+def _attenuation_stats():
+    """30 pre-attenuation deliveries + 3 probes in a 21% channel: past the
+    retire nomination thresholds (tail < ALPHA_RETIRE, probes >= MIN)."""
+    attenuated_at = _naive(50)
+    deliveries = ([_naive(i) for i in range(30)]
+                  + [_naive(60 + i) for i in range(MIN_PROBES_BEFORE_RETIRE)])
+    return attenuated_at, deliveries
+
+
+@pytest.mark.hermetic
+def test_recurrence_in_a_withheld_trial_restores_and_books_a_false_kill():
+    """Honeypot A, decision-rule half: ground-truth harm ends the trial."""
+    attenuated_at, deliveries = _attenuation_stats()
+    state, evidence = decide("attenuated", attenuated_at, deliveries, [],
+                             0.21, None, withheld=[_naive(55), _naive(58)],
+                             recurrences=[_naive(59)])
+    assert state == "active" and evidence.get("verified_false_kill"), (
+        f"the documented failure returned while the memory was withheld — "
+        f"the kill was FALSE and the pathway must restore ({evidence})")
+
+
+@pytest.mark.hermetic
+def test_a_recurrence_anchors_the_clock_so_restore_is_not_undone():
+    """Without the anchor, the very next pass would re-attenuate the
+    restored pathway on unchanged statistics — a restore/condemn loop."""
+    _, deliveries = _attenuation_stats()
+    state, evidence = decide("active", _naive(70), deliveries, [],
+                             0.21, None, recurrences=[_naive(69)])
+    assert state == "active", (
+        f"restored-by-recurrence pathway re-condemned on the same "
+        f"statistics ({evidence})")
+    assert evidence["n_since_reward"] == 0
+
+
+@pytest.mark.hermetic
+def test_no_withholding_means_no_trial_means_no_retire_proposal():
+    """The proposal is a causal claim about a trial. If the pathway was
+    never actually withheld, no trial ran — nomination stats alone must
+    not reach the countersign queue."""
+    attenuated_at, deliveries = _attenuation_stats()
+    state, evidence = decide("attenuated", attenuated_at, deliveries, [],
+                             0.21, None, withheld=[])
+    assert state == "attenuated" and evidence.get("no_trial"), (
+        f"a retire proposal was nominated without any withheld deliveries "
+        f"({evidence})")
+
+
+@pytest.mark.hermetic
+def test_retire_proposal_carries_the_trial_as_evidence():
+    attenuated_at, deliveries = _attenuation_stats()
+    withheld = [_naive(52), _naive(55), _naive(63)]
+    state, evidence = decide("attenuated", attenuated_at, deliveries, [],
+                             0.21, None, withheld=withheld)
+    assert state == "retire-proposed"
+    trial = evidence["trial"]
+    assert trial["withheld_n"] == 3
+    assert trial["withheld_window"][0] < trial["withheld_window"][1]
+    assert trial["probes_fired"] == MIN_PROBES_BEFORE_RETIRE
+    assert trial["probe_rewards"] == 0
+    assert trial["recurrence_n"] == 0
+    # ...and the claim renderer accepts exactly this evidence shape.
+    assert "trial of absence" in trial_claim(evidence)
+
+
+@pytest.mark.hermetic
+def test_trial_claim_refuses_verdict_shaped_proposals():
+    """The tier-2 refusal gate: no trial evidence, no proposal — and a
+    recorded recurrence makes retirement unthinkable, not arguable."""
+    with pytest.raises(AssertionError, match="REFUSED.*without withheld-trial"):
+        trial_claim({"delivered_n": 40, "rewarded_n": 0, "tail": 0.001})
+    with pytest.raises(AssertionError, match="REFUSED.*recurrence"):
+        trial_claim({"trial": {"withheld_n": 5, "probes_fired": 3,
+                               "probe_rewards": 0, "recurrence_n": 1}})
+
+
+@pytest.mark.hermetic
+def test_recurrence_during_retire_proposed_restores_for_supersede():
+    """Mirrors the probe-reward path: new_state=active from retire-proposed
+    is exactly the branch run_plasticity's supersede handler pins on."""
+    _, deliveries = _attenuation_stats()
+    state, evidence = decide("retire-proposed", _naive(70), deliveries, [],
+                             0.21, None, recurrences=[_naive(75)])
+    assert state == "active" and evidence.get("verified_false_kill")
+
+
+@pytest.mark.hermetic
+def test_recurrence_after_a_countersigned_retirement_reopens_not_overturns():
+    _, deliveries = _attenuation_stats()
+    state, evidence = decide("retired", _naive(70), deliveries, [],
+                             0.21, "applied", recurrences=[_naive(75)])
+    assert state == "attenuated" and evidence.get("verified_false_kill"), (
+        "ground-truth harm after a countersigned kill books the incident "
+        "and reopens the reflex loop (it does not silently overturn the "
+        "human's decision to full active)")
+
+
+@pytest.mark.hermetic
+def test_fold_counts_withheld_units_in_distilled_sessions_only(corpus):
+    episode_dir, actions_log = corpus
+    _write_session(episode_dir, "w1", [],
+                   withheld=[(0, "UserPromptSubmit", None, [42])],
+                   distilled_at_min=1)
+    _write_session(episode_dir, "w2", [],
+                   withheld=[(0, "UserPromptSubmit", None, [42]),
+                             (2, "UserPromptSubmit", None, [42])],
+                   distilled_at_min=3)
+    _write_session(episode_dir, "w3", [],
+                   withheld=[(0, "UserPromptSubmit", None, [42])])  # no marker
+    units, _ = pathway_units(str(episode_dir), str(actions_log))
+    unit = units[(42, "UserPromptSubmit", "")]
+    assert len(unit["withheld"]) == 2, (
+        "one withheld unit per pathway per DISTILLED session — the "
+        "undistilled session hasn't had its recurrence check yet")
+    assert not unit["deliveries"], "withholding is not delivery"
+
+
+@pytest.mark.hermetic
+def test_false_kill_receipts_count_only_recurrence_grounded_incidents(corpus):
+    """Zero-false-kills is EXOGENOUS: attribution verdicts (the proxy) in
+    the same log must not move the number."""
+    episode_dir, actions_log = corpus
+    _write_verdict(actions_log, 1, 7, "reward", "UserPromptSubmit")
+    _write_verdict(actions_log, 2, 8, "penalty", "UserPromptSubmit")
+    assert false_kill_receipts(str(actions_log)) == []
+    with open(actions_log, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps({
+            "ts": _ts(3), "event": "JanitorAction",
+            "action": "plasticity.false_kill", "neuron_id": 42,
+            "trigger": "UserPromptSubmit", "tool": None,
+            "from": "attenuated", "to": "active"}) + "\n")
+    receipts = false_kill_receipts(str(actions_log))
+    assert len(receipts) == 1 and receipts[0]["neuron_id"] == 42
+
+
+@pytest.mark.hermetic
+def test_hook_logs_withheld_as_a_sibling_list_outside_neuron_ids(tmp_path):
+    """Round-trip: a fully-suppressed recall still writes an Injection
+    record whose `withheld` list carries the denominator, and whose
+    neuron_ids stays empty — withheld must never count as delivered."""
+    hook = _load_hook()
+    hook.EPISODE_DIR = str(tmp_path / "episodes")
+    hook._log_injection("sess-w", "/x", "UserPromptSubmit", [],
+                        withheld=[42, 77])
+    lines = [json.loads(line) for line in
+             (tmp_path / "episodes" / "sess-w.jsonl").read_text().splitlines()]
+    assert len(lines) == 1
+    rec = lines[0]
+    assert rec["event"] == "Injection" and rec["neuron_ids"] == []
+    assert rec["withheld"] == [42, 77]
+    # Withheld ids must not dedupe future delivery attempts.
+    seen = hook._already_injected("sess-w")
+    assert 42 not in seen and 77 not in seen
