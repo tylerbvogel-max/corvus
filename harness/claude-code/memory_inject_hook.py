@@ -172,7 +172,9 @@ def _pathway_gate(session_id: str, hits: list, trigger: str,
 def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
                    query_id=None, tool: str | None = None,
                    probes: list | None = None,
-                   withheld: list | None = None) -> None:
+                   withheld: list | None = None,
+                   origin: str = "parent",
+                   agent_id: str | None = None) -> None:
     """Append one Injection episode record.
 
     `trigger` stays the bare hook event (mind-pretooluse-reach). The tempting
@@ -197,7 +199,19 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
         "neuron_ids": [h["neuron_id"] for h in hits],
         "labels": [h["label"] for h in hits],
         "scores": [h["score"] for h in hits],
+        # mind-subagent-provenance: WHICH context window this delivery landed
+        # in. PreToolUse fires inside subagents (measured: 2,557 of the
+        # corpus's injections ride this trigger, the largest channel by far),
+        # but usage can only ever be judged against the PARENT transcript — a
+        # subagent-context delivery is structurally incapable of scoring as
+        # load-bearing. Without this field it is indistinguishable from a
+        # delivery the parent saw and ignored, and attribution charges it as
+        # the latter. Absent before 2026-08-02; readers must treat that
+        # absence as UNKNOWN, not as parent.
+        "origin": origin,
     }
+    if agent_id:
+        record["agent_id"] = agent_id
     if tool:
         record["tool"] = tool
     if probes:
@@ -218,7 +232,8 @@ def _log_injection(session_id: str, cwd: str, trigger: str, hits: list,
 
 
 def _log_pointers(session_id: str, cwd: str, trigger: str, pointers: list,
-                  query_id=None) -> None:
+                  query_id=None, origin: str = "parent",
+                  agent_id: str | None = None) -> None:
     """Episode-log every signpost emission (mind-skill-signpost) so the
     Evaluate>Skills conversion instrument can compare pointers shown
     against Skill-tool loads, and so session dedupe has a ledger."""
@@ -236,7 +251,13 @@ def _log_pointers(session_id: str, cwd: str, trigger: str, pointers: list,
         "skills": [{k: p[k] for k in ("name", "votes", "path", "node_score")
                     if p.get(k) is not None}
                    for p in pointers],
+        # Same reasoning as the Injection record: a pointer shown inside a
+        # subagent can never convert into a Skill-tool load the PARENT
+        # transcript records (mind-subagent-provenance).
+        "origin": origin,
     }
+    if agent_id:
+        record["agent_id"] = agent_id
     path = os.path.join(EPISODE_DIR, f"{session_id}.jsonl")
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -368,6 +389,15 @@ def main() -> int:
     session_id = payload.get("session_id") or "unknown"
     if not re.fullmatch(r"[A-Za-z0-9_-]+", session_id):
         session_id = "unknown"
+    # A subagent's hook payload carries the PARENT's session_id and the
+    # PARENT's transcript_path — only agent_id/agent_type mark the origin
+    # (measured 2026-08-02, mind-subagent-provenance). Of the three triggers
+    # below, only PreToolUse can fire inside a subagent.
+    raw_agent_id = payload.get("agent_id")
+    if isinstance(raw_agent_id, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", raw_agent_id):
+        origin, agent_id = "subagent", raw_agent_id
+    else:
+        origin, agent_id = "parent", None
 
     if event == "SessionStart":
         # Ambient recall RETIRED 2026-07-29 (mind-sessionstart-recall).
@@ -441,9 +471,11 @@ def main() -> int:
         # denominator must exist even when nothing was delivered.
         _log_injection(session_id, cwd, event, hits, query_id,
                        tool=hook_tool, probes=probe_ids,
-                       withheld=withheld_ids)
+                       withheld=withheld_ids, origin=origin,
+                       agent_id=agent_id)
     if pointers:
-        _log_pointers(session_id, cwd, event, pointers, query_id)
+        _log_pointers(session_id, cwd, event, pointers, query_id,
+                      origin=origin, agent_id=agent_id)
     if not hits and not capsule and not charter and not pointers:
         return 0  # withheld-only: denominator logged, nothing to inject
     # Capsule attribution (W7 fix): log the capsules' source neurons so

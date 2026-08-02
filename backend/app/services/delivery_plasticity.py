@@ -160,6 +160,19 @@ def _scan_delivery_units(episode_dir: str) -> dict[str, dict]:
                     trigger = str(rec.get("trigger") or "unknown")
                     tool = (str(rec.get("tool") or LEGACY_PRE_TOOL)
                             if trigger == PRE_TOOL_TRIGGER else "")
+                    # OPEN SEAM (mind-subagent-provenance, 2026-08-02):
+                    # `rec["origin"]` now says whether this delivery landed in
+                    # the parent's context window or a subagent's. A
+                    # subagent-context delivery still counts as a full
+                    # delivery here while its reward can only be observed in
+                    # the PARENT transcript — so it biases every pathway
+                    # toward condemnation. It is NOT discounted yet, on
+                    # purpose: this record's constants were calibrated against
+                    # base rates that included these deliveries, and changing
+                    # the actuator before the share is measured is exactly the
+                    # un-measured tuning mind-recurrence-watch was written to
+                    # stop. The share is now reported by
+                    # mind_metrics.injection_metrics.deliveries_by_origin.
                     for nid in rec.get("neuron_ids") or []:
                         if not isinstance(nid, int):
                             continue

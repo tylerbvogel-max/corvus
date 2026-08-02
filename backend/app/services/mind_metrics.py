@@ -222,6 +222,15 @@ async def injection_metrics() -> dict:
     total = 0
     per_lesson: dict[str, int] = {}
     sessions_with = set()
+    # mind-subagent-provenance: deliveries counted by the context window they
+    # landed in. A delivery into a SUBAGENT can only be judged against the
+    # PARENT transcript, so it is structurally disadvantaged at attribution —
+    # and the pathway counters that drive attenuation cannot yet tell the two
+    # apart. This is the instrument for that bias, deliberately shipped BEFORE
+    # any actuator change: measure the share first, then decide whether
+    # delivery_plasticity should discount it.
+    by_origin = {"parent": 0, "subagent": 0, "unknown": 0}
+    neurons_by_origin = {"parent": 0, "subagent": 0, "unknown": 0}
     if os.path.isdir(EPISODE_DIR):
         for name in os.listdir(EPISODE_DIR):
             if not name.endswith(".jsonl"):
@@ -237,6 +246,13 @@ async def injection_metrics() -> dict:
                             continue
                         total += 1
                         sessions_with.add(name)
+                        # Absent on every record written before 2026-08-02.
+                        # That is UNKNOWN, not parent: reading it as parent
+                        # would silently assert provenance nobody measured.
+                        origin = rec.get("origin")
+                        bucket = origin if origin in by_origin else "unknown"
+                        by_origin[bucket] += 1
+                        neurons_by_origin[bucket] += len(rec.get("neuron_ids") or [])
                         for label in rec.get("labels", []):
                             per_lesson[label] = per_lesson.get(label, 0) + 1
             except OSError:
@@ -246,7 +262,9 @@ async def injection_metrics() -> dict:
     return {"events": total, "sessions_with_injections": len(sessions_with),
             "distinct_lessons_injected": len(per_lesson),
             "top_injected": [{"label": k, "count": v} for k, v in top],
-            "volume_by_channel": standing_volume()}
+            "volume_by_channel": standing_volume(),
+            "records_by_origin": by_origin,
+            "deliveries_by_origin": neurons_by_origin}
 
 
 def sessions_report() -> list[dict]:

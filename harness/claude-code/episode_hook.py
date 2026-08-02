@@ -25,6 +25,13 @@ EPISODE_DIR = os.path.expanduser("~/.corvus-mind/episodes")
 CONFIG_PATH = os.path.expanduser("~/.corvus-mind/config.json")
 MAX_FIELD_CHARS = 400
 MAX_ERROR_CHARS = 600
+MAX_IDENT_CHARS = 80
+# GUESSED CONSTANT (mind-subagent-provenance, 2026-08-02): a subagent's returned
+# report is agent-asserted prose, so it is budgeted just above the distiller's
+# per-message assistant-prose cap (600) and far below an event stream. Revisit
+# once report-derived lessons have a measured clear-rate at the corroboration
+# gate.
+MAX_REPORT_CHARS = 1200
 
 # Credential-shaped literals and assignments. Applied to every captured
 # string; a memory system that regurgitates a secret is a persistent leak.
@@ -100,6 +107,48 @@ def _outcome(tool_response) -> tuple:
     return True, None
 
 
+def _report_text(content) -> str:
+    """Flatten an Agent tool_response `content` into plain text.
+
+    Harnesses return either a bare string or a list of content blocks; accept
+    both and ignore anything that is not text (a subagent that hands back an
+    image has handed back nothing this layer can corroborate)."""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str) and block.strip():
+                parts.append(block.strip())
+            elif (isinstance(block, dict) and block.get("type") == "text"
+                    and isinstance(block.get("text"), str) and block["text"].strip()):
+                parts.append(block["text"].strip())
+        return " ".join(parts)
+    return ""
+
+
+def _agent_result(tool_response) -> dict:
+    """Identity + returned report from a completed Agent tool call.
+
+    The report is the one piece of subagent output that has already passed a
+    filter — it is what the agent chose to hand back — and it lands adjacent to
+    the events that can corroborate it. `spawned_agent_id` joins this record to
+    the subagent's own events, which carry the same value as `agent_id`."""
+    if not isinstance(tool_response, dict):
+        return {}
+    out = {}
+    for src, dst in (("agentId", "spawned_agent_id"),
+                     ("agentType", "spawned_agent_type"),
+                     ("status", "agent_status")):
+        value = tool_response.get(src)
+        if isinstance(value, str) and value.strip():
+            out[dst] = _clip(value, MAX_IDENT_CHARS)
+    report = _report_text(tool_response.get("content"))
+    if report:
+        out["agent_report"] = _clip(report, MAX_REPORT_CHARS)
+    return out
+
+
 def _project_from_cwd(cwd: str) -> str:
     home = os.path.expanduser("~")
     projects_root = os.path.join(home, "Projects") + os.sep
@@ -128,6 +177,23 @@ def build_record(payload: dict) -> dict:
         record["ok"] = ok
         if error:
             record["error"] = error
+        # Origin is stamped EXPLICITLY on both branches rather than inferred
+        # from the absence of agent_id: episode files written before
+        # mind-subagent-provenance carry no origin at all, and "unknown
+        # provenance" must stay distinguishable from "measured parent". A
+        # consumer that treats a missing field as parent-confirmed would
+        # silently re-open the attribution seam this record exists to close.
+        agent_id = payload.get("agent_id")
+        if isinstance(agent_id, str) and agent_id.strip():
+            record["origin"] = "subagent"
+            record["agent_id"] = _clip(agent_id, MAX_IDENT_CHARS)
+            agent_type = payload.get("agent_type")
+            if isinstance(agent_type, str) and agent_type.strip():
+                record["agent_type"] = _clip(agent_type, MAX_IDENT_CHARS)
+        else:
+            record["origin"] = "parent"
+        if record["tool"] == "Agent":
+            record.update(_agent_result(payload.get("tool_response")))
     elif event == "Stop":
         record["transcript_path"] = payload.get("transcript_path")
         record["distill_ready"] = True
