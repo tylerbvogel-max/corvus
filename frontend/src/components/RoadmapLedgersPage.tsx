@@ -444,7 +444,14 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
     nextAction: string;
   }>({
     disposition: prior?.disposition ?? 'partial',
-    resultRecap: '',
+    // Seeded for a countersign so the dialog opens ready to submit. Left empty
+    // it is a required field, which disables the submit button — and a button
+    // that is disabled for an unstated reason reads as a broken button, which
+    // is exactly how this was found. The substance is already on the record;
+    // what a countersign adds is the signature, not a fresh account.
+    resultRecap: countersigning
+      ? `Countersigned: accepting the outcome recorded at revision ${prior?.ledgerRevision}, verified by ${prior?.verifier}.`
+      : '',
     verificationPassed: prior?.verificationPassed ?? false,
     confidence: 80,
     claims: '',
@@ -459,6 +466,14 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
   const [error, setError] = useState('');
 
   const lines = (value: string) => value.split('\n').map(item => item.trim()).filter(Boolean);
+
+  // Single source of truth for "can this be submitted", so the button's
+  // disabled state and the reason shown for it can never disagree.
+  const missing = [
+    ['a result recap', form.resultRecap],
+    ['a verifier', form.verifier],
+    ['an accepting name', form.acceptedBy],
+  ].filter(([, value]) => !String(value).trim()).map(([label]) => label as string);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -536,9 +551,18 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
             : 'The harness decides who acts and what permissions it receives. This receipt records only durable claims, evidence, limitations, independent verification, and human acceptance. A record closes only when disposition is complete and verification passed.'}
         </p>
         {error && <p className="rl-form-error">{error}</p>}
+        {/* A disabled submit with no stated reason reads as a broken submit.
+            That is not hypothetical: the countersign button was reported as
+            "does nothing" when the only problem was an empty required field
+            silently holding it shut. Name what is missing. */}
+        {!busy && missing.length > 0 && (
+          <p className="rl-form-hint">
+            Waiting on {missing.join(' and ')} before this receipt can be signed.
+          </p>
+        )}
         <footer>
           <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy || !form.resultRecap.trim() || !form.verifier.trim() || !form.acceptedBy.trim()}>
+          <button className="primary" disabled={busy || missing.length > 0}>
             {busy
               ? (countersigning ? 'Countersigning…' : 'Reconciling…')
               : (countersigning ? 'Countersign' : 'Accept receipt')}

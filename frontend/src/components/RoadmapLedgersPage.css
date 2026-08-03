@@ -215,6 +215,9 @@
 .rl-reconcile-record { display: grid; gap: 5px; margin-bottom: 16px; padding: 11px 12px; border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }.rl-reconcile-record code { color: var(--accent-light); font: .58rem var(--rl-mono); }.rl-reconcile-record strong { font-size: .82rem; }.rl-reconcile-record span, .rl-reconcile-note { color: var(--text-dim); font-size: .66rem; line-height: 1.55; }
 .rl-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }.rl-dialog footer button { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--ui-radius-control); background: transparent; color: var(--text-dim); cursor: pointer; }.rl-dialog footer .primary { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-light); }
 .rl-form-error { color: var(--red); font-size: .68rem; }
+/* Not an error — the form is merely incomplete. Amber, so a missing field
+   never reads as a failed submit. */
+.rl-form-hint { color: var(--amber); font-size: .68rem; }
 
 @media (max-width: 1050px) {
   .rl-root { grid-template-columns: 190px minmax(0, 1fr); }

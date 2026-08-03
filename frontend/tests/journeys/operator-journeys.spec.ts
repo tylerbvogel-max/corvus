@@ -167,9 +167,23 @@ test('a closed record can still be countersigned, and only affirmed', async ({ p
   // Seeded from the prior receipt: this is the verifier being accepted.
   await expect(page.getByLabel('Verifier', { exact: true })).toHaveValue('journey-verifier');
 
-  await page.getByLabel('Result recap').fill('Countersigned by the operator journey.');
+  // Submittable the moment it opens. The recap seeds itself for a countersign,
+  // because a required field left empty silently disables the submit button —
+  // which is how this dialog got reported as "clicking does nothing". Only the
+  // accepting name is typed, and nothing else is touched.
+  const submit = page.locator('.rl-dialog footer button.primary');
+  await expect(submit).toBeEnabled();
+  await expect(page.locator('.rl-dialog .rl-form-hint')).toHaveCount(0);
+  await expect(page.getByLabel('Result recap')).not.toHaveValue('');
+
+  // ...and when something IS missing, the dialog says so instead of going quiet.
+  await page.getByLabel('Accepted by').fill('');
+  await expect(submit).toBeDisabled();
+  await expect(page.locator('.rl-dialog .rl-form-hint')).toContainText('accepting name');
+
   await page.getByLabel('Accepted by').fill('journey-human');
-  await page.getByRole('button', { name: 'Countersign', exact: true }).last().click();
+  await expect(submit).toBeEnabled();
+  await submit.click();
 
   await expect(page.getByText(new RegExp(plural(before + 2)))).toBeVisible({ timeout: 30_000 });
 
