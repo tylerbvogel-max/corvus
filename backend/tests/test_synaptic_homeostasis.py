@@ -160,6 +160,52 @@ def test_dormancy_filters_compiled_delivery_only():
     assert "superseded_by" not in clause, "dormancy must never retire a neuron"
 
 
+RETRIEVAL_PATH_MODULES = (
+    "executor", "scoring_engine", "neuron_service", "recall_primitives",
+    "recall_lanes", "propagation", "memory_assembly", "prompt_assembler",
+    "skill_signpost",
+)
+
+
+def test_homeostatic_axis_never_reaches_the_retrieval_path():
+    """The sleep-side scalar must not become a ninth scoring signal.
+
+    027's own premise is that this axis is deliberately separate from
+    `avg_utility`, which IS read by recall scoring — the whole reason a second
+    column exists is that renormalizing the evidence column would move neurons
+    across trust tiers as a side effect. That separation is currently a
+    convention held up by nobody, so it is asserted here at the source.
+
+    There is a second consequence, measured 2026-08-03 (mind-recall-fixture).
+    Frozen-corpus fixtures are pg_dumps that predate later migrations; a
+    fixture captured before 027 can only be replayed under it by migrating the
+    restored copy, which brings `homeostatic_weight` in at its server_default
+    (1.0) and `dormant_at` at NULL rather than at the values live held. That is
+    sound ONLY while these columns stay off the selection path — the eval
+    harness records exactly that acknowledgement
+    (~/.corvus-mind/evals/recall-probe/probe.py, accept_unbackfilled). The day
+    a scorer starts reading either column, every migrated fixture silently
+    begins measuring a ranking function reading defaults for a corpus that
+    never had them. This test is the tripwire for that day: if it fails, the
+    acknowledgement is void and those fixtures must be recaptured, not
+    migrated.
+    """
+    import importlib
+
+    leaked = {}
+    for name in RETRIEVAL_PATH_MODULES:
+        module = importlib.import_module(f"app.services.{name}")
+        source = inspect.getsource(module)
+        hits = [c for c in ("homeostatic_weight", "dormant_at") if c in source]
+        if hits:
+            leaked[name] = hits
+    assert not leaked, (
+        f"the homeostatic axis reached the retrieval path: {leaked}. Either "
+        "revert it, or accept that pre-027 fixtures can no longer be migrated "
+        "forward and must be recaptured (mind-recall-fixture)."
+    )
+
+
 def test_nothing_in_the_module_deletes_or_deactivates():
     """No deletion path exists — asserted at the source, because the
     guarantee is 'there is no such code', not 'the tests did not hit it'."""

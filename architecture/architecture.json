@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "00ec0dc906dfcea19db8aba34fc842789dbfcbd3ee13e12a5e6fb8604725b6af",
+    "fingerprint": "c924c709ba056d5f258cfa340c3ecb8f3f0619b6ed02b6b1d9b1d8131e7585bc",
     "files": 484
   },
   "frontend": {
@@ -4170,7 +4170,7 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92711,
+    "loc": 92757,
     "routes": 218,
     "import_edges": 1104,
     "call_edges": 731,
@@ -47841,7 +47841,7 @@
     "tests.test_synaptic_homeostasis": {
       "path": "backend/tests/test_synaptic_homeostasis.py",
       "module": "tests.test_synaptic_homeostasis",
-      "loc": 278,
+      "loc": 324,
       "imports": [
         "app.models",
         "app.services.delivery_mode",
@@ -47850,6 +47850,7 @@
         "app.services.synaptic_homeostasis"
       ],
       "external_imports": [
+        "importlib",
         "inspect",
         "os",
         "pytest",
@@ -47952,30 +47953,37 @@
           ],
           "is_route": false
         },
+        "test_homeostatic_axis_never_reaches_the_retrieval_path": {
+          "name": "test_homeostatic_axis_never_reaches_the_retrieval_path",
+          "line": 170,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "test_nothing_in_the_module_deletes_or_deactivates": {
           "name": "test_nothing_in_the_module_deletes_or_deactivates",
-          "line": 163,
+          "line": 209,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_skill_compiler_excludes_dormant_but_substrate_does_not": {
           "name": "test_skill_compiler_excludes_dormant_but_substrate_does_not",
-          "line": 173,
+          "line": 219,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_re_potentiation_clears_dormancy_in_the_same_statement": {
           "name": "test_re_potentiation_clears_dormancy_in_the_same_statement",
-          "line": 184,
+          "line": 230,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_shadow_is_the_default": {
           "name": "test_shadow_is_the_default",
-          "line": 196,
+          "line": 242,
           "is_async": false,
           "calls": [
             "app.services.synaptic_homeostasis::apply_enabled"
@@ -47984,7 +47992,7 @@
         },
         "test_zero_cycles_is_a_no_op": {
           "name": "test_zero_cycles_is_a_no_op",
-          "line": 216,
+          "line": 262,
           "is_async": true,
           "calls": [
             "app.services.synaptic_homeostasis::run_downscaling"
@@ -47993,21 +48001,21 @@
         },
         "test_no_llm_anywhere_in_the_pass": {
           "name": "test_no_llm_anywhere_in_the_pass",
-          "line": 226,
+          "line": 272,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_constants_are_labeled_guessed": {
           "name": "test_constants_are_labeled_guessed",
-          "line": 233,
+          "line": 279,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_volatility_is_parsed_from_the_evidence_frame": {
           "name": "test_volatility_is_parsed_from_the_evidence_frame",
-          "line": 247,
+          "line": 293,
           "is_async": false,
           "calls": [
             "app.services.synaptic_homeostasis::volatility_of"
@@ -48016,7 +48024,7 @@
         },
         "test_unframed_content_reports_unlabeled_not_stable": {
           "name": "test_unframed_content_reports_unlabeled_not_stable",
-          "line": 254,
+          "line": 300,
           "is_async": false,
           "calls": [
             "app.services.synaptic_homeostasis::volatility_of"
@@ -48025,7 +48033,7 @@
         },
         "test_volatility_never_reaches_the_rate": {
           "name": "test_volatility_never_reaches_the_rate",
-          "line": 263,
+          "line": 309,
           "is_async": false,
           "calls": [],
           "is_route": false
