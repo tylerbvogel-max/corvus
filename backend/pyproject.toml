@@ -47,10 +47,15 @@ dependencies = [
     #
     # Route enumeration now goes through scripts.capability_snapshot.
     # effective_routes, which resolves the wrapper via fastapi's own public
-    # iter_route_contexts (the helper its OpenAPI generator uses) and falls back
-    # to a plain read below 0.138. The proof it re-describes rather than
-    # redefines: all six recorded composition artifacts came out byte-identical
-    # on 0.135.1 and 0.141.1. See deps-fastapi-included-router.
+    # iter_route_contexts — the helper its OpenAPI generator uses. The proof it
+    # re-describes rather than redefines: all six recorded composition artifacts
+    # came out byte-identical on 0.135.1 and 0.141.1.
+    #
+    # 0.138.0 is therefore a hard floor, not a preference: below it that helper
+    # does not exist and the accessor raises at import rather than degrading to
+    # a read that would report every capability owning nothing. Downgrading
+    # fastapi means restoring a fallback, not just moving this pin.
+    # See deps-fastapi-included-router.
     #
     # Note fastapi still does not cap starlette (bare starlette>=0.46.0), so the
     # 1.x pin below remains ours to hold rather than something fastapi enforces.

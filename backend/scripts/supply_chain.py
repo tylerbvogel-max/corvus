@@ -20,6 +20,7 @@ used by run_test_lane.py.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -70,7 +71,39 @@ def _artifact_dir() -> Path:
 
 
 def _tool(name: str) -> str | None:
+    """Locate a genuine external binary. PATH is the only place it can be."""
     return shutil.which(name)
+
+
+def _python_tool(name: str, module: str) -> list[str] | None:
+    """Resolve a pip-installed console script to an argv prefix, or None.
+
+    PATH alone is the wrong question for these. Every documented invocation in
+    this repo runs scripts with the venv interpreter directly —
+    ``./venv/bin/python scripts/supply_chain.py audit`` — which does NOT put
+    venv/bin on PATH. ``shutil.which`` then missed a pip-audit sitting right
+    beside the interpreter and the gate reported "not installed" and exited 2:
+    a real failure, but one that reads as a pass to anyone who pipes the output
+    through ``tail`` and reads the last line instead of the status. A security
+    gate that can be mistaken for green when it never ran is worse than one that
+    is merely absent.
+
+    Order is deliberate. The console script next to ``sys.executable`` wins
+    because it belongs to the very interpreter running this file, so the audit
+    describes the environment the caller meant rather than whichever one happens
+    to be first on PATH. Then PATH, for a system-wide install. Then ``-m``,
+    which still works when a wheel shipped the module without generating its
+    console script.
+    """
+    beside = Path(sys.executable).parent / name
+    if beside.exists():
+        return [str(beside)]
+    on_path = shutil.which(name)
+    if on_path:
+        return [on_path]
+    if importlib.util.find_spec(module) is not None:
+        return [sys.executable, "-m", module]
+    return None
 
 
 def _run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
@@ -81,13 +114,18 @@ def _run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
 # ── audit ──
 
 def cmd_audit(args: argparse.Namespace) -> int:
-    tool = _tool("pip-audit")
+    tool = _python_tool("pip-audit", "pip_audit")
     if not tool:
-        print("pip-audit is not installed:  pip install pip-audit", file=sys.stderr)
+        print(
+            f"pip-audit is not installed in {sys.executable}: "
+            f"{sys.executable} -m pip install pip-audit\n"
+            "THE AUDIT DID NOT RUN — this is a failure, not a skip.",
+            file=sys.stderr,
+        )
         return 2
     out = _artifact_dir() / "pip-audit.json"
     proc = _run([
-        tool,
+        *tool,
         "--requirement", str(LOCK),
         "--format", "json",
         "--output", str(out),
@@ -145,17 +183,19 @@ def cmd_audit(args: argparse.Namespace) -> int:
 # ── sbom ──
 
 def cmd_sbom(args: argparse.Namespace) -> int:
-    tool = _tool("cyclonedx-py")
+    tool = _python_tool("cyclonedx-py", "cyclonedx_py")
     if not tool:
         print(
-            "cyclonedx-py is not installed:  pip install cyclonedx-bom",
+            f"cyclonedx-py is not installed in {sys.executable}: "
+            f"{sys.executable} -m pip install cyclonedx-bom\n"
+            "NO SBOM WAS PRODUCED — this is a failure, not a skip.",
             file=sys.stderr,
         )
         return 2
     out = Path(args.output) if args.output else _artifact_dir() / "sbom.cdx.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     proc = _run([
-        tool, "requirements", str(LOCK),
+        *tool, "requirements", str(LOCK),
         "--of", "JSON",
         "--sv", "1.5",
         # Strips serial numbers and timestamps, so the same lock yields a

@@ -74,12 +74,25 @@ _STATIC_FRONTEND_ROUTES = frozenset({"MOUNT /assets", f"GET {_SPA_CATCH_ALL}"})
 #
 # iter_route_contexts is fastapi's own supported way through it: the same public
 # helper its OpenAPI generator uses, yielding one RouteContext per route the app
-# effectively serves, with include prefixes already applied. Absent below 0.138,
-# where the list was already flat and needs no resolution.
-try:  # fastapi >= 0.138
-    from fastapi.routing import iter_route_contexts as _iter_route_contexts
-except ImportError:  # pragma: no cover — fastapi < 0.138 flattens on include
-    _iter_route_contexts = None
+# effectively serves, with include prefixes already applied.
+#
+# Imported unconditionally, and that is the point. This once carried a fallback
+# to a plain .routes read for fastapi < 0.138, which was dead the moment the pin
+# moved to 0.141.1 and would have been the wrong branch anyway: if a future
+# fastapi renames this helper while keeping the wrapper, falling back silently
+# resolves nothing and every capability reads as owning no routes. Failing at
+# import is louder and arrives sooner than twelve composition tests failing for
+# a reason nobody connects to a dependency bump.
+try:
+    from fastapi.routing import iter_route_contexts
+except ImportError as exc:  # pragma: no cover — a fastapi API break, not a path
+    raise ImportError(
+        "fastapi.routing.iter_route_contexts is gone. Corvus resolves capability "
+        "ownership through it; without it, route enumeration silently reports "
+        "that every capability owns nothing. Find what replaced it and update "
+        "effective_routes below — do not fall back to reading app.routes, which "
+        "is what this replaced. Background: deps-fastapi-included-router."
+    ) from exc
 
 
 def effective_routes(app) -> list:
@@ -88,18 +101,14 @@ def effective_routes(app) -> list:
     The one accessor for "what is mounted here". Takes anything carrying a
     ``routes`` list — a FastAPI app or a bare APIRouter — and returns objects
     that answer ``path``, ``methods``, ``name`` and ``include_in_schema`` for
-    the *effective* route, so callers never learn which fastapi arrangement
-    produced them.
+    the *effective* route, so callers never learn how fastapi arranged them.
 
-    Note the attribute contract differs subtly by version and callers must not
-    assume ``hasattr``: a RouteContext always *has* ``path`` and ``methods``,
-    and reports their absence by returning ``None``. Test membership with
-    ``getattr(r, "methods", None)``, never ``hasattr(r, "methods")``.
+    Note the attribute contract and do not assume ``hasattr``: a RouteContext
+    always *has* ``path`` and ``methods``, and reports their absence by
+    returning ``None``. Test membership with ``getattr(r, "methods", None)``,
+    never ``hasattr(r, "methods")``.
     """
-    routes = list(app.routes)
-    if _iter_route_contexts is None:
-        return routes
-    return list(_iter_route_contexts(routes))
+    return list(iter_route_contexts(app.routes))
 
 
 def mounted_paths(app) -> set[str]:

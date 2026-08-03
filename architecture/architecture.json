@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "daaefb7e75bff8da26cd6eab3a4b56924c4510e8281ada52b26d19d716377736",
+    "fingerprint": "a22dd1895c5c5dd67c9572e1b0f952c5d0afd1ae717887d7aa58fb273fa45614",
     "files": 484
   },
   "frontend": {
@@ -4170,7 +4170,7 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92662,
+    "loc": 92711,
     "routes": 218,
     "import_edges": 1104,
     "call_edges": 731,
@@ -30371,7 +30371,7 @@
     "scripts.capability_snapshot": {
       "path": "backend/scripts/capability_snapshot.py",
       "module": "scripts.capability_snapshot",
-      "loc": 500,
+      "loc": 509,
       "imports": [
         "app.main"
       ],
@@ -30390,105 +30390,105 @@
       "functions": {
         "effective_routes": {
           "name": "effective_routes",
-          "line": 85,
+          "line": 98,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "mounted_paths": {
           "name": "mounted_paths",
-          "line": 105,
+          "line": 114,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_discover_tenants": {
           "name": "_discover_tenants",
-          "line": 118,
+          "line": 127,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_fingerprint": {
           "name": "_fingerprint",
-          "line": 126,
+          "line": 135,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "describe_surface": {
           "name": "describe_surface",
-          "line": 137,
+          "line": 146,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_collect": {
           "name": "_collect",
-          "line": 207,
+          "line": 216,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_capture": {
           "name": "_capture",
-          "line": 227,
+          "line": 236,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_declared_unit_targets": {
           "name": "_declared_unit_targets",
-          "line": 250,
+          "line": 259,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_reconcile_jobs": {
           "name": "_reconcile_jobs",
-          "line": 270,
+          "line": 279,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_declared_jobs": {
           "name": "_declared_jobs",
-          "line": 323,
+          "line": 332,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_orphaned_installed_units": {
           "name": "_orphaned_installed_units",
-          "line": 337,
+          "line": 346,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_installed_unit_target": {
           "name": "_installed_unit_target",
-          "line": 388,
+          "line": 397,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_paths": {
           "name": "_paths",
-          "line": 402,
+          "line": 411,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_render": {
           "name": "_render",
-          "line": 410,
+          "line": 419,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 418,
+          "line": 427,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -31476,13 +31476,14 @@
     "scripts.supply_chain": {
       "path": "backend/scripts/supply_chain.py",
       "module": "scripts.supply_chain",
-      "loc": 423,
+      "loc": 463,
       "imports": [],
       "external_imports": [
         "__future__",
         "argparse",
         "datetime",
         "hashlib",
+        "importlib",
         "json",
         "os",
         "pathlib",
@@ -31494,91 +31495,98 @@
       "functions": {
         "_load_allowlist": {
           "name": "_load_allowlist",
-          "line": 41,
+          "line": 42,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_artifact_dir": {
           "name": "_artifact_dir",
-          "line": 67,
+          "line": 68,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_tool": {
           "name": "_tool",
-          "line": 72,
+          "line": 73,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_python_tool": {
+          "name": "_python_tool",
+          "line": 78,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_run": {
           "name": "_run",
-          "line": 76,
+          "line": 109,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "cmd_audit": {
           "name": "cmd_audit",
-          "line": 83,
+          "line": 116,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "cmd_sbom": {
           "name": "cmd_sbom",
-          "line": 147,
+          "line": 185,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_pragma_above": {
           "name": "_pragma_above",
-          "line": 208,
+          "line": 248,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_scan_tree": {
           "name": "_scan_tree",
-          "line": 226,
+          "line": 266,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "cmd_secrets": {
           "name": "cmd_secrets",
-          "line": 253,
+          "line": 293,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "cmd_artifact": {
           "name": "cmd_artifact",
-          "line": 274,
+          "line": 314,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "cmd_provenance": {
           "name": "cmd_provenance",
-          "line": 342,
+          "line": 382,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "cmd_provenance._git": {
           "name": "cmd_provenance._git",
-          "line": 345,
+          "line": 385,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 393,
+          "line": 433,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -31588,7 +31596,7 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 60,
+          "line": 61,
           "in": "_load_allowlist",
           "target": "accepted",
           "model": null
