@@ -26,11 +26,13 @@ REQUIRED = {
     "distill-backlog",
     "janitor-failure",
     "skill-compile-failure",
+    "release-rollback",
 }
 
 # The four the criterion required to be executed under controlled conditions.
 MUST_BE_DRILLED = {
     "database-unavailable", "schema-mismatch", "provider-failure", "backup-restore",
+    "release-rollback",
 }
 
 

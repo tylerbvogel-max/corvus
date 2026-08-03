@@ -39,6 +39,33 @@ def _column_exists(bind, table_name: str, column_name: str) -> bool:
     )
 
 
+def _index_exists(bind, index_name: str) -> bool:
+    """Index presence is asked separately from column presence, deliberately.
+
+    Found by a release rollback drill: nesting the index creation inside the
+    column guard made it unreachable on any FRESH database. The baseline
+    migration runs Base.metadata.create_all, which builds `neurons` from the
+    CURRENT models — so `dormant_at` already exists when this migration runs,
+    the column guard skips, and the partial index it was supposed to create
+    never appears. Live databases had it (their column was added by this
+    migration back when it did not exist); freshly-migrated ones silently did
+    not, and downgrade then failed dropping an index that was never made.
+    """
+    return bool(
+        bind.execute(
+            text(
+                """
+                SELECT 1
+                FROM pg_indexes
+                WHERE schemaname = current_schema()
+                  AND indexname = :index_name
+                """
+            ),
+            {"index_name": index_name},
+        ).first()
+    )
+
+
 def upgrade():
     bind = op.get_bind()
     if not _column_exists(bind, "neurons", "homeostatic_weight"):
@@ -53,16 +80,19 @@ def upgrade():
     if not _column_exists(bind, "neurons", "dormant_at"):
         op.add_column("neurons", sa.Column("dormant_at", sa.DateTime(),
                                            nullable=True))
-        # Partial index: the dormant set is a small minority and every
-        # consumer asks "is this one dormant", never "list them all".
+    # Partial index: the dormant set is a small minority and every consumer
+    # asks "is this one dormant", never "list them all". Guarded on the INDEX,
+    # not the column — see _index_exists.
+    if not _index_exists(bind, "ix_neurons_dormant_at"):
         op.create_index("ix_neurons_dormant_at", "neurons", ["dormant_at"],
                         postgresql_where=text("dormant_at IS NOT NULL"))
 
 
 def downgrade():
     bind = op.get_bind()
-    if _column_exists(bind, "neurons", "dormant_at"):
+    if _index_exists(bind, "ix_neurons_dormant_at"):
         op.drop_index("ix_neurons_dormant_at", table_name="neurons")
+    if _column_exists(bind, "neurons", "dormant_at"):
         op.drop_column("neurons", "dormant_at")
     if _column_exists(bind, "neurons", "homeostatic_weight"):
         op.drop_column("neurons", "homeostatic_weight")

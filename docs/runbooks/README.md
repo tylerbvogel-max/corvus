@@ -15,6 +15,7 @@ Owned by roadmap record `durability-operational-envelope` (06), criterion 6.
 | [Distill backlog](distill-backlog.md) | not drilled | threshold is an unfalsified hypothesis |
 | [Janitor / reconsolidation failure](janitor-failure.md) | 2026-08-02 (partial) | runner-level failure drilled; body-level by test only |
 | [Skill compiler failure](skill-compile-failure.md) | not drilled | shared job wrapper is proven; compiler specifics are not |
+| [Bad release and rollback](release-rollback.md) | 2026-08-03 | detected at exit 2; recovered in 18.8s, verified 7/7 |
 
 ## The one command
 

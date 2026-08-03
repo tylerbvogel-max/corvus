@@ -141,3 +141,32 @@ def test_async_loaders_are_awaited():
     ))
     by_id = {o["id"]: o for o in report["objectives"]}
     assert by_id["recall-latency"]["value"] == 100.0
+
+
+# ---- fresh deployment ---------------------------------------------------------
+
+def test_a_never_served_tenant_is_unknown_not_breached():
+    """Found by the release dry-run: a healthy fresh deploy read as BREACHED.
+
+    An objective no correctly-functioning new instance can meet is
+    miscalibrated, so lifetime volume of zero means 'nothing to judge'.
+    """
+    signals = collect_signals(
+        mind_metrics={"recall": {"latency_ms": {"p95": 0}, "performance_window": 0,
+                                 "total": 0}},
+        distill_status={"ready": 0}, jobs={"counts": {"never-run": 4}},
+    )
+    assert signals["recall-availability"] is None
+    entry = OBJECTIVES_BY_ID["recall-availability"].judge(signals["recall-availability"])
+    assert entry["status"] == UNKNOWN
+
+
+def test_a_tenant_that_served_before_but_not_now_still_breaches():
+    """The failure this objective exists for must survive the fresh-deploy fix."""
+    signals = collect_signals(
+        mind_metrics={"recall": {"latency_ms": {"p95": 100}, "performance_window": 0,
+                                 "total": 18483}},
+        distill_status={"ready": 0}, jobs={"counts": {}},
+    )
+    assert signals["recall-availability"] == 0.0
+    assert OBJECTIVES_BY_ID["recall-availability"].judge(0.0)["status"] == BREACHED

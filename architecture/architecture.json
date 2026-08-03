@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "b5ec2662607cd0c35e68bd6ca6644d891242fe4762bc6c8fa8c1199bc65f256a",
+    "fingerprint": "c316842b75b171759de85f504df4adade17d0db10d1e98ffd8d8733c2f20873f",
     "files": 484
   },
   "frontend": {
@@ -4170,7 +4170,7 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92349,
+    "loc": 92421,
     "routes": 218,
     "import_edges": 1102,
     "call_edges": 729,
@@ -5165,7 +5165,7 @@
     "alembic.versions.027_synaptic_homeostasis": {
       "path": "backend/alembic/versions/027_synaptic_homeostasis.py",
       "module": "alembic.versions.027_synaptic_homeostasis",
-      "loc": 69,
+      "loc": 99,
       "imports": [],
       "external_imports": [
         "alembic",
@@ -5179,16 +5179,23 @@
           "calls": [],
           "is_route": false
         },
+        "_index_exists": {
+          "name": "_index_exists",
+          "line": 42,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "upgrade": {
           "name": "upgrade",
-          "line": 42,
+          "line": 69,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "downgrade": {
           "name": "downgrade",
-          "line": 62,
+          "line": 91,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -7711,7 +7718,7 @@
     "app.observability.slo": {
       "path": "backend/app/observability/slo.py",
       "module": "app.observability.slo",
-      "loc": 254,
+      "loc": 265,
       "imports": [
         "app.observability.jobs"
       ],
@@ -7730,28 +7737,28 @@
         },
         "_dig": {
           "name": "_dig",
-          "line": 171,
+          "line": 173,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "collect_signals": {
           "name": "collect_signals",
-          "line": 180,
+          "line": 182,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "evaluate": {
           "name": "evaluate",
-          "line": 208,
+          "line": 219,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "slo_report": {
           "name": "slo_report",
-          "line": 226,
+          "line": 237,
           "is_async": true,
           "calls": [
             "app.observability.jobs::inventory_health"
@@ -7760,7 +7767,7 @@
         },
         "slo_report._safe": {
           "name": "slo_report._safe",
-          "line": 237,
+          "line": 248,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -45617,7 +45624,7 @@
     "tests.test_runbooks": {
       "path": "backend/tests/test_runbooks.py",
       "module": "tests.test_runbooks",
-      "loc": 92,
+      "loc": 94,
       "imports": [
         "app.observability.jobs"
       ],
@@ -45629,56 +45636,56 @@
       "functions": {
         "_runbook": {
           "name": "_runbook",
-          "line": 37,
+          "line": 39,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_every_required_scenario_has_a_runbook": {
           "name": "test_every_required_scenario_has_a_runbook",
-          "line": 41,
+          "line": 43,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_each_runbook_says_how_to_detect_and_what_to_do": {
           "name": "test_each_runbook_says_how_to_detect_and_what_to_do",
-          "line": 48,
+          "line": 50,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_scenarios_the_record_required_were_actually_drilled": {
           "name": "test_scenarios_the_record_required_were_actually_drilled",
-          "line": 55,
+          "line": 57,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_undrilled_runbooks_say_so_rather_than_implying_otherwise": {
           "name": "test_undrilled_runbooks_say_so_rather_than_implying_otherwise",
-          "line": 67,
+          "line": 69,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_partially_drilled_runbook_names_what_is_still_missing": {
           "name": "test_partially_drilled_runbook_names_what_is_still_missing",
-          "line": 73,
+          "line": 75,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_index_lists_every_runbook": {
           "name": "test_index_lists_every_runbook",
-          "line": 79,
+          "line": 81,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_every_inventoried_job_is_reachable_from_a_runbook": {
           "name": "test_every_inventoried_job_is_reachable_from_a_runbook",
-          "line": 85,
+          "line": 87,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -46174,7 +46181,7 @@
     "tests.test_slo": {
       "path": "backend/tests/test_slo.py",
       "module": "tests.test_slo",
-      "loc": 144,
+      "loc": 173,
       "imports": [
         "app.observability.slo"
       ],
@@ -46324,6 +46331,24 @@
           "line": 136,
           "is_async": true,
           "calls": [],
+          "is_route": false
+        },
+        "test_a_never_served_tenant_is_unknown_not_breached": {
+          "name": "test_a_never_served_tenant_is_unknown_not_breached",
+          "line": 148,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::collect_signals"
+          ],
+          "is_route": false
+        },
+        "test_a_tenant_that_served_before_but_not_now_still_breaches": {
+          "name": "test_a_tenant_that_served_before_but_not_now_still_breaches",
+          "line": 164,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::collect_signals"
+          ],
           "is_route": false
         }
       },

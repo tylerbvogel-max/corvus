@@ -111,7 +111,9 @@ OBJECTIVES: tuple[Objective, ...] = (
         basis_detail=(
             "Any query at all in the performance window means the path is live. "
             "Zero means recall stopped being reached — the failure a user notices "
-            "first, and one that no latency percentile can express."
+            "first, and one that no latency percentile can express. A tenant that "
+            "has NEVER served a query reports unknown rather than breached: a "
+            "freshly deployed instance is untested, not broken."
         ),
         owner="recall-graph",
         first_response=(
@@ -189,8 +191,17 @@ def collect_signals(
     reports unknown.
     """
     latency = _dig(mind_metrics or {}, "recall", "latency_ms", "p95")
-    total = _dig(mind_metrics or {}, "recall", "performance_window")
+    window = _dig(mind_metrics or {}, "recall", "performance_window")
+    lifetime = _dig(mind_metrics or {}, "recall", "total")
     backlog = _dig(distill_status or {}, "ready")
+
+    # FRESH IS NOT BROKEN. Found by the release dry-run: a just-deployed
+    # instance has served zero queries, and reporting that as a BREACH made an
+    # objective no healthy new deployment could ever meet. The distinction is
+    # lifetime volume — never served (fresh, nothing to judge) versus served
+    # before but not now (stopped, which is the real failure this watches for).
+    if isinstance(lifetime, (int, float)) and lifetime == 0:
+        window = None
 
     unhealthy: float | None = None
     if jobs is not None:
@@ -199,7 +210,7 @@ def collect_signals(
 
     return {
         "recall-latency": float(latency) if isinstance(latency, (int, float)) else None,
-        "recall-availability": float(total) if isinstance(total, (int, float)) else None,
+        "recall-availability": float(window) if isinstance(window, (int, float)) else None,
         "distill-backlog": float(backlog) if isinstance(backlog, (int, float)) else None,
         "scheduled-jobs": unhealthy,
     }

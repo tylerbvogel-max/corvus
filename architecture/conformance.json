@@ -54,8 +54,8 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "b5ec2662607cd0c35e68bd6ca6644d891242fe4762bc6c8fa8c1199bc65f256a",
-    "current_fingerprint": "b5ec2662607cd0c35e68bd6ca6644d891242fe4762bc6c8fa8c1199bc65f256a",
+    "stored_fingerprint": "c316842b75b171759de85f504df4adade17d0db10d1e98ffd8d8733c2f20873f",
+    "current_fingerprint": "c316842b75b171759de85f504df4adade17d0db10d1e98ffd8d8733c2f20873f",
     "stored_files": 484,
     "current_files": 484
   },
@@ -566,7 +566,7 @@
       "confidence": "reviewed",
       "module_count": 75,
       "frontend_file_count": 0,
-      "loc": 9141,
+      "loc": 9182,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -674,7 +674,7 @@
       "confidence": "reviewed",
       "module_count": 117,
       "frontend_file_count": 0,
-      "loc": 24751,
+      "loc": 24782,
       "routes": 2,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
