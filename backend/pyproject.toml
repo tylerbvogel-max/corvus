@@ -39,7 +39,8 @@ dependencies = [
     "starlette==0.52.1",
     "uvicorn[standard]==0.41.0",
     "pydantic==2.12.5",
-    "pydantic-settings==2.13.1",
+    # 2.14.2 clears GHSA-4xgf-cpjx-pc3j.
+    "pydantic-settings==2.14.2",
     "httpx==0.28.1",
 
     # Numerics and embeddings.
@@ -76,11 +77,22 @@ dependencies = [
 
     # Configuration parsing
     "PyYAML==6.0.3",
+
+    # SECURITY FLOORS, not direct dependencies. Nothing here is imported by
+    # app code; each is a transitive package carrying an advisory that the
+    # resolver would otherwise keep pinned at the vulnerable version, because
+    # uv treats the committed lock as resolution preferences. Declaring a floor
+    # is the only way to move a transitive pin without unpinning everything.
+    # Remove an entry once the parent package requires the fixed version on its
+    # own — leaving it costs nothing but noise, keeping it wrong costs a CVE.
+    "idna>=3.15",        # PYSEC-2026-215
+    "pygments>=2.20.0",  # PYSEC-2026-2987
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest==9.0.2",
+    # 9.0.3 clears PYSEC-2026-1845.
+    "pytest==9.0.3",
     "pytest-asyncio==1.3.0",
     "pytest-timeout==2.4.0",
 ]
