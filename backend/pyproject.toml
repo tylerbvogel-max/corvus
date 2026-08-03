@@ -56,8 +56,13 @@ dependencies = [
     "python-igraph>=0.11.0",
     "leidenalg>=0.10.0",
 
-    # Agent harness surface
-    "mcp==1.26.0",
+    # Agent harness surface.
+    # 1.28.1 clears PYSEC-2026-3481/3482 (fix 1.27.2) and PYSEC-2026-3483
+    # (fix 1.28.1). Held below 1.29/2.x deliberately: this is a security bump
+    # verified against the two transports Corvus actually uses (the stdio
+    # harness bridge and the streamable-http session manager at /mcp), not a
+    # move to the newest major.
+    "mcp==1.28.1",
 
     # LLM provider SDKs that are actually imported. The Anthropic path is
     # deliberately absent: it routes through the Claude CLI subprocess in
