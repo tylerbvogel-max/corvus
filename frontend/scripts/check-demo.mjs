@@ -11,7 +11,7 @@
    Exits non-zero with a list of failures. Add checks here whenever the
    shim starts mirroring a new contract. */
 
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -40,7 +40,18 @@ if (shimStages.length === 0 || homeStages.length === 0) {
 }
 
 // ── 2. Endpoints the shim handles still exist in app source ──
-const apiSrc = await read('src/api.ts') + await read('src/auth.ts') + await read('src/config.ts');
+// src/api.ts was decomposed into capability-owned adapters by
+// durability-frontend-contracts; this check read the old monolith and had been
+// dying on ENOENT ever since — a contract check that cannot run is worse than
+// none, because it reads as a passing gate. Concatenate the adapters instead,
+// and glob rather than list them so the next adapter is covered automatically.
+const apiDir = join(root, 'src/api');
+const adapters = (await readdir(apiDir)).filter((f) => f.endsWith('.ts'));
+const apiSrc = (await Promise.all([
+  ...adapters.map((f) => read(join('src/api', f))),
+  read('src/auth.ts'),
+  read('src/config.ts'),
+])).join('\n');
 const SHIM_ENDPOINTS = [
   '/query/stream', '/chat/sessions', "'/chat'", '/neurons/stats',
   '/tenant', '/models', 'followups', 'rate', 'generate-title',

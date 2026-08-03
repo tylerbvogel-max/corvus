@@ -243,6 +243,7 @@ export const ROUTE_CONTRACTS: readonly RouteContract[] = [
 /** Routes mounted with no capability-owning router tag. Unowned, not hidden. */
 export const UNOWNED_ROUTES: readonly string[] = [
   'GET /health',
+  'GET /ready',
   'GET /tenant',
   'GET /tenants',
 ]

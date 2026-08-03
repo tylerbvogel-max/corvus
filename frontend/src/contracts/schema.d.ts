@@ -2672,7 +2672,12 @@ export interface paths {
         };
         /**
          * Health
-         * @description Return system health status with neuron count and total queries.
+         * @description LIVENESS. Can this process answer at all?
+         *
+         *     Deliberately touches NO dependency. This used to query the database and
+         *     report neuron counts, which meant a Postgres blip looked like a dead
+         *     process and invited a pointless restart. Dependency state lives at
+         *     /ready; the counts moved there, where a query is legitimate.
          */
         get: operations["health_health_get"];
         put?: never;
@@ -3844,6 +3849,30 @@ export interface paths {
          * @description SSE streaming version of POST /query — emits pipeline stage events in real time.
          */
         post: operations["post_query_stream_query_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description READINESS. Are this build's dependencies satisfied?
+         *
+         *     Returns 503 when they are not, so a load balancer or deploy gate can
+         *     act on it. Reports every check even after one fails — an operator
+         *     debugging a bad deploy needs the whole picture at once.
+         */
+        get: operations["ready_ready_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12596,6 +12625,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ready_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

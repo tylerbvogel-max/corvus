@@ -149,6 +149,10 @@ def test_report_accepts_both_string_and_block_list_shapes():
 def test_report_is_redacted_before_it_touches_disk(tmp_path, monkeypatch):
     """A memory system that regurgitates a secret is a persistent leak — the
     report is untrusted text and gets the same treatment as every other field."""
+    # Synthetic fixture, never a real credential: the body is literally runs of
+    # A, B and C. It has to LOOK like a key or it would not exercise the
+    # redactor's pattern, which is the whole assertion below.
+    # supply-chain: allow
     leak = "sk-ant-AAAAAAAABBBBBBBBCCCCCCCC"
     monkeypatch.setattr(hook, "EPISODE_DIR", str(tmp_path))
     monkeypatch.setattr(hook, "CONFIG_PATH", str(tmp_path / "nope.json"))
