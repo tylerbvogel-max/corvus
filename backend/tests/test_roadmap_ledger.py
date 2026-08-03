@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 from app.services.roadmap_ledger import (
     advance_state, empty_state, extract_commit_candidates, next_review_at,
-    node_is_ready, reconcile_node, review_status, slugify, state_summary,
-    validate_state,
+    node_is_ready, reconcile_node, retirement_conflict, review_status, slugify,
+    state_summary, validate_state,
 )
 
 
@@ -320,3 +320,106 @@ def test_partial_reconciliation_records_evidence_without_closing_record():
     assert reconciled["status"] == "active"
     assert reconciled["verificationResults"]["disposition"] == "partial"
     assert reconciled["verificationResults"]["nextAction"] == "Run the design-partner cohort."
+
+
+# ---------------------------------------------------------------------------
+# Countersign after close (ledger-countersign-after-close).
+#
+# An agent-reconciled record closes in the same call that writes its receipt, so
+# it seals carrying an acceptance no human has given yet. These pin the narrow
+# opening that lets the human sign later without letting anyone re-litigate what
+# the record claims.
+# ---------------------------------------------------------------------------
+
+def _closed_record(**overrides):
+    """A record already reconciled complete by an agent, awaiting countersign."""
+    node = _state()["nodes"][1]
+    node["verification"] = ["live behavior observed"]
+    closed = reconcile_node(
+        node,
+        ledger_revision=4,
+        disposition="complete",
+        result_recap="Shipped and verified by the implementing session.",
+        verification_passed=True,
+        confidence=.9,
+        claims=["Verified live"],
+        limitations=["Awaiting human acceptance"],
+        disclosures=[],
+        evidence=["commit 4f2a91c"],
+        verifier="implementing-session",
+        accepted_by="tyler (pending post-hoc countersign)",
+        accepted_at=datetime(2026, 7, 26, tzinfo=timezone.utc),
+    )
+    closed.update(overrides)
+    return closed
+
+
+def test_closed_record_accepts_a_countersign_that_preserves_its_outcome():
+    closed = _closed_record()
+    assert closed["status"] == "done"
+    assert retirement_conflict(
+        closed, disposition="complete", verification_passed=True,
+    ) is None
+
+
+def test_countersign_records_the_human_without_restamping_when_work_landed():
+    closed = _closed_record()
+    landed_at = closed["completedAt"]
+
+    countersigned = reconcile_node(
+        closed,
+        ledger_revision=9,
+        disposition="complete",
+        result_recap="Countersigned; substance unchanged.",
+        verification_passed=True,
+        confidence=.9,
+        claims=["Tyler countersigned"],
+        limitations=[],
+        disclosures=[],
+        evidence=["commit 4f2a91c"],
+        verifier="implementing-session",
+        accepted_by="Tyler Vogel — explicit countersign",
+        accepted_at=datetime(2026, 8, 3, tzinfo=timezone.utc),
+    )
+
+    # The signature lands...
+    assert countersigned["verificationResults"]["acceptedBy"].startswith("Tyler Vogel")
+    # ...the record still reports when the work actually landed, not when it was
+    # signed for, and it never left `done`.
+    assert countersigned["completedAt"] == landed_at
+    assert countersigned["status"] == "done"
+    # ...and the provisional acceptance survives verbatim as history.
+    history = countersigned["reconciliationHistory"]
+    assert len(history) == 2
+    assert history[0]["acceptedBy"] == "tyler (pending post-hoc countersign)"
+
+
+@pytest.mark.parametrize("disposition, passed, expected", [
+    ("partial", True, "disposition"),
+    ("complete", False, "verification_passed"),
+])
+def test_closed_record_refuses_a_receipt_that_re_litigates_the_outcome(
+    disposition, passed, expected,
+):
+    conflict = retirement_conflict(
+        _closed_record(), disposition=disposition, verification_passed=passed,
+    )
+    assert conflict is not None
+    assert expected in conflict
+    assert "Reopen the record deliberately" in conflict
+
+
+def test_retired_record_with_no_receipt_has_nothing_to_countersign():
+    orphan = _state()["nodes"][2]          # cancelled, never reconciled
+    assert orphan["status"] == "cancelled"
+    conflict = retirement_conflict(
+        orphan, disposition="complete", verification_passed=True,
+    )
+    assert conflict is not None
+    assert "no reconciliation receipt to countersign" in conflict
+
+
+def test_a_live_record_is_untouched_by_the_retirement_rule():
+    assert retirement_conflict(
+        _state()["nodes"][1], disposition="complete", verification_passed=True,
+    ) is None

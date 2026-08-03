@@ -17,7 +17,7 @@ from app.services.roadmap_admission import (
 )
 from app.services.roadmap_ledger import (
     SLUG_RE, advance_state, empty_state, extract_commit_candidates,
-    reconcile_node, slugify, state_summary, validate_state,
+    reconcile_node, retirement_conflict, slugify, state_summary, validate_state,
 )
 
 
@@ -279,8 +279,15 @@ async def reconcile_roadmap_record(
     index = next((i for i, item in enumerate(nodes) if item["id"] == node_id), None)
     if index is None:
         raise HTTPException(404, "roadmap record not found")
-    if nodes[index].get("status") in {"done", "deprioritized", "cancelled"}:
-        raise HTTPException(409, "retired records cannot accept new reconciliation receipts")
+    # A retired record stays frozen in substance but can still be signed for —
+    # see retirement_conflict, which owns that rule and explains why.
+    conflict = retirement_conflict(
+        nodes[index],
+        disposition=req.disposition,
+        verification_passed=req.verification_passed,
+    )
+    if conflict:
+        raise HTTPException(409, conflict)
 
     # DONE MEANS COMMITTED (ledger-done-means-committed). Verified completion
     # has to name a commit that exists in this ledger's own repository —

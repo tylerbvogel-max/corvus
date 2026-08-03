@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "c316842b75b171759de85f504df4adade17d0db10d1e98ffd8d8733c2f20873f",
+    "fingerprint": "5c770f175ff8a6cff2949386751576f0190647e415790a32324c154eac49346d",
     "files": 484
   },
   "frontend": {
@@ -4170,7 +4170,7 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92421,
+    "loc": 92587,
     "routes": 218,
     "import_edges": 1102,
     "call_edges": 729,
@@ -14226,7 +14226,7 @@
     "app.routers.roadmap_ledgers": {
       "path": "backend/app/routers/roadmap_ledgers.py",
       "module": "app.routers.roadmap_ledgers",
-      "loc": 331,
+      "loc": 338,
       "imports": [
         "app.database",
         "app.models",
@@ -14338,6 +14338,7 @@
           "line": 266,
           "is_async": true,
           "calls": [
+            "app.services.roadmap_ledger::retirement_conflict",
             "app.services.roadmap_ledger::extract_commit_candidates",
             "app.services.commit_verification::resolve_commits",
             "app.services.roadmap_ledger::reconcile_node",
@@ -14460,7 +14461,7 @@
         },
         {
           "kind": "commit",
-          "line": 327,
+          "line": 334,
           "in": "reconcile_roadmap_record",
           "target": "db",
           "model": null
@@ -26446,7 +26447,7 @@
     "app.services.roadmap_ledger": {
       "path": "backend/app/services/roadmap_ledger.py",
       "module": "app.services.roadmap_ledger",
-      "loc": 447,
+      "loc": 503,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -26460,105 +26461,112 @@
       "functions": {
         "utc_now": {
           "name": "utc_now",
-          "line": 44,
+          "line": 48,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "slugify": {
           "name": "slugify",
-          "line": 48,
+          "line": 52,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "empty_state": {
           "name": "empty_state",
-          "line": 55,
+          "line": 59,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_record_id": {
           "name": "_record_id",
-          "line": 70,
+          "line": 74,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_require_label": {
           "name": "_require_label",
-          "line": 78,
+          "line": 82,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_optional_datetime": {
           "name": "_optional_datetime",
-          "line": 86,
+          "line": 90,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_validate_assumptions": {
           "name": "_validate_assumptions",
-          "line": 99,
+          "line": 103,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "validate_state": {
           "name": "validate_state",
-          "line": 144,
+          "line": 148,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "review_status": {
           "name": "review_status",
-          "line": 243,
+          "line": 247,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "next_review_at": {
           "name": "next_review_at",
-          "line": 265,
+          "line": 269,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "state_summary": {
           "name": "state_summary",
-          "line": 281,
+          "line": 285,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "advance_state": {
           "name": "advance_state",
-          "line": 314,
+          "line": 318,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "node_is_ready": {
           "name": "node_is_ready",
-          "line": 321,
+          "line": 325,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "extract_commit_candidates": {
           "name": "extract_commit_candidates",
-          "line": 329,
+          "line": 333,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "retirement_conflict": {
+          "name": "retirement_conflict",
+          "line": 351,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "reconcile_node": {
           "name": "reconcile_node",
-          "line": 347,
+          "line": 398,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -26568,28 +26576,28 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 111,
+          "line": 115,
           "in": "_validate_assumptions",
           "target": "assumption_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 180,
+          "line": 184,
           "in": "validate_state",
           "target": "section_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 210,
+          "line": 214,
           "in": "validate_state",
           "target": "node_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 238,
+          "line": 242,
           "in": "validate_state",
           "target": "milestone_ids",
           "model": null
@@ -45410,7 +45418,7 @@
     "tests.test_roadmap_ledger": {
       "path": "backend/tests/test_roadmap_ledger.py",
       "module": "tests.test_roadmap_ledger",
-      "loc": 323,
+      "loc": 426,
       "imports": [
         "app.services.roadmap_ledger"
       ],
@@ -45613,6 +45621,60 @@
           "is_async": false,
           "calls": [
             "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "_closed_record": {
+          "name": "_closed_record",
+          "line": 334,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "test_closed_record_accepts_a_countersign_that_preserves_its_outcome": {
+          "name": "test_closed_record_accepts_a_countersign_that_preserves_its_outcome",
+          "line": 357,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::retirement_conflict"
+          ],
+          "is_route": false
+        },
+        "test_countersign_records_the_human_without_restamping_when_work_landed": {
+          "name": "test_countersign_records_the_human_without_restamping_when_work_landed",
+          "line": 365,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::reconcile_node"
+          ],
+          "is_route": false
+        },
+        "test_closed_record_refuses_a_receipt_that_re_litigates_the_outcome": {
+          "name": "test_closed_record_refuses_a_receipt_that_re_litigates_the_outcome",
+          "line": 401,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::retirement_conflict"
+          ],
+          "is_route": false
+        },
+        "test_retired_record_with_no_receipt_has_nothing_to_countersign": {
+          "name": "test_retired_record_with_no_receipt_has_nothing_to_countersign",
+          "line": 412,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::retirement_conflict"
+          ],
+          "is_route": false
+        },
+        "test_a_live_record_is_untouched_by_the_retirement_rule": {
+          "name": "test_a_live_record_is_untouched_by_the_retirement_rule",
+          "line": 422,
+          "is_async": false,
+          "calls": [
+            "app.services.roadmap_ledger::retirement_conflict"
           ],
           "is_route": false
         }

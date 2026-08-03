@@ -15,6 +15,10 @@ LEDGER_STATUSES = frozenset({
     "bug", "deprioritized", "polish", "conceptual", "cancelled",
 })
 OUT_OF_SCOPE_STATUSES = frozenset({"deprioritized", "cancelled"})
+# Statuses that retire a record from forward planning. A retired record's
+# substance is frozen; it still accepts a receipt that preserves that substance,
+# which is how a countersign reaches a record an agent already closed.
+RETIRED_STATUSES = frozenset({"done"}) | OUT_OF_SCOPE_STATUSES
 PLANNING_HORIZONS = frozenset({
     "thesis", "horizon-3", "horizon-2", "horizon-1", "active",
 })
@@ -344,6 +348,53 @@ def extract_commit_candidates(evidence: list[str]) -> list[str]:
     return list(seen)
 
 
+def retirement_conflict(
+    node: dict[str, Any], *, disposition: str, verification_passed: bool,
+) -> str | None:
+    """Say why a retired record must refuse this receipt, or ``None`` to accept.
+
+    A RETIRED RECORD IS FROZEN IN SUBSTANCE, NOT SEALED AGAINST SIGNATURE.
+
+    The receipt schema requires the accepting human to be someone other than the
+    verifier, but an agent-reconciled record closes in the same call that writes
+    its receipt — so it seals at the instant of verification, carrying an
+    acceptance no human has given yet.  Refusing every later receipt made that
+    provisional acceptance permanent, which is the gap this exists to close.
+
+    So a retired record accepts a further receipt only when it agrees with the
+    one already on file about what happened.  A countersign gets through.
+    Anything that would re-litigate the outcome does not, and reopening the
+    record deliberately remains the only way to change what it claims.
+    """
+    if node.get("status") not in RETIRED_STATUSES:
+        return None
+    prior = node.get("verificationResults") or {}
+    if not prior:
+        return (
+            "this retired record has no reconciliation receipt to countersign; "
+            "a retired record accepts a further receipt only to affirm one it "
+            "already carries"
+        )
+    disagreements = []
+    if disposition != prior.get("disposition"):
+        disagreements.append(
+            f"disposition ({disposition!r} vs recorded {prior.get('disposition')!r})"
+        )
+    if verification_passed != prior.get("verificationPassed"):
+        disagreements.append(
+            "verification_passed "
+            f"({verification_passed!r} vs recorded {prior.get('verificationPassed')!r})"
+        )
+    if not disagreements:
+        return None
+    return (
+        "a retired record accepts a further receipt only if it preserves the "
+        "outcome already recorded; this one disagrees on "
+        + " and ".join(disagreements)
+        + ". Reopen the record deliberately to change what it claims."
+    )
+
+
 def reconcile_node(
     node: dict[str, Any],
     *,
@@ -442,5 +493,10 @@ def reconcile_node(
     })
     if verification_passed and disposition == "complete":
         reconciled["status"] = "done"
-        reconciled["completedAt"] = timestamp.isoformat()
+        # FIRST COMPLETION WINS. A later receipt on an already-complete record is
+        # a countersign, not a re-completion: the human is accepting work that
+        # landed earlier, and restamping completedAt would make the record claim
+        # the work landed when it was signed for. setdefault keeps the original
+        # instant and still stamps the first close, where no instant exists yet.
+        reconciled.setdefault("completedAt", timestamp.isoformat())
     return reconciled
