@@ -213,7 +213,11 @@ What this session adds is that **the ordering of the work is now forced**:
 No threshold shipped. No gate widened. `PRE_TOOL_TOP_K` and
 `PRE_TOOL_MIN_SCORE` are untouched, as the record's review trigger requires.
 
-## Next session — concrete handoff
+## Next session — concrete handoff (SUPERSEDED 2026-08-03 — see §6–§9)
+
+Steps 1–3 below are all done. Step 1 landed as `8cc5db3` and is now an ancestor
+of `main`; step 2 ran on 2026-08-03 (§7); step 3 decided (§9). Kept verbatim
+for the audit trail.
 
 The live hook the harness actually executes is
 `/home/tylerbvogel/Projects/corvus/harness/claude-code/memory_inject_hook.py`
@@ -245,3 +249,204 @@ Two side findings worth their own records, neither blocking:
   matches neither that set nor `READ_TOOL_WORDS` (no separator before
   `search`), so it falls through to "unknown tools may mutate". A read-only
   schema lookup should not need admission.
+
+---
+
+# mind-pretooluse-reach — session 4 (2026-08-03)
+
+Record admitted @ revision 165. Worked on `main` (`59d08cf`), clean tree.
+`8cc5db3` verified an ancestor of `main` — the instrument fix is live, nothing
+was cherry-picked.
+
+## 6. The BEFORE snapshot is restated — §1's numbers are retired
+
+§1 was measured on a corpus that was **99% junk**. On 2026-08-02 the /tmp-loop
+incident was cleaned up by moving Claude-CLI subprocess sessions into
+`~/.corvus-mind/episodes-quarantine-2026-08-02-tmp-loop`. Receipts:
+
+| | jsonl | .distilled |
+|---|---|---|
+| quarantined 2026-08-02 | 1,181 | 828 |
+| live today | 256 | 212 |
+| combined | 1,437 | 1,040 |
+
+§1 reported **1,191 scanned / 836 distilled**. The quarantine alone accounts for
+1,181 / 828 of that. So §1's denominator was almost entirely subprocess junk,
+and its `2.30 injections per distilled session` is `1,923 / 836` — a
+junk-diluted figure. The clean figure is `3,319 / 164 = 20.24`.
+
+**Which comparisons survive the quarantine boundary:**
+
+- **Per-session interrupt budget: NOT comparable.** 2.30 → 20.24 is not a 9x
+  rise in interruption; the denominator lost 828 sessions that were carrying
+  almost no injections. Any future after-measurement must use a clean-corpus
+  before, i.e. the table below and not §1.
+- **Load-bearing rate: comparable.** The junk sessions contributed ~0
+  injections, so 16.90% and 16.00% were computed over substantially the same
+  real-session population.
+
+**BEFORE for this record, taken 2026-08-03 from `GET /metrics/mind/injection-channels`**
+(203 scanned / 164 distilled; pooled 14.88%; standing share 41.86%):
+
+| trigger | injected | reward | penalty | load-bearing |
+|---|---|---|---|---|
+| capsule:mind-charter | 2,629 | 498 | 0 | **18.94%** |
+| capsule:mind-self-model | 1,441 | 247 | 0 | 17.14% |
+| PreToolUse | 3,319 | 531 | 21 | **16.00%** |
+| UserPromptSubmit | 2,968 | 315 | 1 | 10.61% |
+| SessionStart (retired) | 349 | 8 | 0 | 2.29% |
+
+`pretooluse_by_tool.Bash` = 3,319 / 531 / **19** / 16.00%.
+PreToolUse injections per distilled session: **20.24**.
+
+**Two premise changes the record should own:**
+
+1. **PreToolUse is no longer "the best channel in the system."** It is third,
+   behind both capsules. It remains the best *retrieved* channel — 16.00% vs
+   UserPromptSubmit's 10.61% — but the lead is **1.51x**, not the 2.5x the
+   record was written around nor the 4.0x §1 claimed. Comparing a retrieved
+   channel to a standing capsule was never the right comparison; the honest
+   framing is "best retrieved channel, by 1.51x".
+2. It still carries **21 of the corpus's 22 penalties**, which is the record's
+   original point about engagement, intact.
+
+## 7. Criterion #1 — MEASURED. The distribution does not separate.
+
+`~/.corvus-mind/evals/recall-probe/path_score_distribution.py`, 4 sessions /
+348 tool calls (218 Bash / 130 Edit-Write). Ground-truth proxy: 344 neurons
+ever delivered on PreToolUse, 154 with >=1 reward.
+
+**Read-only receipt.** The fixture backend failed to start (below), so this ran
+against LIVE — with `fingerprint_delta(before, after) == {}`, i.e. **every**
+corpus counter identical across the whole run. That is the same zero-delta
+condition `assert_no_writes` demands, so the read-only contract holds by
+measurement rather than by assumption.
+
+**Scores alone are useless as a discriminator** — the two arms are on top of
+each other:
+
+| arm | n | median | mean | >=1.12 |
+|---|---|---|---|---|
+| Bash | 434 | 1.2249 | 1.2285 | 358 |
+| Edit/Write | 260 | **1.2289** | 1.2023 | 200 |
+
+Path-shaped queries score *slightly higher* at the median. Nothing in the score
+itself says "this is a weak query".
+
+**The separation test — proven share of distinct neurons per band:**
+
+| band | Bash | Edit/Write |
+|---|---|---|
+| [1.06,1.12) | 43.6% | 25.0% |
+| [1.12,1.20) | 51.1% | 20.0% |
+| [1.20,1.30) | 70.5% | 16.7% |
+| [1.30,1.50) | 67.6% | 100% (2 neurons) |
+
+Bash **rises** with score, 43.6% → 70.5%. Edit/Write **falls**, 25.0% → 16.7%.
+On the path arm, a higher score selects for a *less* proven neuron. The
+[1.30,1.50) 100% is two neurons and is noise, not a reversal.
+
+**Why: the path arm pulls almost no distinct inventory.**
+
+| arm | hits | hits per neuron | Projects scope | Environment scope |
+|---|---|---|---|---|
+| Bash | 434 | 2.4 | 393 hits / 88 neurons / **47 proven** | 38 hits / 16 neurons / 7 proven |
+| Edit/Write | 260 | 6.7 | 254 hits / **13 neurons** / **3 proven** | 2 hits / 1 neuron / **0 proven** |
+
+254 of 260 path hits come from **13 distinct neurons**, three of which have ever
+earned a PreToolUse reward. Across 130 edit calls that is the same dozen
+neurons re-delivered ~20 times each. That is not recall; it is a stuck record.
+
+**Verdict, stated precisely.** The record's literal kill condition — "path-shaped
+hits have no PreToolUse track record at any score" — **did not fire**: per-band
+delivered counts are 1/5/4/6/8/4/2, so these neurons do have history. But the
+requirement criterion #1 exists to enforce — "shown to separate load-bearing
+from unused hits" — **failed**. A floor can only reorder by score, and on this
+arm score is flat-to-inverted against track record.
+
+**Fixture expiry confirmed, exactly as §5 predicted.** `pretooluse-reach@v1`
+died in `validate_schema_authority` with a startup traceback. It was captured
+2026-08-01 at backend `e3f9e37`; `026_delivery_pathways` and
+`027_synaptic_homeostasis` have landed since, and the live DB is at `027`. §5
+called this ("`load_fixture()` should assert the dump's schema identity … and
+fail with 'recapture', not with a startup traceback 90 seconds later") and it
+happened verbatim. Belongs to `mind-recall-fixture`; it did not block this
+record because the drift receipt above is stronger than the fixture would have
+been. The harness was repaired to fail loudly rather than degrade silently into
+a LIVE run that merely looks like a fixture run — it now asserts the scoring
+backend exists and is clean, and points at `main` (the 2026-08-01 worktree it
+referenced has been removed, and its commit is on `main`).
+
+## 8. The penalty attribution gap: 21 pooled vs 19 Bash — contaminated input
+
+`by_trigger.PreToolUse` counts 21 penalties; `pretooluse_by_tool.Bash` counts
+19. `injected` (3,319) and `reward` (531) reproduce **to the unit**.
+`ambiguous_tool_units` is exactly 2. Both dropped lines are neuron 7,
+2026-08-02 03:37:52 and 03:38:09 UTC — i.e. *after* `8cc5db3`, so not legacy.
+
+It is **test-fixture leakage into the live actions log**, not an attribution bug:
+
+1. Both lines read `label: "lesson 7"`, `evidence: "e"`, utility `0.5 → 0.425` —
+   exactly `test_attribution_tallies_verdicts_per_channel`'s fixture
+   (`_Neuron(7)`, `avg_utility=0.5`, verdict `contradicted`).
+2. Neuron 7's real label is **"Environment"** (a `department`/`structural` node,
+   1,779 invocations). The log's label does not match the live row, so the
+   writer was a stand-in `_Neuron`, not the real one.
+3. **Zero** `Injection` records contain neuron 7 across all 256 episode files.
+   The delivery these penalties claim never happened.
+4. Nearest distill marker is **+12,910 s** (3.6 h). The join correctly finds
+   nothing.
+5. Timeline: `27126c4` (2026-08-02 03:03 UTC) moved `_log_action` to
+   `mind_corpus` for the import-cycle break; the leak is at 03:37–03:38; the
+   test seam was repaired in `2c61e61` at 03:40. For ~37 minutes the test
+   patched `distiller._log_action` while the callee resolved
+   `mind_corpus._log_action`, so the real logger ran. Five lines leaked — three
+   `capsule:mind-charter` rewards (neuron 1) and these two.
+
+**Which instrument is right: the by-tool split.** It requires episode-log
+corroboration that a delivery happened, so it refuses phantom verdicts.
+`by_trigger` trusts the distiller's stamp uncorroborated and counts two
+verdicts whose delivery is absent from its own denominator. The divergence is
+the newer instrument being *stricter*, and is a point in its favour.
+
+**Materiality: nil.** `load_bearing_pct = reward / injected`; penalty has no
+term in it. Both numbers this record is graded on reproduce exactly. Not
+hand-pruned — the graph is a test bed, and known-bad rows are regression
+evidence (`feedback_corvus_graph_testbed`). Worth its own record if the leak
+recurs; the seam is already fixed.
+
+## 9. DECISION — (d): the cap stays on Bash
+
+Nothing shipped. `PRE_TOOL_TOP_K = 2` and `PRE_TOOL_MIN_SCORE = 1.12` are
+untouched; `harness/claude-code/memory_inject_hook.py:438` still reads
+`if payload.get("tool_name") != "Bash": return 0`.
+
+- **(b) — a separately calibrated floor — is dead on measurement.** §7: score is
+  flat-to-inverted against track record on the path arm. A floor reorders by
+  score; there is nothing for it to grip.
+- **(c) — extend only for Environment/Projects scope — is dead on measurement.**
+  Environment is the lane that earns 18.58% on Bash. On path queries it returns
+  **2 hits from 1 neuron, 0 proven**. There is no substrate to gate on.
+- **(a) — extend at the existing 1.12 floor — is rejected on cost/benefit.** It
+  would admit 200 of 260 hits (~1.5 interruptions per edit) drawn from 13
+  neurons, 3 of them ever rewarded, charged against the interrupt budget of the
+  best retrieved channel in the system. The record's own replay put the upside
+  at 10 warnings per 128 edits at a 7.8% fire rate. §7 now says those warnings
+  would be a dozen neurons on repeat.
+
+The measured upside does not justify the interrupt budget. `"editing
+~/foo/bar.py"` is a weak query, the record said so, and the distribution now
+shows *why*: it is weak in inventory, not in score — which is the one failure
+mode a threshold cannot fix.
+
+**Before / after.** Nothing shipped, so the after is the before, re-taken from
+`GET /metrics/mind/injection-channels` at the end of this session and confirmed
+identical — including `capsule:mind-charter` (2,629) and
+`capsule:mind-self-model` (1,441) unchanged, per the record's guardrail.
+
+**What would reopen this.** Not a floor. The binding constraint is inventory:
+there are ~13 path-reachable neurons and 3 of them are proven. If a future
+record raises path-shaped inventory — file/path-scoped lessons, or an engram
+keyed on paths rather than prose — the question is worth re-asking with the
+same harness. Until then, widening spends the best retrieved channel's
+interrupt budget on a stuck record.
