@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MindStyle, StatTile, UtilityBadge, Spark, Bars, UsageMeter } from './mindUi';
 import LocomoRunBeacon from './LocomoRunBeacon';
+import { fetchCodexSubscription, fetchMindMetrics, fetchSubscription, fetchTrust } from '../api/memory';
 
 /** Pallium dashboard — performance, trust, and growth for the
  *  corvus-mind tenant. Data: GET /metrics/mind + /metrics/mind/trust. */
@@ -18,23 +19,6 @@ function compactNumber(value: number | null | undefined): string {
   return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 }
 
-async function fetchJson<T>(url: string, attempts = 3): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const response = await fetch(url);
-      const body = await response.text();
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      if (!body.trim()) throw new Error('empty response');
-      return JSON.parse(body) as T;
-    } catch (error) {
-      lastError = error;
-      if (attempt < attempts) await new Promise(resolve => setTimeout(resolve, attempt * 500));
-    }
-  }
-  throw lastError;
-}
-
 export default function MindMetricsPage() {
   const [m, setM] = useState<any>(null);
   const [trust, setTrust] = useState<any[]>([]);
@@ -44,14 +28,14 @@ export default function MindMetricsPage() {
 
   const load = () => {
     setError('');
-    fetchJson<any>('/metrics/mind').then(setM).catch(e => setError(String(e)));
-    fetchJson<any>('/metrics/mind/trust').then(d => setTrust(d.lessons ?? [])).catch(() => {});
+    fetchMindMetrics<any>().then(setM).catch(e => setError(String(e)));
+    fetchTrust<any>().then(setTrust).catch(() => {});
   };
   useEffect(load, []);
 
   // Subscription gauges are live: poll every 60s (server caches upstream calls).
   useEffect(() => {
-    const poll = () => fetchJson<any>('/metrics/mind/subscription')
+    const poll = () => fetchSubscription<any>()
       .then(setUsage).catch(() => setUsage(null));
     poll();
     const id = setInterval(poll, 60_000);
@@ -59,7 +43,7 @@ export default function MindMetricsPage() {
   }, []);
 
   useEffect(() => {
-    const poll = () => fetchJson<any>('/metrics/mind/subscription/codex')
+    const poll = () => fetchCodexSubscription<any>()
       .then(setCodexUsage).catch(() => setCodexUsage(null));
     poll();
     const id = setInterval(poll, 60_000);

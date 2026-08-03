@@ -3,16 +3,16 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "22c8f9bfc1dff2939822ddbc89a5754c910d0dbd66455a4e362ee8804a04c3f5",
-    "files": 483
+    "fingerprint": "b5ec2662607cd0c35e68bd6ca6644d891242fe4762bc6c8fa8c1199bc65f256a",
+    "files": 484
   },
   "frontend": {
     "available": true,
     "totals": {
-      "files": 79,
-      "loc": 44615,
-      "files_calling_api": 50,
-      "files_using_fetch": 17,
+      "files": 80,
+      "loc": 44762,
+      "files_calling_api": 43,
+      "files_using_fetch": 10,
       "distinct_urls": 205
     },
     "files": {
@@ -348,7 +348,7 @@
       },
       "frontend/src/api/knowledge_graph.ts": {
         "path": "frontend/src/api/knowledge_graph.ts",
-        "loc": 486,
+        "loc": 529,
         "imports": [
           "frontend/src/api/http.ts",
           "frontend/src/types.ts"
@@ -374,6 +374,12 @@
         },
         "urls_direct": [
           "/chat",
+          "/engrams",
+          "/engrams/coverage/gaps",
+          "/engrams/create",
+          "/engrams/stats/summary",
+          "/engrams/{}",
+          "/engrams/{}/resolve",
           "/learning-analytics",
           "/models",
           "/neurons/capacity",
@@ -485,6 +491,12 @@
         "urls_via_imports": [],
         "urls_all": [
           "/chat",
+          "/engrams",
+          "/engrams/coverage/gaps",
+          "/engrams/create",
+          "/engrams/stats/summary",
+          "/engrams/{}",
+          "/engrams/{}/resolve",
           "/learning-analytics",
           "/models",
           "/neurons/capacity",
@@ -513,9 +525,51 @@
           "/query/{}/refine/apply"
         ]
       },
+      "frontend/src/api/memory.ts": {
+        "path": "frontend/src/api/memory.ts",
+        "loc": 106,
+        "imports": [
+          "frontend/src/api/http.ts"
+        ],
+        "named_imports": {
+          "ComposedAwayError": "frontend/src/api/http.ts",
+          "json": "frontend/src/api/http.ts"
+        },
+        "urls_direct": [
+          "/metrics/mind",
+          "/metrics/mind/delivery-pathways",
+          "/metrics/mind/inbox",
+          "/metrics/mind/injection-channels",
+          "/metrics/mind/jobs",
+          "/metrics/mind/locomo-run",
+          "/metrics/mind/sessions",
+          "/metrics/mind/skills",
+          "/metrics/mind/slo",
+          "/metrics/mind/subscription",
+          "/metrics/mind/subscription/codex",
+          "/metrics/mind/trust"
+        ],
+        "exports_with_urls": {},
+        "uses_fetch": true,
+        "urls_via_imports": [],
+        "urls_all": [
+          "/metrics/mind",
+          "/metrics/mind/delivery-pathways",
+          "/metrics/mind/inbox",
+          "/metrics/mind/injection-channels",
+          "/metrics/mind/jobs",
+          "/metrics/mind/locomo-run",
+          "/metrics/mind/sessions",
+          "/metrics/mind/skills",
+          "/metrics/mind/slo",
+          "/metrics/mind/subscription",
+          "/metrics/mind/subscription/codex",
+          "/metrics/mind/trust"
+        ]
+      },
       "frontend/src/api/operator.ts": {
         "path": "frontend/src/api/operator.ts",
-        "loc": 863,
+        "loc": 869,
         "imports": [
           "frontend/src/api/http.ts",
           "frontend/src/types.ts"
@@ -529,6 +583,7 @@
           "/admin/alerts/acknowledge-all",
           "/admin/alerts/{}/acknowledge",
           "/admin/alerts{}",
+          "/admin/architecture",
           "/admin/audit-log/summary{}",
           "/admin/checkpoint",
           "/admin/compliance-audit",
@@ -624,6 +679,7 @@
           "/admin/alerts/acknowledge-all",
           "/admin/alerts/{}/acknowledge",
           "/admin/alerts{}",
+          "/admin/architecture",
           "/admin/audit-log/summary{}",
           "/admin/checkpoint",
           "/admin/compliance-audit",
@@ -722,22 +778,20 @@
       },
       "frontend/src/components/ArchitecturePage.tsx": {
         "path": "frontend/src/components/ArchitecturePage.tsx",
-        "loc": 1545,
+        "loc": 1548,
         "imports": [
+          "frontend/src/api/operator.ts",
           "frontend/src/components/mindUi.tsx"
         ],
         "named_imports": {
-          "MindStyle": "frontend/src/components/mindUi.tsx"
+          "MindStyle": "frontend/src/components/mindUi.tsx",
+          "fetchArchitecture": "frontend/src/api/operator.ts"
         },
-        "urls_direct": [
-          "/admin/architecture"
-        ],
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/admin/architecture"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/AsciiWake.tsx": {
         "path": "frontend/src/components/AsciiWake.tsx",
@@ -1031,28 +1085,23 @@
       },
       "frontend/src/components/EngramPage.tsx": {
         "path": "frontend/src/components/EngramPage.tsx",
-        "loc": 416,
-        "imports": [],
-        "named_imports": {},
-        "urls_direct": [
-          "/engrams",
-          "/engrams/coverage/gaps",
-          "/engrams/create",
-          "/engrams/stats/summary",
-          "/engrams/{}",
-          "/engrams/{}/resolve"
+        "loc": 415,
+        "imports": [
+          "frontend/src/api/knowledge_graph.ts"
         ],
+        "named_imports": {
+          "createEngram": "frontend/src/api/knowledge_graph.ts",
+          "fetchEngram": "frontend/src/api/knowledge_graph.ts",
+          "fetchEngramGaps": "frontend/src/api/knowledge_graph.ts",
+          "fetchEngramSummary": "frontend/src/api/knowledge_graph.ts",
+          "fetchEngrams": "frontend/src/api/knowledge_graph.ts",
+          "resolveEngram": "frontend/src/api/knowledge_graph.ts"
+        },
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/engrams",
-          "/engrams/coverage/gaps",
-          "/engrams/create",
-          "/engrams/stats/summary",
-          "/engrams/{}",
-          "/engrams/{}/resolve"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/EvalRunsPage.tsx": {
         "path": "frontend/src/components/EvalRunsPage.tsx",
@@ -1360,42 +1409,41 @@
       },
       "frontend/src/components/LocomoRunBeacon.tsx": {
         "path": "frontend/src/components/LocomoRunBeacon.tsx",
-        "loc": 130,
-        "imports": [],
-        "named_imports": {},
-        "urls_direct": [
-          "/metrics/mind/locomo-run"
+        "loc": 132,
+        "imports": [
+          "frontend/src/api/memory.ts"
         ],
+        "named_imports": {
+          "fetchLocomoRun": "frontend/src/api/memory.ts"
+        },
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/metrics/mind/locomo-run"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/MindInboxPage.tsx": {
         "path": "frontend/src/components/MindInboxPage.tsx",
-        "loc": 71,
+        "loc": 72,
         "imports": [
+          "frontend/src/api/memory.ts",
           "frontend/src/components/mindUi.tsx"
         ],
         "named_imports": {
-          "MindStyle": "frontend/src/components/mindUi.tsx"
+          "MindStyle": "frontend/src/components/mindUi.tsx",
+          "fetchInbox": "frontend/src/api/memory.ts"
         },
-        "urls_direct": [
-          "/metrics/mind/inbox"
-        ],
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/metrics/mind/inbox"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/MindMetricsPage.tsx": {
         "path": "frontend/src/components/MindMetricsPage.tsx",
-        "loc": 237,
+        "loc": 221,
         "imports": [
+          "frontend/src/api/memory.ts",
           "frontend/src/components/LocomoRunBeacon.tsx",
           "frontend/src/components/mindUi.tsx"
         ],
@@ -1405,61 +1453,51 @@
           "UtilityBadge": "frontend/src/components/mindUi.tsx",
           "Spark": "frontend/src/components/mindUi.tsx",
           "Bars": "frontend/src/components/mindUi.tsx",
-          "UsageMeter": "frontend/src/components/mindUi.tsx"
+          "UsageMeter": "frontend/src/components/mindUi.tsx",
+          "fetchCodexSubscription": "frontend/src/api/memory.ts",
+          "fetchMindMetrics": "frontend/src/api/memory.ts",
+          "fetchSubscription": "frontend/src/api/memory.ts",
+          "fetchTrust": "frontend/src/api/memory.ts"
         },
-        "urls_direct": [
-          "/metrics/mind",
-          "/metrics/mind/subscription",
-          "/metrics/mind/subscription/codex",
-          "/metrics/mind/trust"
-        ],
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/metrics/mind",
-          "/metrics/mind/subscription",
-          "/metrics/mind/subscription/codex",
-          "/metrics/mind/trust"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/MindSessionsPage.tsx": {
         "path": "frontend/src/components/MindSessionsPage.tsx",
-        "loc": 52,
+        "loc": 53,
         "imports": [
+          "frontend/src/api/memory.ts",
           "frontend/src/components/mindUi.tsx"
         ],
         "named_imports": {
-          "MindStyle": "frontend/src/components/mindUi.tsx"
+          "MindStyle": "frontend/src/components/mindUi.tsx",
+          "fetchSessions": "frontend/src/api/memory.ts"
         },
-        "urls_direct": [
-          "/metrics/mind/sessions"
-        ],
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/metrics/mind/sessions"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/MindSkillsPage.tsx": {
         "path": "frontend/src/components/MindSkillsPage.tsx",
-        "loc": 94,
+        "loc": 95,
         "imports": [
+          "frontend/src/api/memory.ts",
           "frontend/src/components/mindUi.tsx"
         ],
         "named_imports": {
-          "MindStyle": "frontend/src/components/mindUi.tsx"
+          "MindStyle": "frontend/src/components/mindUi.tsx",
+          "fetchSkills": "frontend/src/api/memory.ts"
         },
-        "urls_direct": [
-          "/metrics/mind/skills"
-        ],
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/metrics/mind/skills"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/MobileShell.tsx": {
         "path": "frontend/src/components/MobileShell.tsx",
@@ -1960,8 +1998,9 @@
       },
       "frontend/src/components/SigmaGraphPage.tsx": {
         "path": "frontend/src/components/SigmaGraphPage.tsx",
-        "loc": 208,
+        "loc": 209,
         "imports": [
+          "frontend/src/api/knowledge_graph.ts",
           "frontend/src/components/SigmaGraph.tsx",
           "frontend/src/constants.ts",
           "frontend/src/utils/graphology-adapter.ts"
@@ -1969,19 +2008,15 @@
         "named_imports": {
           "DEPT_COLORS": "frontend/src/constants.ts",
           "graph3DToGraphology": "frontend/src/utils/graphology-adapter.ts",
-          "Graph3DResponse": "frontend/src/utils/graphology-adapter.ts"
+          "Graph3DResponse": "frontend/src/utils/graphology-adapter.ts",
+          "fetchClusters": "frontend/src/api/knowledge_graph.ts",
+          "fetchGraph3d": "frontend/src/api/knowledge_graph.ts"
         },
-        "urls_direct": [
-          "/neurons/clusters",
-          "/neurons/graph-3d"
-        ],
+        "urls_direct": [],
         "exports_with_urls": {},
-        "uses_fetch": true,
+        "uses_fetch": false,
         "urls_via_imports": [],
-        "urls_all": [
-          "/neurons/clusters",
-          "/neurons/graph-3d"
-        ]
+        "urls_all": []
       },
       "frontend/src/components/SpreadTrail.tsx": {
         "path": "frontend/src/components/SpreadTrail.tsx",
@@ -3130,7 +3165,7 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/architecture": [
-        "frontend/src/components/ArchitecturePage.tsx",
+        "frontend/src/api/operator.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3691,17 +3726,17 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams": [
-        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/coverage/gaps": [
-        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/create": [
-        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3714,17 +3749,17 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/stats/summary": [
-        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/{}": [
-        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/engrams/{}/resolve": [
-        "frontend/src/components/EngramPage.tsx",
+        "frontend/src/api/knowledge_graph.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3822,58 +3857,62 @@
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind": [
-        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/delivery-pathways": [
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/inbox": [
-        "frontend/src/components/MindInboxPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/injection-channels": [
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/jobs": [
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/locomo-run": [
-        "frontend/src/components/LocomoRunBeacon.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/sessions": [
-        "frontend/src/components/MindSessionsPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/skills": [
-        "frontend/src/components/MindSkillsPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/slo": [
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/subscription": [
-        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/subscription/codex": [
-        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/metrics/mind/trust": [
-        "frontend/src/components/MindMetricsPage.tsx",
+        "frontend/src/api/memory.ts",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3900,7 +3939,6 @@
         "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronUniverse.tsx",
         "frontend/src/components/NexusLabPage.tsx",
-        "frontend/src/components/SigmaGraphPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3935,7 +3973,6 @@
         "frontend/src/api/knowledge_graph.ts",
         "frontend/src/components/NeuronUniverse.tsx",
         "frontend/src/components/NexusLabPage.tsx",
-        "frontend/src/components/SigmaGraphPage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],

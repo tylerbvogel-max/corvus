@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { MindStyle } from './mindUi';
+import { fetchArchitecture } from '../api/operator';
 
 type Box = {
   id: string;
@@ -324,8 +325,10 @@ export default function ArchitecturePage() {
   const [processLaneFilter, setProcessLaneFilter] = useState<ProcessLane>('all');
 
   useEffect(() => {
-    fetch('/admin/architecture')
-      .then(r => r.ok ? r.json() : r.json().then(b => Promise.reject(b.detail || r.statusText)))
+    // The adapter returns the parsed payload and throws on failure, so the
+    // old Response-shaped ok/json dance is gone; http.ts also distinguishes a
+    // composed-away route from a failed one, which bare fetch could not.
+    fetchArchitecture<Payload>()
       .then((payload: Payload) => {
         setData(payload);
         setSelectedProcess(payload.processes?.[0]?.id ?? null);

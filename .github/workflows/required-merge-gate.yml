@@ -141,6 +141,15 @@ jobs:
           mkdir -p ../.artifacts
           set -o pipefail
           npm run check:contracts 2>&1 | tee ../.artifacts/frontend-contracts.log
+      # Frontend feature boundaries must agree with backend capability
+      # vocabulary (durability-frontend-contracts criterion 7): adapters stay
+      # inside their capability, every reachable capability has one, and no
+      # component bypasses them with bare fetch().
+      - name: API boundaries agree with capability vocabulary
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check:boundaries 2>&1 | tee ../.artifacts/frontend-boundaries.log
       - name: Type-check and build
         shell: bash
         run: |

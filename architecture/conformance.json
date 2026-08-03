@@ -29,9 +29,9 @@
   },
   "totals": {
     "modules": 404,
-    "frontend_files": 79,
-    "units": 483,
-    "classified": 483,
+    "frontend_files": 80,
+    "units": 484,
+    "classified": 484,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "22c8f9bfc1dff2939822ddbc89a5754c910d0dbd66455a4e362ee8804a04c3f5",
-    "current_fingerprint": "22c8f9bfc1dff2939822ddbc89a5754c910d0dbd66455a4e362ee8804a04c3f5",
-    "stored_files": 483,
-    "current_files": 483
+    "stored_fingerprint": "b5ec2662607cd0c35e68bd6ca6644d891242fe4762bc6c8fa8c1199bc65f256a",
+    "current_fingerprint": "b5ec2662607cd0c35e68bd6ca6644d891242fe4762bc6c8fa8c1199bc65f256a",
+    "stored_files": 484,
+    "current_files": 484
   },
   "manifest_problems": [],
   "boxes": [
@@ -115,8 +115,8 @@
       "purpose": "Provide optional observation plus real review, roadmap, agent, document, and integrity controls in desktop and mobile shells.",
       "confidence": "reviewed",
       "module_count": 0,
-      "frontend_file_count": 79,
-      "loc": 44615,
+      "frontend_file_count": 80,
+      "loc": 44762,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -126,6 +126,7 @@
         "frontend/src/api/http.ts",
         "frontend/src/api/ingestion.ts",
         "frontend/src/api/knowledge_graph.ts",
+        "frontend/src/api/memory.ts",
         "frontend/src/api/operator.ts",
         "frontend/src/auth.ts",
         "frontend/src/chatBus.ts",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createEngram, fetchEngram, fetchEngramGaps, fetchEngramSummary, fetchEngrams, resolveEngram } from '../api/knowledge_graph';
 
 interface EngramSummary {
   id: number;
@@ -92,9 +93,9 @@ export default function EngramPage() {
   async function load() {
     setLoading(true);
     const [e, s, g] = await Promise.all([
-      fetch('/engrams/').then(r => r.json()).catch(() => []),
-      fetch('/engrams/stats/summary').then(r => r.json()).catch(() => null),
-      fetch('/engrams/coverage/gaps').then(r => r.json()).catch(() => []),
+      fetchEngrams<any>().catch(() => []),
+      fetchEngramSummary<any>().catch(() => null),
+      fetchEngramGaps<any>().catch(() => []),
     ]);
     setEngrams(Array.isArray(e) ? e : []);
     setStats(s && !s.error ? s : null);
@@ -107,10 +108,10 @@ export default function EngramPage() {
   async function handleResolve(id: number) {
     setResolving(id);
     try {
-      const resp = await fetch(`/engrams/${id}/resolve`, { method: 'POST' }).then(r => r.json());
+      const resp = await resolveEngram<any>(id);
       if (!resp.error) {
         setResolveResult(resp);
-        setEngrams(await fetch('/engrams/').then(r => r.json()));
+        setEngrams(await fetchEngrams<any>());
       }
     } finally { setResolving(null); }
   }
@@ -137,9 +138,7 @@ export default function EngramPage() {
         issuing_body: draft.issuing_body || null,
         gap_id: draft.gap_id,
       };
-      const resp = await fetch('/engrams/create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-      }).then(r => r.json());
+      const resp = await createEngram<any>(body);
       if (resp.error) { setSeedError(resp.error); return; }
       setDraft(null);
       await load();
@@ -220,7 +219,7 @@ export default function EngramPage() {
                   const next = expanded === e.id ? null : e.id;
                   setExpanded(next);
                   if (next !== null && !detailCache[e.id]) {
-                    fetch(`/engrams/${e.id}`).then(r => r.json()).then(d => {
+                    fetchEngram<any>(e.id).then(d => {
                       setDetailCache(prev => ({ ...prev, [e.id]: { content: d.content } }));
                     });
                   }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchLocomoRun } from '../api/memory';
 
 /** LoCoMo certificate beacon — flashes on the Pallium when a benchmark
  *  phase finishes, so run completion is visible from any browser tab with
@@ -39,9 +40,10 @@ export default function LocomoRunBeacon() {
   useEffect(() => {
     let alive = true;
     const poll = () =>
-      fetch('/metrics/mind/locomo-run')
-        .then(r => (r.ok ? r.json() : null))
+      fetchLocomoRun<any>()
         .then(d => { if (alive && d) setRun(d); })
+        // Deliberately silent: the beacon is absent on a tenant without the
+        // memory capability, which is an answer rather than an error.
         .catch(() => {});
     poll();
     const id = setInterval(poll, 30_000);

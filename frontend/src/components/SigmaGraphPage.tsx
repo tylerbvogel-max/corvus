@@ -9,6 +9,7 @@ import { DEPT_COLORS } from '../constants';
 import SigmaGraph from './SigmaGraph';
 import { graph3DToGraphology } from '../utils/graphology-adapter';
 import type { Graph3DResponse } from '../utils/graphology-adapter';
+import { fetchClusters, fetchGraph3d } from '../api/knowledge_graph';
 
 const LAYER_LABELS = ['L0 Dept', 'L1 Role', 'L2 Task', 'L3 System', 'L4 Decision', 'L5 Output'];
 
@@ -30,7 +31,7 @@ export default function SigmaGraphPage() {
   // Fetch graph data
   useEffect(() => {
     setLoading(true);
-    fetch('/neurons/graph-3d')
+    fetchGraph3d<any>()
       .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
       .then((data: any) => { setRawData({ nodes: data.neurons ?? data.nodes ?? [], edges: data.edges ?? [] }); setError(null); })
       .catch(e => setError(String(e)))
@@ -39,7 +40,7 @@ export default function SigmaGraphPage() {
 
   // Fetch clusters for community coloring
   useEffect(() => {
-    fetch('/neurons/clusters')
+    fetchClusters<any>()
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.clusters) setClusters(data.clusters); })
       .catch(() => {});

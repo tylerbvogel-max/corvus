@@ -18,7 +18,8 @@
     "verify:neuron-zones": "node scripts/verify-neuron-zones.mjs",
     "verify:neuron-firings": "node scripts/verify-neuron-firings.mjs",
     "preview": "vite preview",
-    "test:journeys": "playwright test -c playwright.journeys.config.ts && playwright test -c playwright.journeys-negative.config.ts"
+    "test:journeys": "playwright test -c playwright.journeys.config.ts && playwright test -c playwright.journeys-negative.config.ts",
+    "check:boundaries": "node scripts/check-api-boundaries.mjs"
   },
   "dependencies": {
     "@types/d3": "^7.4.3",

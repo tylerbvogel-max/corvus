@@ -483,3 +483,46 @@ export function fetchRefinementHistory(params?: {
   const qs = q.toString();
   return json<NeuronRefinementEntry[]>(`/neurons/refinements${qs ? '?' + qs : ''}`);
 }
+
+// ── Engrams (durability-frontend-contracts criterion 7) ──
+// These were called with bare fetch() from EngramPage and SigmaGraphPage,
+// which meant a tenant without the knowledge_graph capability surfaced an
+// unexplained error instead of an honestly absent feature.
+
+export function fetchEngrams<T = unknown>(): Promise<T[]> {
+  return json<T[]>('/engrams/');
+}
+
+export function fetchEngramSummary<T = unknown>(): Promise<T> {
+  return json<T>('/engrams/stats/summary');
+}
+
+export function fetchEngramGaps<T = unknown>(): Promise<T[]> {
+  return json<T[]>('/engrams/coverage/gaps');
+}
+
+export function resolveEngram<T = unknown>(id: string | number): Promise<T> {
+  return json<T>(`/engrams/${id}/resolve`, { method: 'POST' });
+}
+
+export function createEngram<T = unknown>(body: unknown): Promise<T> {
+  return json<T>('/engrams/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Graph views ──
+
+export function fetchGraph3d<T = unknown>(): Promise<T> {
+  return json<T>('/neurons/graph-3d');
+}
+
+export function fetchClusters<T = unknown>(): Promise<T> {
+  return json<T>('/neurons/clusters');
+}
+
+export function fetchEngram<T = unknown>(id: string | number): Promise<T> {
+  return json<T>(`/engrams/${id}`);
+}

@@ -860,3 +860,9 @@ export interface SystemBannerResponse {
 export function fetchSystemBanner(): Promise<SystemBannerResponse> {
   return json<SystemBannerResponse>('/admin/system-banner');
 }
+
+/** Architecture atlas for the console's architecture view.
+ *  Was a bare fetch() in ArchitecturePage; see criterion 7. */
+export function fetchArchitecture<T = unknown>(): Promise<T> {
+  return json<T>('/admin/architecture');
+}

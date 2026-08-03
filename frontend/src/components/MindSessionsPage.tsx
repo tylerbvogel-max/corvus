@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MindStyle } from './mindUi';
+import { fetchSessions } from '../api/memory';
 
 /** Episode browser — the memory's inputs: every captured or backfilled
  *  session, its signal, and what distillation made of it. */
@@ -9,7 +10,7 @@ export default function MindSessionsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/metrics/mind/sessions').then(r => r.json())
+    fetchSessions<any>()
       .then(d => setRows(d.sessions ?? [])).catch(e => setError(String(e)));
   }, []);
 

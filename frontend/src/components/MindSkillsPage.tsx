@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { MindStyle } from './mindUi';
+import { fetchSkills } from '../api/memory';
 
 /** Compiled-skills viewer: the graph's build output, expandable to source
  *  lesson health and the rendered SKILL.md. */
@@ -11,7 +12,7 @@ export default function MindSkillsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/metrics/mind/skills').then(r => r.json())
+    fetchSkills<any>()
       .then(d => setSkills(d.skills ?? []))
       .catch(e => setError(String(e)));
   }, []);

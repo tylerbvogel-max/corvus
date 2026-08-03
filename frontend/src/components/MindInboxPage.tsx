@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MindStyle } from './mindUi';
+import { fetchInbox } from '../api/memory';
 
 /** Needs-your-judgment inbox: the policy plane. Open contradiction
  *  findings, write-gate-queued proposals, and the consolidation
@@ -10,7 +11,7 @@ export default function MindInboxPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/metrics/mind/inbox').then(r => r.json()).then(setInbox).catch(e => setError(String(e)));
+    fetchInbox<any>().then(setInbox).catch(e => setError(String(e)));
   }, []);
 
   if (error) return <div className="error-msg">{error}</div>;
