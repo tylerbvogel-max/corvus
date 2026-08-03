@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 403,
+    "modules": 404,
     "frontend_files": 79,
-    "units": 482,
-    "classified": 482,
+    "units": 483,
+    "classified": 483,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "e8816fec7a4af42eec32984f8f58d774741a8bb29621ce6a165ed8f17c559d76",
-    "current_fingerprint": "e8816fec7a4af42eec32984f8f58d774741a8bb29621ce6a165ed8f17c559d76",
-    "stored_files": 482,
-    "current_files": 482
+    "stored_fingerprint": "22c8f9bfc1dff2939822ddbc89a5754c910d0dbd66455a4e362ee8804a04c3f5",
+    "current_fingerprint": "22c8f9bfc1dff2939822ddbc89a5754c910d0dbd66455a4e362ee8804a04c3f5",
+    "stored_files": 483,
+    "current_files": 483
   },
   "manifest_problems": [],
   "boxes": [
@@ -671,9 +671,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 116,
+      "module_count": 117,
       "frontend_file_count": 0,
-      "loc": 24659,
+      "loc": 24751,
       "routes": 2,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -776,6 +776,7 @@
         "tests.test_retrieval_telemetry",
         "tests.test_roadmap_admission",
         "tests.test_roadmap_ledger",
+        "tests.test_runbooks",
         "tests.test_schema_authority",
         "tests.test_scoring_engine",
         "tests.test_skill_signpost",

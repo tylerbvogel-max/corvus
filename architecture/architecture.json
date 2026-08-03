@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "e8816fec7a4af42eec32984f8f58d774741a8bb29621ce6a165ed8f17c559d76",
-    "files": 482
+    "fingerprint": "22c8f9bfc1dff2939822ddbc89a5754c910d0dbd66455a4e362ee8804a04c3f5",
+    "files": 483
   },
   "frontend": {
     "available": true,
@@ -4132,10 +4132,10 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 403,
-    "loc": 92257,
+    "modules": 404,
+    "loc": 92349,
     "routes": 218,
-    "import_edges": 1101,
+    "import_edges": 1102,
     "call_edges": 729,
     "modules_touching_db": 121,
     "modules_touching_llm": 25,
@@ -45577,6 +45577,80 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_runbooks": {
+      "path": "backend/tests/test_runbooks.py",
+      "module": "tests.test_runbooks",
+      "loc": 92,
+      "imports": [
+        "app.observability.jobs"
+      ],
+      "external_imports": [
+        "__future__",
+        "pathlib",
+        "pytest"
+      ],
+      "functions": {
+        "_runbook": {
+          "name": "_runbook",
+          "line": 37,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_every_required_scenario_has_a_runbook": {
+          "name": "test_every_required_scenario_has_a_runbook",
+          "line": 41,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_each_runbook_says_how_to_detect_and_what_to_do": {
+          "name": "test_each_runbook_says_how_to_detect_and_what_to_do",
+          "line": 48,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_scenarios_the_record_required_were_actually_drilled": {
+          "name": "test_scenarios_the_record_required_were_actually_drilled",
+          "line": 55,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_undrilled_runbooks_say_so_rather_than_implying_otherwise": {
+          "name": "test_undrilled_runbooks_say_so_rather_than_implying_otherwise",
+          "line": 67,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_partially_drilled_runbook_names_what_is_still_missing": {
+          "name": "test_partially_drilled_runbook_names_what_is_still_missing",
+          "line": 73,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_index_lists_every_runbook": {
+          "name": "test_index_lists_every_runbook",
+          "line": 79,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_every_inventoried_job_is_reachable_from_a_runbook": {
+          "name": "test_every_inventoried_job_is_reachable_from_a_runbook",
+          "line": 85,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_schema_authority": {
       "path": "backend/tests/test_schema_authority.py",
       "module": "tests.test_schema_authority",
@@ -48812,7 +48886,8 @@
       "app.routers.distill",
       "app.routers.janitor",
       "app.routers.mind_metrics",
-      "tests.test_job_inventory"
+      "tests.test_job_inventory",
+      "tests.test_runbooks"
     ],
     "app.observability.json_logging": [
       "app.composition.factory",
