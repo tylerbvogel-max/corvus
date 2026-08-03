@@ -128,6 +128,25 @@ async def mind_jobs():
     return inventory_health()
 
 
+@router.get("/mind/slo")
+async def mind_slo(db: AsyncSession = Depends(get_db)):
+    """Service-level objectives judged against live signals.
+
+    Small by design: four objectives drawn from user-visible behaviour, each
+    carrying its threshold's provenance (stated-budget, measured, or labelled
+    hypothesis), an owner, and a first response. Reads signals Corvus already
+    produces rather than adding a collection path.
+    """
+    from app.services.distiller import find_ready_logs
+    from app.services.mind_metrics import collect_all
+    from app.observability.slo import slo_report
+
+    return await slo_report(
+        metrics_loader=lambda: collect_all(db),
+        distill_loader=lambda: {"ready": len(find_ready_logs(min_quiet_minutes=30))},
+    )
+
+
 @router.get("/mind/delivery-pathways")
 async def mind_delivery_pathways(db: AsyncSession = Depends(get_db)):
     """Habituation ledger (mind-delivery-plasticity): per-pathway counters

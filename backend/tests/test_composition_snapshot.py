@@ -55,8 +55,9 @@ _EXPECTED_ROUTE_COUNTS = {
     # split (record durability-operational-envelope). Core route, every profile.
     # +1 again: GET /metrics/mind/jobs, the scheduled-job health surface from
     # the same record. Memory-owned, so corvus-locomo gets it too.
-    "corvus-mind": 214,
-    "corvus-locomo": 81,
+    # +1 again: GET /metrics/mind/slo, the objectives surface (criterion 3).
+    "corvus-mind": 215,
+    "corvus-locomo": 82,
 }
 
 # Re-homed out of routers/compliance.py into app/operations/ by record 04.

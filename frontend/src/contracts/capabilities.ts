@@ -193,6 +193,7 @@ export const ROUTE_CONTRACTS: readonly RouteContract[] = [
   { method: 'GET', path: '/metrics/mind/locomo-run', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/sessions', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/skills', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
+  { method: 'GET', path: '/metrics/mind/slo', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/subscription', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/subscription/codex', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/metrics/mind/trust', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },

@@ -3,17 +3,17 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "ac63cc9831e9e70222a6a7f6fb8c3bff1bba9dc8836e3b04c29b327a7f374bd2",
-    "files": 480
+    "fingerprint": "e8816fec7a4af42eec32984f8f58d774741a8bb29621ce6a165ed8f17c559d76",
+    "files": 482
   },
   "frontend": {
     "available": true,
     "totals": {
       "files": 79,
-      "loc": 44523,
+      "loc": 44615,
       "files_calling_api": 50,
       "files_using_fetch": 17,
-      "distinct_urls": 203
+      "distinct_urls": 205
     },
     "files": {
       "frontend/src/App.tsx": {
@@ -2140,7 +2140,7 @@
       },
       "frontend/src/contracts/capabilities.ts": {
         "path": "frontend/src/contracts/capabilities.ts",
-        "loc": 274,
+        "loc": 276,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -2293,9 +2293,11 @@
           "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
+          "/metrics/mind/jobs",
           "/metrics/mind/locomo-run",
           "/metrics/mind/sessions",
           "/metrics/mind/skills",
+          "/metrics/mind/slo",
           "/metrics/mind/subscription",
           "/metrics/mind/subscription/codex",
           "/metrics/mind/trust",
@@ -2492,9 +2494,11 @@
           "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
+          "/metrics/mind/jobs",
           "/metrics/mind/locomo-run",
           "/metrics/mind/sessions",
           "/metrics/mind/skills",
+          "/metrics/mind/slo",
           "/metrics/mind/subscription",
           "/metrics/mind/subscription/codex",
           "/metrics/mind/trust",
@@ -2541,7 +2545,7 @@
       },
       "frontend/src/contracts/schema.d.ts": {
         "path": "frontend/src/contracts/schema.d.ts",
-        "loc": 13230,
+        "loc": 13320,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -2695,9 +2699,11 @@
           "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
+          "/metrics/mind/jobs",
           "/metrics/mind/locomo-run",
           "/metrics/mind/sessions",
           "/metrics/mind/skills",
+          "/metrics/mind/slo",
           "/metrics/mind/subscription",
           "/metrics/mind/subscription/codex",
           "/metrics/mind/trust",
@@ -2898,9 +2904,11 @@
           "/metrics/mind/delivery-pathways",
           "/metrics/mind/inbox",
           "/metrics/mind/injection-channels",
+          "/metrics/mind/jobs",
           "/metrics/mind/locomo-run",
           "/metrics/mind/sessions",
           "/metrics/mind/skills",
+          "/metrics/mind/slo",
           "/metrics/mind/subscription",
           "/metrics/mind/subscription/codex",
           "/metrics/mind/trust",
@@ -3100,9 +3108,9 @@
   "route_join": {
     "available": true,
     "totals": {
-      "backend_routes": 202,
-      "routes_called_by_frontend": 198,
-      "routes_with_no_frontend_caller": 4,
+      "backend_routes": 203,
+      "routes_called_by_frontend": 200,
+      "routes_with_no_frontend_caller": 3,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
@@ -3831,6 +3839,10 @@
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
+      "/metrics/mind/jobs": [
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
       "/metrics/mind/locomo-run": [
         "frontend/src/components/LocomoRunBeacon.tsx",
         "frontend/src/contracts/capabilities.ts",
@@ -3843,6 +3855,10 @@
       ],
       "/metrics/mind/skills": [
         "frontend/src/components/MindSkillsPage.tsx",
+        "frontend/src/contracts/capabilities.ts",
+        "frontend/src/contracts/schema.d.ts"
+      ],
+      "/metrics/mind/slo": [
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -4111,17 +4127,16 @@
     "routes_with_no_frontend_caller": [
       "/boom",
       "/echo",
-      "/metrics/mind/jobs",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 401,
-    "loc": 91681,
-    "routes": 217,
-    "import_edges": 1097,
-    "call_edges": 725,
+    "modules": 403,
+    "loc": 92257,
+    "routes": 218,
+    "import_edges": 1101,
+    "call_edges": 729,
     "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -7648,6 +7663,68 @@
           "name": "configure_logging",
           "line": 125,
           "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.observability.slo": {
+      "path": "backend/app/observability/slo.py",
+      "module": "app.observability.slo",
+      "loc": 254,
+      "imports": [
+        "app.observability.jobs"
+      ],
+      "external_imports": [
+        "__future__",
+        "dataclasses",
+        "typing"
+      ],
+      "functions": {
+        "Objective.judge": {
+          "name": "Objective.judge",
+          "line": 55,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_dig": {
+          "name": "_dig",
+          "line": 171,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "collect_signals": {
+          "name": "collect_signals",
+          "line": 180,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "evaluate": {
+          "name": "evaluate",
+          "line": 208,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "slo_report": {
+          "name": "slo_report",
+          "line": 226,
+          "is_async": true,
+          "calls": [
+            "app.observability.jobs::inventory_health"
+          ],
+          "is_route": false
+        },
+        "slo_report._safe": {
+          "name": "slo_report._safe",
+          "line": 237,
+          "is_async": true,
           "calls": [],
           "is_route": false
         }
@@ -11454,14 +11531,16 @@
     "app.routers.mind_metrics": {
       "path": "backend/app/routers/mind_metrics.py",
       "module": "app.routers.mind_metrics",
-      "loc": 195,
+      "loc": 214,
       "imports": [
         "app.database",
         "app.models",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.claude_usage",
         "app.services.codex_usage",
         "app.services.delivery_plasticity",
+        "app.services.distiller",
         "app.services.injection_channel",
         "app.services.locomo_run_status",
         "app.services.mind_metrics"
@@ -11563,9 +11642,20 @@
           ],
           "is_route": true
         },
+        "mind_slo": {
+          "name": "mind_slo",
+          "line": 132,
+          "is_async": true,
+          "calls": [
+            "app.observability.slo::slo_report",
+            "app.services.mind_metrics::collect_all",
+            "app.services.distiller::find_ready_logs"
+          ],
+          "is_route": true
+        },
         "mind_delivery_pathways": {
           "name": "mind_delivery_pathways",
-          "line": 132,
+          "line": 151,
           "is_async": true,
           "calls": [
             "app.services.delivery_plasticity::false_kill_receipts"
@@ -11574,7 +11664,7 @@
         },
         "mind_skills": {
           "name": "mind_skills",
-          "line": 186,
+          "line": 205,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::skills_report",
@@ -11667,12 +11757,21 @@
         },
         {
           "method": "GET",
+          "path": "/mind/slo",
+          "prefix": "/metrics",
+          "full_path": "/metrics/mind/slo",
+          "mounted_on": "router",
+          "handler": "mind_slo",
+          "line": 132
+        },
+        {
+          "method": "GET",
           "path": "/mind/delivery-pathways",
           "prefix": "/metrics",
           "full_path": "/metrics/mind/delivery-pathways",
           "mounted_on": "router",
           "handler": "mind_delivery_pathways",
-          "line": 132
+          "line": 151
         },
         {
           "method": "GET",
@@ -11681,7 +11780,7 @@
           "full_path": "/metrics/mind/skills",
           "mounted_on": "router",
           "handler": "mind_skills",
-          "line": 186
+          "line": 205
         }
       ],
       "db_writes": [],
@@ -31433,41 +31532,92 @@
     "scripts.verify_deployment": {
       "path": "backend/scripts/verify_deployment.py",
       "module": "scripts.verify_deployment",
-      "loc": 123,
+      "loc": 281,
       "imports": [],
       "external_imports": [
         "__future__",
         "argparse",
         "json",
+        "pathlib",
         "subprocess",
         "sys",
+        "time",
         "urllib"
       ],
       "functions": {
-        "_check_health": {
-          "name": "_check_health",
-          "line": 32,
+        "_get": {
+          "name": "_get",
+          "line": 52,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
-        "_check_revision": {
-          "name": "_check_revision",
-          "line": 47,
+        "_post": {
+          "name": "_post",
+          "line": 68,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
-        "_check_provenance": {
-          "name": "_check_provenance",
-          "line": 65,
+        "check_liveness": {
+          "name": "check_liveness",
+          "line": 84,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_readiness": {
+          "name": "check_readiness",
+          "line": 93,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_recall": {
+          "name": "check_recall",
+          "line": 105,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_jobs": {
+          "name": "check_jobs",
+          "line": 128,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_slo": {
+          "name": "check_slo",
+          "line": 147,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_schema": {
+          "name": "check_schema",
+          "line": 166,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_atlas": {
+          "name": "check_atlas",
+          "line": 181,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_provenance": {
+          "name": "check_provenance",
+          "line": 195,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 83,
+          "line": 212,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -35551,7 +35701,7 @@
     "tests.test_composition_snapshot": {
       "path": "backend/tests/test_composition_snapshot.py",
       "module": "tests.test_composition_snapshot",
-      "loc": 224,
+      "loc": 225,
       "imports": [
         "app.composition.capabilities",
         "app.composition.factory",
@@ -35569,21 +35719,21 @@
       "functions": {
         "_stored": {
           "name": "_stored",
-          "line": 76,
+          "line": 77,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_every_tenant_has_a_captured_baseline": {
           "name": "test_every_tenant_has_a_captured_baseline",
-          "line": 81,
+          "line": 82,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_live_surface_matches_recorded_baseline": {
           "name": "test_live_surface_matches_recorded_baseline",
-          "line": 94,
+          "line": 95,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35592,7 +35742,7 @@
         },
         "test_live_openapi_contract_matches_recorded_baseline": {
           "name": "test_live_openapi_contract_matches_recorded_baseline",
-          "line": 111,
+          "line": 112,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35601,14 +35751,14 @@
         },
         "test_tenant_surfaces_differ_by_profile": {
           "name": "test_tenant_surfaces_differ_by_profile",
-          "line": 124,
+          "line": 125,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_production_surface_is_exactly_the_full_grant": {
           "name": "test_production_surface_is_exactly_the_full_grant",
-          "line": 152,
+          "line": 153,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app",
@@ -35618,7 +35768,7 @@
         },
         "test_production_surface_is_exactly_the_full_grant.paths": {
           "name": "test_production_surface_is_exactly_the_full_grant.paths",
-          "line": 168,
+          "line": 169,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35627,7 +35777,7 @@
         },
         "test_reduced_profile_actually_drops_modules": {
           "name": "test_reduced_profile_actually_drops_modules",
-          "line": 195,
+          "line": 196,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -45910,6 +46060,166 @@
       ],
       "llm_sites": []
     },
+    "tests.test_slo": {
+      "path": "backend/tests/test_slo.py",
+      "module": "tests.test_slo",
+      "loc": 144,
+      "imports": [
+        "app.observability.slo"
+      ],
+      "external_imports": [
+        "__future__",
+        "asyncio",
+        "pytest"
+      ],
+      "functions": {
+        "test_every_objective_names_an_owner_a_response_and_a_provenance": {
+          "name": "test_every_objective_names_an_owner_a_response_and_a_provenance",
+          "line": 17,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_guessed_thresholds_are_labelled_as_guesses": {
+          "name": "test_guessed_thresholds_are_labelled_as_guesses",
+          "line": 27,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_the_objective_set_stays_small": {
+          "name": "test_the_objective_set_stays_small",
+          "line": 35,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_value_inside_its_bound_is_ok": {
+          "name": "test_a_value_inside_its_bound_is_ok",
+          "line": 42,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_value_outside_its_bound_is_breached": {
+          "name": "test_a_value_outside_its_bound_is_breached",
+          "line": 47,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_lower_bound_objective_breaches_downward": {
+          "name": "test_a_lower_bound_objective_breaches_downward",
+          "line": 53,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_missing_signal_is_unknown_not_healthy": {
+          "name": "test_a_missing_signal_is_unknown_not_healthy",
+          "line": 59,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_any_unhealthy_job_breaches": {
+          "name": "test_any_unhealthy_job_breaches",
+          "line": 67,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_signals_are_read_from_the_reports_corvus_already_produces": {
+          "name": "test_signals_are_read_from_the_reports_corvus_already_produces",
+          "line": 73,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::collect_signals"
+          ],
+          "is_route": false
+        },
+        "test_never_run_jobs_do_not_count_as_unhealthy": {
+          "name": "test_never_run_jobs_do_not_count_as_unhealthy",
+          "line": 86,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::collect_signals"
+          ],
+          "is_route": false
+        },
+        "test_absent_inputs_produce_none_not_zero": {
+          "name": "test_absent_inputs_produce_none_not_zero",
+          "line": 92,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::collect_signals"
+          ],
+          "is_route": false
+        },
+        "test_malformed_inputs_do_not_masquerade_as_zero": {
+          "name": "test_malformed_inputs_do_not_masquerade_as_zero",
+          "line": 97,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::collect_signals"
+          ],
+          "is_route": false
+        },
+        "test_breaches_sort_first": {
+          "name": "test_breaches_sort_first",
+          "line": 105,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::evaluate"
+          ],
+          "is_route": false
+        },
+        "test_report_publishes_threshold_provenance": {
+          "name": "test_report_publishes_threshold_provenance",
+          "line": 114,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::evaluate"
+          ],
+          "is_route": false
+        },
+        "test_a_failing_signal_source_degrades_one_objective_not_the_report": {
+          "name": "test_a_failing_signal_source_degrades_one_objective_not_the_report",
+          "line": 121,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::slo_report"
+          ],
+          "is_route": false
+        },
+        "test_a_failing_signal_source_degrades_one_objective_not_the_report._explode": {
+          "name": "test_a_failing_signal_source_degrades_one_objective_not_the_report._explode",
+          "line": 123,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_async_loaders_are_awaited": {
+          "name": "test_async_loaders_are_awaited",
+          "line": 135,
+          "is_async": false,
+          "calls": [
+            "app.observability.slo::slo_report"
+          ],
+          "is_route": false
+        },
+        "test_async_loaders_are_awaited._metrics": {
+          "name": "test_async_loaders_are_awaited._metrics",
+          "line": 136,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_spread_activation": {
       "path": "backend/tests/test_spread_activation.py",
       "module": "tests.test_spread_activation",
@@ -48496,6 +48806,7 @@
       "tests.test_structured_logging"
     ],
     "app.observability.jobs": [
+      "app.observability.slo",
       "app.routers.auditor",
       "app.routers.compile",
       "app.routers.distill",
@@ -48506,6 +48817,10 @@
     "app.observability.json_logging": [
       "app.composition.factory",
       "tests.test_structured_logging"
+    ],
+    "app.observability.slo": [
+      "app.routers.mind_metrics",
+      "tests.test_slo"
     ],
     "app.operations.router": [
       "app.operations",
@@ -48715,6 +49030,7 @@
     ],
     "app.services.distiller": [
       "app.routers.distill",
+      "app.routers.mind_metrics",
       "app.services.memory_quality_auditor",
       "tests.test_distiller",
       "tests.test_injection_channel",
@@ -49574,6 +49890,9 @@
     "app.observability.json_logging": [
       "app.observability.context"
     ],
+    "app.observability.slo": [
+      "app.observability.jobs"
+    ],
     "app.routers.admin": [
       "app.middleware.rbac",
       "app.models",
@@ -49671,9 +49990,11 @@
     ],
     "app.routers.mind_metrics": [
       "app.observability.jobs",
+      "app.observability.slo",
       "app.services.claude_usage",
       "app.services.codex_usage",
       "app.services.delivery_plasticity",
+      "app.services.distiller",
       "app.services.injection_channel",
       "app.services.locomo_run_status",
       "app.services.mind_metrics"
@@ -50645,6 +50966,9 @@
     ],
     "tests.test_skill_signpost": [
       "app.services.skill_signpost"
+    ],
+    "tests.test_slo": [
+      "app.observability.slo"
     ],
     "tests.test_spread_activation": [
       "app.services.neuron_service",
@@ -57454,6 +57778,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57511,6 +57836,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57568,7 +57894,7 @@
       "full_path": "/metrics/mind/delivery-pathways",
       "mounted_on": "router",
       "handler": "mind_delivery_pathways",
-      "line": 132,
+      "line": 151,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57578,6 +57904,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57635,6 +57962,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57702,6 +58030,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57759,6 +58088,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57826,6 +58156,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57883,6 +58214,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57950,6 +58282,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58007,6 +58340,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58074,6 +58408,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58131,6 +58466,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58198,6 +58534,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58255,6 +58592,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58312,7 +58650,7 @@
       "full_path": "/metrics/mind/skills",
       "mounted_on": "router",
       "handler": "mind_skills",
-      "line": 186,
+      "line": 205,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -58322,6 +58660,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58379,6 +58718,133 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.bootstrap_service",
+        "app.services.claude_usage",
+        "app.services.clustering",
+        "app.services.codex_usage",
+        "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
+        "app.services.distiller",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.evidence_frame",
+        "app.services.injection_channel",
+        "app.services.integrity",
+        "app.services.integrity.conflict_monitor",
+        "app.services.integrity.similarity",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.locomo_run_status",
+        "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
+        "app.services.mind_janitors",
+        "app.services.mind_lint",
+        "app.services.mind_metrics",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.proposal_apply_service",
+        "app.services.recall_lanes",
+        "app.services.reconsolidation.fingerprints",
+        "app.services.reconsolidation.inheritance",
+        "app.services.reconsolidation.lifecycle",
+        "app.services.reconsolidation.loaders",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "app.services.reconsolidation.rewiring",
+        "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
+        "app.services.redaction",
+        "app.services.reference_class",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.seeding_service",
+        "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
+        "app.services.synaptic_learning",
+        "app.services.write_gate"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/mind/slo",
+      "prefix": "/metrics",
+      "full_path": "/metrics/mind/slo",
+      "mounted_on": "router",
+      "handler": "mind_slo",
+      "line": 132,
+      "module": "app.routers.mind_metrics",
+      "file": "backend/app/routers/mind_metrics.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
+        "app.observability.slo",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.bootstrap_service",
+        "app.services.claude_usage",
+        "app.services.clustering",
+        "app.services.codex_usage",
+        "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
+        "app.services.distiller",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.evidence_frame",
+        "app.services.injection_channel",
+        "app.services.integrity",
+        "app.services.integrity.conflict_monitor",
+        "app.services.integrity.similarity",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.locomo_run_status",
+        "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
+        "app.services.mind_janitors",
+        "app.services.mind_lint",
+        "app.services.mind_metrics",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.proposal_apply_service",
+        "app.services.recall_lanes",
+        "app.services.reconsolidation.fingerprints",
+        "app.services.reconsolidation.inheritance",
+        "app.services.reconsolidation.lifecycle",
+        "app.services.reconsolidation.loaders",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "app.services.reconsolidation.rewiring",
+        "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
+        "app.services.redaction",
+        "app.services.reference_class",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.seeding_service",
+        "app.services.semantic_prefilter",
+        "app.services.skill_compiler",
+        "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
+        "app.services.synaptic_learning",
+        "app.services.write_gate",
+        "app.tenant"
+      ],
+      "calls_reachable": [
+        "app.middleware.rbac",
+        "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58446,6 +58912,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58503,6 +58970,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58570,6 +59038,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58627,6 +59096,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58694,6 +59164,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58751,6 +59222,7 @@
         "app.models",
         "app.observability.context",
         "app.observability.jobs",
+        "app.observability.slo",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",

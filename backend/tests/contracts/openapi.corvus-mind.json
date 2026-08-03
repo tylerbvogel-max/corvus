@@ -14019,6 +14019,26 @@
         ]
       }
     },
+    "/metrics/mind/slo": {
+      "get": {
+        "description": "Service-level objectives judged against live signals.\n\nSmall by design: four objectives drawn from user-visible behaviour, each\ncarrying its threshold's provenance (stated-budget, measured, or labelled\nhypothesis), an owner, and a first response. Reads signals Corvus already\nproduces rather than adding a collection path.",
+        "operationId": "mind_slo_metrics_mind_slo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Slo",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/metrics/mind/subscription": {
       "get": {
         "description": "Live Claude subscription utilization (5-hour block + weekly limits).",

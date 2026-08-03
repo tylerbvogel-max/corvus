@@ -1,6 +1,6 @@
 {
-  "documented_path_count": 79,
-  "method_level_route_count": 81,
+  "documented_path_count": 80,
+  "method_level_route_count": 82,
   "routes": [
     {
       "method": "GET",
@@ -419,6 +419,15 @@
       "operation_id": "mind_skills_metrics_mind_skills_get",
       "path": "/metrics/mind/skills",
       "schema_fingerprint": "961d74b86a8e1ba0",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_slo_metrics_mind_slo_get",
+      "path": "/metrics/mind/slo",
+      "schema_fingerprint": "2df3c3bb7c1f325f",
       "tags": [
         "memory"
       ]

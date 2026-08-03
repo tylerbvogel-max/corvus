@@ -3267,6 +3267,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics/mind/slo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mind Slo
+         * @description Service-level objectives judged against live signals.
+         *
+         *     Small by design: four objectives drawn from user-visible behaviour, each
+         *     carrying its threshold's provenance (stated-budget, measured, or labelled
+         *     hypothesis), an owner, and a first response. Reads signals Corvus already
+         *     produces rather than adding a collection path.
+         */
+        get: operations["mind_slo_metrics_mind_slo_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics/mind/subscription": {
         parameters: {
             query?: never;
@@ -11790,6 +11815,26 @@ export interface operations {
         };
     };
     mind_skills_metrics_mind_skills_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    mind_slo_metrics_mind_slo_get: {
         parameters: {
             query?: never;
             header?: never;
