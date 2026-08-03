@@ -3,17 +3,17 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "fecd498ddf03f9f86151bb0cb260d8ee799e2a6dd4cdcc14b3c1d363736a1e5c",
-    "files": 473
+    "fingerprint": "fe009cea50776f5ea2462a395655daba5de8f0ed5e11ef07f06ae7872a550617",
+    "files": 478
   },
   "frontend": {
     "available": true,
     "totals": {
       "files": 79,
-      "loc": 44473,
+      "loc": 44523,
       "files_calling_api": 50,
       "files_using_fetch": 17,
-      "distinct_urls": 202
+      "distinct_urls": 203
     },
     "files": {
       "frontend/src/App.tsx": {
@@ -2140,7 +2140,7 @@
       },
       "frontend/src/contracts/capabilities.ts": {
         "path": "frontend/src/contracts/capabilities.ts",
-        "loc": 273,
+        "loc": 274,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -2541,7 +2541,7 @@
       },
       "frontend/src/contracts/schema.d.ts": {
         "path": "frontend/src/contracts/schema.d.ts",
-        "loc": 13181,
+        "loc": 13230,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -2727,6 +2727,7 @@
           "/query/{}/rate",
           "/query/{}/refine",
           "/query/{}/refine/apply",
+          "/ready",
           "/recall",
           "/remember",
           "/roadmap-ledgers",
@@ -2929,6 +2930,7 @@
           "/query/{}/rate",
           "/query/{}/refine",
           "/query/{}/refine/apply",
+          "/ready",
           "/recall",
           "/remember",
           "/roadmap-ledgers",
@@ -3098,9 +3100,9 @@
   "route_join": {
     "available": true,
     "totals": {
-      "backend_routes": 199,
-      "routes_called_by_frontend": 197,
-      "routes_with_no_frontend_caller": 2,
+      "backend_routes": 201,
+      "routes_called_by_frontend": 198,
+      "routes_with_no_frontend_caller": 3,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
@@ -4033,6 +4035,9 @@
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
+      "/ready": [
+        "frontend/src/contracts/schema.d.ts"
+      ],
       "/recall": [
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -4104,17 +4109,18 @@
       ]
     },
     "routes_with_no_frontend_caller": [
-      "/ready",
+      "/boom",
+      "/echo",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 394,
-    "loc": 90423,
-    "routes": 214,
-    "import_edges": 1078,
-    "call_edges": 712,
+    "modules": 399,
+    "loc": 91066,
+    "routes": 216,
+    "import_edges": 1086,
+    "call_edges": 718,
     "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -6027,7 +6033,7 @@
     "app.composition.factory": {
       "path": "backend/app/composition/factory.py",
       "module": "app.composition.factory",
-      "loc": 345,
+      "loc": 356,
       "imports": [
         "app.composition.capabilities",
         "app.composition.profiles",
@@ -6037,8 +6043,10 @@
         "app.mcp_http",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability.json_logging",
         "app.services.readiness",
         "app.tenant"
       ],
@@ -6056,21 +6064,21 @@
       "functions": {
         "_load": {
           "name": "_load",
-          "line": 55,
+          "line": 57,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_lifespan": {
           "name": "_build_lifespan",
-          "line": 72,
+          "line": 74,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_lifespan.lifespan": {
           "name": "_build_lifespan.lifespan",
-          "line": 77,
+          "line": 79,
           "is_async": true,
           "calls": [
             "app.composition.startup::canonical_startup_lock",
@@ -6080,100 +6088,101 @@
         },
         "_all_steps": {
           "name": "_all_steps",
-          "line": 118,
+          "line": 120,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_index": {
           "name": "_index",
-          "line": 123,
+          "line": 125,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_run_step": {
           "name": "_run_step",
-          "line": 127,
+          "line": 129,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "create_app": {
           "name": "create_app",
-          "line": 137,
+          "line": 139,
           "is_async": false,
           "calls": [
-            "app.composition.profiles::resolve_profile"
+            "app.composition.profiles::resolve_profile",
+            "app.observability.json_logging::configure_logging"
           ],
           "is_route": false
         },
         "_add_middleware": {
           "name": "_add_middleware",
-          "line": 178,
+          "line": 184,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_error_contract": {
           "name": "_add_error_contract",
-          "line": 200,
+          "line": 211,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_error_contract.global_exception_handler": {
           "name": "_add_error_contract.global_exception_handler",
-          "line": 202,
+          "line": 213,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_mount_mcp": {
           "name": "_mount_mcp",
-          "line": 218,
+          "line": 229,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_mcp._mcp_slash_redirect": {
           "name": "_mount_mcp._mcp_slash_redirect",
-          "line": 234,
+          "line": 245,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_add_core_routes": {
           "name": "_add_core_routes",
-          "line": 239,
+          "line": 250,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_add_core_routes.get_tenant": {
           "name": "_add_core_routes.get_tenant",
-          "line": 243,
+          "line": 254,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_add_core_routes.list_tenants": {
           "name": "_add_core_routes.list_tenants",
-          "line": 258,
+          "line": 269,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_add_core_routes.health": {
           "name": "_add_core_routes.health",
-          "line": 278,
+          "line": 289,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "_add_core_routes.ready": {
           "name": "_add_core_routes.ready",
-          "line": 289,
+          "line": 300,
           "is_async": true,
           "calls": [
             "app.services.readiness::evaluate_readiness",
@@ -6183,21 +6192,21 @@
         },
         "_mount_frontend": {
           "name": "_mount_frontend",
-          "line": 319,
+          "line": 330,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_frontend._is_api_path": {
           "name": "_mount_frontend._is_api_path",
-          "line": 329,
+          "line": 340,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_frontend.serve_spa": {
           "name": "_mount_frontend.serve_spa",
-          "line": 333,
+          "line": 344,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -6211,7 +6220,7 @@
           "full_path": "/tenant",
           "mounted_on": "app",
           "handler": "_add_core_routes.get_tenant",
-          "line": 243
+          "line": 254
         },
         {
           "method": "GET",
@@ -6220,7 +6229,7 @@
           "full_path": "/tenants",
           "mounted_on": "app",
           "handler": "_add_core_routes.list_tenants",
-          "line": 258
+          "line": 269
         },
         {
           "method": "GET",
@@ -6229,7 +6238,7 @@
           "full_path": "/health",
           "mounted_on": "app",
           "handler": "_add_core_routes.health",
-          "line": 278
+          "line": 289
         },
         {
           "method": "GET",
@@ -6238,7 +6247,7 @@
           "full_path": "/ready",
           "mounted_on": "app",
           "handler": "_add_core_routes.ready",
-          "line": 289
+          "line": 300
         },
         {
           "method": "GET",
@@ -6247,13 +6256,13 @@
           "full_path": "/{full_path:path}",
           "mounted_on": "app",
           "handler": "_mount_frontend.serve_spa",
-          "line": 333
+          "line": 344
         }
       ],
       "db_writes": [
         {
           "kind": "add",
-          "line": 167,
+          "line": 173,
           "in": "create_app",
           "target": "mounted_specs",
           "model": null
@@ -6460,7 +6469,7 @@
     "app.config": {
       "path": "backend/app/config.py",
       "module": "app.config",
-      "loc": 400,
+      "loc": 402,
       "imports": [],
       "external_imports": [
         "os",
@@ -6477,7 +6486,7 @@
         },
         "Settings.model_post_init": {
           "name": "Settings.model_post_init",
-          "line": 393,
+          "line": 395,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -7233,6 +7242,49 @@
       ],
       "llm_sites": []
     },
+    "app.middleware.correlation": {
+      "path": "backend/app/middleware/correlation.py",
+      "module": "app.middleware.correlation",
+      "loc": 69,
+      "imports": [
+        "app.observability.context"
+      ],
+      "external_imports": [
+        "__future__",
+        "logging",
+        "re",
+        "starlette"
+      ],
+      "functions": {
+        "_clean": {
+          "name": "_clean",
+          "line": 33,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "CorrelationMiddleware.__init__": {
+          "name": "CorrelationMiddleware.__init__",
+          "line": 40,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "CorrelationMiddleware.dispatch": {
+          "name": "CorrelationMiddleware.dispatch",
+          "line": 44,
+          "is_async": true,
+          "calls": [
+            "app.observability.context::new_request_id",
+            "app.observability.context::bound"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "app.middleware.rate_limit": {
       "path": "backend/app/middleware/rate_limit.py",
       "module": "app.middleware.rate_limit",
@@ -7389,6 +7441,127 @@
         "types"
       ],
       "functions": {},
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.observability": {
+      "path": "backend/app/observability/__init__.py",
+      "module": "app.observability",
+      "loc": 2,
+      "imports": [],
+      "external_imports": [],
+      "functions": {},
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.observability.context": {
+      "path": "backend/app/observability/context.py",
+      "module": "app.observability.context",
+      "loc": 69,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "contextlib",
+        "contextvars",
+        "typing",
+        "uuid"
+      ],
+      "functions": {
+        "new_request_id": {
+          "name": "new_request_id",
+          "line": 32,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "current": {
+          "name": "current",
+          "line": 36,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_coerce": {
+          "name": "_coerce",
+          "line": 41,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "bound": {
+          "name": "bound",
+          "line": 52,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.observability.json_logging": {
+      "path": "backend/app/observability/json_logging.py",
+      "module": "app.observability.json_logging",
+      "loc": 163,
+      "imports": [
+        "app.observability.context"
+      ],
+      "external_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "logging",
+        "warnings"
+      ],
+      "functions": {
+        "_scrub": {
+          "name": "_scrub",
+          "line": 55,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "JsonFormatter.format": {
+          "name": "JsonFormatter.format",
+          "line": 66,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "JsonFormatter._payload": {
+          "name": "JsonFormatter._payload",
+          "line": 79,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_install_correlation_factory": {
+          "name": "_install_correlation_factory",
+          "line": 104,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_install_correlation_factory.factory": {
+          "name": "_install_correlation_factory.factory",
+          "line": 116,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::current"
+          ],
+          "is_route": false
+        },
+        "configure_logging": {
+          "name": "configure_logging",
+          "line": 125,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
       "routes": [],
       "db_writes": [],
       "llm_sites": []
@@ -10859,10 +11032,11 @@
     "app.routers.janitor": {
       "path": "backend/app/routers/janitor.py",
       "module": "app.routers.janitor",
-      "loc": 167,
+      "loc": 185,
       "imports": [
         "app.database",
         "app.models",
+        "app.observability.context",
         "app.services.mind_janitors",
         "app.services.mind_lint"
       ],
@@ -10870,28 +11044,31 @@
         "datetime",
         "fastapi",
         "json",
-        "sqlalchemy"
+        "logging",
+        "sqlalchemy",
+        "time"
       ],
       "functions": {
         "janitor_status": {
           "name": "janitor_status",
-          "line": 24,
+          "line": 29,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "janitor_run": {
           "name": "janitor_run",
-          "line": 46,
+          "line": 51,
           "is_async": true,
           "calls": [
+            "app.observability.context::bound",
             "app.services.mind_janitors::run_janitors"
           ],
           "is_route": true
         },
         "corpus_health_report": {
           "name": "corpus_health_report",
-          "line": 66,
+          "line": 84,
           "is_async": true,
           "calls": [
             "app.services.mind_lint::corpus_health"
@@ -10900,21 +11077,21 @@
         },
         "_event_dict": {
           "name": "_event_dict",
-          "line": 75,
+          "line": 93,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "memory_history": {
           "name": "memory_history",
-          "line": 83,
+          "line": 101,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "memory_as_of": {
           "name": "memory_as_of",
-          "line": 125,
+          "line": 143,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -10928,7 +11105,7 @@
           "full_path": "/janitor/status",
           "mounted_on": "router",
           "handler": "janitor_status",
-          "line": 24
+          "line": 29
         },
         {
           "method": "POST",
@@ -10937,7 +11114,7 @@
           "full_path": "/janitor/run",
           "mounted_on": "router",
           "handler": "janitor_run",
-          "line": 46
+          "line": 51
         },
         {
           "method": "GET",
@@ -10946,7 +11123,7 @@
           "full_path": "/janitor/corpus-health",
           "mounted_on": "router",
           "handler": "corpus_health_report",
-          "line": 66
+          "line": 84
         },
         {
           "method": "GET",
@@ -10955,7 +11132,7 @@
           "full_path": "/janitor/history/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_history",
-          "line": 83
+          "line": 101
         },
         {
           "method": "GET",
@@ -10964,7 +11141,7 @@
           "full_path": "/janitor/as-of/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_as_of",
-          "line": 125
+          "line": 143
         }
       ],
       "db_writes": [],
@@ -46084,10 +46261,297 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_structured_logging": {
+      "path": "backend/tests/test_structured_logging.py",
+      "module": "tests.test_structured_logging",
+      "loc": 305,
+      "imports": [
+        "app.middleware.correlation",
+        "app.observability.context",
+        "app.observability.json_logging"
+      ],
+      "external_imports": [
+        "__future__",
+        "fastapi",
+        "json",
+        "logging",
+        "pytest",
+        "sys",
+        "warnings"
+      ],
+      "functions": {
+        "_logging_configured": {
+          "name": "_logging_configured",
+          "line": 18,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::configure_logging"
+          ],
+          "is_route": false
+        },
+        "_record": {
+          "name": "_record",
+          "line": 24,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_emit": {
+          "name": "_emit",
+          "line": 43,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::JsonFormatter"
+          ],
+          "is_route": false
+        },
+        "test_record_is_one_line_of_valid_json": {
+          "name": "test_record_is_one_line_of_valid_json",
+          "line": 49,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::JsonFormatter"
+          ],
+          "is_route": false
+        },
+        "test_message_formatting_arguments_are_applied": {
+          "name": "test_message_formatting_arguments_are_applied",
+          "line": 59,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_exception_and_causality_survive": {
+          "name": "test_exception_and_causality_survive",
+          "line": 64,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_correlation_identifiers_are_attached_to_every_record": {
+          "name": "test_correlation_identifiers_are_attached_to_every_record",
+          "line": 75,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound"
+          ],
+          "is_route": false
+        },
+        "test_correlation_does_not_leak_out_of_its_block": {
+          "name": "test_correlation_does_not_leak_out_of_its_block",
+          "line": 83,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound",
+            "app.observability.context::current"
+          ],
+          "is_route": false
+        },
+        "test_nested_binds_merge_so_a_job_keeps_its_session_and_query": {
+          "name": "test_nested_binds_merge_so_a_job_keeps_its_session_and_query",
+          "line": 90,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound"
+          ],
+          "is_route": false
+        },
+        "test_none_valued_identifiers_are_dropped_not_stringified": {
+          "name": "test_none_valued_identifiers_are_dropped_not_stringified",
+          "line": 98,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound"
+          ],
+          "is_route": false
+        },
+        "test_correlation_field_count_is_bounded": {
+          "name": "test_correlation_field_count_is_bounded",
+          "line": 106,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound",
+            "app.observability.context::current"
+          ],
+          "is_route": false
+        },
+        "test_request_ids_are_unique": {
+          "name": "test_request_ids_are_unique",
+          "line": 112,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::new_request_id"
+          ],
+          "is_route": false
+        },
+        "test_unlisted_extra_fields_are_dropped": {
+          "name": "test_unlisted_extra_fields_are_dropped",
+          "line": 118,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_allowed_diagnostic_fields_survive": {
+          "name": "test_allowed_diagnostic_fields_survive",
+          "line": 129,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_sensitive_field_names_are_redacted_even_when_allowed": {
+          "name": "test_sensitive_field_names_are_redacted_even_when_allowed",
+          "line": 140,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound"
+          ],
+          "is_route": false
+        },
+        "test_formatter_never_raises_into_its_caller": {
+          "name": "test_formatter_never_raises_into_its_caller",
+          "line": 151,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::JsonFormatter"
+          ],
+          "is_route": false
+        },
+        "test_formatter_never_raises_into_its_caller.Exploding.__str__": {
+          "name": "test_formatter_never_raises_into_its_caller.Exploding.__str__",
+          "line": 153,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_configure_logging_is_idempotent": {
+          "name": "test_configure_logging_is_idempotent",
+          "line": 166,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::configure_logging"
+          ],
+          "is_route": false
+        },
+        "test_warnings_are_captured_into_the_log_stream": {
+          "name": "test_warnings_are_captured_into_the_log_stream",
+          "line": 173,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::configure_logging"
+          ],
+          "is_route": false
+        },
+        "test_warnings_are_captured_into_the_log_stream._Capture.emit": {
+          "name": "test_warnings_are_captured_into_the_log_stream._Capture.emit",
+          "line": 184,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_configure_logging_honours_level": {
+          "name": "test_configure_logging_honours_level",
+          "line": 208,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::configure_logging"
+          ],
+          "is_route": false
+        },
+        "_correlated_app": {
+          "name": "_correlated_app",
+          "line": 216,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_correlated_app.echo": {
+          "name": "_correlated_app.echo",
+          "line": 224,
+          "is_async": true,
+          "calls": [
+            "app.observability.context::current"
+          ],
+          "is_route": true
+        },
+        "_correlated_app.boom": {
+          "name": "_correlated_app.boom",
+          "line": 228,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "test_request_gets_an_id_and_echoes_it_back": {
+          "name": "test_request_gets_an_id_and_echoes_it_back",
+          "line": 234,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_inbound_request_id_is_honoured_so_callers_can_stitch_traces": {
+          "name": "test_inbound_request_id_is_honoured_so_callers_can_stitch_traces",
+          "line": 246,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_hostile_inbound_request_ids_are_replaced_not_reflected": {
+          "name": "test_hostile_inbound_request_ids_are_replaced_not_reflected",
+          "line": 259,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_failing_request_still_produces_a_correlated_log_line": {
+          "name": "test_a_failing_request_still_produces_a_correlated_log_line",
+          "line": 269,
+          "is_async": false,
+          "calls": [
+            "app.observability.json_logging::JsonFormatter"
+          ],
+          "is_route": false
+        },
+        "test_a_failing_request_still_produces_a_correlated_log_line._Capture.emit": {
+          "name": "test_a_failing_request_still_produces_a_correlated_log_line._Capture.emit",
+          "line": 281,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_successful_requests_do_carry_the_header": {
+          "name": "test_successful_requests_do_carry_the_header",
+          "line": 301,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/echo",
+          "prefix": "",
+          "full_path": "/echo",
+          "mounted_on": "app",
+          "handler": "_correlated_app.echo",
+          "line": 224
+        },
+        {
+          "method": "GET",
+          "path": "/boom",
+          "prefix": "",
+          "full_path": "/boom",
+          "mounted_on": "app",
+          "handler": "_correlated_app.boom",
+          "line": 228
+        }
+      ],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_subagent_provenance": {
       "path": "backend/tests/test_subagent_provenance.py",
       "module": "tests.test_subagent_provenance",
-      "loc": 304,
+      "loc": 308,
       "imports": [
         "app.services.distiller"
       ],
@@ -46160,105 +46624,105 @@
         },
         "test_report_is_clipped_to_its_budget": {
           "name": "test_report_is_clipped_to_its_budget",
-          "line": 164,
+          "line": 168,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_non_agent_tools_carry_no_report_fields": {
           "name": "test_non_agent_tools_carry_no_report_fields",
-          "line": 170,
+          "line": 174,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_Stdin.__init__": {
           "name": "_Stdin.__init__",
-          "line": 177,
+          "line": 181,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_Stdin.read": {
           "name": "_Stdin.read",
-          "line": 180,
+          "line": 184,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_hook_never_breaks_a_session_on_malformed_payloads": {
           "name": "test_hook_never_breaks_a_session_on_malformed_payloads",
-          "line": 184,
+          "line": 188,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "distiller": {
           "name": "distiller",
-          "line": 199,
+          "line": 203,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_event": {
           "name": "_event",
-          "line": 204,
+          "line": 208,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_parent_deeds_survive_a_fan_out": {
           "name": "test_parent_deeds_survive_a_fan_out",
-          "line": 213,
+          "line": 217,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_subagent_events_are_labelled_in_the_prompt": {
           "name": "test_subagent_events_are_labelled_in_the_prompt",
-          "line": 227,
+          "line": 231,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_legacy_events_without_origin_are_not_treated_as_subagent": {
           "name": "test_legacy_events_without_origin_are_not_treated_as_subagent",
-          "line": 237,
+          "line": 241,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_reports_are_extracted_from_the_parent_agent_event": {
           "name": "test_reports_are_extracted_from_the_parent_agent_event",
-          "line": 245,
+          "line": 249,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_reports_are_capped": {
           "name": "test_reports_are_capped",
-          "line": 259,
+          "line": 263,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_reports_enter_last_and_as_data": {
           "name": "test_reports_enter_last_and_as_data",
-          "line": 265,
+          "line": 269,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_no_subagent_transcript_is_ever_read": {
           "name": "test_no_subagent_transcript_is_ever_read",
-          "line": 283,
+          "line": 287,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_project_vote_belongs_to_the_parent": {
           "name": "test_project_vote_belongs_to_the_parent",
-          "line": 294,
+          "line": 298,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -47504,6 +47968,10 @@
       "app.composition.factory",
       "tests.test_capability_composition"
     ],
+    "app.middleware.correlation": [
+      "app.composition.factory",
+      "tests.test_structured_logging"
+    ],
     "app.middleware.rate_limit": [
       "app.routers.v1"
     ],
@@ -47697,6 +48165,16 @@
       "tests.test_substrate_ontology",
       "tests.test_synaptic_homeostasis",
       "tests.test_token_bounded_pipeline"
+    ],
+    "app.observability.context": [
+      "app.middleware.correlation",
+      "app.observability.json_logging",
+      "app.routers.janitor",
+      "tests.test_structured_logging"
+    ],
+    "app.observability.json_logging": [
+      "app.composition.factory",
+      "tests.test_structured_logging"
     ],
     "app.operations.router": [
       "app.operations",
@@ -48705,6 +49183,7 @@
       "app.composition.startup",
       "app.database",
       "app.mcp_http",
+      "app.observability.json_logging",
       "app.services.readiness"
     ],
     "app.composition.profiles": [
@@ -48750,6 +49229,12 @@
     "app.middleware.audit": [
       "app.database",
       "app.models"
+    ],
+    "app.middleware.correlation": [
+      "app.observability.context"
+    ],
+    "app.observability.json_logging": [
+      "app.observability.context"
     ],
     "app.routers.admin": [
       "app.middleware.rbac",
@@ -48832,6 +49317,7 @@
       "app.services.integrity.reconciler"
     ],
     "app.routers.janitor": [
+      "app.observability.context",
       "app.services.mind_janitors",
       "app.services.mind_lint"
     ],
@@ -49840,6 +50326,10 @@
       "app.composition.capabilities",
       "app.composition.profiles"
     ],
+    "tests.test_structured_logging": [
+      "app.observability.context",
+      "app.observability.json_logging"
+    ],
     "tests.test_substrate_ontology": [
       "app.services.executor",
       "app.services.scoring_engine",
@@ -49872,7 +50362,7 @@
       "full_path": "/health",
       "mounted_on": "app",
       "handler": "_add_core_routes.health",
-      "line": 278,
+      "line": 289,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -49885,9 +50375,12 @@
         "app.mcp_server",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.rbac",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -49953,6 +50446,8 @@
         "app.mcp_http",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -49970,7 +50465,7 @@
       "full_path": "/ready",
       "mounted_on": "app",
       "handler": "_add_core_routes.ready",
-      "line": 289,
+      "line": 300,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -49983,9 +50478,12 @@
         "app.mcp_server",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.rbac",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50051,6 +50549,8 @@
         "app.mcp_http",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50068,7 +50568,7 @@
       "full_path": "/tenant",
       "mounted_on": "app",
       "handler": "_add_core_routes.get_tenant",
-      "line": 243,
+      "line": 254,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -50081,9 +50581,12 @@
         "app.mcp_server",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.rbac",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50149,6 +50652,8 @@
         "app.mcp_http",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50166,7 +50671,7 @@
       "full_path": "/tenants",
       "mounted_on": "app",
       "handler": "_add_core_routes.list_tenants",
-      "line": 258,
+      "line": 269,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -50179,9 +50684,12 @@
         "app.mcp_server",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.rbac",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50247,6 +50755,8 @@
         "app.mcp_http",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50264,7 +50774,7 @@
       "full_path": "/{full_path:path}",
       "mounted_on": "app",
       "handler": "_mount_frontend.serve_spa",
-      "line": 333,
+      "line": 344,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -50277,9 +50787,12 @@
         "app.mcp_server",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.rbac",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -50345,6 +50858,8 @@
         "app.mcp_http",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.seed.engram_loader",
         "app.seed.loader",
         "app.seed.regulatory_seed",
@@ -55945,7 +56460,7 @@
       "full_path": "/janitor/as-of/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_as_of",
-      "line": 125,
+      "line": 143,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -55953,6 +56468,7 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -55991,6 +56507,7 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56034,7 +56551,7 @@
       "full_path": "/janitor/corpus-health",
       "mounted_on": "router",
       "handler": "corpus_health_report",
-      "line": 66,
+      "line": 84,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56042,6 +56559,7 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56080,6 +56598,7 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56123,7 +56642,7 @@
       "full_path": "/janitor/history/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_history",
-      "line": 83,
+      "line": 101,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56131,6 +56650,7 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56169,6 +56689,7 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56212,7 +56733,7 @@
       "full_path": "/janitor/run",
       "mounted_on": "router",
       "handler": "janitor_run",
-      "line": 46,
+      "line": 51,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56220,6 +56741,7 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56258,6 +56780,7 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56301,7 +56824,7 @@
       "full_path": "/janitor/status",
       "mounted_on": "router",
       "handler": "janitor_status",
-      "line": 24,
+      "line": 29,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56309,6 +56832,7 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56347,6 +56871,7 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -62676,6 +63201,46 @@
         "app.services.semantic_prefilter",
         "app.services.structural_resolver",
         "app.services.tier_routing"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/boom",
+      "prefix": "",
+      "full_path": "/boom",
+      "mounted_on": "app",
+      "handler": "_correlated_app.boom",
+      "line": 228,
+      "module": "tests.test_structured_logging",
+      "file": "backend/tests/test_structured_logging.py",
+      "imports_reachable": [
+        "app.middleware.correlation",
+        "app.observability.context",
+        "app.observability.json_logging"
+      ],
+      "calls_reachable": [
+        "app.observability.context",
+        "app.observability.json_logging"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/echo",
+      "prefix": "",
+      "full_path": "/echo",
+      "mounted_on": "app",
+      "handler": "_correlated_app.echo",
+      "line": 224,
+      "module": "tests.test_structured_logging",
+      "file": "backend/tests/test_structured_logging.py",
+      "imports_reachable": [
+        "app.middleware.correlation",
+        "app.observability.context",
+        "app.observability.json_logging"
+      ],
+      "calls_reachable": [
+        "app.observability.context",
+        "app.observability.json_logging"
       ]
     }
   ],

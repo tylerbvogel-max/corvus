@@ -32,8 +32,10 @@ from app.config import settings
 from app.database import async_session, engine
 from app.middleware.access_gate import AccessGateMiddleware
 from app.middleware.audit import AuditMiddleware
+from app.middleware.correlation import CorrelationMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.models import Neuron, SystemState
+from app.observability.json_logging import configure_logging
 from app.services.readiness import evaluate_readiness
 from app.tenant import tenant as default_tenant
 
@@ -144,6 +146,10 @@ def create_app(profile: CapabilityProfile | None = None, tenant=None) -> FastAPI
     tenant = tenant or default_tenant
     profile = profile or resolve_profile(tenant)
 
+    # Before anything else logs: uvicorn and this module both emit during
+    # construction, and a line written before configuration lands unstructured.
+    configure_logging(settings.log_level)
+
     app = FastAPI(
         title=tenant.display_name,
         description=tenant.description,
@@ -154,7 +160,7 @@ def create_app(profile: CapabilityProfile | None = None, tenant=None) -> FastAPI
     # profile is part of the app's identity, not ambient state.
     app.state.capability_profile = profile
 
-    _add_middleware(app)
+    _add_middleware(app, tenant_id=tenant.tenant_id)
     _add_error_contract(app)
 
     # Record what actually mounted, so readiness can prove the profile's claims
@@ -175,7 +181,7 @@ def create_app(profile: CapabilityProfile | None = None, tenant=None) -> FastAPI
     return app
 
 
-def _add_middleware(app: FastAPI) -> None:
+def _add_middleware(app: FastAPI, tenant_id: str = "") -> None:
     cors_origins = (
         [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
         if settings.cors_origins
@@ -195,6 +201,11 @@ def _add_middleware(app: FastAPI) -> None:
     # Audit logging middleware — logs all POST/PUT/DELETE/PATCH to audit_log table
     # Addresses: NIST 800-53 AU-2/AU-3/AU-12, CMMC 3.3.1, SOC 2 CC7.2
     app.add_middleware(AuditMiddleware)
+    # Correlation LAST, so it is OUTERMOST: Starlette runs the most recently
+    # added middleware first. A request rejected by the access gate above is
+    # precisely the one that is hardest to diagnose without an id, so it must
+    # already be inside the correlation scope by the time the gate sees it.
+    app.add_middleware(CorrelationMiddleware, tenant_id=tenant_id)
 
 
 def _add_error_contract(app: FastAPI) -> None:

@@ -1,5 +1,5 @@
 {
-  "app_module_count": 83,
+  "app_module_count": 87,
   "app_modules": [
     "app",
     "app.composition",
@@ -19,9 +19,13 @@
     "app.middleware",
     "app.middleware.access_gate",
     "app.middleware.audit",
+    "app.middleware.correlation",
     "app.middleware.rbac",
     "app.middleware.security_headers",
     "app.models",
+    "app.observability",
+    "app.observability.context",
+    "app.observability.json_logging",
     "app.routers",
     "app.routers.auditor",
     "app.routers.capabilities",

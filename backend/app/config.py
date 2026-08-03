@@ -13,6 +13,8 @@ def _default_database_url() -> str:
 
 class Settings(BaseSettings):
     database_url: str = ""  # Auto-derived from TENANT_ID if not set
+    # Root level for the structured JSON log stream (durability-operational-envelope).
+    log_level: str = "INFO"
     anthropic_api_key: str = ""
     google_api_key: str = ""
     groq_api_key: str = ""

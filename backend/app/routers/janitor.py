@@ -7,6 +7,8 @@ janitor-relevant graph state without side effects.
 """
 
 import json
+import logging
+import time
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,7 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import IntegrityFinding, MemoryChangeEvent, Neuron
+from app.observability.context import bound
 from app.services.mind_janitors import LESSON_TYPES, run_janitors
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/janitor", tags=["memory"])
 
@@ -54,11 +59,24 @@ async def janitor_run(
 ):
     """Run the selected janitor passes and return the combined report."""
     assert max_pairs >= 1, "max_pairs must be positive"
-    report = await run_janitors(
-        db, consolidation=consolidation, staleness=staleness,
-        decay=decay, lint=lint, plasticity=plasticity, max_pairs=max_pairs,
-    )
-    assert isinstance(report, dict), "janitor report must be a dict"
+    # Background-job correlation: every line the passes emit — including any
+    # warning they raise — carries the job identity, so a scheduled run that
+    # misbehaves can be reconstructed from the log stream alone rather than
+    # from whichever operator happened to be watching the response.
+    with bound(job="janitor"):
+        started = time.monotonic()
+        logger.info("janitor run starting", extra={
+            "event": "job.start", "job": "janitor",
+        })
+        report = await run_janitors(
+            db, consolidation=consolidation, staleness=staleness,
+            decay=decay, lint=lint, plasticity=plasticity, max_pairs=max_pairs,
+        )
+        assert isinstance(report, dict), "janitor report must be a dict"
+        logger.info("janitor run complete", extra={
+            "event": "job.complete", "job": "janitor", "outcome": "ok",
+            "duration_ms": round((time.monotonic() - started) * 1000),
+        })
     return json.loads(json.dumps(report, default=str))
 
 

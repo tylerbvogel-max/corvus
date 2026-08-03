@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 394,
+    "modules": 399,
     "frontend_files": 79,
-    "units": 473,
-    "classified": 473,
+    "units": 478,
+    "classified": 478,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "fecd498ddf03f9f86151bb0cb260d8ee799e2a6dd4cdcc14b3c1d363736a1e5c",
-    "current_fingerprint": "fecd498ddf03f9f86151bb0cb260d8ee799e2a6dd4cdcc14b3c1d363736a1e5c",
-    "stored_files": 473,
-    "current_files": 473
+    "stored_fingerprint": "fe009cea50776f5ea2462a395655daba5de8f0ed5e11ef07f06ae7872a550617",
+    "current_fingerprint": "fe009cea50776f5ea2462a395655daba5de8f0ed5e11ef07f06ae7872a550617",
+    "stored_files": 478,
+    "current_files": 478
   },
   "manifest_problems": [],
   "boxes": [
@@ -116,7 +116,7 @@
       "confidence": "reviewed",
       "module_count": 0,
       "frontend_file_count": 79,
-      "loc": 44473,
+      "loc": 44523,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -392,7 +392,7 @@
       "confidence": "reviewed",
       "module_count": 34,
       "frontend_file_count": 0,
-      "loc": 11135,
+      "loc": 11153,
       "routes": 57,
       "modules": [
         "app.routers.admin",
@@ -563,9 +563,9 @@
       "tier": "infra",
       "purpose": "Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.",
       "confidence": "reviewed",
-      "module_count": 69,
+      "module_count": 73,
       "frontend_file_count": 0,
-      "loc": 8241,
+      "loc": 8546,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -607,9 +607,13 @@
         "app.middleware",
         "app.middleware.access_gate",
         "app.middleware.audit",
+        "app.middleware.correlation",
         "app.middleware.rate_limit",
         "app.middleware.security_headers",
         "app.models",
+        "app.observability",
+        "app.observability.context",
+        "app.observability.json_logging",
         "app.operations",
         "app.operations.router",
         "app.routers",
@@ -648,7 +652,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 969,
+      "loc": 980,
       "routes": 5,
       "modules": [
         "app.composition",
@@ -665,10 +669,10 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 113,
+      "module_count": 114,
       "frontend_file_count": 0,
-      "loc": 23790,
-      "routes": 0,
+      "loc": 24099,
+      "routes": 2,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
         "scripts.add_token_pressure_maintenance_record",
@@ -777,6 +781,7 @@
         "tests.test_spread_vectorized",
         "tests.test_staleness_supersession",
         "tests.test_startup_schema_authority",
+        "tests.test_structured_logging",
         "tests.test_subagent_provenance",
         "tests.test_substrate_ontology",
         "tests.test_synaptic_homeostasis",

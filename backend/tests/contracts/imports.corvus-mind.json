@@ -1,5 +1,5 @@
 {
-  "app_module_count": 129,
+  "app_module_count": 133,
   "app_modules": [
     "app",
     "app.agents",
@@ -29,10 +29,14 @@
     "app.middleware",
     "app.middleware.access_gate",
     "app.middleware.audit",
+    "app.middleware.correlation",
     "app.middleware.rate_limit",
     "app.middleware.rbac",
     "app.middleware.security_headers",
     "app.models",
+    "app.observability",
+    "app.observability.context",
+    "app.observability.json_logging",
     "app.operations",
     "app.operations.router",
     "app.routers",

@@ -1361,6 +1361,9 @@ boxes:
       # schema head and mounted capability surface — so it sits with the
       # runtime, not with any capability it reports on.
       - backend/app/services/readiness.py
+      # Structured logging and correlation are process-wide runtime concerns,
+      # consumed by every capability and owned by none of them.
+      - backend/app/observability/**
       - backend/app/middleware/**
       # Reader for two things this box already owns: the audit rows written by
       # middleware/audit.py and the banner text carried in tenant.py. Moved out
