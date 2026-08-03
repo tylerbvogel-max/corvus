@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "5c770f175ff8a6cff2949386751576f0190647e415790a32324c154eac49346d",
+    "fingerprint": "daaefb7e75bff8da26cd6eab3a4b56924c4510e8281ada52b26d19d716377736",
     "files": 484
   },
   "frontend": {
@@ -4170,10 +4170,10 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92587,
+    "loc": 92662,
     "routes": 218,
-    "import_edges": 1102,
-    "call_edges": 729,
+    "import_edges": 1104,
+    "call_edges": 731,
     "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -30371,13 +30371,14 @@
     "scripts.capability_snapshot": {
       "path": "backend/scripts/capability_snapshot.py",
       "module": "scripts.capability_snapshot",
-      "loc": 438,
+      "loc": 500,
       "imports": [
         "app.main"
       ],
       "external_imports": [
         "__future__",
         "argparse",
+        "fastapi",
         "hashlib",
         "json",
         "os",
@@ -30387,93 +30388,107 @@
         "sys"
       ],
       "functions": {
+        "effective_routes": {
+          "name": "effective_routes",
+          "line": 85,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "mounted_paths": {
+          "name": "mounted_paths",
+          "line": 105,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "_discover_tenants": {
           "name": "_discover_tenants",
-          "line": 62,
+          "line": 118,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_fingerprint": {
           "name": "_fingerprint",
-          "line": 70,
+          "line": 126,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "describe_surface": {
           "name": "describe_surface",
-          "line": 81,
+          "line": 137,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_collect": {
           "name": "_collect",
-          "line": 146,
+          "line": 207,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_capture": {
           "name": "_capture",
-          "line": 166,
+          "line": 227,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_declared_unit_targets": {
           "name": "_declared_unit_targets",
-          "line": 189,
+          "line": 250,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_reconcile_jobs": {
           "name": "_reconcile_jobs",
-          "line": 209,
+          "line": 270,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_declared_jobs": {
           "name": "_declared_jobs",
-          "line": 261,
+          "line": 323,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_orphaned_installed_units": {
           "name": "_orphaned_installed_units",
-          "line": 275,
+          "line": 337,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_installed_unit_target": {
           "name": "_installed_unit_target",
-          "line": 326,
+          "line": 388,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_paths": {
           "name": "_paths",
-          "line": 340,
+          "line": 402,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_render": {
           "name": "_render",
-          "line": 348,
+          "line": 410,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 356,
+          "line": 418,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -34198,12 +34213,13 @@
     "tests.test_capability_composition": {
       "path": "backend/tests/test_capability_composition.py",
       "module": "tests.test_capability_composition",
-      "loc": 493,
+      "loc": 502,
       "imports": [
         "app.composition.capabilities",
         "app.composition.factory",
         "app.composition.profiles",
-        "app.middleware.audit"
+        "app.middleware.audit",
+        "scripts.capability_snapshot"
       ],
       "external_imports": [
         "__future__",
@@ -34217,14 +34233,14 @@
       "functions": {
         "_FakeTenant.__init__": {
           "name": "_FakeTenant.__init__",
-          "line": 27,
+          "line": 28,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_profile": {
           "name": "_profile",
-          "line": 35,
+          "line": 36,
           "is_async": false,
           "calls": [
             "app.composition.profiles::CapabilityProfile"
@@ -34233,14 +34249,16 @@
         },
         "_paths": {
           "name": "_paths",
-          "line": 48,
+          "line": 49,
           "is_async": false,
-          "calls": [],
+          "calls": [
+            "scripts.capability_snapshot::mounted_paths"
+          ],
           "is_route": false
         },
         "test_disabled_capability_mounts_none_of_its_routes": {
           "name": "test_disabled_capability_mounts_none_of_its_routes",
-          "line": 56,
+          "line": 65,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34249,7 +34267,7 @@
         },
         "test_disabled_capability_routes_are_absent_from_openapi": {
           "name": "test_disabled_capability_routes_are_absent_from_openapi",
-          "line": 75,
+          "line": 84,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34258,7 +34276,7 @@
         },
         "test_disabled_capability_does_not_answer_with_a_later_authorization_failure": {
           "name": "test_disabled_capability_does_not_answer_with_a_later_authorization_failure",
-          "line": 100,
+          "line": 109,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34267,14 +34285,14 @@
         },
         "test_disabled_capability_startup_steps_do_not_run": {
           "name": "test_disabled_capability_startup_steps_do_not_run",
-          "line": 144,
+          "line": 153,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_external_api_off_means_no_mcp_transport": {
           "name": "test_external_api_off_means_no_mcp_transport",
-          "line": 160,
+          "line": 169,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34283,21 +34301,21 @@
         },
         "test_actions_registry_survives_governance_being_disabled": {
           "name": "test_actions_registry_survives_governance_being_disabled",
-          "line": 176,
+          "line": 185,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_recall_prefilter_keeps_its_engram_seed_without_the_engram_router": {
           "name": "test_recall_prefilter_keeps_its_engram_seed_without_the_engram_router",
-          "line": 188,
+          "line": 197,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_core_surface_exists_in_the_empty_profile": {
           "name": "test_core_surface_exists_in_the_empty_profile",
-          "line": 198,
+          "line": 207,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34306,7 +34324,7 @@
         },
         "test_profile_is_published_for_the_frontend": {
           "name": "test_profile_is_published_for_the_frontend",
-          "line": 207,
+          "line": 216,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34315,7 +34333,7 @@
         },
         "test_missing_capabilities_block_fails_closed": {
           "name": "test_missing_capabilities_block_fails_closed",
-          "line": 223,
+          "line": 232,
           "is_async": false,
           "calls": [
             "app.composition.profiles::resolve_profile"
@@ -34324,7 +34342,7 @@
         },
         "test_unknown_capability_name_fails_closed_with_an_actionable_error": {
           "name": "test_unknown_capability_name_fails_closed_with_an_actionable_error",
-          "line": 230,
+          "line": 239,
           "is_async": false,
           "calls": [
             "app.composition.profiles::resolve_profile"
@@ -34333,7 +34351,7 @@
         },
         "test_malformed_capabilities_block_fails_closed": {
           "name": "test_malformed_capabilities_block_fails_closed",
-          "line": 241,
+          "line": 250,
           "is_async": false,
           "calls": [
             "app.composition.profiles::resolve_profile"
@@ -34342,7 +34360,7 @@
         },
         "test_duplicate_capability_fails_closed": {
           "name": "test_duplicate_capability_fails_closed",
-          "line": 247,
+          "line": 256,
           "is_async": false,
           "calls": [
             "app.composition.profiles::resolve_profile"
@@ -34351,7 +34369,7 @@
         },
         "test_non_string_capability_fails_closed": {
           "name": "test_non_string_capability_fails_closed",
-          "line": 253,
+          "line": 262,
           "is_async": false,
           "calls": [
             "app.composition.profiles::resolve_profile"
@@ -34360,35 +34378,35 @@
         },
         "test_no_router_is_mounted_twice": {
           "name": "test_no_router_is_mounted_twice",
-          "line": 261,
+          "line": 270,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_every_capability_declares_a_summary": {
           "name": "test_every_capability_declares_a_summary",
-          "line": 269,
+          "line": 278,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_declared_jobs_belong_to_a_granted_capability": {
           "name": "test_declared_jobs_belong_to_a_granted_capability",
-          "line": 277,
+          "line": 286,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_memory_surface_gate_no_longer_exists": {
           "name": "test_memory_surface_gate_no_longer_exists",
-          "line": 287,
+          "line": 296,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_memory_backed_routers_need_memory_even_when_their_owner_is_granted": {
           "name": "test_memory_backed_routers_need_memory_even_when_their_owner_is_granted",
-          "line": 320,
+          "line": 329,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34397,7 +34415,7 @@
         },
         "test_every_declared_job_targets_a_route_its_capability_mounts": {
           "name": "test_every_declared_job_targets_a_route_its_capability_mounts",
-          "line": 347,
+          "line": 356,
           "is_async": false,
           "calls": [
             "app.composition.capabilities::items",
@@ -34407,7 +34425,7 @@
         },
         "test_operator_surfaces_are_owned_by_operator_alone": {
           "name": "test_operator_surfaces_are_owned_by_operator_alone",
-          "line": 400,
+          "line": 409,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -34416,14 +34434,14 @@
         },
         "test_operator_routes_are_declared_in_exactly_one_module": {
           "name": "test_operator_routes_are_declared_in_exactly_one_module",
-          "line": 424,
+          "line": 433,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_audit_trail_is_readable_wherever_it_is_written": {
           "name": "test_audit_trail_is_readable_wherever_it_is_written",
-          "line": 469,
+          "line": 478,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app"
@@ -37810,10 +37828,11 @@
     "tests.test_eval_runs": {
       "path": "backend/tests/test_eval_runs.py",
       "module": "tests.test_eval_runs",
-      "loc": 172,
+      "loc": 176,
       "imports": [
         "app.routers.eval_runs",
-        "app.services.eval_runs"
+        "app.services.eval_runs",
+        "scripts.capability_snapshot"
       ],
       "external_imports": [
         "__future__",
@@ -37923,12 +37942,14 @@
           "name": "test_eval_runs_router_has_no_mutation_routes",
           "line": 158,
           "is_async": false,
-          "calls": [],
+          "calls": [
+            "scripts.capability_snapshot::effective_routes"
+          ],
           "is_route": false
         },
         "test_scoring_engine_version_is_set": {
           "name": "test_scoring_engine_version_is_set",
-          "line": 169,
+          "line": 173,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -49986,7 +50007,9 @@
       "tests.test_output_guard"
     ],
     "scripts.capability_snapshot": [
-      "tests.test_composition_snapshot"
+      "tests.test_capability_composition",
+      "tests.test_composition_snapshot",
+      "tests.test_eval_runs"
     ],
     "tests.golden_frames": [
       "tests.kernel_matrix_fixtures",
@@ -50858,7 +50881,8 @@
     "tests.test_capability_composition": [
       "app.composition.capabilities",
       "app.composition.factory",
-      "app.composition.profiles"
+      "app.composition.profiles",
+      "scripts.capability_snapshot"
     ],
     "tests.test_chat_session": [
       "app.routers.query",
@@ -50951,7 +50975,8 @@
       "app.routers.query"
     ],
     "tests.test_eval_runs": [
-      "app.services.eval_runs"
+      "app.services.eval_runs",
+      "scripts.capability_snapshot"
     ],
     "tests.test_evidence_frame": [
       "app.services.evidence_frame",

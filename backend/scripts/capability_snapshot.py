@@ -28,6 +28,12 @@ sys.modules is process-global and a second tenant imported into the same
 interpreter would inherit the first one's modules and silently read as "always
 present".
 
+This module also owns :func:`effective_routes` and :func:`mounted_paths`, the
+single accessor every route enumeration in the repo goes through — the
+composition tests, the job reconciler below, and the surface files the
+frontend's check:contracts and check:boundaries read. Route enumeration has one
+fastapi-version-sensitive spelling and it lives here, once.
+
 Run with the backend venv interpreter from the backend directory:
 
     PYTHONPATH=. venv/bin/python scripts/capability_snapshot.py --write
@@ -57,6 +63,56 @@ _JSON_KWARGS = {"sort_keys": True, "indent": 2, "ensure_ascii": False}
 # comparable surface and reported as a flag instead.
 _SPA_CATCH_ALL = "/{full_path}"
 _STATIC_FRONTEND_ROUTES = frozenset({"MOUNT /assets", f"GET {_SPA_CATCH_ALL}"})
+
+# fastapi 0.138.0 changed what include_router() leaves behind. It used to flatten
+# each included router's routes into the parent as APIRoute objects; it now
+# appends one opaque _IncludedRouter per include and resolves through it at
+# request time. Requests route identically either way — what moves is
+# introspection, and Corvus decides capability ownership by introspection.
+# Reading .routes directly against the wrapper sees pathless placeholders and
+# concludes every capability owns nothing.
+#
+# iter_route_contexts is fastapi's own supported way through it: the same public
+# helper its OpenAPI generator uses, yielding one RouteContext per route the app
+# effectively serves, with include prefixes already applied. Absent below 0.138,
+# where the list was already flat and needs no resolution.
+try:  # fastapi >= 0.138
+    from fastapi.routing import iter_route_contexts as _iter_route_contexts
+except ImportError:  # pragma: no cover — fastapi < 0.138 flattens on include
+    _iter_route_contexts = None
+
+
+def effective_routes(app) -> list:
+    """Every route ``app`` actually serves, with included routers resolved.
+
+    The one accessor for "what is mounted here". Takes anything carrying a
+    ``routes`` list — a FastAPI app or a bare APIRouter — and returns objects
+    that answer ``path``, ``methods``, ``name`` and ``include_in_schema`` for
+    the *effective* route, so callers never learn which fastapi arrangement
+    produced them.
+
+    Note the attribute contract differs subtly by version and callers must not
+    assume ``hasattr``: a RouteContext always *has* ``path`` and ``methods``,
+    and reports their absence by returning ``None``. Test membership with
+    ``getattr(r, "methods", None)``, never ``hasattr(r, "methods")``.
+    """
+    routes = list(app.routes)
+    if _iter_route_contexts is None:
+        return routes
+    return list(_iter_route_contexts(routes))
+
+
+def mounted_paths(app) -> set[str]:
+    """The set of paths ``app`` serves, included routers resolved.
+
+    This is the question capability ownership actually asks — "is this surface
+    mounted?" — and the answer a disabled capability must make empty.
+    """
+    return {
+        path
+        for path in (getattr(r, "path", None) for r in effective_routes(app))
+        if path is not None
+    }
 
 
 def _discover_tenants() -> list[str]:
@@ -92,7 +148,7 @@ def describe_surface(app, tenant_id: str) -> dict:
     # built, so they are machine state, not composition. Left in, the snapshot
     # would flip between a developer box and a clean CI checkout and the tripwire
     # would be useless. Record the condition, exclude the routes.
-    bundle_present = any(getattr(r, "name", None) == "assets" for r in app.routes)
+    bundle_present = any(getattr(r, "name", None) == "assets" for r in effective_routes(app))
     spec.get("paths", {}).pop(_SPA_CATCH_ALL, None)
 
     routes = []
@@ -113,12 +169,17 @@ def describe_surface(app, tenant_id: str) -> dict:
     # apps (/mcp), static files, and anything with include_in_schema=False. A
     # composition record that ignored these would call /mcp "absent" while it
     # was still mounted and serving.
+    # "Has no methods" is spelled as a falsy value rather than a missing
+    # attribute on purpose: a RouteContext always carries the attribute and
+    # says "none" with None (or, for a mount reached through an include, an
+    # empty set). hasattr here would silently call every mount a method route.
     unschematized = sorted(
         {
-            f"{sorted(getattr(r, 'methods', None) or ['MOUNT'])[0]} {getattr(r, 'path', '')}"
-            for r in app.routes
+            f"{sorted(getattr(r, 'methods', None) or ['MOUNT'])[0]} "
+            f"{getattr(r, 'path', None) or ''}"
+            for r in effective_routes(app)
             if getattr(r, "include_in_schema", True) is False
-            or not hasattr(r, "methods")
+            or not getattr(r, "methods", None)
         }
         - _STATIC_FRONTEND_ROUTES
     )
@@ -220,10 +281,11 @@ def _reconcile_jobs(tenant_id: str) -> tuple[list[str], list[str]]:
         "from app.composition.profiles import resolve_profile;"
         "from app.composition.factory import create_app;"
         "from app.tenant import tenant;"
+        "from scripts.capability_snapshot import mounted_paths;"
         "p=resolve_profile(tenant);"
         "a=create_app(profile=p, tenant=tenant);"
         "print(json.dumps({'jobs': list(p.jobs()),"
-        " 'paths': sorted({r.path for r in a.routes if hasattr(r,'path')})}))"
+        " 'paths': sorted(mounted_paths(a))}))"
     )
     proc = subprocess.run(
         [sys.executable, "-c", probe],

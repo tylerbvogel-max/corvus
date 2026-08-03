@@ -38,20 +38,23 @@ dependencies = [
     # starlette 1.3.1 clears PYSEC-2026-161, -2280, -2281, -248 and -249; nothing
     # below 1.3.1 clears all five.
     #
-    # fastapi deliberately does NOT move with it. It does not cap starlette — it
-    # declares a bare starlette>=0.46.0 — so 0.135.1 admits the 1.x line on its
-    # own. Moving fastapi anyway was tried and reverted: every fastapi published
-    # after starlette 1.3.1 (0.138.0 onward) replaces the flattened routes that
-    # include_router used to append to app.routes with a single _IncludedRouter
-    # wrapper per include. Requests still route correctly through it, but the
-    # composition model reads app.routes to decide which capability owns which
-    # surface, so the wrapper makes every capability look like it owns nothing:
-    # 12 composition tests fail and the recorded route baseline goes empty.
+    # fastapi did not move with starlette on 2026-08-03 and moves on its own
+    # here, because 0.138.0 changed what include_router() leaves in app.routes:
+    # one opaque _IncludedRouter per include instead of the included router's
+    # routes flattened in. Requests route identically through it — what moved is
+    # introspection, and Corvus decides capability ownership by introspection,
+    # so against the wrapper every capability read as owning nothing.
     #
-    # That is a composition-contract change and wants its own node with its own
-    # verification. Pinning it here would smuggle a contract rewrite into a
-    # security bump. See deps-fastapi-included-router on the long-horizon ledger.
-    "fastapi==0.135.1",
+    # Route enumeration now goes through scripts.capability_snapshot.
+    # effective_routes, which resolves the wrapper via fastapi's own public
+    # iter_route_contexts (the helper its OpenAPI generator uses) and falls back
+    # to a plain read below 0.138. The proof it re-describes rather than
+    # redefines: all six recorded composition artifacts came out byte-identical
+    # on 0.135.1 and 0.141.1. See deps-fastapi-included-router.
+    #
+    # Note fastapi still does not cap starlette (bare starlette>=0.46.0), so the
+    # 1.x pin below remains ours to hold rather than something fastapi enforces.
+    "fastapi==0.141.1",
     "starlette==1.3.1",
     "uvicorn[standard]==0.41.0",
     "pydantic==2.12.5",

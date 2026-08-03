@@ -19,6 +19,7 @@ from fastapi import APIRouter
 from app.composition.capabilities import CAPABILITIES, Capability, STARTUP_STEPS
 from app.composition.factory import create_app
 from app.composition.profiles import CapabilityProfile, ProfileError, resolve_profile
+from scripts.capability_snapshot import mounted_paths
 
 
 class _FakeTenant:
@@ -46,7 +47,15 @@ _GATED_ONLY_PATHS = ("/admin/documents/upload", "/admin/eval/runs")
 
 
 def _paths(app) -> set[str]:
-    return {r.path for r in app.routes if hasattr(r, "path")}
+    """What this app actually serves.
+
+    Delegated, not reimplemented. Reading app.routes here would have been a
+    correct spelling until fastapi 0.138.0 stopped flattening included routers
+    into it, at which point every assertion below would have read "this
+    capability owns nothing" and passed for the wrong reason. See
+    scripts.capability_snapshot.effective_routes.
+    """
+    return mounted_paths(app)
 
 
 # ── Absence, not refusal ───────────────────────────────────────────────────
@@ -112,7 +121,7 @@ def test_disabled_capability_does_not_answer_with_a_later_authorization_failure(
     client = TestClient(memory_only, raise_server_exceptions=False)
 
     full = create_app(profile=_profile(*Capability), tenant=_FakeTenant())
-    served_when_enabled = {r.path for r in full.routes if hasattr(r, "path")}
+    served_when_enabled = _paths(full)
 
     for gated_path in _GATED_ONLY_PATHS:
         assert gated_path in served_when_enabled, (
@@ -164,12 +173,12 @@ def test_external_api_off_means_no_mcp_transport():
     half that matters, and CI's snapshot check proves it in a clean process.
     """
     without = create_app(profile=_profile(Capability.MEMORY), tenant=_FakeTenant())
-    assert not any(r.path.startswith("/mcp") for r in without.routes if hasattr(r, "path"))
+    assert not any(p.startswith("/mcp") for p in _paths(without))
 
     with_external = create_app(
         profile=_profile(Capability.MEMORY, Capability.EXTERNAL_API), tenant=_FakeTenant()
     )
-    assert any(r.path.startswith("/mcp") for r in with_external.routes if hasattr(r, "path"))
+    assert any(p.startswith("/mcp") for p in _paths(with_external))
 
 
 @pytest.mark.hermetic
@@ -325,19 +334,19 @@ def test_memory_backed_routers_need_memory_even_when_their_owner_is_granted():
     """
     operator_only = create_app(profile=_profile(Capability.OPERATOR), tenant=_FakeTenant())
     assert not any(
-        r.path.startswith("/roadmap-ledgers") for r in operator_only.routes if hasattr(r, "path")
+        p.startswith("/roadmap-ledgers") for p in _paths(operator_only)
     ), "roadmap ledgers mounted without the memory graph that stores them"
 
     with_memory = create_app(
         profile=_profile(Capability.OPERATOR, Capability.MEMORY), tenant=_FakeTenant()
     )
     assert any(
-        r.path.startswith("/roadmap-ledgers") for r in with_memory.routes if hasattr(r, "path")
+        p.startswith("/roadmap-ledgers") for p in _paths(with_memory)
     ), "roadmap ledgers absent even with both capabilities granted"
 
     ingestion_only = create_app(profile=_profile(Capability.INGESTION), tenant=_FakeTenant())
     assert not any(
-        r.path.startswith("/admin/reference") for r in ingestion_only.routes if hasattr(r, "path")
+        p.startswith("/admin/reference") for p in _paths(ingestion_only)
     ), "reference library mounted without the memory graph it writes to"
 
 
@@ -361,7 +370,7 @@ def test_every_declared_job_targets_a_route_its_capability_mounts():
         if not spec.jobs:
             continue
         app = create_app(profile=_profile(capability), tenant=_FakeTenant())
-        mounted = {r.path for r in app.routes if hasattr(r, "path")}
+        mounted = _paths(app)
         for unit in spec.jobs:
             service = systemd / (unit.removesuffix(".timer") + ".service")
             assert service.exists(), f"{capability.value} claims {unit}, absent from harness/systemd"

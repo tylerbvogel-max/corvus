@@ -158,8 +158,12 @@ def test_model_versions_snapshot_shape():
 def test_eval_runs_router_has_no_mutation_routes():
     """Pattern #3: runs are append-only — no PUT/PATCH/DELETE exposed."""
     from app.routers.eval_runs import router
+    from scripts.capability_snapshot import effective_routes
 
-    for route in router.routes:
+    # Through the accessor, so this keeps holding if the router ever includes a
+    # sub-router: fastapi 0.138+ would hide those behind a wrapper whose empty
+    # `methods` would satisfy the assertion without inspecting anything.
+    for route in effective_routes(router):
         methods = getattr(route, "methods", set()) or set()
         assert not (methods & {"PUT", "PATCH", "DELETE"}), (
             f"append-only invariant violated: {route.path} exposes {methods}"
