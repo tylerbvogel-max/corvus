@@ -414,16 +414,44 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (ledger: RoadmapLedger) => void;
 }) {
-  const [form, setForm] = useState({
-    disposition: 'partial' as 'complete' | 'partial' | 'failed' | 'blocked',
+  // A record that already carries a receipt is being countersigned, not
+  // reconciled: the human is accepting an outcome that is already recorded.
+  // The backend enforces that by refusing a receipt which disagrees with the
+  // one on file about disposition or verification, so those two are seeded
+  // from it and locked below — a rule you cannot break by accident beats a 409
+  // explaining the rule after the fact. Verifier seeds from the prior receipt
+  // too, since that is who did the verifying the human is now accepting, and
+  // the schema requires it to differ from the acceptor.
+  // Retired AND carrying a receipt — both halves matter. A record holding a
+  // PARTIAL receipt is still open and may legitimately be re-reconciled to a
+  // different disposition, so keying this off "has a receipt" alone would lock
+  // a field the backend was perfectly willing to change. reviewSignal owns the
+  // retired-status list; don't restate it here.
+  const prior = node.reconciliationHistory?.at(-1);
+  const countersigning = reviewSignal(node) === 'retired' && Boolean(prior);
+
+  const [form, setForm] = useState<{
+    disposition: 'complete' | 'partial' | 'failed' | 'blocked';
+    resultRecap: string;
+    verificationPassed: boolean;
+    confidence: number;
+    claims: string;
+    limitations: string;
+    disclosures: string;
+    evidence: string;
+    verifier: string;
+    acceptedBy: string;
+    nextAction: string;
+  }>({
+    disposition: prior?.disposition ?? 'partial',
     resultRecap: '',
-    verificationPassed: false,
+    verificationPassed: prior?.verificationPassed ?? false,
     confidence: 80,
     claims: '',
     limitations: '',
     disclosures: '',
-    evidence: '',
-    verifier: '',
+    evidence: (prior?.evidence ?? []).join('\n'),
+    verifier: prior?.verifier ?? '',
     acceptedBy: 'tyler',
     nextAction: '',
   });
@@ -464,7 +492,7 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
         <header>
           <div>
             <span>HARNESS RETURN → HUMAN ACCEPTANCE</span>
-            <h3>Reconcile verified outcome</h3>
+            <h3>{countersigning ? 'Countersign recorded outcome' : 'Reconcile verified outcome'}</h3>
           </div>
           <button type="button" onClick={onClose}>×</button>
         </header>
@@ -475,8 +503,8 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
         </div>
         <div className="rl-form-grid two">
           <label>
-            <span>Disposition</span>
-            <select value={form.disposition} onChange={e => setForm({ ...form, disposition: e.target.value as typeof form.disposition })}>
+            <span>Disposition {countersigning && <small>locked to the recorded outcome</small>}</span>
+            <select disabled={countersigning} value={form.disposition} onChange={e => setForm({ ...form, disposition: e.target.value as typeof form.disposition })}>
               <option value="complete">Complete</option>
               <option value="partial">Partial</option>
               <option value="failed">Failed</option>
@@ -488,7 +516,7 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
             <input type="number" min={0} max={100} value={form.confidence} onChange={e => setForm({ ...form, confidence: Number(e.target.value) })} />
           </label>
         </div>
-        <label className="rl-check"><input type="checkbox" checked={form.verificationPassed} onChange={e => setForm({ ...form, verificationPassed: e.target.checked })} /><span>Independent verifier passed the recorded checklist</span></label>
+        <label className="rl-check"><input type="checkbox" disabled={countersigning} checked={form.verificationPassed} onChange={e => setForm({ ...form, verificationPassed: e.target.checked })} /><span>Independent verifier passed the recorded checklist</span></label>
         <label><span>Result recap</span><textarea required className="tall" value={form.resultRecap} onChange={e => setForm({ ...form, resultRecap: e.target.value })} /></label>
         <div className="rl-form-grid two">
           <label><span>Verifier</span><input required value={form.verifier} onChange={e => setForm({ ...form, verifier: e.target.value })} placeholder="qa-agent / eval run / reviewer" /></label>
@@ -503,13 +531,17 @@ function ReconciliationDialog({ ledger, node, onClose, onSaved }: {
         <label><span>Next action <small>optional</small></span><textarea value={form.nextAction} onChange={e => setForm({ ...form, nextAction: e.target.value })} /></label>
         <DetailBlock label="Recorded verification checklist" value={node.verification} wide />
         <p className="rl-reconcile-note">
-          The harness decides who acts and what permissions it receives. This receipt records only durable claims, evidence, limitations, independent verification, and human acceptance. A record closes only when disposition is complete and verification passed.
+          {countersigning
+            ? 'This record is already closed and stays that way. A countersign affirms the outcome on file — it cannot change what the record claims, which is why disposition and verification are locked. Reopen the record deliberately to change those. Completion time keeps its original instant, not the moment you sign.'
+            : 'The harness decides who acts and what permissions it receives. This receipt records only durable claims, evidence, limitations, independent verification, and human acceptance. A record closes only when disposition is complete and verification passed.'}
         </p>
         {error && <p className="rl-form-error">{error}</p>}
         <footer>
           <button type="button" onClick={onClose}>Cancel</button>
           <button className="primary" disabled={busy || !form.resultRecap.trim() || !form.verifier.trim() || !form.acceptedBy.trim()}>
-            {busy ? 'Reconciling…' : 'Accept receipt'}
+            {busy
+              ? (countersigning ? 'Countersigning…' : 'Reconciling…')
+              : (countersigning ? 'Countersign' : 'Accept receipt')}
           </button>
         </footer>
       </form>
@@ -1005,8 +1037,17 @@ export default function RoadmapLedgersPage() {
                                         <small>{strategicHorizon ? `${strategicHorizon.short} · ${strategicHorizon.description}` : 'Planning horizon not yet classified'} · {node.reviewCadence ?? 'No'} review cadence · next {asDate(node.nextReviewAt)}</small>
                                       </div>
                                       <div>
-                                        {review !== 'retired' && (
-                                          <button className="reconcile" type="button" onClick={() => openReconciliation(node)}>Reconcile outcome</button>
+                                        {/* A retired record is frozen in substance, not sealed against
+                                            signature: the backend accepts a later receipt that affirms the
+                                            one on file. Hiding this button on retired records made that
+                                            countersign unreachable — the record closes in the same call
+                                            that writes its receipt, so it sealed carrying an acceptance
+                                            no human had given. Offered only where there is a receipt to
+                                            affirm; a retired record with none has nothing to countersign. */}
+                                        {(review !== 'retired' || receipts.length > 0) && (
+                                          <button className="reconcile" type="button" onClick={() => openReconciliation(node)}>
+                                            {review === 'retired' ? 'Countersign' : 'Reconcile outcome'}
+                                          </button>
                                         )}
                                         <button type="button" onClick={() => { setEditing(node); setDialog('record'); }}>Edit record</button>
                                         {typeof node.href === 'string' && <a href={node.href} target="_blank" rel="noreferrer">Open reference ↗</a>}

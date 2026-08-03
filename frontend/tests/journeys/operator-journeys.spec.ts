@@ -9,6 +9,12 @@ import { MIND_API, bootOperator, openNavItem, openWindowByKey } from './helpers'
 
 test.describe.configure({ mode: 'serial' });
 
+async function receiptCount(page: import('@playwright/test').Page): Promise<number> {
+  const ledger = await (await page.request.get(`${MIND_API}/roadmap-ledgers/journey-fixture`)).json();
+  const node = ledger.state.nodes.find((n: { id: string }) => n.id === 'journey-record-1');
+  return node?.reconciliationHistory?.length ?? 0;
+}
+
 test('proposal approval auto-applies in one step', async ({ page }) => {
   await bootOperator(page);
   await openNavItem(page, 'Steer', 'Proposal Queue');
@@ -101,4 +107,87 @@ test('roadmap record reconciliation renders a receipt', async ({ page }) => {
   expect(node.reconciliationHistory[0].disposition).toBe('partial');
   expect(node.reconciliationHistory[0].verifier).toBe('journey-spec');
   expect(node.reconciliationHistory[0].acceptedBy).toBe('journey-operator');
+});
+
+/* Runs after the reconcile journey above and depends on its state (serial
+   mode, one worker): that test leaves journey-record-1 carrying a single
+   PARTIAL receipt, so the record is not retired and can still be closed here.
+
+   This exists because a real bug shipped through the gap it covers. The
+   backend learned to accept a countersign on a closed record, but the dossier
+   only rendered its reconcile button when reviewSignal(node) !== 'retired' —
+   so the affordance vanished at exactly the moment it became meaningful, and
+   a record that closes in the same call that writes its receipt sealed
+   carrying an acceptance no human had given. Nothing caught it: every journey
+   above stops at a PARTIAL receipt, which never retires anything. */
+test('a closed record can still be countersigned, and only affirmed', async ({ page }) => {
+  await bootOperator(page);
+  await openNavItem(page, 'Steer', 'Roadmap Ledgers');
+
+  await expect(page.getByRole('heading', { name: /Journey Fixture Project/ })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Expand Journey record' }).click();
+
+  // Receipt counts are read, not assumed. Hard-coding them would couple this
+  // test to whether the reconcile journey above ran first, which made an
+  // isolated `--grep` run fail for a reason that had nothing to do with the
+  // behaviour under test.
+  const before = await receiptCount(page);
+  const plural = (n: number) => `RECONCILIATION \\/ ${n} RECEIPT${n === 1 ? '' : 'S'}`;
+
+  // Close the record: complete + verification passed is what retires it.
+  await page.getByRole('button', { name: 'Reconcile outcome' }).click();
+  await page.getByLabel('Disposition').selectOption('complete');
+  await page.getByLabel(/Independent verifier passed/).check();
+  await page.getByLabel('Result recap').fill('Closed so the countersign path can be exercised.');
+  await page.getByLabel('Verifier', { exact: true }).fill('journey-verifier');
+  await page.getByLabel('Accepted by').fill('journey-agent');
+  // Evidence is required once a receipt claims completion, and it must carry a
+  // commit-shaped token: done means committed, so a record cannot close while
+  // its work exists only in a working tree. The fixture ledger has no
+  // project_path, so the token is shape-checked but never resolved.
+  await page.getByLabel(/^Evidence/).fill('commit deadbeefcafe1234 — journey fixture');
+  await page.getByRole('button', { name: 'Accept receipt' }).click();
+  await expect(page.getByText(new RegExp(plural(before + 1)))).toBeVisible({ timeout: 30_000 });
+
+  // THE REGRESSION: the button must survive retirement, renamed for what it
+  // now does. Before the fix it disappeared here and the record was unsignable.
+  const countersign = page.getByRole('button', { name: 'Countersign', exact: true });
+  await expect(countersign).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('button', { name: 'Reconcile outcome' })).toHaveCount(0);
+
+  await countersign.click();
+  await expect(page.getByRole('heading', { name: 'Countersign recorded outcome' })).toBeVisible();
+
+  // The backend refuses a receipt that disagrees with the one on file, so the
+  // UI must make that disagreement unreachable rather than explain it in a 409.
+  await expect(page.getByLabel('Disposition')).toBeDisabled();
+  await expect(page.getByLabel('Disposition')).toHaveValue('complete');
+  await expect(page.getByLabel(/Independent verifier passed/)).toBeDisabled();
+  await expect(page.getByLabel(/Independent verifier passed/)).toBeChecked();
+  // Seeded from the prior receipt: this is the verifier being accepted.
+  await expect(page.getByLabel('Verifier', { exact: true })).toHaveValue('journey-verifier');
+
+  await page.getByLabel('Result recap').fill('Countersigned by the operator journey.');
+  await page.getByLabel('Accepted by').fill('journey-human');
+  await page.getByRole('button', { name: 'Countersign', exact: true }).last().click();
+
+  await expect(page.getByText(new RegExp(plural(before + 2)))).toBeVisible({ timeout: 30_000 });
+
+  // Backend state: the countersign affirms without re-litigating. Status stays
+  // done, the outcome is unchanged, and completedAt keeps the instant the work
+  // landed rather than the instant it was signed for.
+  const ledger = await (await page.request.get(`${MIND_API}/roadmap-ledgers/journey-fixture`)).json();
+  const node = ledger.state.nodes.find((n: { id: string }) => n.id === 'journey-record-1');
+  expect(node.status).toBe('done');
+  expect(node.reconciliationHistory).toHaveLength(before + 2);
+
+  const closing = node.reconciliationHistory[before];
+  const signed = node.reconciliationHistory[before + 1];
+  expect(signed.acceptedBy).toBe('journey-human');
+  expect(signed.verifier).toBe('journey-verifier');
+  expect(signed.verifier).not.toBe(signed.acceptedBy);
+  // Affirmation, not re-litigation.
+  expect(signed.disposition).toBe(closing.disposition);
+  expect(signed.verificationPassed).toBe(closing.verificationPassed);
+  expect(node.completedAt).toBe(closing.acceptedAt);
 });

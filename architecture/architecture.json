@@ -3,14 +3,14 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "a22dd1895c5c5dd67c9572e1b0f952c5d0afd1ae717887d7aa58fb273fa45614",
+    "fingerprint": "159ffd964bc48fe6e838fcc8c26201b69d7dfe6a94514b5f7eb2530bcf3f6174",
     "files": 484
   },
   "frontend": {
     "available": true,
     "totals": {
       "files": 80,
-      "loc": 44762,
+      "loc": 44803,
       "files_calling_api": 43,
       "files_using_fetch": 10,
       "distinct_urls": 205
@@ -1906,7 +1906,7 @@
       },
       "frontend/src/components/RoadmapLedgersPage.tsx": {
         "path": "frontend/src/components/RoadmapLedgersPage.tsx",
-        "loc": 1085,
+        "loc": 1126,
         "imports": [
           "frontend/src/api/operator.ts",
           "frontend/src/components/RoadmapLedgersPage.tsx"
