@@ -8,7 +8,6 @@ janitor-relevant graph state without side effects.
 
 import json
 import logging
-import time
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,8 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import IntegrityFinding, MemoryChangeEvent, Neuron
-from app.observability.context import bound
+from app.observability.jobs import scheduled_run
 from app.services.mind_janitors import LESSON_TYPES, run_janitors
+from app.tenant import tenant
 
 logger = logging.getLogger(__name__)
 
@@ -59,24 +59,15 @@ async def janitor_run(
 ):
     """Run the selected janitor passes and return the combined report."""
     assert max_pairs >= 1, "max_pairs must be positive"
-    # Background-job correlation: every line the passes emit — including any
-    # warning they raise — carries the job identity, so a scheduled run that
-    # misbehaves can be reconstructed from the log stream alone rather than
-    # from whichever operator happened to be watching the response.
-    with bound(job="janitor"):
-        started = time.monotonic()
-        logger.info("janitor run starting", extra={
-            "event": "job.start", "job": "janitor",
-        })
+    # Correlated job identity, start/complete logging, and the run receipt that
+    # is this job's real health signal — systemd only ever knew whether curl ran.
+    with scheduled_run("janitor", tenant.tenant_id) as detail:
         report = await run_janitors(
             db, consolidation=consolidation, staleness=staleness,
             decay=decay, lint=lint, plasticity=plasticity, max_pairs=max_pairs,
         )
         assert isinstance(report, dict), "janitor report must be a dict"
-        logger.info("janitor run complete", extra={
-            "event": "job.complete", "job": "janitor", "outcome": "ok",
-            "duration_ms": round((time.monotonic() - started) * 1000),
-        })
+        detail["passes"] = sorted(k for k in report if isinstance(report, dict))
     return json.loads(json.dumps(report, default=str))
 
 

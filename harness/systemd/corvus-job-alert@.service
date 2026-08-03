@@ -1,0 +1,12 @@
+[Unit]
+# Instantiated by OnFailure= on every scheduled Corvus job. %i is the unit
+# that failed, so one template covers all of them and any job added later.
+Description=Alert that scheduled job %i failed
+Documentation=file:///home/tylerbvogel/.local/state/corvus-job-alerts/
+
+[Service]
+Type=oneshot
+ExecStart=/home/tylerbvogel/.local/bin/corvus-job-alert %i
+# notify-send needs the session bus; a systemd user service does not inherit it.
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=DISPLAY=:0

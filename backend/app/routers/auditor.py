@@ -13,9 +13,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.observability.jobs import scheduled_run
 from app.services.memory_quality_auditor import (
     _prior_ran_at, _sessions_distilled_since, auditor_metrics, run_audit,
 )
+from app.tenant import tenant
 
 router = APIRouter(prefix="/auditor", tags=["memory"])
 
@@ -41,10 +43,12 @@ async def auditor_run(
 ):
     """Run one auditor pass. mode=auto lets the evidence clock decide;
     light/deep force the pass (deep = admin request per the cadence spec)."""
-    report = await run_audit(db, mode=mode, max_candidates=max_candidates,
-                             max_critic=max_critic,
-                             trigger="admin" if mode != "auto" else "timer")
-    assert isinstance(report, dict), "auditor report must be a dict"
+    with scheduled_run("auditor", tenant.tenant_id) as detail:
+        report = await run_audit(db, mode=mode, max_candidates=max_candidates,
+                                 max_critic=max_critic,
+                                 trigger="admin" if mode != "auto" else "timer")
+        assert isinstance(report, dict), "auditor report must be a dict"
+        detail["mode"] = mode
     return json.loads(json.dumps(report, default=str))
 
 

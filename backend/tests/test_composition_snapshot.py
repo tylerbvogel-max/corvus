@@ -53,8 +53,10 @@ _PREFACTORY_ROUTE_COUNT = 242
 _EXPECTED_ROUTE_COUNTS = {
     # +1 on 2026-08-02: GET /ready, the readiness half of the liveness/readiness
     # split (record durability-operational-envelope). Core route, every profile.
-    "corvus-mind": 213,
-    "corvus-locomo": 80,
+    # +1 again: GET /metrics/mind/jobs, the scheduled-job health surface from
+    # the same record. Memory-owned, so corvus-locomo gets it too.
+    "corvus-mind": 214,
+    "corvus-locomo": 81,
 }
 
 # Re-homed out of routers/compliance.py into app/operations/ by record 04.

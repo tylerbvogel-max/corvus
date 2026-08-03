@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.services.mind_metrics import collect_all
+from app.observability.jobs import inventory_health
 
 router = APIRouter(prefix="/metrics", tags=["memory"])
 
@@ -113,6 +114,18 @@ async def mind_locomo_run():
     report = run_status()
     assert isinstance(report, dict), "locomo run status must be a dict"
     return report
+
+
+@router.get("/mind/jobs")
+async def mind_jobs():
+    """Scheduled-job inventory judged against its run receipts.
+
+    systemd can only report whether the command ran — every timer invokes
+    `curl -s`, which exits 0 on an HTTP error, so `Result=success` never meant
+    the work succeeded. The receipts each run writes are the real health
+    signal, and this is where they are read.
+    """
+    return inventory_health()
 
 
 @router.get("/mind/delivery-pathways")

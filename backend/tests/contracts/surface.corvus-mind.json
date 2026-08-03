@@ -1,6 +1,6 @@
 {
-  "documented_path_count": 198,
-  "method_level_route_count": 213,
+  "documented_path_count": 199,
+  "method_level_route_count": 214,
   "routes": [
     {
       "method": "GET",
@@ -1445,6 +1445,15 @@
       "operation_id": "mind_injection_channels_metrics_mind_injection_channels_get",
       "path": "/metrics/mind/injection-channels",
       "schema_fingerprint": "1098ca3c1d25b524",
+      "tags": [
+        "memory"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "mind_jobs_metrics_mind_jobs_get",
+      "path": "/metrics/mind/jobs",
+      "schema_fingerprint": "7707314787bdcd87",
       "tags": [
         "memory"
       ]

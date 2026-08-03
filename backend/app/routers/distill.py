@@ -10,7 +10,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.observability.jobs import scheduled_run
 from app.services.distiller import MAX_SESSIONS_PER_RUN, find_ready_logs, run_distillation
+from app.tenant import tenant
 
 router = APIRouter(prefix="/distill", tags=["memory"])
 
@@ -31,4 +33,8 @@ async def distill_run(
 ):
     """Distill up to `limit` ready session logs into candidate lessons."""
     assert limit >= 1, "limit must be positive"
-    return await run_distillation(db, limit=limit, min_quiet_minutes=min_quiet_minutes)
+    with scheduled_run("distill", tenant.tenant_id) as detail:
+        report = await run_distillation(
+            db, limit=limit, min_quiet_minutes=min_quiet_minutes)
+        detail["limit"] = limit
+    return report

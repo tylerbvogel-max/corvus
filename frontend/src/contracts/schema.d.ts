@@ -3182,6 +3182,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metrics/mind/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mind Jobs
+         * @description Scheduled-job inventory judged against its run receipts.
+         *
+         *     systemd can only report whether the command ran — every timer invokes
+         *     `curl -s`, which exits 0 on an HTTP error, so `Result=success` never meant
+         *     the work succeeded. The receipts each run writes are the real health
+         *     signal, and this is where they are read.
+         */
+        get: operations["mind_jobs_metrics_mind_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics/mind/locomo-run": {
         parameters: {
             query?: never;
@@ -11700,6 +11725,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mind_jobs_metrics_mind_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "fe009cea50776f5ea2462a395655daba5de8f0ed5e11ef07f06ae7872a550617",
-    "files": 478
+    "fingerprint": "ac63cc9831e9e70222a6a7f6fb8c3bff1bba9dc8836e3b04c29b327a7f374bd2",
+    "files": 480
   },
   "frontend": {
     "available": true,
@@ -3100,9 +3100,9 @@
   "route_join": {
     "available": true,
     "totals": {
-      "backend_routes": 201,
+      "backend_routes": 202,
       "routes_called_by_frontend": 198,
-      "routes_with_no_frontend_caller": 3,
+      "routes_with_no_frontend_caller": 4,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
@@ -4111,16 +4111,17 @@
     "routes_with_no_frontend_caller": [
       "/boom",
       "/echo",
+      "/metrics/mind/jobs",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 399,
-    "loc": 91066,
-    "routes": 216,
-    "import_edges": 1086,
-    "call_edges": 718,
+    "modules": 401,
+    "loc": 91681,
+    "routes": 217,
+    "import_edges": 1097,
+    "call_edges": 725,
     "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -7502,6 +7503,95 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "app.observability.jobs": {
+      "path": "backend/app/observability/jobs.py",
+      "module": "app.observability.jobs",
+      "loc": 341,
+      "imports": [
+        "app.observability.context"
+      ],
+      "external_imports": [
+        "__future__",
+        "contextlib",
+        "dataclasses",
+        "datetime",
+        "json",
+        "logging",
+        "os",
+        "pathlib",
+        "typing"
+      ],
+      "functions": {
+        "ScheduledJob.as_dict": {
+          "name": "ScheduledJob.as_dict",
+          "line": 68,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_receipt_path": {
+          "name": "_receipt_path",
+          "line": 177,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "read_receipt": {
+          "name": "read_receipt",
+          "line": 181,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "write_receipt": {
+          "name": "write_receipt",
+          "line": 194,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_now": {
+          "name": "_now",
+          "line": 204,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "job_receipt": {
+          "name": "job_receipt",
+          "line": 209,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "scheduled_run": {
+          "name": "scheduled_run",
+          "line": 252,
+          "is_async": false,
+          "calls": [
+            "app.observability.context::bound"
+          ],
+          "is_route": false
+        },
+        "job_health": {
+          "name": "job_health",
+          "line": 284,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "inventory_health": {
+          "name": "inventory_health",
+          "line": 327,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "app.observability.json_logging": {
       "path": "backend/app/observability/json_logging.py",
       "module": "app.observability.json_logging",
@@ -9182,11 +9272,13 @@
     "app.routers.auditor": {
       "path": "backend/app/routers/auditor.py",
       "module": "app.routers.auditor",
-      "loc": 80,
+      "loc": 84,
       "imports": [
         "app.database",
+        "app.observability.jobs",
         "app.services.memory_quality_auditor",
-        "app.services.mind_janitors"
+        "app.services.mind_janitors",
+        "app.tenant"
       ],
       "external_imports": [
         "fastapi",
@@ -9196,7 +9288,7 @@
       "functions": {
         "auditor_status": {
           "name": "auditor_status",
-          "line": 24,
+          "line": 26,
           "is_async": true,
           "calls": [
             "app.services.memory_quality_auditor::_prior_ran_at",
@@ -9207,16 +9299,17 @@
         },
         "auditor_run": {
           "name": "auditor_run",
-          "line": 35,
+          "line": 37,
           "is_async": true,
           "calls": [
+            "app.observability.jobs::scheduled_run",
             "app.services.memory_quality_auditor::run_audit"
           ],
           "is_route": true
         },
         "audit_one": {
           "name": "audit_one",
-          "line": 52,
+          "line": 56,
           "is_async": true,
           "calls": [
             "app.services.memory_quality_auditor::run_audit"
@@ -9225,7 +9318,7 @@
         },
         "auditor_candidates": {
           "name": "auditor_candidates",
-          "line": 65,
+          "line": 69,
           "is_async": true,
           "calls": [
             "app.services.mind_janitors::_load_lessons",
@@ -9243,7 +9336,7 @@
           "full_path": "/auditor/status",
           "mounted_on": "router",
           "handler": "auditor_status",
-          "line": 24
+          "line": 26
         },
         {
           "method": "POST",
@@ -9252,7 +9345,7 @@
           "full_path": "/auditor/run",
           "mounted_on": "router",
           "handler": "auditor_run",
-          "line": 35
+          "line": 37
         },
         {
           "method": "POST",
@@ -9261,7 +9354,7 @@
           "full_path": "/auditor/audit/{neuron_id}",
           "mounted_on": "router",
           "handler": "audit_one",
-          "line": 52
+          "line": 56
         },
         {
           "method": "GET",
@@ -9270,7 +9363,7 @@
           "full_path": "/auditor/candidates",
           "mounted_on": "router",
           "handler": "auditor_candidates",
-          "line": 65
+          "line": 69
         }
       ],
       "db_writes": [],
@@ -9612,11 +9705,13 @@
     "app.routers.compile": {
       "path": "backend/app/routers/compile.py",
       "module": "app.routers.compile",
-      "loc": 43,
+      "loc": 46,
       "imports": [
         "app.database",
+        "app.observability.jobs",
         "app.services.mind_janitors",
-        "app.services.skill_compiler"
+        "app.services.skill_compiler",
+        "app.tenant"
       ],
       "external_imports": [
         "fastapi",
@@ -9625,7 +9720,7 @@
       "functions": {
         "compile_status": {
           "name": "compile_status",
-          "line": 20,
+          "line": 22,
           "is_async": true,
           "calls": [
             "app.services.mind_janitors::_load_lessons",
@@ -9636,9 +9731,10 @@
         },
         "compile_run": {
           "name": "compile_run",
-          "line": 38,
+          "line": 40,
           "is_async": true,
           "calls": [
+            "app.observability.jobs::scheduled_run",
             "app.services.skill_compiler::run_compile"
           ],
           "is_route": true
@@ -9652,7 +9748,7 @@
           "full_path": "/compile/status",
           "mounted_on": "router",
           "handler": "compile_status",
-          "line": 20
+          "line": 22
         },
         {
           "method": "POST",
@@ -9661,7 +9757,7 @@
           "full_path": "/compile/run",
           "mounted_on": "router",
           "handler": "compile_run",
-          "line": 38
+          "line": 40
         }
       ],
       "db_writes": [],
@@ -9670,10 +9766,12 @@
     "app.routers.distill": {
       "path": "backend/app/routers/distill.py",
       "module": "app.routers.distill",
-      "loc": 35,
+      "loc": 41,
       "imports": [
         "app.database",
-        "app.services.distiller"
+        "app.observability.jobs",
+        "app.services.distiller",
+        "app.tenant"
       ],
       "external_imports": [
         "fastapi",
@@ -9682,7 +9780,7 @@
       "functions": {
         "distill_status": {
           "name": "distill_status",
-          "line": 19,
+          "line": 21,
           "is_async": true,
           "calls": [
             "app.services.distiller::find_ready_logs"
@@ -9691,9 +9789,10 @@
         },
         "distill_run": {
           "name": "distill_run",
-          "line": 27,
+          "line": 29,
           "is_async": true,
           "calls": [
+            "app.observability.jobs::scheduled_run",
             "app.services.distiller::run_distillation"
           ],
           "is_route": true
@@ -9707,7 +9806,7 @@
           "full_path": "/distill/status",
           "mounted_on": "router",
           "handler": "distill_status",
-          "line": 19
+          "line": 21
         },
         {
           "method": "POST",
@@ -9716,7 +9815,7 @@
           "full_path": "/distill/run",
           "mounted_on": "router",
           "handler": "distill_run",
-          "line": 27
+          "line": 29
         }
       ],
       "db_writes": [],
@@ -11032,21 +11131,21 @@
     "app.routers.janitor": {
       "path": "backend/app/routers/janitor.py",
       "module": "app.routers.janitor",
-      "loc": 185,
+      "loc": 176,
       "imports": [
         "app.database",
         "app.models",
-        "app.observability.context",
+        "app.observability.jobs",
         "app.services.mind_janitors",
-        "app.services.mind_lint"
+        "app.services.mind_lint",
+        "app.tenant"
       ],
       "external_imports": [
         "datetime",
         "fastapi",
         "json",
         "logging",
-        "sqlalchemy",
-        "time"
+        "sqlalchemy"
       ],
       "functions": {
         "janitor_status": {
@@ -11061,14 +11160,14 @@
           "line": 51,
           "is_async": true,
           "calls": [
-            "app.observability.context::bound",
+            "app.observability.jobs::scheduled_run",
             "app.services.mind_janitors::run_janitors"
           ],
           "is_route": true
         },
         "corpus_health_report": {
           "name": "corpus_health_report",
-          "line": 84,
+          "line": 75,
           "is_async": true,
           "calls": [
             "app.services.mind_lint::corpus_health"
@@ -11077,21 +11176,21 @@
         },
         "_event_dict": {
           "name": "_event_dict",
-          "line": 93,
+          "line": 84,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "memory_history": {
           "name": "memory_history",
-          "line": 101,
+          "line": 92,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "memory_as_of": {
           "name": "memory_as_of",
-          "line": 143,
+          "line": 134,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -11123,7 +11222,7 @@
           "full_path": "/janitor/corpus-health",
           "mounted_on": "router",
           "handler": "corpus_health_report",
-          "line": 84
+          "line": 75
         },
         {
           "method": "GET",
@@ -11132,7 +11231,7 @@
           "full_path": "/janitor/history/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_history",
-          "line": 101
+          "line": 92
         },
         {
           "method": "GET",
@@ -11141,7 +11240,7 @@
           "full_path": "/janitor/as-of/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_as_of",
-          "line": 143
+          "line": 134
         }
       ],
       "db_writes": [],
@@ -11355,10 +11454,11 @@
     "app.routers.mind_metrics": {
       "path": "backend/app/routers/mind_metrics.py",
       "module": "app.routers.mind_metrics",
-      "loc": 182,
+      "loc": 195,
       "imports": [
         "app.database",
         "app.models",
+        "app.observability.jobs",
         "app.services.claude_usage",
         "app.services.codex_usage",
         "app.services.delivery_plasticity",
@@ -11376,7 +11476,7 @@
       "functions": {
         "mind_metrics": {
           "name": "mind_metrics",
-          "line": 20,
+          "line": 21,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::collect_all"
@@ -11385,7 +11485,7 @@
         },
         "mind_sessions": {
           "name": "mind_sessions",
-          "line": 28,
+          "line": 29,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::sessions_report"
@@ -11394,7 +11494,7 @@
         },
         "mind_injection_channels": {
           "name": "mind_injection_channels",
-          "line": 37,
+          "line": 38,
           "is_async": true,
           "calls": [
             "app.services.injection_channel::reconstruct_history",
@@ -11404,14 +11504,14 @@
         },
         "mind_injection_channels._bound": {
           "name": "mind_injection_channels._bound",
-          "line": 53,
+          "line": 54,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "mind_trust": {
           "name": "mind_trust",
-          "line": 74,
+          "line": 75,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::trust_report"
@@ -11420,7 +11520,7 @@
         },
         "mind_inbox": {
           "name": "mind_inbox",
-          "line": 83,
+          "line": 84,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::inbox_report"
@@ -11429,7 +11529,7 @@
         },
         "mind_subscription": {
           "name": "mind_subscription",
-          "line": 92,
+          "line": 93,
           "is_async": true,
           "calls": [
             "app.services.claude_usage::subscription_report"
@@ -11438,7 +11538,7 @@
         },
         "mind_codex_subscription": {
           "name": "mind_codex_subscription",
-          "line": 101,
+          "line": 102,
           "is_async": true,
           "calls": [
             "app.services.codex_usage::subscription_report"
@@ -11447,16 +11547,25 @@
         },
         "mind_locomo_run": {
           "name": "mind_locomo_run",
-          "line": 110,
+          "line": 111,
           "is_async": true,
           "calls": [
             "app.services.locomo_run_status::run_status"
           ],
           "is_route": true
         },
+        "mind_jobs": {
+          "name": "mind_jobs",
+          "line": 120,
+          "is_async": true,
+          "calls": [
+            "app.observability.jobs::inventory_health"
+          ],
+          "is_route": true
+        },
         "mind_delivery_pathways": {
           "name": "mind_delivery_pathways",
-          "line": 119,
+          "line": 132,
           "is_async": true,
           "calls": [
             "app.services.delivery_plasticity::false_kill_receipts"
@@ -11465,7 +11574,7 @@
         },
         "mind_skills": {
           "name": "mind_skills",
-          "line": 173,
+          "line": 186,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::skills_report",
@@ -11482,7 +11591,7 @@
           "full_path": "/metrics/mind",
           "mounted_on": "router",
           "handler": "mind_metrics",
-          "line": 20
+          "line": 21
         },
         {
           "method": "GET",
@@ -11491,7 +11600,7 @@
           "full_path": "/metrics/mind/sessions",
           "mounted_on": "router",
           "handler": "mind_sessions",
-          "line": 28
+          "line": 29
         },
         {
           "method": "GET",
@@ -11500,7 +11609,7 @@
           "full_path": "/metrics/mind/injection-channels",
           "mounted_on": "router",
           "handler": "mind_injection_channels",
-          "line": 37
+          "line": 38
         },
         {
           "method": "GET",
@@ -11509,7 +11618,7 @@
           "full_path": "/metrics/mind/trust",
           "mounted_on": "router",
           "handler": "mind_trust",
-          "line": 74
+          "line": 75
         },
         {
           "method": "GET",
@@ -11518,7 +11627,7 @@
           "full_path": "/metrics/mind/inbox",
           "mounted_on": "router",
           "handler": "mind_inbox",
-          "line": 83
+          "line": 84
         },
         {
           "method": "GET",
@@ -11527,7 +11636,7 @@
           "full_path": "/metrics/mind/subscription",
           "mounted_on": "router",
           "handler": "mind_subscription",
-          "line": 92
+          "line": 93
         },
         {
           "method": "GET",
@@ -11536,7 +11645,7 @@
           "full_path": "/metrics/mind/subscription/codex",
           "mounted_on": "router",
           "handler": "mind_codex_subscription",
-          "line": 101
+          "line": 102
         },
         {
           "method": "GET",
@@ -11545,7 +11654,16 @@
           "full_path": "/metrics/mind/locomo-run",
           "mounted_on": "router",
           "handler": "mind_locomo_run",
-          "line": 110
+          "line": 111
+        },
+        {
+          "method": "GET",
+          "path": "/mind/jobs",
+          "prefix": "/metrics",
+          "full_path": "/metrics/mind/jobs",
+          "mounted_on": "router",
+          "handler": "mind_jobs",
+          "line": 120
         },
         {
           "method": "GET",
@@ -11554,7 +11672,7 @@
           "full_path": "/metrics/mind/delivery-pathways",
           "mounted_on": "router",
           "handler": "mind_delivery_pathways",
-          "line": 119
+          "line": 132
         },
         {
           "method": "GET",
@@ -11563,7 +11681,7 @@
           "full_path": "/metrics/mind/skills",
           "mounted_on": "router",
           "handler": "mind_skills",
-          "line": 173
+          "line": 186
         }
       ],
       "db_writes": [],
@@ -35433,7 +35551,7 @@
     "tests.test_composition_snapshot": {
       "path": "backend/tests/test_composition_snapshot.py",
       "module": "tests.test_composition_snapshot",
-      "loc": 222,
+      "loc": 224,
       "imports": [
         "app.composition.capabilities",
         "app.composition.factory",
@@ -35451,21 +35569,21 @@
       "functions": {
         "_stored": {
           "name": "_stored",
-          "line": 74,
+          "line": 76,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_every_tenant_has_a_captured_baseline": {
           "name": "test_every_tenant_has_a_captured_baseline",
-          "line": 79,
+          "line": 81,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_live_surface_matches_recorded_baseline": {
           "name": "test_live_surface_matches_recorded_baseline",
-          "line": 92,
+          "line": 94,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35474,7 +35592,7 @@
         },
         "test_live_openapi_contract_matches_recorded_baseline": {
           "name": "test_live_openapi_contract_matches_recorded_baseline",
-          "line": 109,
+          "line": 111,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35483,14 +35601,14 @@
         },
         "test_tenant_surfaces_differ_by_profile": {
           "name": "test_tenant_surfaces_differ_by_profile",
-          "line": 122,
+          "line": 124,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_production_surface_is_exactly_the_full_grant": {
           "name": "test_production_surface_is_exactly_the_full_grant",
-          "line": 150,
+          "line": 152,
           "is_async": false,
           "calls": [
             "app.composition.factory::create_app",
@@ -35500,7 +35618,7 @@
         },
         "test_production_surface_is_exactly_the_full_grant.paths": {
           "name": "test_production_surface_is_exactly_the_full_grant.paths",
-          "line": 166,
+          "line": 168,
           "is_async": false,
           "calls": [
             "scripts.capability_snapshot::describe_surface"
@@ -35509,7 +35627,7 @@
         },
         "test_reduced_profile_actually_drops_modules": {
           "name": "test_reduced_profile_actually_drops_modules",
-          "line": 193,
+          "line": 195,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -39882,6 +40000,210 @@
             "app.models::IntegrityFinding",
             "app.services.integrity.proposals::_create_proposal_record"
           ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_job_inventory": {
+      "path": "backend/tests/test_job_inventory.py",
+      "module": "tests.test_job_inventory",
+      "loc": 255,
+      "imports": [
+        "app.observability.context",
+        "app.observability.jobs"
+      ],
+      "external_imports": [
+        "__future__",
+        "datetime",
+        "json",
+        "pytest",
+        "subprocess"
+      ],
+      "functions": {
+        "_isolated_receipts": {
+          "name": "_isolated_receipts",
+          "line": 25,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_every_job_declares_what_an_operator_needs_at_3am": {
+          "name": "test_every_job_declares_what_an_operator_needs_at_3am",
+          "line": 32,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_job_names_and_units_are_unique": {
+          "name": "test_job_names_and_units_are_unique",
+          "line": 44,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_declared_units_never_collide_with_the_not_a_job_list": {
+          "name": "test_declared_units_never_collide_with_the_not_a_job_list",
+          "line": 49,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_a_successful_run_records_its_success": {
+          "name": "test_a_successful_run_records_its_success",
+          "line": 55,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_receipt",
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_a_failing_run_records_the_exception_and_keeps_the_prior_success": {
+          "name": "test_a_failing_run_records_the_exception_and_keeps_the_prior_success",
+          "line": 65,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_receipt",
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_receipt_carries_job_identity_and_tenant": {
+          "name": "test_receipt_carries_job_identity_and_tenant",
+          "line": 84,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_receipt",
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_unreadable_receipt_does_not_take_down_the_reporting_path": {
+          "name": "test_unreadable_receipt_does_not_take_down_the_reporting_path",
+          "line": 94,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_receipt_write_is_atomic_leaving_no_partial_file": {
+          "name": "test_receipt_write_is_atomic_leaving_no_partial_file",
+          "line": 100,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::write_receipt"
+          ],
+          "is_route": false
+        },
+        "_job": {
+          "name": "_job",
+          "line": 109,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::ScheduledJob"
+          ],
+          "is_route": false
+        },
+        "test_a_job_that_never_ran_is_not_reported_healthy": {
+          "name": "test_a_job_that_never_ran_is_not_reported_healthy",
+          "line": 119,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_health"
+          ],
+          "is_route": false
+        },
+        "test_a_recent_success_is_healthy": {
+          "name": "test_a_recent_success_is_healthy",
+          "line": 123,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_health"
+          ],
+          "is_route": false
+        },
+        "test_a_job_that_stopped_running_goes_late": {
+          "name": "test_a_job_that_stopped_running_goes_late",
+          "line": 129,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_health"
+          ],
+          "is_route": false
+        },
+        "test_an_errored_job_is_failing_and_surfaces_its_exception": {
+          "name": "test_an_errored_job_is_failing_and_surfaces_its_exception",
+          "line": 138,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_health"
+          ],
+          "is_route": false
+        },
+        "test_unparseable_timestamp_is_a_failure_not_a_pass": {
+          "name": "test_unparseable_timestamp_is_a_failure_not_a_pass",
+          "line": 144,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_health"
+          ],
+          "is_route": false
+        },
+        "test_inventory_health_is_unhealthy_when_any_job_is": {
+          "name": "test_inventory_health_is_unhealthy_when_any_job_is",
+          "line": 149,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::inventory_health"
+          ],
+          "is_route": false
+        },
+        "test_inventory_health_is_healthy_once_every_job_has_reported": {
+          "name": "test_inventory_health_is_healthy_once_every_job_has_reported",
+          "line": 156,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_receipt",
+            "app.observability.jobs::inventory_health"
+          ],
+          "is_route": false
+        },
+        "test_scheduled_run_writes_a_receipt_and_reraises_on_failure": {
+          "name": "test_scheduled_run_writes_a_receipt_and_reraises_on_failure",
+          "line": 167,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::scheduled_run",
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_scheduled_run_binds_job_correlation": {
+          "name": "test_scheduled_run_binds_job_correlation",
+          "line": 176,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::scheduled_run",
+            "app.observability.context::current"
+          ],
+          "is_route": false
+        },
+        "test_declared_jobs_match_the_timers_actually_installed": {
+          "name": "test_declared_jobs_match_the_timers_actually_installed",
+          "line": 185,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_no_scheduled_job_invokes_curl_without_failing_on_http_errors": {
+          "name": "test_no_scheduled_job_invokes_curl_without_failing_on_http_errors",
+          "line": 226,
+          "is_async": false,
+          "calls": [],
           "is_route": false
         }
       },
@@ -48168,9 +48490,18 @@
     ],
     "app.observability.context": [
       "app.middleware.correlation",
+      "app.observability.jobs",
       "app.observability.json_logging",
-      "app.routers.janitor",
+      "tests.test_job_inventory",
       "tests.test_structured_logging"
+    ],
+    "app.observability.jobs": [
+      "app.routers.auditor",
+      "app.routers.compile",
+      "app.routers.distill",
+      "app.routers.janitor",
+      "app.routers.mind_metrics",
+      "tests.test_job_inventory"
     ],
     "app.observability.json_logging": [
       "app.composition.factory",
@@ -49119,6 +49450,10 @@
       "app.composition.startup",
       "app.governance.output_guard",
       "app.operations.router",
+      "app.routers.auditor",
+      "app.routers.compile",
+      "app.routers.distill",
+      "app.routers.janitor",
       "app.routers.recall",
       "app.routers.v1",
       "app.seed.engram_loader",
@@ -49233,6 +49568,9 @@
     "app.middleware.correlation": [
       "app.observability.context"
     ],
+    "app.observability.jobs": [
+      "app.observability.context"
+    ],
     "app.observability.json_logging": [
       "app.observability.context"
     ],
@@ -49265,6 +49603,7 @@
       "app.middleware.rbac"
     ],
     "app.routers.auditor": [
+      "app.observability.jobs",
       "app.services.memory_quality_auditor",
       "app.services.mind_janitors"
     ],
@@ -49277,10 +49616,12 @@
       "app.services.llm_provider"
     ],
     "app.routers.compile": [
+      "app.observability.jobs",
       "app.services.mind_janitors",
       "app.services.skill_compiler"
     ],
     "app.routers.distill": [
+      "app.observability.jobs",
       "app.services.distiller"
     ],
     "app.routers.document_ingest": [
@@ -49317,7 +49658,7 @@
       "app.services.integrity.reconciler"
     ],
     "app.routers.janitor": [
-      "app.observability.context",
+      "app.observability.jobs",
       "app.services.mind_janitors",
       "app.services.mind_lint"
     ],
@@ -49329,6 +49670,7 @@
       "app.models"
     ],
     "app.routers.mind_metrics": [
+      "app.observability.jobs",
       "app.services.claude_usage",
       "app.services.codex_usage",
       "app.services.delivery_plasticity",
@@ -50136,6 +50478,10 @@
       "app.models",
       "app.schemas",
       "app.services.integrity.proposals"
+    ],
+    "tests.test_job_inventory": [
+      "app.observability.context",
+      "app.observability.jobs"
     ],
     "tests.test_kernel_replay_fixture_guard": [
       "app.services.evidence_frame",
@@ -52905,7 +53251,7 @@
       "full_path": "/auditor/audit/{neuron_id}",
       "mounted_on": "router",
       "handler": "audit_one",
-      "line": 52,
+      "line": 56,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -52913,6 +53259,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -52962,6 +53310,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53015,7 +53365,7 @@
       "full_path": "/auditor/candidates",
       "mounted_on": "router",
       "handler": "auditor_candidates",
-      "line": 65,
+      "line": 69,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -53023,6 +53373,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53072,6 +53424,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53125,7 +53479,7 @@
       "full_path": "/auditor/run",
       "mounted_on": "router",
       "handler": "auditor_run",
-      "line": 35,
+      "line": 37,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -53133,6 +53487,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53182,6 +53538,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53235,7 +53593,7 @@
       "full_path": "/auditor/status",
       "mounted_on": "router",
       "handler": "auditor_status",
-      "line": 24,
+      "line": 26,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -53243,6 +53601,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53292,6 +53652,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -53937,7 +54299,7 @@
       "full_path": "/compile/run",
       "mounted_on": "router",
       "handler": "compile_run",
-      "line": 38,
+      "line": 40,
       "module": "app.routers.compile",
       "file": "backend/app/routers/compile.py",
       "imports_reachable": [
@@ -53945,6 +54307,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -53980,11 +54344,14 @@
         "app.services.skill_compiler",
         "app.services.skill_projection",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -54030,7 +54397,7 @@
       "full_path": "/compile/status",
       "mounted_on": "router",
       "handler": "compile_status",
-      "line": 20,
+      "line": 22,
       "module": "app.routers.compile",
       "file": "backend/app/routers/compile.py",
       "imports_reachable": [
@@ -54038,6 +54405,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -54073,11 +54442,14 @@
         "app.services.skill_compiler",
         "app.services.skill_projection",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -54123,7 +54495,7 @@
       "full_path": "/distill/run",
       "mounted_on": "router",
       "handler": "distill_run",
-      "line": 27,
+      "line": 29,
       "module": "app.routers.distill",
       "file": "backend/app/routers/distill.py",
       "imports_reachable": [
@@ -54131,6 +54503,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -54178,6 +54552,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -54229,7 +54605,7 @@
       "full_path": "/distill/status",
       "mounted_on": "router",
       "handler": "distill_status",
-      "line": 19,
+      "line": 21,
       "module": "app.routers.distill",
       "file": "backend/app/routers/distill.py",
       "imports_reachable": [
@@ -54237,6 +54613,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -54284,6 +54662,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -56460,7 +56840,7 @@
       "full_path": "/janitor/as-of/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_as_of",
-      "line": 143,
+      "line": 134,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56469,6 +56849,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56502,12 +56883,14 @@
         "app.services.region_policy",
         "app.services.scoring_engine",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56551,7 +56934,7 @@
       "full_path": "/janitor/corpus-health",
       "mounted_on": "router",
       "handler": "corpus_health_report",
-      "line": 84,
+      "line": 75,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56560,6 +56943,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56593,12 +56977,14 @@
         "app.services.region_policy",
         "app.services.scoring_engine",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56642,7 +57028,7 @@
       "full_path": "/janitor/history/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_history",
-      "line": 101,
+      "line": 92,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -56651,6 +57037,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56684,12 +57071,14 @@
         "app.services.region_policy",
         "app.services.scoring_engine",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56742,6 +57131,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56775,12 +57165,14 @@
         "app.services.region_policy",
         "app.services.scoring_engine",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56833,6 +57225,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -56866,12 +57259,14 @@
         "app.services.region_policy",
         "app.services.scoring_engine",
         "app.services.synaptic_homeostasis",
-        "app.services.synaptic_learning"
+        "app.services.synaptic_learning",
+        "app.tenant"
       ],
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.delivery_mode",
@@ -57049,7 +57444,7 @@
       "full_path": "/metrics/mind",
       "mounted_on": "router",
       "handler": "mind_metrics",
-      "line": 20,
+      "line": 21,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57057,6 +57452,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57112,6 +57509,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57169,7 +57568,7 @@
       "full_path": "/metrics/mind/delivery-pathways",
       "mounted_on": "router",
       "handler": "mind_delivery_pathways",
-      "line": 119,
+      "line": 132,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57177,6 +57576,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57232,6 +57633,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57289,7 +57692,7 @@
       "full_path": "/metrics/mind/inbox",
       "mounted_on": "router",
       "handler": "mind_inbox",
-      "line": 83,
+      "line": 84,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57297,6 +57700,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57352,6 +57757,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57409,7 +57816,7 @@
       "full_path": "/metrics/mind/injection-channels",
       "mounted_on": "router",
       "handler": "mind_injection_channels",
-      "line": 37,
+      "line": 38,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57417,6 +57824,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57472,6 +57881,132 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.bootstrap_service",
+        "app.services.claude_usage",
+        "app.services.clustering",
+        "app.services.codex_usage",
+        "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
+        "app.services.distiller",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.evidence_frame",
+        "app.services.injection_channel",
+        "app.services.integrity",
+        "app.services.integrity.conflict_monitor",
+        "app.services.integrity.similarity",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.locomo_run_status",
+        "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
+        "app.services.mind_janitors",
+        "app.services.mind_lint",
+        "app.services.mind_metrics",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.proposal_apply_service",
+        "app.services.recall_lanes",
+        "app.services.reconsolidation.fingerprints",
+        "app.services.reconsolidation.inheritance",
+        "app.services.reconsolidation.lifecycle",
+        "app.services.reconsolidation.loaders",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "app.services.reconsolidation.rewiring",
+        "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
+        "app.services.redaction",
+        "app.services.reference_class",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.seeding_service",
+        "app.services.semantic_prefilter",
+        "app.services.synaptic_homeostasis",
+        "app.services.synaptic_learning",
+        "app.services.write_gate"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/mind/jobs",
+      "prefix": "/metrics",
+      "full_path": "/metrics/mind/jobs",
+      "mounted_on": "router",
+      "handler": "mind_jobs",
+      "line": 120,
+      "module": "app.routers.mind_metrics",
+      "file": "backend/app/routers/mind_metrics.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.rbac",
+        "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
+        "app.services.action_bus",
+        "app.services.adjacency_cache",
+        "app.services.bootstrap_service",
+        "app.services.claude_usage",
+        "app.services.clustering",
+        "app.services.codex_usage",
+        "app.services.delivery_mode",
+        "app.services.delivery_plasticity",
+        "app.services.distiller",
+        "app.services.edge_tier",
+        "app.services.embedding_service",
+        "app.services.evidence_frame",
+        "app.services.injection_channel",
+        "app.services.integrity",
+        "app.services.integrity.conflict_monitor",
+        "app.services.integrity.similarity",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.locomo_run_status",
+        "app.services.memory_quality_auditor",
+        "app.services.mind_corpus",
+        "app.services.mind_janitors",
+        "app.services.mind_lint",
+        "app.services.mind_metrics",
+        "app.services.model_usage_ledger",
+        "app.services.neuron_candidate",
+        "app.services.neuron_index",
+        "app.services.neuron_service",
+        "app.services.proposal_apply_service",
+        "app.services.recall_lanes",
+        "app.services.reconsolidation.fingerprints",
+        "app.services.reconsolidation.inheritance",
+        "app.services.reconsolidation.lifecycle",
+        "app.services.reconsolidation.loaders",
+        "app.services.reconsolidation.plan",
+        "app.services.reconsolidation.review",
+        "app.services.reconsolidation.rewiring",
+        "app.services.reconsolidation.validators",
+        "app.services.recurrence_watch",
+        "app.services.redaction",
+        "app.services.reference_class",
+        "app.services.region_policy",
+        "app.services.scoring_engine",
+        "app.services.seeding_service",
+        "app.services.semantic_prefilter",
+        "app.services.skill_compiler",
+        "app.services.skill_projection",
+        "app.services.synaptic_homeostasis",
+        "app.services.synaptic_learning",
+        "app.services.write_gate",
+        "app.tenant"
+      ],
+      "calls_reachable": [
+        "app.middleware.rbac",
+        "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57529,7 +58064,7 @@
       "full_path": "/metrics/mind/locomo-run",
       "mounted_on": "router",
       "handler": "mind_locomo_run",
-      "line": 110,
+      "line": 111,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57537,6 +58072,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57592,6 +58129,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57649,7 +58188,7 @@
       "full_path": "/metrics/mind/sessions",
       "mounted_on": "router",
       "handler": "mind_sessions",
-      "line": 28,
+      "line": 29,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57657,6 +58196,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57712,6 +58253,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57769,7 +58312,7 @@
       "full_path": "/metrics/mind/skills",
       "mounted_on": "router",
       "handler": "mind_skills",
-      "line": 173,
+      "line": 186,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57777,6 +58320,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57832,6 +58377,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57889,7 +58436,7 @@
       "full_path": "/metrics/mind/subscription",
       "mounted_on": "router",
       "handler": "mind_subscription",
-      "line": 92,
+      "line": 93,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -57897,6 +58444,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -57952,6 +58501,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58009,7 +58560,7 @@
       "full_path": "/metrics/mind/subscription/codex",
       "mounted_on": "router",
       "handler": "mind_codex_subscription",
-      "line": 101,
+      "line": 102,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -58017,6 +58568,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58072,6 +58625,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58129,7 +58684,7 @@
       "full_path": "/metrics/mind/trust",
       "mounted_on": "router",
       "handler": "mind_trust",
-      "line": 74,
+      "line": 75,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -58137,6 +58692,8 @@
         "app.database",
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",
@@ -58192,6 +58749,8 @@
       "calls_reachable": [
         "app.middleware.rbac",
         "app.models",
+        "app.observability.context",
+        "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
         "app.services.bootstrap_service",

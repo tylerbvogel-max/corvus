@@ -1,5 +1,5 @@
 {
-  "app_module_count": 87,
+  "app_module_count": 88,
   "app_modules": [
     "app",
     "app.composition",
@@ -25,6 +25,7 @@
     "app.models",
     "app.observability",
     "app.observability.context",
+    "app.observability.jobs",
     "app.observability.json_logging",
     "app.routers",
     "app.routers.auditor",

@@ -13939,6 +13939,26 @@
         ]
       }
     },
+    "/metrics/mind/jobs": {
+      "get": {
+        "description": "Scheduled-job inventory judged against its run receipts.\n\nsystemd can only report whether the command ran — every timer invokes\n`curl -s`, which exits 0 on an HTTP error, so `Result=success` never meant\nthe work succeeded. The receipts each run writes are the real health\nsignal, and this is where they are read.",
+        "operationId": "mind_jobs_metrics_mind_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mind Jobs",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/metrics/mind/locomo-run": {
       "get": {
         "description": "LoCoMo certificate phase status, derived from run logs on disk.",
