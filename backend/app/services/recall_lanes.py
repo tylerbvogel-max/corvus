@@ -7,6 +7,21 @@ lexical and entity match, Postgres-native, zero LLM in the hot path; the
 ranked lists are fused with the embedding lane via reciprocal-rank fusion
 in score_candidates. Both lanes are gated by settings flags (default off)
 so embed-only behavior is unchanged until the A/B says otherwise.
+
+Every lane statement here ends in a TOTAL order — `ORDER BY score DESC, id`
+— and the trailing primary key is load-bearing, not decoration. Measured
+2026-08-04 (roadmap record mind-recall-warm-state): without it, `score DESC`
+alone is a partial order over a lane that comes back 43-of-50 tied on the
+corvus-mind corpus, so the planner decided both WHICH rows survived the LIMIT
+and what order they arrived in. calc_rrf then turns that order into the rank
+it fuses (Python's sort is stable, so tied scores inherit Postgres's row
+order), which made delivered context a function of the query plan. Forcing a
+different plan moved the delivered hits and the claimed set on a byte-frozen
+corpus; with the tie-breaker the same forced plan change is a no-op.
+
+The tie-breaker is not neutral and should not be read as such: lower id —
+the older neuron — now wins ties. That is a stated, stable rule replacing an
+unstated, arbitrary one, which is the whole of the improvement.
 """
 
 from __future__ import annotations
@@ -87,7 +102,7 @@ async def keyword_lane(
         SELECT id, ts_rank_cd({TSV_EXPR}, q) AS score
         FROM neurons, to_tsquery('english', :query) q
         WHERE {TSV_EXPR} @@ q AND is_active = true
-        ORDER BY score DESC
+        ORDER BY score DESC, id
         LIMIT :top_n
     """
     result = await db.execute(
@@ -141,7 +156,7 @@ async def entity_lane(
         FROM matches m JOIN df ON df.sent = m.sent
         WHERE df.d / df.n <= 0.25
         GROUP BY m.id
-        ORDER BY score DESC
+        ORDER BY score DESC, m.id
         LIMIT :top_n
     """
     result = await db.execute(text(sql), {"ents": ents, "top_n": top_n})

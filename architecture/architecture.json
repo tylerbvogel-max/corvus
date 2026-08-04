@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "cb87d4c466fe8914ece92390494bb6538a62660a1f612e2e803a160caa62da73",
+    "fingerprint": "5b34ff5c44f5e649eaee175e57f2fdb8bf612af08f1a9e88e868a914041279b3",
     "files": 484
   },
   "frontend": {
@@ -4170,11 +4170,11 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92816,
+    "loc": 92842,
     "routes": 218,
     "import_edges": 1104,
     "call_edges": 731,
-    "modules_touching_db": 122,
+    "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -24490,7 +24490,7 @@
     "app.services.recall_lanes": {
       "path": "backend/app/services/recall_lanes.py",
       "module": "app.services.recall_lanes",
-      "loc": 149,
+      "loc": 164,
       "imports": [
         "app.services.scoring_engine"
       ],
@@ -24502,21 +24502,21 @@
       "functions": {
         "normalize_entities": {
           "name": "normalize_entities",
-          "line": 35,
+          "line": 50,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "extract_query_entities": {
           "name": "extract_query_entities",
-          "line": 51,
+          "line": 66,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "keyword_lane": {
           "name": "keyword_lane",
-          "line": 71,
+          "line": 86,
           "is_async": true,
           "calls": [
             "app.services.scoring_engine::extract_keywords"
@@ -24525,7 +24525,7 @@
         },
         "entity_lane": {
           "name": "entity_lane",
-          "line": 98,
+          "line": 113,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -24535,7 +24535,7 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 44,
+          "line": 59,
           "in": "normalize_entities",
           "target": "seen",
           "model": null
@@ -43242,7 +43242,7 @@
     "tests.test_recall_lanes": {
       "path": "backend/tests/test_recall_lanes.py",
       "module": "tests.test_recall_lanes",
-      "loc": 155,
+      "loc": 166,
       "imports": [
         "app.services.recall_lanes",
         "app.services.scoring_engine"
@@ -43385,24 +43385,16 @@
           ],
           "is_route": false
         },
-        "TestLaneOrderingDeterminism.test_rank_fused_lanes_have_no_new_unbroken_ties": {
-          "name": "TestLaneOrderingDeterminism.test_rank_fused_lanes_have_no_new_unbroken_ties",
-          "line": 130,
+        "TestLaneOrderingDeterminism.test_every_rank_fused_lane_orders_by_a_total_order": {
+          "name": "TestLaneOrderingDeterminism.test_every_rank_fused_lane_orders_by_a_total_order",
+          "line": 131,
           "is_async": false,
           "calls": [],
           "is_route": false
         }
       },
       "routes": [],
-      "db_writes": [
-        {
-          "kind": "add",
-          "line": 143,
-          "in": "TestLaneOrderingDeterminism.test_rank_fused_lanes_have_no_new_unbroken_ties",
-          "target": "found",
-          "model": null
-        }
-      ],
+      "db_writes": [],
       "llm_sites": []
     },
     "tests.test_reconciler": {
