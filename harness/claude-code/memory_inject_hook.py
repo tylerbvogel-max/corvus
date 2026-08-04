@@ -38,6 +38,12 @@ SESSION_START_TOP_K = 0  # retired 2026-07-29 (mind-sessionstart-recall) — see
 PROMPT_TOP_K = 6  # W2: summary one-liners are ~5x smaller than bodies — wider net, same budget
 PRE_TOOL_TOP_K = 2
 PRE_TOOL_MIN_SCORE = 1.12  # warn rarely: only strong matches interrupt a tool call
+# DO NOT RAISE THIS TO IMPROVE PRECISION. Measured 2026-08-04
+# (mind-delivery-timing): inside the qualifying band, recall score and blind
+# relevance are uncorrelated -- Pearson r=+0.044, Spearman rho=+0.056, n=75,
+# 95% CI [-0.185, +0.268]. The 1.36-1.50 band rates 60% irrelevant against 41%
+# for 1.12-1.20. A higher floor cuts volume without improving precision. See
+# the dedupe comment in main() for the full result.
 MIN_PROMPT_CHARS = 15
 HTTP_TIMEOUT_S = 2.5
 
@@ -451,6 +457,32 @@ def main() -> int:
     else:
         return 0
 
+    # GREEDY FIRST-FIRE IS DELIBERATE AS OF 2026-08-04 (mind-delivery-timing).
+    # The first command past the floor consumes a memory and `seen` bars it
+    # everywhere later, even at a far better match. That is real -- neuron #122
+    # was claimed at `git status --short harness/` (blind judgement 0,0,1) four
+    # commands before `git push private main`, where it rated 2,2,2.
+    #
+    # Deferring the delivery to the best match in a bounded window was measured
+    # on 124 sessions / 14,965 commands / 5,457 deliveries and REJECTED:
+    #
+    #   * This hook is a fresh process per command with no lookahead. It can
+    #     only choose "fire now or hold"; it can never place a memory at a
+    #     command it learns was best only afterwards. Forced-fire-at-expiry
+    #     lands on whatever command is current -- at window 20, 3,266 of 4,864
+    #     deliveries landed on a command the memory did not qualify for, and
+    #     593 more were LOST because a hold open at session end never fires.
+    #   * Blind, three-run Opus judgement of the placements: -0.2478 relevance
+    #     per delivery versus firing greedily.
+    #
+    # The deeper reason, and the one that generalises: inside the qualifying
+    # band the score carries no usefulness signal (r=+0.044, n=75). EVERY
+    # policy that reorders qualifying candidates by score -- deferral,
+    # best-in-window, a higher floor, re-entry-by-score -- is a coin flip.
+    # Do not reach for one without first making the score mean something.
+    # The open lead is the QUERY: this channel recalls on command[:400] alone,
+    # with no user intent and no session history. Receipts:
+    # ~/.corvus-mind/evals/recall-probe/DELIVERY-TIMING.md
     seen = _already_injected(session_id)
     hits = [h for h in hits if h["neuron_id"] not in seen]
     # Habituation gate (mind-delivery-plasticity) — retrieved lanes only.
