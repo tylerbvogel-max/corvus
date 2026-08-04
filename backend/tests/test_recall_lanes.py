@@ -93,3 +93,62 @@ class TestCalcRrf:
     def test_two_lane_wrapper_unchanged(self):
         kw, sem = {1: 0.2, 2: 0.9}, {1: 0.8, 2: 0.1}
         assert calc_hybrid_relevance(kw, sem, k=60) == calc_rrf([kw, sem], k=60)
+
+
+class TestLaneOrderingDeterminism:
+    """Rank-fused lanes must not grow new plan-dependent tie surfaces.
+
+    Measured 2026-08-04 (roadmap record mind-recall-warm-state). Both lanes end
+    in `ORDER BY score DESC LIMIT :top_n` with NO tie-breaker, and
+    scoring_engine.calc_rrf turns each lane's row ORDER into the rank it fuses
+    (Python's sort is stable, so tied lane scores inherit whatever order
+    Postgres returned). On the corvus-mind corpus the entity lane comes back 43
+    of 50 rows tied, so that order is doing real work and nothing defines it.
+
+    What this cost, concretely: replaying one 66-command session against a
+    byte-frozen corpus, a GroupAggregate plan and a HashAggregate plan for the
+    same entity-lane query emitted the tied rows differently, moving neuron
+    1541 from lane position 35 to 21. Its fused score went 1.3287 -> 1.3923 and
+    it crossed the top-2 delivery boundary — a different lesson injected, from
+    an identical corpus, because the planner's statistics had changed.
+
+    This is a CONTAINMENT tripwire, not a fix: the two lanes below are the
+    known surfaces and the record deliberately left repairing them as a
+    separate decision with its own evidence. The assertion is equality, not
+    subset, so both directions are loud — a new unbroken-tie LIMIT entering the
+    rank-fused path fails, and so does silently repairing one of these two
+    without recording that the measurements above no longer describe the system.
+    """
+
+    # (function, ORDER BY key text) for every LIMIT-bounded statement whose row
+    # order becomes an RRF rank. A tie-broken lane would read "score DESC, id".
+    KNOWN_UNBROKEN_TIES = {
+        ("keyword_lane", "score DESC"),
+        ("entity_lane", "score DESC"),
+    }
+
+    def test_rank_fused_lanes_have_no_new_unbroken_ties(self):
+        import inspect
+        import re
+
+        from app.services import recall_lanes
+
+        pattern = re.compile(
+            r"ORDER\s+BY\s+(?P<keys>[^\n]+?)\s*\n\s*LIMIT\b", re.IGNORECASE)
+        found = set()
+        for name, fn in vars(recall_lanes).items():
+            if not inspect.isfunction(fn) or fn.__module__ != recall_lanes.__name__:
+                continue
+            for match in pattern.finditer(inspect.getsource(fn)):
+                found.add((name, " ".join(match.group("keys").split())))
+
+        assert found == self.KNOWN_UNBROKEN_TIES, (
+            "the rank-fused lane surface changed.\n"
+            f"  found:    {sorted(found)}\n"
+            f"  expected: {sorted(self.KNOWN_UNBROKEN_TIES)}\n"
+            "A LIMIT over a non-unique ORDER BY hands calc_rrf a rank that the "
+            "query planner chose, not one the data determined. If you ADDED a "
+            "lane, give it a tie-breaker before it reaches fusion. If you FIXED "
+            "one of these, update this set and mind-recall-warm-state's "
+            "receipts — they measure a system that no longer exists."
+        )
