@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "c924c709ba056d5f258cfa340c3ecb8f3f0619b6ed02b6b1d9b1d8131e7585bc",
+    "fingerprint": "cb87d4c466fe8914ece92390494bb6538a62660a1f612e2e803a160caa62da73",
     "files": 484
   },
   "frontend": {
@@ -4170,11 +4170,11 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92757,
+    "loc": 92816,
     "routes": 218,
     "import_edges": 1104,
     "call_edges": 731,
-    "modules_touching_db": 121,
+    "modules_touching_db": 122,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -43242,13 +43242,15 @@
     "tests.test_recall_lanes": {
       "path": "backend/tests/test_recall_lanes.py",
       "module": "tests.test_recall_lanes",
-      "loc": 96,
+      "loc": 155,
       "imports": [
         "app.services.recall_lanes",
         "app.services.scoring_engine"
       ],
       "external_imports": [
-        "pytest"
+        "inspect",
+        "pytest",
+        "re"
       ],
       "functions": {
         "TestNormalizeEntities.test_lowercases_strips_dedupes": {
@@ -43382,10 +43384,25 @@
             "app.services.scoring_engine::calc_rrf"
           ],
           "is_route": false
+        },
+        "TestLaneOrderingDeterminism.test_rank_fused_lanes_have_no_new_unbroken_ties": {
+          "name": "TestLaneOrderingDeterminism.test_rank_fused_lanes_have_no_new_unbroken_ties",
+          "line": 130,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
         }
       },
       "routes": [],
-      "db_writes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 143,
+          "in": "TestLaneOrderingDeterminism.test_rank_fused_lanes_have_no_new_unbroken_ties",
+          "target": "found",
+          "model": null
+        }
+      ],
       "llm_sites": []
     },
     "tests.test_reconciler": {
