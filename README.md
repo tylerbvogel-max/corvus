@@ -1,6 +1,6 @@
 # Corvus-Mind: Agentic Institutional Memory Framework
 
-> **Trust-gated memory for AI agents.** A multi-tenant neuron graph that captures, consolidates, and recalls situated agentic experience — with evidence at every layer.
+> **High-trust, harness-agnostic memory for AI agents.** A multi-tenant neuron graph that captures, consolidates, and recalls situated agentic experience — evidence at every layer, benchmarked in public.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -20,7 +20,23 @@ The methodology has three pillars:
 | **Supersession with History** | When the world changes, old memories are demoted with a `was-true-until` record, not deleted — "this used to be different" is itself useful context | Agentic facts rot: tools update, repos refactor, services move ports |
 | **Context Scoping** | Contextual truths (true in repo A, false in repo B) are conditioned on scope rather than merged, deleted, or promoted to global | Many lessons are true only within a boundary: a migration workaround for one project's alembic chain, a port convention for one machine |
 
-The framework is **harness-agnostic** — it works as an invisible add-on for any coding agent (Claude Code, OpenCode, Cursor, custom harnesses) via MCP, HTTP, or direct library use.
+The framework is **harness-agnostic** — it works as an invisible add-on for any coding agent (Claude Code, OpenCode, Cursor, custom harnesses) via MCP, HTTP, or direct library use. The graph and its trust gates live behind an API, not inside a vendor tool, so memory survives a change of model or harness.
+
+---
+
+## Proven, Not Promised
+
+Certified across **all 1,986 questions** of the public [LoCoMo](https://github.com/snap-research/locomo) long-conversation benchmark — nine of ten conversations held out from tuning, every model call receipted:
+
+- **+26.5 points on adversarial trap questions** versus a full-transcript baseline (85.7 vs 59.2) — the category where a confident unsupported answer is the failure mode. Not one adversarial miss was a wrongful assertion.
+- **The honest limit, stated first:** full context still wins overall (72.0 vs 65.4). Continuity gives up detail that brute force keeps — [the certificate forensics](eval/locomo/analysis/CERTIFICATE-FORENSICS.md) decompose exactly where and why.
+- Full scorecard, provider receipts, and dataset pinning: see [Evaluation](#evaluation).
+
+Because the core component (the LLM) is non-deterministic, every number above comes from a controlled experiment, not a demo run:
+
+1. **Pin every variable but one.** Judge model, memory corpus, and dataset SHA-256 are held fixed across runs; repeat runs of an unchanged configuration establish the stochastic band (~1 point) and a measured judge-noise ceiling (0.86 points) that a result must clear before it is credited to the change.
+2. **Govern the writes.** Durable memory passes provenance and evidence checks through tiered write gates; authoritative changes require human countersign. Retrieval may fail open — durable writes fail closed.
+3. **Write the verdict down.** An append-only run ledger records every scored configuration with its verdict, including the failures: one configuration scored higher overall and was rejected anyway, because the added context collapsed the adversarial guardrail.
 
 ---
 
