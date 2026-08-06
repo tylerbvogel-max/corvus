@@ -24,9 +24,9 @@ The framework is **harness-agnostic** — it works as an invisible add-on for an
 
 ---
 
-## Proven, Not Promised
+## Measured, With Limits
 
-Certified across **all 1,986 questions** of the public [LoCoMo](https://github.com/snap-research/locomo) long-conversation benchmark — nine of ten conversations held out from tuning, every model call receipted:
+Evaluated by the project across **all 1,986 questions** of the public [LoCoMo](https://github.com/snap-research/locomo) long-conversation benchmark — nine of ten conversations held out from tuning, every model call receipted:
 
 - **+26.5 points on adversarial trap questions** versus a full-transcript baseline (85.7 vs 59.2) — the category where a confident unsupported answer is the failure mode. Not one adversarial miss was a wrongful assertion.
 - **The honest limit, stated first:** full context still wins overall (72.0 vs 65.4). Continuity gives up detail that brute force keeps — [the certificate forensics](eval/locomo/analysis/CERTIFICATE-FORENSICS.md) decompose exactly where and why.
@@ -37,6 +37,30 @@ Because the core component (the LLM) is non-deterministic, every number above co
 1. **Pin every variable but one.** Judge model, memory corpus, and dataset SHA-256 are held fixed across runs; repeat runs of an unchanged configuration establish the stochastic band (~1 point) and a measured judge-noise ceiling (0.86 points) that a result must clear before it is credited to the change.
 2. **Govern the writes.** Durable memory passes provenance and evidence checks through tiered write gates; authoritative changes require human countersign. Retrieval may fail open — durable writes fail closed.
 3. **Write the verdict down.** An append-only run ledger records every scored configuration with its verdict, including the failures: one configuration scored higher overall and was rejected anyway, because the added context collapsed the adversarial guardrail.
+
+This is project-run evidence, not independent certification. The benchmark artifacts document
+the experiment and its limitations; an unrelated clean-checkout reproduction has not yet been
+completed.
+
+---
+
+## Current Maturity and Known Gaps
+
+Corvus is a research-grade reference implementation and an active independent engineering
+project. It is **not yet presented as a production-ready dependency**. A blind repository audit
+on 2026-08-06 identified five production-readiness gaps. They are recorded in the canonical
+Roadmap Ledger with explicit acceptance evidence and sequencing:
+
+| Gap | Verified current state | Roadmap disposition |
+|-----|------------------------|---------------------|
+| **Green, protected trunk and first release** | The latest required gate on `main` is red: Alembic detects drift around `ix_neurons_dormant_at`, and the browser-smoke fixture lacks representative sessions, answers, and neurons. `main` is not branch-protected, and no tagged release exists. | **Active first:** `audit-green-trunk-release`. Optional feature work is gated behind three consecutive green runs, branch protection, and a tag pointing to the exact tested artifact. |
+| **Benchmark/deployment parity** | The July LoCoMo result exercises the shipped memory behavior, but its disposable databases are initialized with `Base.metadata.create_all`, not the production Alembic path. | **Planned after trunk recovery:** `audit-benchmark-deployment-parity` migrates benchmark bootstrap to Alembic, adds a composed clean-checkout preflight, and reissues project-run evidence without overwriting the historical run. |
+| **Fail-closed production security** | Development defaults remain intentionally open: an absent access key disables the gate, disabled RBAC resolves callers as admin, and there is no explicit production profile that refuses unsafe startup. Audit coverage and redaction are not a certification boundary. | **Planned before any outside key:** `prod-tenant-auth` adds explicit dev/production profiles, scoped identity, default-deny routes, startup validation that survives `python -O`, and an evidence-bounded audit contract. |
+| **Structural and semantic simplification** | Prior modularization removed measured import cycles and established ownership guards, but `models.py` and the distiller still concentrate responsibilities, structured state mixes text and JSONB, and some internal names carry more metaphor than mechanism. | **Planned after trunk recovery:** `audit-structural-simplification` requires responsibility mapping, reversible schema work, conventional internal naming, and measured subtraction rather than arbitrary file splitting. |
+| **Independent operation and adoption** | Release dry-runs and restore drills have been executed locally, but there is no independent benchmark reproduction, clean-checkout outside deployment, upgrade history, or evidence of sustained outside use. | **Planned:** `com-asset-bundle` and `com-first-pilot` require a tagged one-command path, sanitized receipts, and at least two unrelated users operating and upgrading Corvus without founder shell access. |
+
+The failed gates are evidence doing their job, not evidence of production readiness. These rows
+stay visible until their roadmap records close with receipts.
 
 ---
 
@@ -322,7 +346,8 @@ Two things worth knowing before you run it:
 docker compose up --build
 ```
 
-> **Note**: The Docker build requires the Claude CLI binary. Either install it in the image or mount your host's `~/.claude` directory (as shown) to use your authenticated CLI.
+> **Note**: The image does not install or mount a personal Claude CLI. Configure an API provider
+> explicitly, or run providerless and accept that LLM-backed maintenance paths remain unavailable.
 
 ---
 
@@ -421,11 +446,11 @@ Key metrics tracked:
 
 ### LoCoMo full-suite result (2026-07-21)
 
-**65.4 overall** on all 10 conversations / 1,986 questions (LLM-judge percent-correct,
-judge fixed at Claude Sonnet), run end-to-end through the shipped production pipeline —
-chunked distillation through the write gate, hybrid three-lane recall (no LLM in the hot
-path), strict refuse-when-unsure answering, and the full maintenance lifecycle (janitors +
-skill compilers) at production-equivalent cadence:
+Project-run result: **65.4 overall** on all 10 conversations / 1,986 questions
+(LLM-judge percent-correct, judge fixed at Claude Sonnet). The run exercised chunked
+distillation through the write gate, hybrid three-lane recall (no LLM in the hot path),
+strict refuse-when-unsure answering, and the full maintenance lifecycle (janitors + skill
+compilers) at production-equivalent cadence:
 
 | | single-hop | multi-hop | temporal | open-domain | adversarial |
 |---|---|---|---|---|---|
@@ -438,6 +463,12 @@ questions whose correct answer is "no information available," it refuses correct
 of the time, and not one of its adversarial misses was a wrongful refusal. Provider
 integrity was receipt-verified per call (16,652 calls, zero fallbacks, single model
 version per workload); the dataset is SHA-256-pinned and loaded fail-closed.
+
+> **Deployment-parity limitation:** the evaluation harness currently initializes its disposable
+> databases with SQLAlchemy metadata rather than the production Alembic migration chain. The
+> memory-quality result remains the recorded project experiment; clean initialization and upgrade
+> behavior were outside that proof. Roadmap record `audit-benchmark-deployment-parity` owns the
+> correction and rerun.
 
 > The LoCoMo dataset (CC BY-NC 4.0) is not distributed with this repo — fetch it from
 > [snap-research/locomo](https://github.com/snap-research/locomo) and place it at
