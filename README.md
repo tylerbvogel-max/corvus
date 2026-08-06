@@ -539,7 +539,7 @@ corvus/
 
 MIT License — see [LICENSE](LICENSE).
 
-Copyright (c) 2024-2025 **Tyler B. Vogel**
+Copyright (c) 2026 **Tyler B. Vogel**
 
 ---
 
@@ -551,8 +551,8 @@ If you use Corvus-Mind's methodology in research or production:
 @software{corvus-mind,
   author = {Tyler B. Vogel},
   title = {Corvus-Mind: Evidence-Gated Agentic Institutional Memory},
-  year = {2024},
-  url = {https://github.com/tylerbvogel/corvus}
+  year = {2026},
+  url = {https://github.com/tylerbvogel-max/corvus}
 }
 ```
 
@@ -561,7 +561,7 @@ If you use Corvus-Mind's methodology in research or production:
 ## Acknowledgments
 
 - **Biomimetic inspiration**: cortical microcircuits (stellate/pyramidal/inhibitory), synaptic consolidation, memory reconsolidation
-- **Methodology forged in**: Aurora Flight Sciences AI-ops (replacing $120k+ AppSheet with deterministic agent-built apps)
+- **Methodology informed by**: regulated enterprise AI operations and production-workflow automation
 - **Adversarial testing culture**: the Corvid temperament — honeypots against your own systems, incident reports as trophies
 
 ---
