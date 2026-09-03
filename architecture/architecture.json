@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "5b34ff5c44f5e649eaee175e57f2fdb8bf612af08f1a9e88e868a914041279b3",
+    "fingerprint": "8846a2ebd25f53a91895026c5d0d06b1180fde05b239981de69b6197a1745bfc",
     "files": 484
   },
   "frontend": {
@@ -4170,7 +4170,7 @@
   },
   "totals": {
     "modules": 404,
-    "loc": 92842,
+    "loc": 92849,
     "routes": 218,
     "import_edges": 1104,
     "call_edges": 731,
@@ -7493,7 +7493,7 @@
     "app.models": {
       "path": "backend/app/models.py",
       "module": "app.models",
-      "loc": 1348,
+      "loc": 1355,
       "imports": [],
       "external_imports": [
         "datetime",

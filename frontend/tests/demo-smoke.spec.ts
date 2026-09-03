@@ -16,8 +16,10 @@ const fixtures = JSON.parse(readFileSync(
 /** Fresh state is a bare desktop with the collapsed nav pill; the Home
     window opens via pill → expanded nav → the top-level Chat entry. */
 async function openHomeWindow(page: import('@playwright/test').Page) {
-  await page.locator('.sidebar-pill-btn').click();
-  await page.locator('.sidebar-group-header', { hasText: 'Chat' }).click();
+  const collapsedNav = page.locator('.sidebar-pill-btn');
+  if (await collapsedNav.isVisible()) await collapsedNav.click();
+  await page.getByRole('navigation', { name: 'Primary navigation' })
+    .getByRole('button', { name: 'Chat', exact: true }).click();
   await expect(page.locator('.chat-hero-logo')).toBeVisible();
 }
 
@@ -30,7 +32,8 @@ test('demo boots, replays a grounded chat answer, opens companion windows', asyn
   await expect(page.locator('.app-window')).toHaveCount(0);
 
   // Walkthrough helper opens and closes
-  await page.locator('.helper-pill').click();
+  await page.locator('.sidebar-pill-btn').click();
+  await page.getByRole('button', { name: 'Start walkthrough' }).click();
   await expect(page.locator('.tour-card')).toContainText('Welcome');
   await page.locator('.tour-close').click();
   await expect(page.locator('.tour-card')).toHaveCount(0);
@@ -81,7 +84,7 @@ test.describe('phone viewport', () => {
 
     // Menu sheet → open a page from a group
     await page.locator('.mobile-bottombar-btn', { hasText: 'Menu' }).click();
-    await page.locator('.mobile-sheet-group', { hasText: 'Knowledge' }).click();
+    await page.locator('.mobile-sheet-group', { hasText: 'Memory' }).click();
     await page.locator('.mobile-sheet-subitem', { hasText: 'Explorer' }).click();
     await expect(page.locator('.mobile-view-active .mobile-view-title')).toHaveText('Explorer');
 

@@ -1,33 +1,109 @@
 {
-  "capturedAt": "2026-07-14T00:00:00.000Z",
-  "source": "corvus-mind",
+  "capturedAt": "2026-09-02T21:00:00.000Z",
+  "source": "synthetic-release-fixture",
   "fixtures": {
     "/tenant": {
       "tenant_id": "corvus-mind",
       "display_name": "Corvus Mind",
       "description": "Agentic institutional memory for coding harnesses. Situated episodes with outcomes, evidence-gated lessons, temporal supersession.",
       "seed_prompts": [
-        {"label": "Environment gotcha", "text": "What should I know before checking which process holds a port on this machine?"},
-        {"label": "Project recall", "text": "What has gone wrong before when running migrations on a fresh Corvus database?"},
-        {"label": "User preference", "text": "The frontend isn't showing my changes — what does the user expect me to do about it?"},
-        {"label": "Tool profile", "text": "Which Claude CLI flags are required when shelling out from inside a Claude Code session?"}
+        {"label": "Evidence gates", "text": "Why should durable memory require evidence?"},
+        {"label": "Temporal truth", "text": "How does Corvus handle a fact that stops being true?"},
+        {"label": "Scoped knowledge", "text": "Why are project-specific lessons scoped?"}
       ],
-      "memory_surface": true
+      "memory_surface": false
     },
     "/neurons/stats": {
-      "total_neurons": 0,
-      "by_abstraction_type": {},
-      "by_region": {},
-      "by_layer": {}
+      "total_neurons": 20,
+      "by_abstraction_type": {"principle": 5, "process": 5, "procedure": 5, "artifact": 5},
+      "by_region": {"Trust": 8, "Retrieval": 6, "Operations": 6},
+      "by_layer": {"layer_1": 4, "layer_2": 8, "layer_3": 8}
     },
-    "/models": [
-      {"display_name": "haiku", "provider": "anthropic", "api_id": "claude-haiku-4-5-20251001", "tier": "frontier", "input_price": 1.0, "output_price": 5.0, "context_window_tokens": 200000},
-      {"display_name": "sonnet", "provider": "anthropic", "api_id": "claude-sonnet-4-6", "tier": "frontier", "input_price": 3.0, "output_price": 15.0, "context_window_tokens": 200000},
-      {"display_name": "opus", "provider": "anthropic", "api_id": "claude-opus-4-6", "tier": "frontier", "input_price": 5.0, "output_price": 25.0, "context_window_tokens": 200000},
-      {"display_name": "gemini-flash", "provider": "google", "api_id": "gemini-2.0-flash", "tier": "free", "input_price": 0.0, "output_price": 0.0, "context_window_tokens": 1048576},
-      {"display_name": "groq-llama-70b", "provider": "groq", "api_id": "llama-3.3-70b-versatile", "tier": "free", "input_price": 0.0, "output_price": 0.0, "context_window_tokens": 131072}
-    ]
+    "/chat/sessions": [
+      {
+        "id": 9001,
+        "title": "Evidence-gated memory",
+        "created_at": "2026-09-02T20:55:00.000000",
+        "updated_at": "2026-09-02T20:56:00.000000",
+        "message_count": 2
+      }
+    ],
+    "/chat/sessions/9001": {
+      "id": 9001,
+      "title": "Evidence-gated memory",
+      "created_at": "2026-09-02T20:55:00.000000",
+      "updated_at": "2026-09-02T20:56:00.000000",
+      "messages": [
+        {
+          "id": 18001,
+          "role": "user",
+          "text": "Why should durable agent memory require evidence?",
+          "model": null,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cost": 0,
+          "neurons_activated": 0,
+          "neuron_scores": null,
+          "created_at": "2026-09-02T20:55:00.000000"
+        },
+        {
+          "id": 18002,
+          "role": "assistant",
+          "text": "Durable memory compounds across future decisions, so an unsupported lesson can repeat the same mistake indefinitely. Corvus therefore admits claims with provenance, keeps tentative conclusions at informational authority, and requires verified outcomes before promotion. When reality changes, supersession preserves the history instead of silently deleting it.",
+          "model": "demo replay",
+          "input_tokens": 24,
+          "output_tokens": 55,
+          "cost": 0,
+          "neurons_activated": 3,
+          "neuron_scores": [
+            {"neuron_id": 1, "combined": 1.0, "label": "Evidence-gated admission", "department": "Trust", "layer": 2, "parent_id": null, "summary": "Durable claims require provenance and a verified outcome before promotion."},
+            {"neuron_id": 2, "combined": 0.91, "label": "Authority ladder", "department": "Trust", "layer": 2, "parent_id": null, "summary": "Tentative lessons remain informational until independent evidence supports stronger authority."},
+            {"neuron_id": 3, "combined": 0.84, "label": "Temporal supersession", "department": "Trust", "layer": 3, "parent_id": null, "summary": "Changed facts are superseded with history rather than erased."}
+          ],
+          "created_at": "2026-09-02T20:56:00.000000"
+        }
+      ]
+    },
+    "/admin/proposals/stats": {
+      "proposed": 2,
+      "approved": 0,
+      "rejected": 0,
+      "applied": 5,
+      "total": 7,
+      "proposed_by_origin": {"document": 1, "emergent": 1}
+    }
   },
-  "demoAnswers": [],
-  "neuronPool": []
+  "demoAnswers": [
+    {
+      "text": "Durable memory compounds across future decisions, so an unsupported lesson can repeat the same mistake indefinitely. Corvus therefore admits claims with provenance, keeps tentative conclusions at informational authority, and requires verified outcomes before promotion. When reality changes, supersession preserves the history instead of silently deleting it.",
+      "neurons_activated": 3,
+      "neuron_scores": [
+        {"neuron_id": 1, "combined": 1.0, "label": "Evidence-gated admission", "department": "Trust", "layer": 2, "parent_id": null, "summary": "Durable claims require provenance and a verified outcome before promotion."},
+        {"neuron_id": 2, "combined": 0.91, "label": "Authority ladder", "department": "Trust", "layer": 2, "parent_id": null, "summary": "Tentative lessons remain informational until independent evidence supports stronger authority."},
+        {"neuron_id": 3, "combined": 0.84, "label": "Temporal supersession", "department": "Trust", "layer": 3, "parent_id": null, "summary": "Changed facts are superseded with history rather than erased."}
+      ]
+    }
+  ],
+  "neuronPool": [
+    {"neuron_id": 1, "combined": 1.0, "label": "Evidence-gated admission", "department": "Trust", "summary": "Durable claims require provenance and a verified outcome before promotion."},
+    {"neuron_id": 2, "combined": 0.98, "label": "Authority ladder", "department": "Trust", "summary": "Tentative lessons remain informational until independent evidence supports stronger authority."},
+    {"neuron_id": 3, "combined": 0.96, "label": "Temporal supersession", "department": "Trust", "summary": "Changed facts are superseded with history rather than erased."},
+    {"neuron_id": 4, "combined": 0.94, "label": "Context scoping", "department": "Trust", "summary": "Project-specific knowledge stays inside the boundary where it is true."},
+    {"neuron_id": 5, "combined": 0.92, "label": "Write gate", "department": "Trust", "summary": "Instruction-shaped candidates are rejected before they can become durable guidance."},
+    {"neuron_id": 6, "combined": 0.90, "label": "Independent verification", "department": "Trust", "summary": "Claims and acceptance are separated so the author cannot self-certify an outcome."},
+    {"neuron_id": 7, "combined": 0.88, "label": "Provenance chain", "department": "Trust", "summary": "Every promoted lesson retains a link to the evidence that justified it."},
+    {"neuron_id": 8, "combined": 0.86, "label": "Fail-closed durability", "department": "Trust", "summary": "Recall may degrade safely, but durable writes refuse uncertain evidence."},
+    {"neuron_id": 9, "combined": 0.84, "label": "Hybrid recall", "department": "Retrieval", "summary": "Keyword, entity, and embedding lanes are fused to retrieve complementary evidence."},
+    {"neuron_id": 10, "combined": 0.82, "label": "Citation hopping", "department": "Retrieval", "summary": "Ephemeral citation keys make fabricated grounding mechanically detectable."},
+    {"neuron_id": 11, "combined": 0.80, "label": "Token-bounded assembly", "department": "Retrieval", "summary": "Relevant neurons are assembled under an explicit context budget."},
+    {"neuron_id": 12, "combined": 0.78, "label": "Query enrichment", "department": "Retrieval", "summary": "Operational context expands underspecified retrieval queries before search."},
+    {"neuron_id": 13, "combined": 0.76, "label": "Abstention threshold", "department": "Retrieval", "summary": "Weak evidence produces an explicit abstention instead of a confident guess."},
+    {"neuron_id": 14, "combined": 0.74, "label": "Evidence frames", "department": "Retrieval", "summary": "Memories preserve enough context to reconstruct the answer they support."},
+    {"neuron_id": 15, "combined": 0.72, "label": "Roadmap admission", "department": "Operations", "summary": "Material project mutations bind to an unfinished canonical roadmap record."},
+    {"neuron_id": 16, "combined": 0.70, "label": "Deterministic gate", "department": "Operations", "summary": "Merge-critical checks run through named, bounded test lanes."},
+    {"neuron_id": 17, "combined": 0.68, "label": "Migration authority", "department": "Operations", "summary": "Alembic owns schema evolution and drift checks remain unsuppressed."},
+    {"neuron_id": 18, "combined": 0.66, "label": "Immutable release", "department": "Operations", "summary": "Release provenance, SBOM, tag, and source SHA identify one artifact."},
+    {"neuron_id": 19, "combined": 0.64, "label": "Live verification", "department": "Operations", "summary": "Completion claims require observed runtime behavior, not static inspection."},
+    {"neuron_id": 20, "combined": 0.62, "label": "Incident receipt", "department": "Operations", "summary": "Failures retain commands, traces, root causes, and the fix that closed them."}
+  ]
 }

@@ -1,7 +1,7 @@
 import datetime
 from types import MappingProxyType
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, TIMESTAMP, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, TIMESTAMP, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, synonym
 
@@ -53,6 +53,13 @@ ABSTRACTION_BY_NODE_TYPE = MappingProxyType({
 
 class Neuron(Base):
     __tablename__ = "neurons"
+    __table_args__ = (
+        Index(
+            "ix_neurons_dormant_at",
+            "dormant_at",
+            postgresql_where=text("dormant_at IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     parent_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("neurons.id"), nullable=True, index=True)
