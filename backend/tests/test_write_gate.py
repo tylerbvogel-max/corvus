@@ -32,10 +32,11 @@ def test_authority_rank_ordering():
     assert authority_rank("guidance") > authority_rank("informational")
 
 
-def test_unknown_authority_is_observational():
+def test_only_omitted_authority_is_observational():
     assert authority_rank(None) == authority_rank("informational")
-    assert authority_rank("") == authority_rank("informational")
-    assert authority_rank("made_up_level") == authority_rank("informational")
+    for invalid in ("", "made_up_level"):
+        with pytest.raises(ValueError):
+            authority_rank(invalid)
 
 
 # ── Policy evaluation matrix ─────────────────────────────────────────
@@ -90,9 +91,9 @@ def test_confidence_not_applicable_skips_check():
     assert decision.route == "auto"
 
 
-def test_raised_ceiling_admits_organizational():
+def test_raised_ceiling_preserves_organizational_countersign():
     policy = WriteGatePolicy(mode="tiered", auto_commit_max_authority="organizational")
-    assert evaluate_write(policy, "organizational", True, 1.0).route == "auto"
+    assert evaluate_write(policy, "organizational", True, 1.0).route == "queue"
     assert evaluate_write(policy, "industry_practice", True, 1.0).route == "queue"
 
 
@@ -104,7 +105,8 @@ def _fake_db(items, target_authorities):
     items_result = MagicMock()
     items_result.scalars.return_value.all.return_value = items
     auth_result = MagicMock()
-    auth_result.all.return_value = [(a,) for a in target_authorities]
+    ids = list(dict.fromkeys(i.target_neuron_id for i in items if i.target_neuron_id))
+    auth_result.all.return_value = [(nid, a, None) for nid, a in zip(ids, target_authorities)]
     db.execute = AsyncMock(side_effect=[items_result, auth_result])
     return db
 
@@ -197,5 +199,5 @@ async def test_route_proposal_auto_approves_and_applies():
 @pytest.mark.asyncio
 async def test_route_proposal_requires_proposed_state():
     p = _proposal(state="approved")
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         await route_proposal(AsyncMock(), p, guardrails_passed=None, confidence=None)

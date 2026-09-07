@@ -6711,8 +6711,9 @@ export interface components {
             /**
              * Authority Level
              * @default informational
+             * @enum {string}
              */
-            authority_level: string;
+            authority_level: "informational" | "guidance" | "organizational" | "industry_practice" | "regulatory" | "binding_standard";
             /** Confidence */
             confidence?: string | null;
             /** Context */

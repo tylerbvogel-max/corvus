@@ -3,14 +3,14 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "b60a256ffb57234e0041cea6c724ef9d4c7465c0029b57b7895d13bb1926b995",
-    "files": 487
+    "fingerprint": "6ef542377e0a88501ad4d9c98ae3eb6018682af40da52aa3fbf5466b4162a169",
+    "files": 489
   },
   "frontend": {
     "available": true,
     "totals": {
       "files": 80,
-      "loc": 44827,
+      "loc": 44828,
       "files_calling_api": 43,
       "files_using_fetch": 10,
       "distinct_urls": 205
@@ -2580,7 +2580,7 @@
       },
       "frontend/src/contracts/schema.d.ts": {
         "path": "frontend/src/contracts/schema.d.ts",
-        "loc": 13320,
+        "loc": 13321,
         "imports": [],
         "named_imports": {},
         "urls_direct": [
@@ -4170,12 +4170,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 407,
-    "loc": 93396,
+    "modules": 409,
+    "loc": 93814,
     "routes": 219,
-    "import_edges": 1111,
-    "call_edges": 734,
-    "modules_touching_db": 122,
+    "import_edges": 1122,
+    "call_edges": 741,
+    "modules_touching_db": 123,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -13860,7 +13860,7 @@
     "app.routers.recall": {
       "path": "backend/app/routers/recall.py",
       "module": "app.routers.recall",
-      "loc": 299,
+      "loc": 300,
       "imports": [
         "app.database",
         "app.models",
@@ -13870,6 +13870,7 @@
         "app.services.neuron_service",
         "app.services.reference_ingest",
         "app.services.skill_signpost",
+        "app.services.write_gate",
         "app.tenant"
       ],
       "external_imports": [
@@ -13882,14 +13883,14 @@
       "functions": {
         "_parent_projects": {
           "name": "_parent_projects",
-          "line": 76,
+          "line": 77,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_persist_recall": {
           "name": "_persist_recall",
-          "line": 92,
+          "line": 93,
           "is_async": true,
           "calls": [
             "app.services.neuron_service::get_system_state",
@@ -13900,7 +13901,7 @@
         },
         "recall": {
           "name": "recall",
-          "line": 179,
+          "line": 180,
           "is_async": true,
           "calls": [
             "app.services.executor::prepare_context",
@@ -13911,7 +13912,7 @@
         },
         "remember": {
           "name": "remember",
-          "line": 270,
+          "line": 271,
           "is_async": true,
           "calls": [
             "app.services.lesson_store::save_lesson"
@@ -13927,7 +13928,7 @@
           "full_path": "/recall",
           "mounted_on": "router",
           "handler": "recall",
-          "line": 179
+          "line": 180
         },
         {
           "method": "POST",
@@ -13936,27 +13937,27 @@
           "full_path": "/remember",
           "mounted_on": "router",
           "handler": "remember",
-          "line": 270
+          "line": 271
         }
       ],
       "db_writes": [
         {
           "kind": "add",
-          "line": 141,
+          "line": 142,
           "in": "_persist_recall",
           "target": "db",
           "model": "Query"
         },
         {
           "kind": "flush",
-          "line": 142,
+          "line": 143,
           "in": "_persist_recall",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 152,
+          "line": 153,
           "in": "_persist_recall",
           "target": "db",
           "model": null
@@ -20579,7 +20580,7 @@
     "app.services.lesson_store": {
       "path": "backend/app/services/lesson_store.py",
       "module": "app.services.lesson_store",
-      "loc": 431,
+      "loc": 437,
       "imports": [
         "app.config",
         "app.middleware.rbac",
@@ -20693,6 +20694,7 @@
           "line": 300,
           "is_async": true,
           "calls": [
+            "app.services.write_gate::authority_rank",
             "app.models::AutopilotProposal",
             "app.models::ProposalItem",
             "app.services.write_gate::route_proposal"
@@ -20711,49 +20713,49 @@
         },
         {
           "kind": "add",
-          "line": 329,
+          "line": 335,
           "in": "save_lesson",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 330,
+          "line": 336,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 355,
+          "line": 361,
           "in": "save_lesson",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "flush",
-          "line": 356,
+          "line": 362,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 388,
+          "line": 394,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 402,
+          "line": 408,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 424,
+          "line": 430,
           "in": "save_lesson",
           "target": "db",
           "model": null
@@ -27772,7 +27774,7 @@
     "app.services.write_gate": {
       "path": "backend/app/services/write_gate.py",
       "module": "app.services.write_gate",
-      "loc": 236,
+      "loc": 299,
       "imports": [
         "app.middleware.rbac",
         "app.models",
@@ -27785,57 +27787,87 @@
         "datetime",
         "json",
         "logging",
+        "math",
         "sqlalchemy",
-        "types"
+        "types",
+        "typing"
       ],
       "functions": {
+        "authority_rank": {
+          "name": "authority_rank",
+          "line": 54,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_validate_probability": {
+          "name": "_validate_probability",
+          "line": 67,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "WriteGatePolicy.__post_init__": {
+          "name": "WriteGatePolicy.__post_init__",
+          "line": 81,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "WriteGatePolicy.validate": {
+          "name": "WriteGatePolicy.validate",
+          "line": 84,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "_policy_from_dict": {
           "name": "_policy_from_dict",
-          "line": 67,
+          "line": 102,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "load_policy": {
           "name": "load_policy",
-          "line": 85,
+          "line": 114,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "policy_for_region": {
           "name": "policy_for_region",
-          "line": 91,
+          "line": 120,
           "is_async": true,
           "calls": [
             "app.services.region_policy::get_region_policies"
           ],
           "is_route": false
         },
-        "authority_rank": {
-          "name": "authority_rank",
-          "line": 108,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
         "evaluate_write": {
           "name": "evaluate_write",
-          "line": 113,
+          "line": 138,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "proposal_max_authority": {
           "name": "proposal_max_authority",
-          "line": 159,
+          "line": 191,
           "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "proposal_max_authority.consider": {
+          "name": "proposal_max_authority.consider",
+          "line": 209,
+          "is_async": false,
           "calls": [],
           "is_route": false
         },
         "route_proposal": {
           "name": "route_proposal",
-          "line": 193,
+          "line": 256,
           "is_async": true,
           "calls": [
             "app.middleware.rbac::UserIdentity",
@@ -27848,7 +27880,7 @@
       "db_writes": [
         {
           "kind": "flush",
-          "line": 228,
+          "line": 291,
           "in": "route_proposal",
           "target": "db",
           "model": null
@@ -31837,6 +31869,86 @@
       },
       "routes": [],
       "db_writes": [],
+      "llm_sites": []
+    },
+    "scripts.verify_write_authority": {
+      "path": "backend/scripts/verify_write_authority.py",
+      "module": "scripts.verify_write_authority",
+      "loc": 129,
+      "imports": [
+        "app.database",
+        "app.models",
+        "app.routers.recall",
+        "app.services.actions.init_registry",
+        "app.services.lesson_store",
+        "app.services.write_gate"
+      ],
+      "external_imports": [
+        "asyncio",
+        "fastapi",
+        "httpx",
+        "json",
+        "os",
+        "socket",
+        "sqlalchemy",
+        "unittest",
+        "uvicorn"
+      ],
+      "functions": {
+        "require": {
+          "name": "require",
+          "line": 17,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 22,
+          "is_async": true,
+          "calls": [
+            "app.services.actions.init_registry::init_actions_registry",
+            "app.database::async_session",
+            "app.services.lesson_store::save_lesson",
+            "app.models::AutopilotProposal",
+            "app.models::ProposalItem",
+            "app.services.write_gate::route_proposal",
+            "app.database::dispose"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "add",
+          "line": 97,
+          "in": "main",
+          "target": "db",
+          "model": "AutopilotProposal"
+        },
+        {
+          "kind": "flush",
+          "line": 98,
+          "in": "main",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 100,
+          "in": "main",
+          "target": "db",
+          "model": "ProposalItem"
+        },
+        {
+          "kind": "commit",
+          "line": 102,
+          "in": "main",
+          "target": "db",
+          "model": null
+        }
+      ],
       "llm_sites": []
     },
     "tenants.corvus-locomo.classifier_prompt": {
@@ -48741,10 +48853,250 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_write_authority_validation": {
+      "path": "backend/tests/test_write_authority_validation.py",
+      "module": "tests.test_write_authority_validation",
+      "loc": 217,
+      "imports": [
+        "app.routers.recall",
+        "app.services.lesson_store",
+        "app.services.region_policy",
+        "app.services.write_gate"
+      ],
+      "external_imports": [
+        "fastapi",
+        "httpx",
+        "json",
+        "pytest",
+        "types",
+        "typing",
+        "unittest"
+      ],
+      "functions": {
+        "test_invalid_authority_rejected_at_rank_and_gate": {
+          "name": "test_invalid_authority_rejected_at_rank_and_gate",
+          "line": 18,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::authority_rank",
+            "app.services.write_gate::evaluate_write",
+            "app.services.write_gate::WriteGatePolicy"
+          ],
+          "is_route": false
+        },
+        "test_invalid_policy_rejected_at_construction_and_overlay": {
+          "name": "test_invalid_policy_rejected_at_construction_and_overlay",
+          "line": 34,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::WriteGatePolicy",
+            "app.services.write_gate::_policy_from_dict"
+          ],
+          "is_route": false
+        },
+        "test_malformed_policy_container_rejected": {
+          "name": "test_malformed_policy_container_rejected",
+          "line": 42,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::_policy_from_dict"
+          ],
+          "is_route": false
+        },
+        "test_invalid_confidence_rejected_even_in_manual_mode": {
+          "name": "test_invalid_confidence_rejected_even_in_manual_mode",
+          "line": 48,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::evaluate_write",
+            "app.services.write_gate::WriteGatePolicy"
+          ],
+          "is_route": false
+        },
+        "test_invalid_guardrail_signal_rejected": {
+          "name": "test_invalid_guardrail_signal_rejected",
+          "line": 54,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::evaluate_write",
+            "app.services.write_gate::WriteGatePolicy"
+          ],
+          "is_route": false
+        },
+        "test_none_is_deliberate_internal_default": {
+          "name": "test_none_is_deliberate_internal_default",
+          "line": 59,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::authority_rank",
+            "app.services.write_gate::evaluate_write",
+            "app.services.write_gate::WriteGatePolicy"
+          ],
+          "is_route": false
+        },
+        "test_policy_is_revalidated_at_evaluation_boundary": {
+          "name": "test_policy_is_revalidated_at_evaluation_boundary",
+          "line": 64,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::WriteGatePolicy",
+            "app.services.write_gate::evaluate_write"
+          ],
+          "is_route": false
+        },
+        "test_region_override_cannot_hide_invalid_falsey_config": {
+          "name": "test_region_override_cannot_hide_invalid_falsey_config",
+          "line": 73,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::WriteGatePolicy",
+            "app.services.write_gate::policy_for_region"
+          ],
+          "is_route": false
+        },
+        "test_unclassified_mutations_do_not_auto_route": {
+          "name": "test_unclassified_mutations_do_not_auto_route",
+          "line": 83,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::proposal_max_authority"
+          ],
+          "is_route": false
+        },
+        "test_empty_proposal_is_not_auto_approved": {
+          "name": "test_empty_proposal_is_not_auto_approved",
+          "line": 89,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::proposal_max_authority"
+          ],
+          "is_route": false
+        },
+        "test_http_authority_vocabulary_matches_gate": {
+          "name": "test_http_authority_vocabulary_matches_gate",
+          "line": 94,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_countersign_cannot_be_bypassed_by_raised_ceiling": {
+          "name": "test_countersign_cannot_be_bypassed_by_raised_ceiling",
+          "line": 100,
+          "is_async": false,
+          "calls": [
+            "app.services.write_gate::WriteGatePolicy",
+            "app.services.write_gate::evaluate_write"
+          ],
+          "is_route": false
+        },
+        "item": {
+          "name": "item",
+          "line": 105,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "database": {
+          "name": "database",
+          "line": 110,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_mixed_proposal_cannot_hide_invalid_spec": {
+          "name": "test_mixed_proposal_cannot_hide_invalid_spec",
+          "line": 125,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::proposal_max_authority"
+          ],
+          "is_route": false
+        },
+        "test_invalid_target_authority_blocks_routing_without_side_effects": {
+          "name": "test_invalid_target_authority_blocks_routing_without_side_effects",
+          "line": 132,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::WriteGatePolicy",
+            "app.services.write_gate::route_proposal"
+          ],
+          "is_route": false
+        },
+        "test_missing_target_rejected": {
+          "name": "test_missing_target_rejected",
+          "line": 143,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::proposal_max_authority"
+          ],
+          "is_route": false
+        },
+        "test_authority_edits_consider_new_value": {
+          "name": "test_authority_edits_consider_new_value",
+          "line": 151,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::proposal_max_authority"
+          ],
+          "is_route": false
+        },
+        "test_identity_scope_requires_countersign": {
+          "name": "test_identity_scope_requires_countersign",
+          "line": 168,
+          "is_async": true,
+          "calls": [
+            "app.services.write_gate::proposal_max_authority",
+            "app.services.write_gate::evaluate_write",
+            "app.services.write_gate::WriteGatePolicy"
+          ],
+          "is_route": false
+        },
+        "test_lesson_store_rejects_before_database_or_provider_work": {
+          "name": "test_lesson_store_rejects_before_database_or_provider_work",
+          "line": 176,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_remember_http_rejects_invalid_authority_before_save": {
+          "name": "test_remember_http_rejects_invalid_authority_before_save",
+          "line": 188,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_remember_http_rejects_invalid_authority_before_save.fake_db": {
+          "name": "test_remember_http_rejects_invalid_authority_before_save.fake_db",
+          "line": 192,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_remember_http_omission_keeps_informational_default": {
+          "name": "test_remember_http_omission_keeps_informational_default",
+          "line": 204,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_remember_http_omission_keeps_informational_default.fake_db": {
+          "name": "test_remember_http_omission_keeps_informational_default.fake_db",
+          "line": 208,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_write_gate": {
       "path": "backend/tests/test_write_gate.py",
       "module": "tests.test_write_gate",
-      "loc": 202,
+      "loc": 204,
       "imports": [
         "app.services.write_gate"
       ],
@@ -48763,8 +49115,8 @@
           ],
           "is_route": false
         },
-        "test_unknown_authority_is_observational": {
-          "name": "test_unknown_authority_is_observational",
+        "test_only_omitted_authority_is_observational": {
+          "name": "test_only_omitted_authority_is_observational",
           "line": 35,
           "is_async": false,
           "calls": [
@@ -48774,7 +49126,7 @@
         },
         "test_manual_mode_queues_everything": {
           "name": "test_manual_mode_queues_everything",
-          "line": 43,
+          "line": 44,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48783,7 +49135,7 @@
         },
         "test_tiered_informational_auto_commits": {
           "name": "test_tiered_informational_auto_commits",
-          "line": 50,
+          "line": 51,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48792,7 +49144,7 @@
         },
         "test_tiered_unattributed_auto_commits": {
           "name": "test_tiered_unattributed_auto_commits",
-          "line": 55,
+          "line": 56,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48801,7 +49153,7 @@
         },
         "test_tiered_regulatory_queues": {
           "name": "test_tiered_regulatory_queues",
-          "line": 60,
+          "line": 61,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48810,7 +49162,7 @@
         },
         "test_tiered_organizational_above_guidance_ceiling_queues": {
           "name": "test_tiered_organizational_above_guidance_ceiling_queues",
-          "line": 66,
+          "line": 67,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48819,7 +49171,7 @@
         },
         "test_guardrail_trip_always_queues": {
           "name": "test_guardrail_trip_always_queues",
-          "line": 71,
+          "line": 72,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48828,7 +49180,7 @@
         },
         "test_guardrails_not_applicable_is_not_a_trip": {
           "name": "test_guardrails_not_applicable_is_not_a_trip",
-          "line": 77,
+          "line": 78,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48837,7 +49189,7 @@
         },
         "test_low_confidence_queues": {
           "name": "test_low_confidence_queues",
-          "line": 82,
+          "line": 83,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
@@ -48846,16 +49198,16 @@
         },
         "test_confidence_not_applicable_skips_check": {
           "name": "test_confidence_not_applicable_skips_check",
-          "line": 88,
+          "line": 89,
           "is_async": false,
           "calls": [
             "app.services.write_gate::evaluate_write"
           ],
           "is_route": false
         },
-        "test_raised_ceiling_admits_organizational": {
-          "name": "test_raised_ceiling_admits_organizational",
-          "line": 93,
+        "test_raised_ceiling_preserves_organizational_countersign": {
+          "name": "test_raised_ceiling_preserves_organizational_countersign",
+          "line": 94,
           "is_async": false,
           "calls": [
             "app.services.write_gate::WriteGatePolicy",
@@ -48865,21 +49217,21 @@
         },
         "_fake_db": {
           "name": "_fake_db",
-          "line": 101,
+          "line": 102,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_item": {
           "name": "_item",
-          "line": 112,
+          "line": 114,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_proposal_authority_from_update_target": {
           "name": "test_proposal_authority_from_update_target",
-          "line": 121,
+          "line": 123,
           "is_async": true,
           "calls": [
             "app.services.write_gate::proposal_max_authority"
@@ -48888,7 +49240,7 @@
         },
         "test_proposal_authority_from_create_spec": {
           "name": "test_proposal_authority_from_create_spec",
-          "line": 128,
+          "line": 130,
           "is_async": true,
           "calls": [
             "app.services.write_gate::proposal_max_authority"
@@ -48897,7 +49249,7 @@
         },
         "test_proposal_authority_takes_max": {
           "name": "test_proposal_authority_takes_max",
-          "line": 141,
+          "line": 143,
           "is_async": true,
           "calls": [
             "app.services.write_gate::proposal_max_authority"
@@ -48906,14 +49258,14 @@
         },
         "_proposal": {
           "name": "_proposal",
-          "line": 155,
+          "line": 157,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_route_proposal_queue_leaves_state": {
           "name": "test_route_proposal_queue_leaves_state",
-          "line": 163,
+          "line": 165,
           "is_async": true,
           "calls": [
             "app.services.write_gate::route_proposal"
@@ -48922,7 +49274,7 @@
         },
         "test_route_proposal_auto_approves_and_applies": {
           "name": "test_route_proposal_auto_approves_and_applies",
-          "line": 176,
+          "line": 178,
           "is_async": true,
           "calls": [
             "app.services.write_gate::route_proposal"
@@ -48931,7 +49283,7 @@
         },
         "test_route_proposal_requires_proposed_state": {
           "name": "test_route_proposal_requires_proposed_state",
-          "line": 198,
+          "line": 200,
           "is_async": true,
           "calls": [
             "app.services.write_gate::route_proposal"
@@ -49153,6 +49505,7 @@
       "scripts.record_roadmap_strategic_plasticity",
       "scripts.retire_false_neurons",
       "scripts.verify_audit_redaction",
+      "scripts.verify_write_authority",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
       "tests.fixtures.auditor_golden.freeze_golden",
@@ -49376,6 +49729,7 @@
       "scripts.record_roadmap_strategic_plasticity",
       "scripts.retire_false_neurons",
       "scripts.verify_audit_redaction",
+      "scripts.verify_write_authority",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
       "tests.kernel_matrix_fixtures",
@@ -49464,7 +49818,9 @@
       "tests.test_llm_fallback"
     ],
     "app.routers.recall": [
-      "tests.test_skill_signpost"
+      "scripts.verify_write_authority",
+      "tests.test_skill_signpost",
+      "tests.test_write_authority_validation"
     ],
     "app.schemas": [
       "app.governance.output_guard",
@@ -49533,6 +49889,7 @@
       "eval.locomo.analysis.step04_live_janitor_probe2",
       "eval.locomo.run_locomo",
       "scripts.retire_false_neurons",
+      "scripts.verify_write_authority",
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway"
     ],
@@ -49820,7 +50177,9 @@
       "app.services.reference_ingest",
       "eval.locomo.run_locomo",
       "eval.locomo.test_lifecycle",
-      "tests.test_reconsolidation_kernel"
+      "scripts.verify_write_authority",
+      "tests.test_reconsolidation_kernel",
+      "tests.test_write_authority_validation"
     ],
     "app.services.llm_provider": [
       "app.agents.runtime",
@@ -50238,7 +50597,8 @@
       "app.services.recall_primitives",
       "app.services.reference_ingest",
       "app.services.write_gate",
-      "tests.test_region_policy"
+      "tests.test_region_policy",
+      "tests.test_write_authority_validation"
     ],
     "app.services.regulatory_coverage": [
       "app.services.executor",
@@ -50364,11 +50724,14 @@
       "tests.test_tier_routing"
     ],
     "app.services.write_gate": [
+      "app.routers.recall",
       "app.services.document_extractor",
       "app.services.lesson_store",
       "app.services.reference_ingest",
+      "scripts.verify_write_authority",
       "tests.test_reference_class",
       "tests.test_region_policy",
+      "tests.test_write_authority_validation",
       "tests.test_write_gate"
     ],
     "app.tenant": [
@@ -51205,6 +51568,13 @@
     "scripts.verify_audit_redaction": [
       "app.database"
     ],
+    "scripts.verify_write_authority": [
+      "app.database",
+      "app.models",
+      "app.services.actions.init_registry",
+      "app.services.lesson_store",
+      "app.services.write_gate"
+    ],
     "tests.benchmarks.eval_token_assembly_triangle": [
       "app.database",
       "app.services.executor",
@@ -51642,6 +52012,10 @@
       "app.services.inhibitory_service",
       "app.services.memory_assembly",
       "app.services.scoring_engine"
+    ],
+    "tests.test_write_authority_validation": [
+      "app.services.lesson_store",
+      "app.services.write_gate"
     ],
     "tests.test_write_gate": [
       "app.services.write_gate"
@@ -63435,7 +63809,7 @@
       "full_path": "/recall",
       "mounted_on": "router",
       "handler": "recall",
-      "line": 179,
+      "line": 180,
       "module": "app.routers.recall",
       "file": "backend/app/routers/recall.py",
       "imports_reachable": [
@@ -63615,7 +63989,7 @@
       "full_path": "/remember",
       "mounted_on": "router",
       "handler": "remember",
-      "line": 270,
+      "line": 271,
       "module": "app.routers.recall",
       "file": "backend/app/routers/recall.py",
       "imports_reachable": [
@@ -65198,6 +65572,12 @@
       ]
     },
     {
+      "module": "scripts.verify_write_authority",
+      "entrypoints": [
+        "main"
+      ]
+    },
+    {
       "module": "tests.benchmarks.eval_token_assembly_triangle",
       "entrypoints": [
         "_answer_one",
@@ -65552,6 +65932,22 @@
         "test_feature_flag_restores_legacy_inhibition",
         "test_legacy_eight_vs_token_packet_near_three_thousand",
         "test_redundancy_pass_preserves_ranked_order_and_counts_suppression"
+      ]
+    },
+    {
+      "module": "tests.test_write_authority_validation",
+      "entrypoints": [
+        "test_authority_edits_consider_new_value",
+        "test_empty_proposal_is_not_auto_approved",
+        "test_identity_scope_requires_countersign",
+        "test_invalid_target_authority_blocks_routing_without_side_effects",
+        "test_lesson_store_rejects_before_database_or_provider_work",
+        "test_missing_target_rejected",
+        "test_mixed_proposal_cannot_hide_invalid_spec",
+        "test_region_override_cannot_hide_invalid_falsey_config",
+        "test_remember_http_omission_keeps_informational_default",
+        "test_remember_http_rejects_invalid_authority_before_save",
+        "test_unclassified_mutations_do_not_auto_route"
       ]
     },
     {

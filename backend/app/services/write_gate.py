@@ -21,9 +21,11 @@ RegionPolicy (plat-region-config).
 
 import json
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,9 +36,11 @@ logger = logging.getLogger(__name__)
 
 GATE_ACTOR = "write_gate:tiered-v1"
 
-# Authority ranking for the auto-commit ceiling. Absent/unknown authority
-# ranks as informational: unattributed writes are observational by
-# definition (session learnings), and decay reclaims them if wrong.
+# None is a deliberate legacy default; unsupported values are never defaults.
+AuthorityLevel = Literal[
+    "informational", "guidance", "organizational", "industry_practice",
+    "regulatory", "binding_standard",
+]
 AUTHORITY_RANK = MappingProxyType({
     "informational": 1,
     "guidance": 2,
@@ -45,7 +49,25 @@ AUTHORITY_RANK = MappingProxyType({
     "regulatory": 5,
     "binding_standard": 6,
 })
-_UNKNOWN_AUTHORITY_RANK = 1
+
+
+def authority_rank(authority_level: str | None) -> int:
+    """Rank a supported authority. Only None defaults to informational.
+
+    Malformed input raises ValueError without echoing untrusted input. This
+    boundary is shared by HTTP saves, internal writes and proposal aggregation.
+    """
+    if authority_level is None:
+        return AUTHORITY_RANK["informational"]
+    if not isinstance(authority_level, str) or authority_level not in AUTHORITY_RANK:
+        raise ValueError("unsupported authority_level")
+    return AUTHORITY_RANK[authority_level]
+
+
+def _validate_probability(value, name: str) -> None:
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value) or not 0 <= value <= 1):
+        raise ValueError(f"{name} must be a finite number in [0,1]")
 
 
 @dataclass(frozen=True)
@@ -55,6 +77,19 @@ class WriteGatePolicy:
     auto_commit_max_authority: str = "informational"  # ceiling for auto route
     require_guardrails_pass: bool = True              # False guardrails always queue
     min_confidence: float = 0.6                       # normalized 0-1
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        if not isinstance(self.mode, str) or self.mode not in ("manual", "tiered"):
+            raise ValueError("write_gate.mode must be manual|tiered")
+        if self.auto_commit_max_authority is None:
+            raise ValueError("write_gate ceiling requires an explicit authority")
+        authority_rank(self.auto_commit_max_authority)
+        if type(self.require_guardrails_pass) is not bool:
+            raise ValueError("require_guardrails_pass must be boolean")
+        _validate_probability(self.min_confidence, "min_confidence")
 
 
 @dataclass(frozen=True)
@@ -67,19 +102,13 @@ class WriteDecision:
 def _policy_from_dict(raw: dict, base: "WriteGatePolicy | None" = None) -> WriteGatePolicy:
     """Build a policy from a config dict, overlaying an optional base."""
     defaults = base or WriteGatePolicy()
-    policy = WriteGatePolicy(
-        mode=str(raw.get("mode", defaults.mode)),
-        auto_commit_max_authority=str(
-            raw.get("auto_commit_max_authority", defaults.auto_commit_max_authority)
-        ),
-        require_guardrails_pass=bool(
-            raw.get("require_guardrails_pass", defaults.require_guardrails_pass)
-        ),
-        min_confidence=float(raw.get("min_confidence", defaults.min_confidence)),
+    defaults.validate()
+    fields = {"mode", "auto_commit_max_authority", "require_guardrails_pass", "min_confidence"}
+    if not isinstance(raw, dict) or raw.keys() - fields:
+        raise ValueError("write_gate policy must be an object with supported fields")
+    return WriteGatePolicy(
+        **{name: raw.get(name, getattr(defaults, name)) for name in fields},
     )
-    assert policy.mode in ("manual", "tiered"), \
-        f"write_gate.mode must be manual|tiered, got {policy.mode!r}"
-    return policy
 
 
 def load_policy() -> WriteGatePolicy:
@@ -91,23 +120,19 @@ def load_policy() -> WriteGatePolicy:
 async def policy_for_region(db: AsyncSession, region: str | None) -> WriteGatePolicy:
     """Tenant policy overlaid with the region's write_gate overrides, if any.
 
-    The controller dials the threshold per tenant AND per region — e.g.
-    Manufacturing auto-commits organizational notes while Legal queues
-    everything.
+    Region thresholds may restrict low-authority auto-writes. They cannot
+    remove the organizational/identity countersign requirement.
     """
     base = load_policy()
     if not region:
         return base
     from app.services.region_policy import get_region_policies
-    overrides = ((await get_region_policies(db)).get(region) or {}).get("write_gate") or {}
-    if not overrides:
+    region_settings = (await get_region_policies(db)).get(region)
+    if region_settings is None:
         return base
-    return _policy_from_dict(overrides, base)
-
-
-def authority_rank(authority_level: str | None) -> int:
-    """Rank an authority level; unknown/absent = observational (lowest)."""
-    return AUTHORITY_RANK.get(authority_level or "", _UNKNOWN_AUTHORITY_RANK)
+    if not isinstance(region_settings, dict):
+        raise ValueError("region policy must be an object")
+    return _policy_from_dict(region_settings.get("write_gate", {}), base)
 
 
 def evaluate_write(
@@ -122,8 +147,15 @@ def evaluate_write(
     least one tripped (always queues); None = not applicable to this path.
     confidence: normalized 0-1 (e.g. eval_overall/5); None = not applicable.
     """
-    assert confidence is None or 0.0 <= confidence <= 1.0, \
-        f"confidence must be in [0,1], got {confidence}"
+    if not isinstance(policy, WriteGatePolicy):
+        raise ValueError("WriteGatePolicy required")
+    policy.validate()
+    rank = authority_rank(authority_level)
+    ceiling = authority_rank(policy.auto_commit_max_authority)
+    if guardrails_passed is not None and type(guardrails_passed) is not bool:
+        raise ValueError("guardrails_passed must be boolean or None")
+    if confidence is not None:
+        _validate_probability(confidence, "confidence")
 
     if policy.mode == "manual":
         return WriteDecision("queue", "manual mode: all writes human-gated", policy.mode)
@@ -131,8 +163,8 @@ def evaluate_write(
     if guardrails_passed is False and policy.require_guardrails_pass:
         return WriteDecision("queue", "guardrail layer tripped", policy.mode)
 
-    rank = authority_rank(authority_level)
-    ceiling = authority_rank(policy.auto_commit_max_authority)
+    if rank >= AUTHORITY_RANK["organizational"]:
+        return WriteDecision("queue", "authoritative write requires human countersign", policy.mode)
     if rank > ceiling:
         return WriteDecision(
             "queue",
@@ -168,25 +200,56 @@ async def proposal_max_authority(
         select(ProposalItem).where(ProposalItem.proposal_id == proposal.id)
     )).scalars().all()
 
+    if not items:
+        raise ValueError("cannot classify an empty proposal")
+
     best: str | None = None
     best_rank = 0
-    target_ids = [i.target_neuron_id for i in items if i.target_neuron_id]
+
+    def consider(level, department=None):
+        nonlocal best, best_rank
+        rank = authority_rank(level)
+        if department is not None and not isinstance(department, str):
+            raise ValueError("proposal department must be a string or None")
+        if (department and department.strip().casefold() == "assistant"
+                and rank < AUTHORITY_RANK["organizational"]):
+            level, rank = "organizational", AUTHORITY_RANK["organizational"]
+        if rank > best_rank:
+            best, best_rank = level, rank
+
+    target_ids = {i.target_neuron_id for i in items if i.target_neuron_id is not None}
+    if any(type(target) is not int or target <= 0 for target in target_ids):
+        raise ValueError("proposal target must be a positive neuron id")
     if target_ids:
         rows = (await db.execute(
-            select(Neuron.authority_level).where(Neuron.id.in_(target_ids))
+            select(Neuron.id, Neuron.authority_level, Neuron.department)
+            .where(Neuron.id.in_(target_ids))
         )).all()
-        for (level,) in rows:
-            if authority_rank(level) > best_rank:
-                best, best_rank = level, authority_rank(level)
+        if {row[0] for row in rows} != target_ids:
+            raise ValueError("proposal target authority is unresolved")
+        for _, level, department in rows:
+            consider(level, department)
     for item in items:
-        if not item.neuron_spec_json:
-            continue
-        try:
-            spec_level = json.loads(item.neuron_spec_json).get("authority_level")
-        except (json.JSONDecodeError, TypeError):
-            continue
-        if authority_rank(spec_level) > best_rank:
-            best, best_rank = spec_level, authority_rank(spec_level)
+        if item.action not in ("create", "update", "merge"):
+            raise ValueError("proposal action requires explicit human review")
+        if item.action in ("update", "merge"):
+            if item.target_neuron_id is None:
+                raise ValueError("proposal update requires a target")
+            if item.field == "authority_level":
+                # The apply path turns None into an empty string; reject it.
+                if item.new_value is None:
+                    raise ValueError("authority update requires an explicit value")
+                consider(item.new_value)
+            elif item.field == "department":
+                consider(None, item.new_value)
+        if item.neuron_spec_json is not None or item.action == "create":
+            try:
+                spec = json.loads(item.neuron_spec_json)
+            except (ValueError, TypeError, RecursionError) as exc:
+                raise ValueError("proposal spec must be a valid JSON object") from exc
+            if not isinstance(spec, dict):
+                raise ValueError("proposal spec must be a JSON object")
+            consider(spec.get("authority_level"), spec.get("department"))
     return best
 
 
@@ -205,8 +268,8 @@ async def route_proposal(
     review_notes and the actor is GATE_ACTOR. Caller owns the commit.
     region selects per-region policy overrides (plat-region-config).
     """
-    assert proposal.state == "proposed", \
-        f"route_proposal requires state='proposed', got {proposal.state!r}"
+    if proposal.state != "proposed":
+        raise ValueError("route_proposal requires state='proposed'")
 
     policy = await policy_for_region(db, region)
     authority = await proposal_max_authority(db, proposal)

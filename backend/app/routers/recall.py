@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services.executor import prepare_context
 from app.services.lesson_store import save_lesson
+from app.services.write_gate import AuthorityLevel
 from app.services.skill_signpost import skill_pointers_for
 from app.tenant import tenant
 
@@ -57,7 +58,7 @@ class RememberRequest(BaseModel):
     node_type: str = Field(default="lesson", max_length=50)
     abstraction_type: str | None = Field(default="principle", max_length=20)
     summary: str | None = Field(default=None, max_length=500)
-    authority_level: str = Field(default="informational", max_length=30)
+    authority_level: AuthorityLevel = "informational"
     project: str | None = Field(default=None, max_length=100)
     entities: list[str] | None = Field(default=None, max_length=50)
     # Evidence-frame slots (mind-neuron-evidence-frame). For durable memory
