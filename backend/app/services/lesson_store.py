@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AutopilotProposal, Neuron, ProposalItem
-from app.services.write_gate import route_proposal
+from app.services.write_gate import authority_rank, route_proposal
 
 logger = logging.getLogger(__name__)
 
@@ -315,12 +315,18 @@ async def save_lesson(
     decoration: `future_use` and `likely_queries` are required, and the
     save raises EvidenceFrameError without them.
     """
+    # Reject malformed authority before staging, anchors, embedding or commits.
+    rank = authority_rank(authority_level)
+    if authority_level is None:
+        authority_level = "informational"
     # Scopes are region tags; casefold to the canonical spelling so
     # "assistant" and "Assistant" never split the corpus-by-scope counts.
     if scope:
         canonical = {s.casefold(): s for s in
                      ("Projects", "User", "Harness", "Environment", "Assistant")}
         scope = canonical.get(scope.strip().casefold(), scope.strip())
+    if scope == "Assistant" and rank < authority_rank("organizational"):
+        authority_level = "organizational"
     proposal = AutopilotProposal(
         state="proposed",
         gap_source=gap_source,

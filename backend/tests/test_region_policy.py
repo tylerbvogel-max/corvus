@@ -153,5 +153,5 @@ def test_write_gate_overlay_can_force_manual():
 
 
 def test_write_gate_rejects_bad_mode():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         _policy_from_dict({"mode": "yolo"})

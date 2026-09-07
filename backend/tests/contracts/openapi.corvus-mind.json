@@ -6317,7 +6317,14 @@
           },
           "authority_level": {
             "default": "informational",
-            "maxLength": 30,
+            "enum": [
+              "informational",
+              "guidance",
+              "organizational",
+              "industry_practice",
+              "regulatory",
+              "binding_standard"
+            ],
             "title": "Authority Level",
             "type": "string"
           },

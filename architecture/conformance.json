@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 407,
+    "modules": 409,
     "frontend_files": 80,
-    "units": 487,
-    "classified": 487,
+    "units": 489,
+    "classified": 489,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "b60a256ffb57234e0041cea6c724ef9d4c7465c0029b57b7895d13bb1926b995",
-    "current_fingerprint": "b60a256ffb57234e0041cea6c724ef9d4c7465c0029b57b7895d13bb1926b995",
-    "stored_files": 487,
-    "current_files": 487
+    "stored_fingerprint": "6ef542377e0a88501ad4d9c98ae3eb6018682af40da52aa3fbf5466b4162a169",
+    "current_fingerprint": "6ef542377e0a88501ad4d9c98ae3eb6018682af40da52aa3fbf5466b4162a169",
+    "stored_files": 489,
+    "current_files": 489
   },
   "manifest_problems": [],
   "boxes": [
@@ -116,7 +116,7 @@
       "confidence": "reviewed",
       "module_count": 0,
       "frontend_file_count": 80,
-      "loc": 44827,
+      "loc": 44828,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -281,7 +281,7 @@
       "confidence": "reviewed",
       "module_count": 23,
       "frontend_file_count": 0,
-      "loc": 8246,
+      "loc": 8247,
       "routes": 24,
       "modules": [
         "app.routers.engrams",
@@ -318,7 +318,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 1646,
+      "loc": 1652,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -360,7 +360,7 @@
       "confidence": "reviewed",
       "module_count": 19,
       "frontend_file_count": 0,
-      "loc": 2947,
+      "loc": 3010,
       "routes": 8,
       "modules": [
         "app.middleware.rbac",
@@ -672,9 +672,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 120,
+      "module_count": 122,
       "frontend_file_count": 0,
-      "loc": 25606,
+      "loc": 25954,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -689,6 +689,7 @@
         "scripts.supply_chain",
         "scripts.verify_audit_redaction",
         "scripts.verify_deployment",
+        "scripts.verify_write_authority",
         "tests",
         "tests.benchmarks.eval_token_assembly_triangle",
         "tests.conftest",
@@ -796,6 +797,7 @@
         "tests.test_synaptic_homeostasis",
         "tests.test_tier_routing",
         "tests.test_token_bounded_pipeline",
+        "tests.test_write_authority_validation",
         "tests.test_write_gate"
       ],
       "frontend_files": []
