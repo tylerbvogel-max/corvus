@@ -1030,7 +1030,7 @@ async def run_audit(
             try:
                 verdict, usage = await critique_neuron(packet)
             except (VerdictValidationError, AssertionError) as exc:
-                outcome["error"] = str(exc)[:300]
+                outcome["error"] = "critic-verdict-invalid"
                 return outcome
         violations = validate_verdict(verdict, packet, neuron)
         outcome.update({

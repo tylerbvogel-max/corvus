@@ -694,5 +694,8 @@ async def run_distillation(
         try:
             results.append(await distill_log(db, path))
         except (OSError, ValueError, AssertionError, RuntimeError) as exc:
-            results.append({"session_id": os.path.basename(path), "error": str(exc)[:300]})
+            # Error prose may contain provider prompts, credentials, or paths.
+            # Keep the per-session result useful without copying that content.
+            results.append({"session_id": os.path.basename(path),
+                            "error": "session-processing-failed"})
     return {"ready": len(ready), "processed": len(results), "results": results}

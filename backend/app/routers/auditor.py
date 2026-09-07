@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.observability.jobs import scheduled_run
+from app.observability.jobs import scheduled_http_run as scheduled_run
+from app.observability.job_outcomes import attach_outcome
 from app.services.memory_quality_auditor import (
     _prior_ran_at, _sessions_distilled_since, auditor_metrics, run_audit,
 )
@@ -49,6 +50,7 @@ async def auditor_run(
                                  trigger="admin" if mode != "auto" else "timer")
         assert isinstance(report, dict), "auditor report must be a dict"
         detail["mode"] = mode
+        report = attach_outcome("auditor", report, detail)
     return json.loads(json.dumps(report, default=str))
 
 

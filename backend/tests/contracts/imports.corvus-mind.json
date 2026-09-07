@@ -1,5 +1,5 @@
 {
-  "app_module_count": 134,
+  "app_module_count": 135,
   "app_modules": [
     "app",
     "app.agents",
@@ -36,6 +36,7 @@
     "app.models",
     "app.observability",
     "app.observability.context",
+    "app.observability.job_outcomes",
     "app.observability.jobs",
     "app.observability.json_logging",
     "app.operations",

@@ -35,6 +35,9 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from app.observability.context import bound
+from app.observability.job_outcomes import BatchOutcome, exception_reason, safe_detail
+
+logger = logging.getLogger(__name__)
 
 
 RECEIPTS_DIR = Path(
@@ -207,12 +210,10 @@ def _now() -> datetime:
 
 @contextmanager
 def job_receipt(job: str, tenant: str) -> Iterator[dict[str, Any]]:
-    """Record what a scheduled run did, including when it failed.
+    """Record actual batch outcomes; a healthy no-work check is not a write.
 
-    The failure path is the whole point. On success the receipt records
-    last_success; on failure it preserves the exception and the PREVIOUS
-    success time, because "when did this last work" is the first question
-    asked about a job that is now broken.
+    Interrupted batches have unknown counts. Never serialize an exception or
+    arbitrary caller details into the operational receipt.
     """
     started = _now()
     previous = read_receipt(job) or {}
@@ -220,66 +221,79 @@ def job_receipt(job: str, tenant: str) -> Iterator[dict[str, Any]]:
     try:
         yield detail
     except Exception as exc:
+        finished = _now()
+        metadata = safe_detail(detail)
+        metadata.pop("batch", None)
         write_receipt(job, {
-            "job": job,
-            "tenant": tenant,
-            "outcome": "error",
-            "started_at": started.isoformat(),
-            "finished_at": _now().isoformat(),
-            "duration_ms": round((_now() - started).total_seconds() * 1000),
-            "exception": f"{type(exc).__name__}: {exc}",
+            "job": job, "tenant": tenant, "outcome": "error",
+            "started_at": started.isoformat(), "finished_at": finished.isoformat(),
+            "duration_ms": round((finished - started).total_seconds() * 1000, 3),
+            "exception": exception_reason(exc), "counts_known": False,
             "last_success": previous.get("last_success"),
-            "remediation": JOBS_BY_NAME[job].remediation if job in JOBS_BY_NAME else "",
-            "detail": detail,
+            "remediation": JOBS_BY_NAME[job].remediation,
+            "detail": metadata,
         })
         raise
     finished = _now()
+    batch = detail.get("batch")
+    outcome = batch.outcome if isinstance(batch, BatchOutcome) else "ok"
+    healthy = outcome in {"ok", "no-work"}
     write_receipt(job, {
-        "job": job,
-        "tenant": tenant,
-        "outcome": "ok",
-        "started_at": started.isoformat(),
-        "finished_at": finished.isoformat(),
-        "duration_ms": round((finished - started).total_seconds() * 1000),
-        "exception": None,
-        "last_success": finished.isoformat(),
-        "remediation": "",
-        "detail": detail,
+        "job": job, "tenant": tenant, "outcome": outcome,
+        "started_at": started.isoformat(), "finished_at": finished.isoformat(),
+        "duration_ms": round((finished - started).total_seconds() * 1000, 3),
+        "exception": None if healthy else "returned-item-failure",
+        "counts_known": isinstance(batch, BatchOutcome),
+        "last_success": finished.isoformat() if healthy else previous.get("last_success"),
+        "remediation": "" if healthy else JOBS_BY_NAME[job].remediation,
+        "detail": safe_detail(detail),
     })
 
 
 @contextmanager
 def scheduled_run(job: str, tenant: str) -> Iterator[dict[str, Any]]:
-    """The one wrapper every scheduled endpoint uses.
-
-    Binds job correlation so each line the run emits is attributable, logs a
-    start/complete pair, and writes the receipt that is the job's real health
-    signal. Combined into one helper because four handlers repeating three
-    concerns is how they drift apart — and the failure path is the one that
-    must not be forgotten in the fourth copy.
-    """
-    logger = logging.getLogger("app.observability.jobs")
+    """Correlate the run and log only content-safe, truthful outcome fields."""
     with bound(job=job):
-        logger.info("scheduled job starting", extra={
-            "event": "job.start", "job": job,
-        })
+        logger.info("scheduled job starting", extra={"event": "job.start", "job": job})
         try:
             with job_receipt(job, tenant) as detail:
                 yield detail
         except Exception as exc:
             logger.error("scheduled job FAILED", extra={
                 "event": "job.failed", "job": job, "outcome": "error",
-                "reason": f"{type(exc).__name__}: {exc}",
-            }, exc_info=True)
+                "reason": exception_reason(exc),
+            })
             raise
         receipt = read_receipt(job) or {}
-        logger.info("scheduled job complete", extra={
-            "event": "job.complete", "job": job, "outcome": "ok",
+        outcome = receipt.get("outcome", "unreadable")
+        healthy = outcome in {"ok", "no-work"}
+        log = logger.info if healthy else logger.error
+        log("scheduled job complete" if healthy else "scheduled job FAILED", extra={
+            "event": "job.complete" if healthy else "job.failed",
+            "job": job, "outcome": outcome,
             "duration_ms": receipt.get("duration_ms"),
+            "reason": None if healthy else "returned-item-failure",
         })
 
 
-# ---- health ----------------------------------------------------------------
+@contextmanager
+def scheduled_http_run(job: str, tenant: str) -> Iterator[dict[str, Any]]:
+    """HTTP adapter: retain internal exceptions without leaking them to ASGI.
+
+    The job wrapper records a sanitized failure before this boundary converts
+    the exception to a handled HTTP error. A generic 500 handler is too late:
+    Starlette rethrows server errors, allowing Uvicorn to log their contents.
+    Authentication and request validation dependencies remain outside this
+    context and retain their existing semantics.
+    """
+    from fastapi import HTTPException
+
+    try:
+        with scheduled_run(job, tenant) as detail:
+            yield detail
+    except Exception:
+        raise HTTPException(status_code=503, detail="maintenance-job-failed") from None
+
 
 def job_health(job: ScheduledJob, receipt: dict[str, Any] | None,
                now: datetime | None = None) -> dict[str, Any]:
@@ -292,7 +306,7 @@ def job_health(job: ScheduledJob, receipt: dict[str, Any] | None,
         entry["detail"] = "no receipt has ever been written for this job"
         return entry
 
-    if receipt.get("outcome") == "error":
+    if receipt.get("outcome") not in {"ok", "no-work"}:
         entry["status"] = "failing"
         entry["detail"] = receipt.get("exception") or "job reported an error"
         return entry

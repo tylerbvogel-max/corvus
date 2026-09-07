@@ -545,14 +545,17 @@ async def run_compile(db: AsyncSession) -> dict:
 
     compiled_sets = {frozenset(m.get("sources", [])) for m in manifest}
     emitted: list[dict] = []
+    composition_attempted = composition_failed = 0
     for cluster in sorted(clusters, key=len, reverse=True):
         if len(emitted) >= MAX_COMPILE_PER_RUN:
             break
         ids = frozenset(x.id for x in cluster)
         if ids in compiled_sets:
             continue
+        composition_attempted += 1
         skill = await _compose(cluster)
         if skill is None:
+            composition_failed += 1
             _log_action("compiler.compose_failed", {"sources": sorted(ids)})
             continue
         # Name uniqueness: a grown cluster can re-earn an existing name —
@@ -581,6 +584,8 @@ async def run_compile(db: AsyncSession) -> dict:
     await db.commit()
     _save_manifest(manifest)
     return {"lessons": len(lessons), "clusters": len(clusters),
+            "composition_attempted": composition_attempted,
+            "composition_failed": composition_failed,
             "retracted": [e["name"] for e in stale],
             "reconciled_ghosts": ghosts, "charter": charter,
             "emitted": emitted, "manifest_size": len(manifest)}
