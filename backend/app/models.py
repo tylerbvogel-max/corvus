@@ -810,10 +810,9 @@ class ComplianceAttestation(Base):
 
 
 class AuditLog(Base):
-    """Immutable audit trail for all state-changing API actions.
+    """Best-effort request audit records; see docs/audit-logging.md for coverage.
 
-    Addresses: NIST 800-53 AU-2/AU-3/AU-4/AU-8/AU-12, CMMC 3.3.1/3.3.5/3.3.6,
-    SOC 2 CC7.2/CC7.3, FedRAMP AU family.
+    This model does not enforce immutability or certify a compliance framework.
     """
     __tablename__ = "audit_log"
 
@@ -824,7 +823,7 @@ class AuditLog(Base):
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
     client_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)  # IPv4 or IPv6
-    request_body_summary: Mapped[str | None] = mapped_column(Text, nullable=True)  # Truncated, no secrets
+    request_body_summary: Mapped[str | None] = mapped_column(Text, nullable=True)  # Bounded shape/omission metadata; legacy rows may contain raw bodies
     response_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
 

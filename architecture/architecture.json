@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "0c717540273f0d29f0187fe55328be3575942ab7cc73fbc47270f09aa56addba",
-    "files": 485
+    "fingerprint": "b60a256ffb57234e0041cea6c724ef9d4c7465c0029b57b7895d13bb1926b995",
+    "files": 487
   },
   "frontend": {
     "available": true,
@@ -3143,9 +3143,9 @@
   "route_join": {
     "available": true,
     "totals": {
-      "backend_routes": 203,
+      "backend_routes": 204,
       "routes_called_by_frontend": 200,
-      "routes_with_no_frontend_caller": 3,
+      "routes_with_no_frontend_caller": 4,
       "frontend_urls_unmatched": 0
     },
     "route_callers": {
@@ -4164,17 +4164,18 @@
     "routes_with_no_frontend_caller": [
       "/boom",
       "/echo",
+      "/synthetic-audit-proof",
       "/{}"
     ],
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 405,
-    "loc": 93053,
-    "routes": 218,
-    "import_edges": 1107,
-    "call_edges": 732,
-    "modules_touching_db": 121,
+    "modules": 407,
+    "loc": 93396,
+    "routes": 219,
+    "import_edges": 1111,
+    "call_edges": 734,
+    "modules_touching_db": 122,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -7253,7 +7254,7 @@
     "app.middleware.audit": {
       "path": "backend/app/middleware/audit.py",
       "module": "app.middleware.audit",
-      "loc": 111,
+      "loc": 162,
       "imports": [
         "app.database",
         "app.models"
@@ -7265,16 +7266,37 @@
         "time"
       ],
       "functions": {
+        "_reject_json_constant": {
+          "name": "_reject_json_constant",
+          "line": 43,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
         "_redact_body": {
           "name": "_redact_body",
-          "line": 39,
+          "line": 48,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_redact_body.omitted": {
+          "name": "_redact_body.omitted",
+          "line": 59,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_redact_body.shape": {
+          "name": "_redact_body.shape",
+          "line": 73,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "AuditMiddleware.dispatch": {
           "name": "AuditMiddleware.dispatch",
-          "line": 65,
+          "line": 114,
           "is_async": true,
           "calls": [
             "app.database::async_session",
@@ -7287,14 +7309,14 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 104,
+          "line": 154,
           "in": "AuditMiddleware.dispatch",
           "target": "db",
           "model": "AuditLog"
         },
         {
           "kind": "commit",
-          "line": 105,
+          "line": 155,
           "in": "AuditMiddleware.dispatch",
           "target": "db",
           "model": null
@@ -7493,7 +7515,7 @@
     "app.models": {
       "path": "backend/app/models.py",
       "module": "app.models",
-      "loc": 1355,
+      "loc": 1354,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -31606,6 +31628,83 @@
       ],
       "llm_sites": []
     },
+    "scripts.verify_audit_redaction": {
+      "path": "backend/scripts/verify_audit_redaction.py",
+      "module": "scripts.verify_audit_redaction",
+      "loc": 127,
+      "imports": [
+        "app.database",
+        "app.middleware.audit",
+        "app.models"
+      ],
+      "external_imports": [
+        "asyncio",
+        "fastapi",
+        "httpx",
+        "io",
+        "json",
+        "logging",
+        "os",
+        "socket",
+        "sqlalchemy",
+        "starlette",
+        "uvicorn"
+      ],
+      "functions": {
+        "require": {
+          "name": "require",
+          "line": 18,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 23,
+          "is_async": true,
+          "calls": [
+            "app.database::connect",
+            "app.database::async_session",
+            "app.database::dispose"
+          ],
+          "is_route": false
+        },
+        "main.echo": {
+          "name": "main.echo",
+          "line": 48,
+          "is_async": true,
+          "calls": [],
+          "is_route": true
+        },
+        "main.FailedSession.__aenter__": {
+          "name": "main.FailedSession.__aenter__",
+          "line": 82,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "main.FailedSession.__aexit__": {
+          "name": "main.FailedSession.__aexit__",
+          "line": 85,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/synthetic-audit-proof",
+          "prefix": "",
+          "full_path": "/synthetic-audit-proof",
+          "mounted_on": "app",
+          "handler": "main.echo",
+          "line": 48
+        }
+      ],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "scripts.verify_deployment": {
       "path": "backend/scripts/verify_deployment.py",
       "module": "scripts.verify_deployment",
@@ -33845,6 +33944,133 @@
       },
       "routes": [],
       "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_audit_middleware": {
+      "path": "backend/tests/test_audit_middleware.py",
+      "module": "tests.test_audit_middleware",
+      "loc": 166,
+      "imports": [
+        "app.middleware.audit"
+      ],
+      "external_imports": [
+        "fastapi",
+        "httpx",
+        "json",
+        "logging",
+        "pytest",
+        "sqlite3",
+        "starlette"
+      ],
+      "functions": {
+        "audit_app": {
+          "name": "audit_app",
+          "line": 20,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "audit_app.Session.__aenter__": {
+          "name": "audit_app.Session.__aenter__",
+          "line": 26,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "audit_app.Session.__aexit__": {
+          "name": "audit_app.Session.__aexit__",
+          "line": 29,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "audit_app.Session.add": {
+          "name": "audit_app.Session.add",
+          "line": 32,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "audit_app.Session.commit": {
+          "name": "audit_app.Session.commit",
+          "line": 35,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "audit_app.endpoint": {
+          "name": "audit_app.endpoint",
+          "line": 51,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_canary_never_reaches_committed_summary": {
+          "name": "test_canary_never_reaches_committed_summary",
+          "line": 73,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_database_failure_logs_no_exception_payload_and_recovers": {
+          "name": "test_database_failure_logs_no_exception_payload_and_recovers",
+          "line": 88,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_mutations_and_http_errors_are_audited": {
+          "name": "test_mutations_and_http_errors_are_audited",
+          "line": 107,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_documented_coverage_exclusions": {
+          "name": "test_documented_coverage_exclusions",
+          "line": 117,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_shape_redaction_and_scalar_omission": {
+          "name": "test_shape_redaction_and_scalar_omission",
+          "line": 128,
+          "is_async": false,
+          "calls": [
+            "app.middleware.audit::_redact_body"
+          ],
+          "is_route": false
+        },
+        "test_omission_metadata": {
+          "name": "test_omission_metadata",
+          "line": 150,
+          "is_async": false,
+          "calls": [
+            "app.middleware.audit::_redact_body"
+          ],
+          "is_route": false
+        },
+        "test_explicit_limits_and_empty_body": {
+          "name": "test_explicit_limits_and_empty_body",
+          "line": 154,
+          "is_async": false,
+          "calls": [
+            "app.middleware.audit::_redact_body"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 43,
+          "in": "audit_app.Session.commit",
+          "target": "connection",
+          "model": null
+        }
+      ],
       "llm_sites": []
     },
     "tests.test_branch_stage": {
@@ -48926,6 +49152,7 @@
       "scripts.probe_homeostasis",
       "scripts.record_roadmap_strategic_plasticity",
       "scripts.retire_false_neurons",
+      "scripts.verify_audit_redaction",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
       "tests.fixtures.auditor_golden.freeze_golden",
@@ -48977,6 +49204,8 @@
     ],
     "app.middleware.audit": [
       "app.composition.factory",
+      "scripts.verify_audit_redaction",
+      "tests.test_audit_middleware",
       "tests.test_capability_composition"
     ],
     "app.middleware.correlation": [
@@ -49146,6 +49375,7 @@
       "scripts.probe_homeostasis",
       "scripts.record_roadmap_strategic_plasticity",
       "scripts.retire_false_neurons",
+      "scripts.verify_audit_redaction",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.eval_auditor_golden",
       "tests.kernel_matrix_fixtures",
@@ -50972,6 +51202,9 @@
       "app.services.action_bus",
       "app.services.actions.init_registry"
     ],
+    "scripts.verify_audit_redaction": [
+      "app.database"
+    ],
     "tests.benchmarks.eval_token_assembly_triangle": [
       "app.database",
       "app.services.executor",
@@ -51030,6 +51263,9 @@
     ],
     "tests.test_architecture_atlas": [
       "app.routers.architecture"
+    ],
+    "tests.test_audit_middleware": [
+      "app.middleware.audit"
     ],
     "tests.test_branch_stage": [
       "app.services.pipeline"
@@ -64626,6 +64862,26 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/synthetic-audit-proof",
+      "prefix": "",
+      "full_path": "/synthetic-audit-proof",
+      "mounted_on": "app",
+      "handler": "main.echo",
+      "line": 48,
+      "module": "scripts.verify_audit_redaction",
+      "file": "backend/scripts/verify_audit_redaction.py",
+      "imports_reachable": [
+        "app.config",
+        "app.database",
+        "app.middleware.audit",
+        "app.models"
+      ],
+      "calls_reachable": [
+        "app.database"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/boom",
       "prefix": "",
@@ -65013,6 +65269,15 @@
       "entrypoints": [
         "test_architecture_model_names_describe_alias_routing_not_fixed_providers",
         "test_memory_engine_atlas_exposes_verified_runtime_truth"
+      ]
+    },
+    {
+      "module": "tests.test_audit_middleware",
+      "entrypoints": [
+        "test_canary_never_reaches_committed_summary",
+        "test_database_failure_logs_no_exception_payload_and_recovers",
+        "test_documented_coverage_exclusions",
+        "test_mutations_and_http_errors_are_audited"
       ]
     },
     {
