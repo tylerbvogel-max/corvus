@@ -10,6 +10,12 @@
 
 ## What Is This?
 
+Corvus is a public portfolio project by Tyler Vogel, demonstrating evidence-governed
+AI memory, explicit architecture boundaries, reproducible delivery, and measured
+tradeoffs. The immediate focus is a working, inspectable reference implementation
+and demo. Hosted SaaS, billing, and enterprise federation are deferred directions.
+Public source and release artifacts contain no personal memory database or transcripts.
+
 **Corvus-Mind** is the reference implementation of a **trust-gated memory methodology** for LLM agents. It solves the core problem of agentic memory: *how does an agent remember what's true without accumulating confident falsehoods?*
 
 The methodology has three pillars:

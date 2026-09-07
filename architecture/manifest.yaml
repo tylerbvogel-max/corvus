@@ -35,7 +35,9 @@ review:
 
 system_summary:
   identity: >-
-    Corvus is a governed developer-memory organ. Coding harnesses capture
+    Corvus is a public portfolio implementation of governed developer memory.
+    Source and release images are public; personal runtime memory stays private.
+    Coding harnesses capture
     evidence, recall verified memories, and receive standing policy; a FastAPI
     service owns the private graph and trust gates; PostgreSQL holds canonical
     state; filesystem projections deliver capsules, skills, episode logs, and
@@ -201,7 +203,7 @@ system_context:
     id: corvus
     name: Corvus
     purpose: Governed long-term memory and forward-intent infrastructure for coding-agent harnesses.
-    boundary: Private tenant-scoped graph and control plane; public demo contains fixtures only.
+    boundary: Private tenant-scoped runtime data and control plane; public source and fixture-only demo.
     evidence:
       - backend/app/main.py
       - backend/app/tenant.py

@@ -329,8 +329,14 @@ def _add_core_routes(app: FastAPI, tenant, profile: CapabilityProfile) -> None:
 
 def _mount_frontend(app: FastAPI) -> None:
     """Serve frontend static files if built."""
-    frontend_dist = Path(__file__).resolve().parents[3] / "frontend" / "dist"
-    if not frontend_dist.exists():
+    configured = settings.corvus_frontend_dist
+    frontend_dist = (
+        Path(configured).expanduser().resolve() if configured
+        else Path(__file__).resolve().parents[3] / "frontend" / "dist"
+    )
+    if not (frontend_dist / "index.html").is_file():
+        if configured:
+            raise RuntimeError(f"CORVUS_FRONTEND_DIST has no index.html: {frontend_dist}")
         return
 
     assets_dir = frontend_dist / "assets"
@@ -345,8 +351,10 @@ def _mount_frontend(app: FastAPI) -> None:
         """Serve the SPA frontend, falling back to index.html for client-side routes."""
         # Serve real static files first (logos, images, etc.)
         if full_path:
-            file_path = frontend_dist / full_path
-            if file_path.exists() and file_path.is_file():
+            file_path = (frontend_dist / full_path).resolve()
+            if not file_path.is_relative_to(frontend_dist.resolve()):
+                raise HTTPException(status_code=404, detail="Not found")
+            if file_path.is_file():
                 return FileResponse(str(file_path))
         # Never intercept API paths — let them 404 naturally
         if _is_api_path(full_path):
