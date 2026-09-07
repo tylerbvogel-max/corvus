@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "6ef542377e0a88501ad4d9c98ae3eb6018682af40da52aa3fbf5466b4162a169",
-    "files": 489
+    "fingerprint": "b1b262cebfd18d606f7abe7f4bd981891b451a6a7abb7d881ac9d998b08ce944",
+    "files": 491
   },
   "frontend": {
     "available": true,
@@ -4170,11 +4170,11 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 409,
-    "loc": 93814,
+    "modules": 411,
+    "loc": 94260,
     "routes": 219,
-    "import_edges": 1122,
-    "call_edges": 741,
+    "import_edges": 1137,
+    "call_edges": 751,
     "modules_touching_db": 123,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -7584,18 +7584,98 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "app.observability.job_outcomes": {
+      "path": "backend/app/observability/job_outcomes.py",
+      "module": "app.observability.job_outcomes",
+      "loc": 158,
+      "imports": [],
+      "external_imports": [
+        "dataclasses",
+        "typing"
+      ],
+      "functions": {
+        "BatchOutcome.__post_init__": {
+          "name": "BatchOutcome.__post_init__",
+          "line": 18,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "BatchOutcome.outcome": {
+          "name": "BatchOutcome.outcome",
+          "line": 26,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "BatchOutcome.as_dict": {
+          "name": "BatchOutcome.as_dict",
+          "line": 31,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_count": {
+          "name": "_count",
+          "line": 41,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_items": {
+          "name": "_items",
+          "line": 47,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "summarize_report": {
+          "name": "summarize_report",
+          "line": 60,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "attach_outcome": {
+          "name": "attach_outcome",
+          "line": 126,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "safe_detail": {
+          "name": "safe_detail",
+          "line": 132,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "exception_reason": {
+          "name": "exception_reason",
+          "line": 151,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "app.observability.jobs": {
       "path": "backend/app/observability/jobs.py",
       "module": "app.observability.jobs",
-      "loc": 341,
+      "loc": 355,
       "imports": [
-        "app.observability.context"
+        "app.observability.context",
+        "app.observability.job_outcomes"
       ],
       "external_imports": [
         "__future__",
         "contextlib",
         "dataclasses",
         "datetime",
+        "fastapi",
         "json",
         "logging",
         "os",
@@ -7605,65 +7685,76 @@
       "functions": {
         "ScheduledJob.as_dict": {
           "name": "ScheduledJob.as_dict",
-          "line": 68,
+          "line": 71,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_receipt_path": {
           "name": "_receipt_path",
-          "line": 177,
+          "line": 180,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "read_receipt": {
           "name": "read_receipt",
-          "line": 181,
+          "line": 184,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "write_receipt": {
           "name": "write_receipt",
-          "line": 194,
+          "line": 197,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_now": {
           "name": "_now",
-          "line": 204,
+          "line": 207,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "job_receipt": {
           "name": "job_receipt",
-          "line": 209,
+          "line": 212,
           "is_async": false,
-          "calls": [],
+          "calls": [
+            "app.observability.job_outcomes::safe_detail",
+            "app.observability.job_outcomes::exception_reason"
+          ],
           "is_route": false
         },
         "scheduled_run": {
           "name": "scheduled_run",
-          "line": 252,
+          "line": 254,
           "is_async": false,
           "calls": [
-            "app.observability.context::bound"
+            "app.observability.context::bound",
+            "app.observability.job_outcomes::exception_reason"
           ],
+          "is_route": false
+        },
+        "scheduled_http_run": {
+          "name": "scheduled_http_run",
+          "line": 280,
+          "is_async": false,
+          "calls": [],
           "is_route": false
         },
         "job_health": {
           "name": "job_health",
-          "line": 284,
+          "line": 298,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "inventory_health": {
           "name": "inventory_health",
-          "line": 327,
+          "line": 341,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -9417,9 +9508,10 @@
     "app.routers.auditor": {
       "path": "backend/app/routers/auditor.py",
       "module": "app.routers.auditor",
-      "loc": 84,
+      "loc": 86,
       "imports": [
         "app.database",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.memory_quality_auditor",
         "app.services.mind_janitors",
@@ -9433,7 +9525,7 @@
       "functions": {
         "auditor_status": {
           "name": "auditor_status",
-          "line": 26,
+          "line": 27,
           "is_async": true,
           "calls": [
             "app.services.memory_quality_auditor::_prior_ran_at",
@@ -9444,17 +9536,18 @@
         },
         "auditor_run": {
           "name": "auditor_run",
-          "line": 37,
+          "line": 38,
           "is_async": true,
           "calls": [
             "app.observability.jobs::scheduled_run",
-            "app.services.memory_quality_auditor::run_audit"
+            "app.services.memory_quality_auditor::run_audit",
+            "app.observability.job_outcomes::attach_outcome"
           ],
           "is_route": true
         },
         "audit_one": {
           "name": "audit_one",
-          "line": 56,
+          "line": 58,
           "is_async": true,
           "calls": [
             "app.services.memory_quality_auditor::run_audit"
@@ -9463,7 +9556,7 @@
         },
         "auditor_candidates": {
           "name": "auditor_candidates",
-          "line": 69,
+          "line": 71,
           "is_async": true,
           "calls": [
             "app.services.mind_janitors::_load_lessons",
@@ -9481,7 +9574,7 @@
           "full_path": "/auditor/status",
           "mounted_on": "router",
           "handler": "auditor_status",
-          "line": 26
+          "line": 27
         },
         {
           "method": "POST",
@@ -9490,7 +9583,7 @@
           "full_path": "/auditor/run",
           "mounted_on": "router",
           "handler": "auditor_run",
-          "line": 37
+          "line": 38
         },
         {
           "method": "POST",
@@ -9499,7 +9592,7 @@
           "full_path": "/auditor/audit/{neuron_id}",
           "mounted_on": "router",
           "handler": "audit_one",
-          "line": 56
+          "line": 58
         },
         {
           "method": "GET",
@@ -9508,7 +9601,7 @@
           "full_path": "/auditor/candidates",
           "mounted_on": "router",
           "handler": "auditor_candidates",
-          "line": 69
+          "line": 71
         }
       ],
       "db_writes": [],
@@ -9850,9 +9943,10 @@
     "app.routers.compile": {
       "path": "backend/app/routers/compile.py",
       "module": "app.routers.compile",
-      "loc": 46,
+      "loc": 48,
       "imports": [
         "app.database",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.mind_janitors",
         "app.services.skill_compiler",
@@ -9865,7 +9959,7 @@
       "functions": {
         "compile_status": {
           "name": "compile_status",
-          "line": 22,
+          "line": 23,
           "is_async": true,
           "calls": [
             "app.services.mind_janitors::_load_lessons",
@@ -9876,11 +9970,12 @@
         },
         "compile_run": {
           "name": "compile_run",
-          "line": 40,
+          "line": 41,
           "is_async": true,
           "calls": [
             "app.observability.jobs::scheduled_run",
-            "app.services.skill_compiler::run_compile"
+            "app.services.skill_compiler::run_compile",
+            "app.observability.job_outcomes::attach_outcome"
           ],
           "is_route": true
         }
@@ -9893,7 +9988,7 @@
           "full_path": "/compile/status",
           "mounted_on": "router",
           "handler": "compile_status",
-          "line": 22
+          "line": 23
         },
         {
           "method": "POST",
@@ -9902,7 +9997,7 @@
           "full_path": "/compile/run",
           "mounted_on": "router",
           "handler": "compile_run",
-          "line": 40
+          "line": 41
         }
       ],
       "db_writes": [],
@@ -9911,9 +10006,10 @@
     "app.routers.distill": {
       "path": "backend/app/routers/distill.py",
       "module": "app.routers.distill",
-      "loc": 41,
+      "loc": 43,
       "imports": [
         "app.database",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.distiller",
         "app.tenant"
@@ -9925,7 +10021,7 @@
       "functions": {
         "distill_status": {
           "name": "distill_status",
-          "line": 21,
+          "line": 22,
           "is_async": true,
           "calls": [
             "app.services.distiller::find_ready_logs"
@@ -9934,11 +10030,12 @@
         },
         "distill_run": {
           "name": "distill_run",
-          "line": 29,
+          "line": 30,
           "is_async": true,
           "calls": [
             "app.observability.jobs::scheduled_run",
-            "app.services.distiller::run_distillation"
+            "app.services.distiller::run_distillation",
+            "app.observability.job_outcomes::attach_outcome"
           ],
           "is_route": true
         }
@@ -9951,7 +10048,7 @@
           "full_path": "/distill/status",
           "mounted_on": "router",
           "handler": "distill_status",
-          "line": 21
+          "line": 22
         },
         {
           "method": "POST",
@@ -9960,7 +10057,7 @@
           "full_path": "/distill/run",
           "mounted_on": "router",
           "handler": "distill_run",
-          "line": 29
+          "line": 30
         }
       ],
       "db_writes": [],
@@ -11276,10 +11373,11 @@
     "app.routers.janitor": {
       "path": "backend/app/routers/janitor.py",
       "module": "app.routers.janitor",
-      "loc": 176,
+      "loc": 178,
       "imports": [
         "app.database",
         "app.models",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.mind_janitors",
         "app.services.mind_lint",
@@ -11295,24 +11393,25 @@
       "functions": {
         "janitor_status": {
           "name": "janitor_status",
-          "line": 29,
+          "line": 30,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "janitor_run": {
           "name": "janitor_run",
-          "line": 51,
+          "line": 52,
           "is_async": true,
           "calls": [
             "app.observability.jobs::scheduled_run",
-            "app.services.mind_janitors::run_janitors"
+            "app.services.mind_janitors::run_janitors",
+            "app.observability.job_outcomes::attach_outcome"
           ],
           "is_route": true
         },
         "corpus_health_report": {
           "name": "corpus_health_report",
-          "line": 75,
+          "line": 77,
           "is_async": true,
           "calls": [
             "app.services.mind_lint::corpus_health"
@@ -11321,21 +11420,21 @@
         },
         "_event_dict": {
           "name": "_event_dict",
-          "line": 84,
+          "line": 86,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "memory_history": {
           "name": "memory_history",
-          "line": 92,
+          "line": 94,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "memory_as_of": {
           "name": "memory_as_of",
-          "line": 134,
+          "line": 136,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -11349,7 +11448,7 @@
           "full_path": "/janitor/status",
           "mounted_on": "router",
           "handler": "janitor_status",
-          "line": 29
+          "line": 30
         },
         {
           "method": "POST",
@@ -11358,7 +11457,7 @@
           "full_path": "/janitor/run",
           "mounted_on": "router",
           "handler": "janitor_run",
-          "line": 51
+          "line": 52
         },
         {
           "method": "GET",
@@ -11367,7 +11466,7 @@
           "full_path": "/janitor/corpus-health",
           "mounted_on": "router",
           "handler": "corpus_health_report",
-          "line": 75
+          "line": 77
         },
         {
           "method": "GET",
@@ -11376,7 +11475,7 @@
           "full_path": "/janitor/history/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_history",
-          "line": 92
+          "line": 94
         },
         {
           "method": "GET",
@@ -11385,7 +11484,7 @@
           "full_path": "/janitor/as-of/{neuron_id}",
           "mounted_on": "router",
           "handler": "memory_as_of",
-          "line": 134
+          "line": 136
         }
       ],
       "db_writes": [],
@@ -17246,7 +17345,7 @@
     "app.services.distiller": {
       "path": "backend/app/services/distiller.py",
       "module": "app.services.distiller",
-      "loc": 699,
+      "loc": 702,
       "imports": [
         "app.models",
         "app.services.evidence_frame",
@@ -27192,7 +27291,7 @@
     "app.services.skill_compiler": {
       "path": "backend/app/services/skill_compiler.py",
       "module": "app.services.skill_compiler",
-      "loc": 587,
+      "loc": 592,
       "imports": [
         "app.middleware.rbac",
         "app.models",
@@ -27364,14 +27463,14 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 574,
+          "line": 577,
           "in": "run_compile",
           "target": "compiled_sets",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 581,
+          "line": 584,
           "in": "run_compile",
           "target": "db",
           "model": null
@@ -41095,6 +41194,157 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_maintenance_outcomes": {
+      "path": "backend/tests/test_maintenance_outcomes.py",
+      "module": "tests.test_maintenance_outcomes",
+      "loc": 258,
+      "imports": [
+        "app.database",
+        "app.observability.job_outcomes",
+        "app.observability.jobs",
+        "app.observability.slo",
+        "app.routers.auditor",
+        "app.routers.compile",
+        "app.routers.distill",
+        "app.routers.janitor",
+        "app.services.distiller",
+        "app.services.skill_compiler"
+      ],
+      "external_imports": [
+        "asyncio",
+        "fastapi",
+        "httpx",
+        "json",
+        "logging",
+        "pytest",
+        "socket",
+        "types",
+        "unittest",
+        "uvicorn"
+      ],
+      "functions": {
+        "app": {
+          "name": "app",
+          "line": 26,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "app.fake_db": {
+          "name": "app.fake_db",
+          "line": 32,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "distill_report": {
+          "name": "distill_report",
+          "line": 39,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_distill_http_receipt_and_slo": {
+          "name": "test_distill_http_receipt_and_slo",
+          "line": 51,
+          "is_async": true,
+          "calls": [
+            "app.observability.job_outcomes::BatchOutcome",
+            "app.observability.jobs::read_receipt",
+            "app.observability.jobs::inventory_health",
+            "app.observability.slo::collect_signals"
+          ],
+          "is_route": false
+        },
+        "test_thrown_exception_and_successful_recovery": {
+          "name": "test_thrown_exception_and_successful_recovery",
+          "line": 77,
+          "is_async": true,
+          "calls": [
+            "app.observability.jobs::read_receipt",
+            "app.observability.jobs::inventory_health"
+          ],
+          "is_route": false
+        },
+        "test_sibling_returned_failures": {
+          "name": "test_sibling_returned_failures",
+          "line": 123,
+          "is_async": true,
+          "calls": [
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_invalid_counts_rejected_without_asserts": {
+          "name": "test_invalid_counts_rejected_without_asserts",
+          "line": 137,
+          "is_async": false,
+          "calls": [
+            "app.observability.job_outcomes::BatchOutcome"
+          ],
+          "is_route": false
+        },
+        "test_malformed_reports_fail_closed": {
+          "name": "test_malformed_reports_fail_closed",
+          "line": 150,
+          "is_async": false,
+          "calls": [
+            "app.observability.job_outcomes::summarize_report"
+          ],
+          "is_route": false
+        },
+        "test_distiller_sanitizes_caught_session_failure": {
+          "name": "test_distiller_sanitizes_caught_session_failure",
+          "line": 157,
+          "is_async": true,
+          "calls": [
+            "app.services.distiller::run_distillation"
+          ],
+          "is_route": false
+        },
+        "test_compiler_counts_failed_composition_without_real_io": {
+          "name": "test_compiler_counts_failed_composition_without_real_io",
+          "line": 167,
+          "is_async": true,
+          "calls": [
+            "app.services.skill_compiler::run_compile",
+            "app.observability.job_outcomes::summarize_report"
+          ],
+          "is_route": false
+        },
+        "test_wrapper_drops_arbitrary_detail_and_exception_content": {
+          "name": "test_wrapper_drops_arbitrary_detail_and_exception_content",
+          "line": 185,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::scheduled_run",
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_non_success_outcome_is_never_healthy": {
+          "name": "test_non_success_outcome_is_never_healthy",
+          "line": 196,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::job_health"
+          ],
+          "is_route": false
+        },
+        "test_real_http_server_never_logs_batch_exception": {
+          "name": "test_real_http_server_never_logs_batch_exception",
+          "line": 204,
+          "is_async": true,
+          "calls": [
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_maintenance_substrate": {
       "path": "backend/tests/test_maintenance_substrate.py",
       "module": "tests.test_maintenance_substrate",
@@ -49512,6 +49762,7 @@
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway",
       "tests.seed_journey_fixture",
+      "tests.test_maintenance_outcomes",
       "tests.test_query_transaction_boundary"
     ],
     "app.governance.output_guard": [
@@ -49768,6 +50019,14 @@
       "tests.test_job_inventory",
       "tests.test_structured_logging"
     ],
+    "app.observability.job_outcomes": [
+      "app.observability.jobs",
+      "app.routers.auditor",
+      "app.routers.compile",
+      "app.routers.distill",
+      "app.routers.janitor",
+      "tests.test_maintenance_outcomes"
+    ],
     "app.observability.jobs": [
       "app.observability.slo",
       "app.routers.auditor",
@@ -49776,6 +50035,7 @@
       "app.routers.janitor",
       "app.routers.mind_metrics",
       "tests.test_job_inventory",
+      "tests.test_maintenance_outcomes",
       "tests.test_runbooks"
     ],
     "app.observability.json_logging": [
@@ -49784,6 +50044,7 @@
     ],
     "app.observability.slo": [
       "app.routers.mind_metrics",
+      "tests.test_maintenance_outcomes",
       "tests.test_slo"
     ],
     "app.operations.router": [
@@ -49796,14 +50057,26 @@
     "app.routers.architecture": [
       "tests.test_architecture_atlas"
     ],
+    "app.routers.auditor": [
+      "tests.test_maintenance_outcomes"
+    ],
     "app.routers.chat_sessions": [
       "tests.test_chat_session_title_cleaner"
+    ],
+    "app.routers.compile": [
+      "tests.test_maintenance_outcomes"
+    ],
+    "app.routers.distill": [
+      "tests.test_maintenance_outcomes"
     ],
     "app.routers.document_ingest": [
       "app.routers.reference"
     ],
     "app.routers.eval_runs": [
       "tests.test_eval_runs"
+    ],
+    "app.routers.janitor": [
+      "tests.test_maintenance_outcomes"
     ],
     "app.routers.neurons": [
       "tests.test_graph_replay"
@@ -50001,6 +50274,7 @@
       "app.services.memory_quality_auditor",
       "tests.test_distiller",
       "tests.test_injection_channel",
+      "tests.test_maintenance_outcomes",
       "tests.test_recurrence_watch",
       "tests.test_subagent_provenance"
     ],
@@ -50694,6 +50968,7 @@
       "eval.locomo.run_locomo",
       "eval.locomo.test_lifecycle",
       "tests.test_delivery_mode",
+      "tests.test_maintenance_outcomes",
       "tests.test_reference_class",
       "tests.test_synaptic_homeostasis"
     ],
@@ -50860,7 +51135,8 @@
       "app.observability.context"
     ],
     "app.observability.jobs": [
-      "app.observability.context"
+      "app.observability.context",
+      "app.observability.job_outcomes"
     ],
     "app.observability.json_logging": [
       "app.observability.context"
@@ -50897,6 +51173,7 @@
       "app.middleware.rbac"
     ],
     "app.routers.auditor": [
+      "app.observability.job_outcomes",
       "app.observability.jobs",
       "app.services.memory_quality_auditor",
       "app.services.mind_janitors"
@@ -50910,11 +51187,13 @@
       "app.services.llm_provider"
     ],
     "app.routers.compile": [
+      "app.observability.job_outcomes",
       "app.observability.jobs",
       "app.services.mind_janitors",
       "app.services.skill_compiler"
     ],
     "app.routers.distill": [
+      "app.observability.job_outcomes",
       "app.observability.jobs",
       "app.services.distiller"
     ],
@@ -50952,6 +51231,7 @@
       "app.services.integrity.reconciler"
     ],
     "app.routers.janitor": [
+      "app.observability.job_outcomes",
       "app.observability.jobs",
       "app.services.mind_janitors",
       "app.services.mind_lint"
@@ -51805,6 +52085,13 @@
     "tests.test_llm_fallback": [
       "app.routers.query",
       "app.services.llm_provider"
+    ],
+    "tests.test_maintenance_outcomes": [
+      "app.observability.job_outcomes",
+      "app.observability.jobs",
+      "app.observability.slo",
+      "app.services.distiller",
+      "app.services.skill_compiler"
     ],
     "tests.test_maintenance_substrate": [
       "app.services.adjacency_cache",
@@ -54576,7 +54863,7 @@
       "full_path": "/auditor/audit/{neuron_id}",
       "mounted_on": "router",
       "handler": "audit_one",
-      "line": 56,
+      "line": 58,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -54585,6 +54872,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54636,6 +54924,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54690,7 +54979,7 @@
       "full_path": "/auditor/candidates",
       "mounted_on": "router",
       "handler": "auditor_candidates",
-      "line": 69,
+      "line": 71,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -54699,6 +54988,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54750,6 +55040,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54804,7 +55095,7 @@
       "full_path": "/auditor/run",
       "mounted_on": "router",
       "handler": "auditor_run",
-      "line": 37,
+      "line": 38,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -54813,6 +55104,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54864,6 +55156,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54918,7 +55211,7 @@
       "full_path": "/auditor/status",
       "mounted_on": "router",
       "handler": "auditor_status",
-      "line": 26,
+      "line": 27,
       "module": "app.routers.auditor",
       "file": "backend/app/routers/auditor.py",
       "imports_reachable": [
@@ -54927,6 +55220,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -54978,6 +55272,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55624,7 +55919,7 @@
       "full_path": "/compile/run",
       "mounted_on": "router",
       "handler": "compile_run",
-      "line": 40,
+      "line": 41,
       "module": "app.routers.compile",
       "file": "backend/app/routers/compile.py",
       "imports_reachable": [
@@ -55633,6 +55928,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55676,6 +55972,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55722,7 +56019,7 @@
       "full_path": "/compile/status",
       "mounted_on": "router",
       "handler": "compile_status",
-      "line": 22,
+      "line": 23,
       "module": "app.routers.compile",
       "file": "backend/app/routers/compile.py",
       "imports_reachable": [
@@ -55731,6 +56028,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55774,6 +56072,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55820,7 +56119,7 @@
       "full_path": "/distill/run",
       "mounted_on": "router",
       "handler": "distill_run",
-      "line": 29,
+      "line": 30,
       "module": "app.routers.distill",
       "file": "backend/app/routers/distill.py",
       "imports_reachable": [
@@ -55829,6 +56128,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55878,6 +56178,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55930,7 +56231,7 @@
       "full_path": "/distill/status",
       "mounted_on": "router",
       "handler": "distill_status",
-      "line": 21,
+      "line": 22,
       "module": "app.routers.distill",
       "file": "backend/app/routers/distill.py",
       "imports_reachable": [
@@ -55939,6 +56240,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -55988,6 +56290,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58165,7 +58468,7 @@
       "full_path": "/janitor/as-of/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_as_of",
-      "line": 134,
+      "line": 136,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -58174,6 +58477,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58215,6 +58519,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58259,7 +58564,7 @@
       "full_path": "/janitor/corpus-health",
       "mounted_on": "router",
       "handler": "corpus_health_report",
-      "line": 75,
+      "line": 77,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -58268,6 +58573,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58309,6 +58615,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58353,7 +58660,7 @@
       "full_path": "/janitor/history/{neuron_id}",
       "mounted_on": "router",
       "handler": "memory_history",
-      "line": 92,
+      "line": 94,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -58362,6 +58669,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58403,6 +58711,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58447,7 +58756,7 @@
       "full_path": "/janitor/run",
       "mounted_on": "router",
       "handler": "janitor_run",
-      "line": 51,
+      "line": 52,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -58456,6 +58765,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58497,6 +58807,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58541,7 +58852,7 @@
       "full_path": "/janitor/status",
       "mounted_on": "router",
       "handler": "janitor_status",
-      "line": 29,
+      "line": 30,
       "module": "app.routers.janitor",
       "file": "backend/app/routers/janitor.py",
       "imports_reachable": [
@@ -58550,6 +58861,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58591,6 +58903,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
         "app.services.adjacency_cache",
@@ -58778,6 +59091,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -58836,6 +59150,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -58904,6 +59219,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -58962,6 +59278,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59030,6 +59347,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59088,6 +59406,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59156,6 +59475,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59214,6 +59534,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59282,6 +59603,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59340,6 +59662,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59408,6 +59731,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59466,6 +59790,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59534,6 +59859,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59592,6 +59918,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59660,6 +59987,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59718,6 +60046,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59786,6 +60115,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59844,6 +60174,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59912,6 +60243,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -59970,6 +60302,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -60038,6 +60371,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -60096,6 +60430,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -60164,6 +60499,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -60222,6 +60558,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
         "app.services.action_bus",
@@ -65833,6 +66170,17 @@
         "test_casual_chat_reports_actual_serving_model_and_cost",
         "test_codex_lapse_falls_back_to_anthropic",
         "test_default_alias_is_served_by_codex"
+      ]
+    },
+    {
+      "module": "tests.test_maintenance_outcomes",
+      "entrypoints": [
+        "test_compiler_counts_failed_composition_without_real_io",
+        "test_distill_http_receipt_and_slo",
+        "test_distiller_sanitizes_caught_session_failure",
+        "test_real_http_server_never_logs_batch_exception",
+        "test_sibling_returned_failures",
+        "test_thrown_exception_and_successful_recovery"
       ]
     },
     {

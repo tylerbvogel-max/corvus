@@ -74,7 +74,7 @@ def test_a_failing_run_records_the_exception_and_keeps_the_prior_success():
 
     receipt = read_receipt("janitor")
     assert receipt["outcome"] == "error"
-    assert "decay pass exploded" in receipt["exception"]
+    assert receipt["exception"] == "job-execution-failure"
     assert receipt["last_success"] == first_success, (
         "a failed run erased the record of when the job last worked"
     )
@@ -170,7 +170,7 @@ def test_scheduled_run_writes_a_receipt_and_reraises_on_failure():
             raise RuntimeError("compiler died")
     receipt = read_receipt("compile")
     assert receipt["outcome"] == "error"
-    assert "compiler died" in receipt["exception"]
+    assert receipt["exception"] == "job-execution-failure"
 
 
 def test_scheduled_run_binds_job_correlation():

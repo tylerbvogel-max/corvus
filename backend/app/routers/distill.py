@@ -10,7 +10,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.observability.jobs import scheduled_run
+from app.observability.jobs import scheduled_http_run as scheduled_run
+from app.observability.job_outcomes import attach_outcome
 from app.services.distiller import MAX_SESSIONS_PER_RUN, find_ready_logs, run_distillation
 from app.tenant import tenant
 
@@ -37,4 +38,5 @@ async def distill_run(
         report = await run_distillation(
             db, limit=limit, min_quiet_minutes=min_quiet_minutes)
         detail["limit"] = limit
+        report = attach_outcome("distill", report, detail)
     return report

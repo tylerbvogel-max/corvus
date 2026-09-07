@@ -16,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import IntegrityFinding, MemoryChangeEvent, Neuron
-from app.observability.jobs import scheduled_run
+from app.observability.jobs import scheduled_http_run as scheduled_run
+from app.observability.job_outcomes import attach_outcome
 from app.services.mind_janitors import LESSON_TYPES, run_janitors
 from app.tenant import tenant
 
@@ -68,6 +69,7 @@ async def janitor_run(
         )
         assert isinstance(report, dict), "janitor report must be a dict"
         detail["passes"] = sorted(k for k in report if isinstance(report, dict))
+        report = attach_outcome("janitor", report, detail)
     return json.loads(json.dumps(report, default=str))
 
 

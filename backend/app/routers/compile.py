@@ -10,7 +10,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.observability.jobs import scheduled_run
+from app.observability.jobs import scheduled_http_run as scheduled_run
+from app.observability.job_outcomes import attach_outcome
 from app.services.mind_janitors import _load_lessons
 from app.services.skill_compiler import _load_manifest, find_clusters, run_compile
 from app.tenant import tenant
@@ -39,7 +40,8 @@ async def compile_status(db: AsyncSession = Depends(get_db)):
 @router.post("/run")
 async def compile_run(db: AsyncSession = Depends(get_db)):
     """Reverse check + compile eligible clusters (bounded Opus spend)."""
-    with scheduled_run("compile", tenant.tenant_id):
+    with scheduled_run("compile", tenant.tenant_id) as detail:
         report = await run_compile(db)
         assert isinstance(report, dict), "compile report must be a dict"
+        report = attach_outcome("compile", report, detail)
     return report
