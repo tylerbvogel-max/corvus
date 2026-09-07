@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 405,
+    "modules": 407,
     "frontend_files": 80,
-    "units": 485,
-    "classified": 485,
+    "units": 487,
+    "classified": 487,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "0c717540273f0d29f0187fe55328be3575942ab7cc73fbc47270f09aa56addba",
-    "current_fingerprint": "0c717540273f0d29f0187fe55328be3575942ab7cc73fbc47270f09aa56addba",
-    "stored_files": 485,
-    "current_files": 485
+    "stored_fingerprint": "b60a256ffb57234e0041cea6c724ef9d4c7465c0029b57b7895d13bb1926b995",
+    "current_fingerprint": "b60a256ffb57234e0041cea6c724ef9d4c7465c0029b57b7895d13bb1926b995",
+    "stored_files": 487,
+    "current_files": 487
   },
   "manifest_problems": [],
   "boxes": [
@@ -566,7 +566,7 @@
       "confidence": "reviewed",
       "module_count": 75,
       "frontend_file_count": 0,
-      "loc": 9192,
+      "loc": 9242,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -672,10 +672,10 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 118,
+      "module_count": 120,
       "frontend_file_count": 0,
-      "loc": 25313,
-      "routes": 2,
+      "loc": 25606,
+      "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
         "scripts.add_token_pressure_maintenance_record",
@@ -687,6 +687,7 @@
         "scripts.retire_false_neurons",
         "scripts.run_test_lane",
         "scripts.supply_chain",
+        "scripts.verify_audit_redaction",
         "scripts.verify_deployment",
         "tests",
         "tests.benchmarks.eval_token_assembly_triangle",
@@ -704,6 +705,7 @@
         "tests.test_agents_tool_base",
         "tests.test_architecture_atlas",
         "tests.test_architecture_cycles",
+        "tests.test_audit_middleware",
         "tests.test_branch_stage",
         "tests.test_capability_capsule",
         "tests.test_capability_composition",

@@ -1,12 +1,8 @@
-"""Audit logging middleware for state-changing API requests.
+"""Best-effort, awaited audit records for selected mutation requests.
 
-Logs all POST, PUT, DELETE, PATCH requests to the audit_log table.
-GET requests are not logged (read-only, no state change).
-
-Addresses: NIST 800-53 AU-2, AU-3, AU-4, AU-8, AU-12
-           CMMC 3.3.1, 3.3.5, 3.3.6
-           SOC 2 CC7.2, CC7.3
-           FedRAMP Moderate AU family
+Body summaries retain bounded shape, never arbitrary keys or scalar values.
+Reads, excluded paths and downstream exceptions are not recorded here.
+See docs/audit-logging.md for coverage, privacy and failure limitations.
 """
 
 import json
@@ -29,34 +25,87 @@ SKIP_ENDPOINTS = {
     "/corvus/latest-frame", # Frame retrieval
 }
 
-# Max bytes of request body to store (prevent bloat from image uploads etc.)
+# Fixed resource budgets, not empirically tuned throughput targets. These bound
+# summary work/storage, not request.body() buffering or the application's uploads.
 MAX_BODY_SUMMARY = 2000
+MAX_BODY_PARSE_BYTES = 64 * 1024
+MAX_BODY_DEPTH = 8
+MAX_BODY_NODES = 256
 
 # Fields to redact from request body summaries
-REDACT_FIELDS = {"password", "secret", "token", "api_key", "apikey", "authorization"}
+REDACT_FIELDS = {
+    "password", "secret", "token", "api_key", "apikey", "authorization",
+    "access_token", "refresh_token", "client_secret", "private_key",
+    "cookie", "set_cookie",
+}
+
+
+def _reject_json_constant(value: str) -> None:
+    """Reject Python's nonstandard NaN/Infinity JSON extension without logging it."""
+    raise ValueError("nonstandard JSON constant")
 
 
 def _redact_body(body_bytes: bytes) -> str:
-    """Parse and redact sensitive fields from request body. Returns truncated string."""
+    """Return bounded JSON metadata/shape; never fall back to request text.
+
+Secret fields become fixed redaction markers at every visited depth. Other keys
+become positional labels and scalar values become type markers: a denylist alone
+cannot make free-form memory, credentials or even field names safe to persist.
+Limits omit entire summaries or subtrees, never slice serialized JSON.
+"""
     if not body_bytes:
         return ""
+
+    def omitted(reason: str) -> str:
+        return json.dumps({"bytes": len(body_bytes), "omitted": reason})
+
+    if len(body_bytes) > MAX_BODY_PARSE_BYTES:
+        return omitted("body_size_limit")
     try:
-        text = body_bytes.decode("utf-8", errors="replace")
-        # Try to parse as JSON and redact sensitive fields
-        try:
-            data = json.loads(text)
-            if isinstance(data, dict):
-                for key in list(data.keys()):
-                    if key.lower() in REDACT_FIELDS:
-                        data[key] = "[REDACTED]"
-                text = json.dumps(data, default=str)
-        except (json.JSONDecodeError, TypeError):
-            pass
-        if len(text) > MAX_BODY_SUMMARY:
-            return text[:MAX_BODY_SUMMARY] + f"... (truncated, {len(text)} bytes total)"
-        return text
-    except Exception:
-        return f"[binary, {len(body_bytes)} bytes]"
+        data = json.loads(body_bytes.decode("utf-8"), parse_constant=_reject_json_constant)
+    except (ValueError, RecursionError):
+        return omitted("invalid_json")
+    if not isinstance(data, (dict, list)):
+        return omitted("non_container_json")
+
+    remaining = MAX_BODY_NODES
+
+    def shape(value, depth: int = 0):
+        nonlocal remaining
+        remaining -= 1
+        if remaining < 0:
+            raise ValueError("node_limit")
+        if depth >= MAX_BODY_DEPTH:
+            return "[depth limit]"
+        if isinstance(value, dict):
+            result = {}
+            for index, (key, child) in enumerate(value.items()):
+                normalized = key.lower().replace("-", "_")
+                if normalized in REDACT_FIELDS:
+                    remaining -= 1
+                    if remaining < 0:
+                        raise ValueError("node_limit")
+                    result[normalized] = "[REDACTED]"
+                else:
+                    result[f"field_{index}"] = shape(child, depth + 1)
+            return result
+        if isinstance(value, list):
+            return [shape(child, depth + 1) for child in value]
+        if value is None:
+            return "[null]"
+        if isinstance(value, bool):
+            return "[boolean]"
+        if isinstance(value, (int, float)):
+            return "[number]"
+        return "[string]"
+
+    try:
+        summary = json.dumps({"bytes": len(body_bytes), "body": shape(data)})
+    except ValueError:
+        return omitted("node_limit")
+    if len(summary.encode("utf-8")) > MAX_BODY_SUMMARY:
+        return omitted("summary_size_limit")
+    return summary
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
@@ -88,7 +137,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if status_code >= 400:
             error_detail = f"HTTP {status_code}"
 
-        # Write audit record asynchronously (don't block the response)
+        # Async database I/O is awaited before returning the response. This is
+        # best-effort persistence, not a background task or a durable queue.
         try:
             async with async_session() as db:
                 record = AuditLog(
@@ -103,8 +153,9 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 )
                 db.add(record)
                 await db.commit()
-        except Exception as e:
-            # AU-5: Log audit failures — but never block the response
-            logger.error("Audit log write failed: %s", e)
+        except Exception:
+            # Exception messages/tracebacks may contain SQL parameters or raw
+            # request metadata. Emit only a fixed diagnostic; preserve response.
+            logger.error("Audit log write failed; record not persisted")
 
         return response
