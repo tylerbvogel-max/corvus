@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "8846a2ebd25f53a91895026c5d0d06b1180fde05b239981de69b6197a1745bfc",
-    "files": 484
+    "fingerprint": "0c717540273f0d29f0187fe55328be3575942ab7cc73fbc47270f09aa56addba",
+    "files": 485
   },
   "frontend": {
     "available": true,
@@ -4169,11 +4169,11 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 404,
-    "loc": 92849,
+    "modules": 405,
+    "loc": 93053,
     "routes": 218,
-    "import_edges": 1104,
-    "call_edges": 731,
+    "import_edges": 1107,
+    "call_edges": 732,
     "modules_touching_db": 121,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -6093,7 +6093,7 @@
     "app.composition.factory": {
       "path": "backend/app/composition/factory.py",
       "module": "app.composition.factory",
-      "loc": 356,
+      "loc": 364,
       "imports": [
         "app.composition.capabilities",
         "app.composition.profiles",
@@ -6259,14 +6259,14 @@
         },
         "_mount_frontend._is_api_path": {
           "name": "_mount_frontend._is_api_path",
-          "line": 340,
+          "line": 346,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_mount_frontend.serve_spa": {
           "name": "_mount_frontend.serve_spa",
-          "line": 344,
+          "line": 350,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -6316,7 +6316,7 @@
           "full_path": "/{full_path:path}",
           "mounted_on": "app",
           "handler": "_mount_frontend.serve_spa",
-          "line": 344
+          "line": 350
         }
       ],
       "db_writes": [
@@ -6529,7 +6529,7 @@
     "app.config": {
       "path": "backend/app/config.py",
       "module": "app.config",
-      "loc": 402,
+      "loc": 405,
       "imports": [],
       "external_imports": [
         "os",
@@ -6546,7 +6546,7 @@
         },
         "Settings.model_post_init": {
           "name": "Settings.model_post_init",
-          "line": 395,
+          "line": 398,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -9336,8 +9336,10 @@
     "app.routers.architecture": {
       "path": "backend/app/routers/architecture.py",
       "module": "app.routers.architecture",
-      "loc": 87,
-      "imports": [],
+      "loc": 92,
+      "imports": [
+        "app.config"
+      ],
       "external_imports": [
         "__future__",
         "fastapi",
@@ -9347,21 +9349,21 @@
       "functions": {
         "_load": {
           "name": "_load",
-          "line": 25,
+          "line": 30,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "get_architecture": {
           "name": "get_architecture",
-          "line": 43,
+          "line": 48,
           "is_async": true,
           "calls": [],
           "is_route": true
         },
         "get_module": {
           "name": "get_module",
-          "line": 80,
+          "line": 85,
           "is_async": true,
           "calls": [],
           "is_route": true
@@ -9375,7 +9377,7 @@
           "full_path": "/admin/architecture",
           "mounted_on": "router",
           "handler": "get_architecture",
-          "line": 43
+          "line": 48
         },
         {
           "method": "GET",
@@ -9384,7 +9386,7 @@
           "full_path": "/admin/architecture/module/{module_name}",
           "mounted_on": "router",
           "handler": "get_module",
-          "line": 80
+          "line": 85
         }
       ],
       "db_writes": [],
@@ -31476,7 +31478,7 @@
     "scripts.supply_chain": {
       "path": "backend/scripts/supply_chain.py",
       "module": "scripts.supply_chain",
-      "loc": 463,
+      "loc": 476,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -31586,7 +31588,7 @@
         },
         "main": {
           "name": "main",
-          "line": 433,
+          "line": 446,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -31607,11 +31609,12 @@
     "scripts.verify_deployment": {
       "path": "backend/scripts/verify_deployment.py",
       "module": "scripts.verify_deployment",
-      "loc": 281,
+      "loc": 362,
       "imports": [],
       "external_imports": [
         "__future__",
         "argparse",
+        "html",
         "json",
         "pathlib",
         "subprocess",
@@ -31622,77 +31625,112 @@
       "functions": {
         "_get": {
           "name": "_get",
-          "line": 52,
+          "line": 54,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_post": {
           "name": "_post",
-          "line": 68,
+          "line": 70,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_FrontendAssets.__init__": {
+          "name": "_FrontendAssets.__init__",
+          "line": 87,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_FrontendAssets.handle_starttag": {
+          "name": "_FrontendAssets.handle_starttag",
+          "line": 92,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_frontend": {
+          "name": "check_frontend",
+          "line": 101,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_image_identity": {
+          "name": "check_image_identity",
+          "line": 129,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "check_packaged_atlas": {
+          "name": "check_packaged_atlas",
+          "line": 142,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_liveness": {
           "name": "check_liveness",
-          "line": 84,
+          "line": 150,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_readiness": {
           "name": "check_readiness",
-          "line": 93,
+          "line": 159,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_recall": {
           "name": "check_recall",
-          "line": 105,
+          "line": 171,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_jobs": {
           "name": "check_jobs",
-          "line": 128,
+          "line": 194,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_slo": {
           "name": "check_slo",
-          "line": 147,
+          "line": 213,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_schema": {
           "name": "check_schema",
-          "line": 166,
+          "line": 232,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_atlas": {
           "name": "check_atlas",
-          "line": 181,
+          "line": 247,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "check_provenance": {
           "name": "check_provenance",
-          "line": 195,
+          "line": 261,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "main": {
           "name": "main",
-          "line": 212,
+          "line": 278,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -45156,6 +45194,100 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_release_artifact": {
+      "path": "backend/tests/test_release_artifact.py",
+      "module": "tests.test_release_artifact",
+      "loc": 94,
+      "imports": [
+        "app.composition.factory",
+        "app.config"
+      ],
+      "external_imports": [
+        "asyncio",
+        "email",
+        "fastapi",
+        "httpx",
+        "importlib",
+        "io",
+        "pathlib",
+        "pytest",
+        "types"
+      ],
+      "functions": {
+        "_script": {
+          "name": "_script",
+          "line": 17,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_packaged_frontend_serves_root_assets_and_preserves_api_absence": {
+          "name": "test_packaged_frontend_serves_root_assets_and_preserves_api_absence",
+          "line": 25,
+          "is_async": false,
+          "calls": [
+            "app.composition.factory::_mount_frontend"
+          ],
+          "is_route": false
+        },
+        "test_packaged_frontend_serves_root_assets_and_preserves_api_absence.exercise": {
+          "name": "test_packaged_frontend_serves_root_assets_and_preserves_api_absence.exercise",
+          "line": 34,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_explicit_missing_frontend_fails_startup": {
+          "name": "test_explicit_missing_frontend_fails_startup",
+          "line": 46,
+          "is_async": false,
+          "calls": [
+            "app.composition.factory::_mount_frontend"
+          ],
+          "is_route": false
+        },
+        "test_static_symlink_cannot_escape_dist": {
+          "name": "test_static_symlink_cannot_escape_dist",
+          "line": 52,
+          "is_async": false,
+          "calls": [
+            "app.composition.factory::_mount_frontend"
+          ],
+          "is_route": false
+        },
+        "test_static_symlink_cannot_escape_dist.exercise": {
+          "name": "test_static_symlink_cannot_escape_dist.exercise",
+          "line": 63,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "Resource.__init__": {
+          "name": "Resource.__init__",
+          "line": 70,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_deployment_rejects_spa_fallback_for_script": {
+          "name": "test_deployment_rejects_spa_fallback_for_script",
+          "line": 78,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_source_match_is_insufficient_when_image_differs": {
+          "name": "test_source_match_is_insufficient_when_image_differs",
+          "line": 88,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_retention": {
       "path": "backend/tests/test_retention.py",
       "module": "tests.test_retention",
@@ -48643,7 +48775,8 @@
     "app.composition.factory": [
       "app.composition",
       "tests.test_capability_composition",
-      "tests.test_composition_snapshot"
+      "tests.test_composition_snapshot",
+      "tests.test_release_artifact"
     ],
     "app.composition.profiles": [
       "app.composition",
@@ -48666,6 +48799,7 @@
       "app.middleware.security_headers",
       "app.operations.router",
       "app.routers.admin_graph_maintenance",
+      "app.routers.architecture",
       "app.routers.query",
       "app.routers.v1",
       "app.seed.regulatory_seed",
@@ -48735,6 +48869,7 @@
       "tests.test_proposals_router",
       "tests.test_region_policy",
       "tests.test_regulatory_coverage",
+      "tests.test_release_artifact",
       "tests.test_retention",
       "tests.test_spread_vectorized",
       "tests.test_substrate_ontology",
@@ -51193,6 +51328,9 @@
     "tests.test_regulatory_coverage": [
       "app.services.regulatory_coverage"
     ],
+    "tests.test_release_artifact": [
+      "app.composition.factory"
+    ],
     "tests.test_retention": [
       "app.services.retention"
     ],
@@ -51693,7 +51831,7 @@
       "full_path": "/{full_path:path}",
       "mounted_on": "app",
       "handler": "_mount_frontend.serve_spa",
-      "line": 344,
+      "line": 350,
       "module": "app.composition.factory",
       "file": "backend/app/composition/factory.py",
       "imports_reachable": [
@@ -53798,10 +53936,12 @@
       "full_path": "/admin/architecture",
       "mounted_on": "router",
       "handler": "get_architecture",
-      "line": 43,
+      "line": 48,
       "module": "app.routers.architecture",
       "file": "backend/app/routers/architecture.py",
-      "imports_reachable": [],
+      "imports_reachable": [
+        "app.config"
+      ],
       "calls_reachable": []
     },
     {
@@ -53811,10 +53951,12 @@
       "full_path": "/admin/architecture/module/{module_name}",
       "mounted_on": "router",
       "handler": "get_module",
-      "line": 80,
+      "line": 85,
       "module": "app.routers.architecture",
       "file": "backend/app/routers/architecture.py",
-      "imports_reachable": [],
+      "imports_reachable": [
+        "app.config"
+      ],
       "calls_reachable": []
     },
     {

@@ -61,6 +61,7 @@ COPY backend/tenants/ ./tenants/
 COPY backend/alembic/ ./alembic/
 COPY backend/alembic.ini ./
 COPY backend/scripts/start_backend.sh ./scripts/start_backend.sh
+COPY architecture/architecture.json architecture/conformance.json ./architecture/
 
 # Built frontend. The previous INCLUDE_FRONTEND ARG was declared twice and never
 # consulted — this COPY ran unconditionally — so the flag advertised a choice the
@@ -76,6 +77,8 @@ ENV HOME=/home/corvus
 ENV PORT=8005
 ENV TENANT_ID=corvus-mind
 ENV CORVUS_BIND_HOST=0.0.0.0
+ENV CORVUS_FRONTEND_DIST=/app/frontend/dist
+ENV CORVUS_ARCHITECTURE_DIR=/app/architecture
 
 # NOTE: CLAUDE_CLI_PATH is deliberately NOT set here.
 #

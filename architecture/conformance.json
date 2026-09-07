@@ -19,7 +19,7 @@
     ]
   },
   "system_summary": {
-    "identity": "Corvus is a governed developer-memory organ. Coding harnesses capture evidence, recall verified memories, and receive standing policy; a FastAPI service owns the private graph and trust gates; PostgreSQL holds canonical state; filesystem projections deliver capsules, skills, episode logs, and admission caches back to harnesses.",
+    "identity": "Corvus is a public portfolio implementation of governed developer memory. Source and release images are public; personal runtime memory stays private. Coding harnesses capture evidence, recall verified memories, and receive standing policy; a FastAPI service owns the private graph and trust gates; PostgreSQL holds canonical state; filesystem projections deliver capsules, skills, episode logs, and admission caches back to harnesses.",
     "primary_loop": "session work -> redacted episode evidence -> frontier-grade distillation through the opus capability alias -> evidence frame -> near-duplicate check -> tiered write gate -> audited Action Bus mutation or human proposal -> cheap hybrid recall -> measured attribution -> janitor/auditor maintenance -> compiled skill and charter projection.",
     "governing_principle": "Retrieval may fail open, but durable writes fail closed. Authoritative, identity-shaping, deduplication, reconsolidation, and reference-promotion decisions remain review-gated.",
     "current_tenants": [
@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 404,
+    "modules": 405,
     "frontend_files": 80,
-    "units": 484,
-    "classified": 484,
+    "units": 485,
+    "classified": 485,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "8846a2ebd25f53a91895026c5d0d06b1180fde05b239981de69b6197a1745bfc",
-    "current_fingerprint": "8846a2ebd25f53a91895026c5d0d06b1180fde05b239981de69b6197a1745bfc",
-    "stored_files": 484,
-    "current_files": 484
+    "stored_fingerprint": "0c717540273f0d29f0187fe55328be3575942ab7cc73fbc47270f09aa56addba",
+    "current_fingerprint": "0c717540273f0d29f0187fe55328be3575942ab7cc73fbc47270f09aa56addba",
+    "stored_files": 485,
+    "current_files": 485
   },
   "manifest_problems": [],
   "boxes": [
@@ -210,7 +210,7 @@
       "confidence": "reviewed",
       "module_count": 4,
       "frontend_file_count": 0,
-      "loc": 1831,
+      "loc": 1836,
       "routes": 2,
       "modules": [
         "app.routers.architecture",
@@ -566,7 +566,7 @@
       "confidence": "reviewed",
       "module_count": 75,
       "frontend_file_count": 0,
-      "loc": 9189,
+      "loc": 9192,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -655,7 +655,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 980,
+      "loc": 988,
       "routes": 5,
       "modules": [
         "app.composition",
@@ -672,9 +672,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 117,
+      "module_count": 118,
       "frontend_file_count": 0,
-      "loc": 25125,
+      "loc": 25313,
       "routes": 2,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -773,6 +773,7 @@
         "tests.test_reference_class",
         "tests.test_region_policy",
         "tests.test_regulatory_coverage",
+        "tests.test_release_artifact",
         "tests.test_retention",
         "tests.test_retrieval_telemetry",
         "tests.test_roadmap_admission",
@@ -1538,7 +1539,7 @@
       "id": "corvus",
       "name": "Corvus",
       "purpose": "Governed long-term memory and forward-intent infrastructure for coding-agent harnesses.",
-      "boundary": "Private tenant-scoped graph and control plane; public demo contains fixtures only.",
+      "boundary": "Private tenant-scoped runtime data and control plane; public source and fixture-only demo.",
       "evidence": [
         "backend/app/main.py",
         "backend/app/tenant.py"

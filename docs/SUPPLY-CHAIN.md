@@ -159,16 +159,29 @@ Required before a tag. See the evidence document for a worked run.
    grant `CREATE` on `public` to non-owners, and migrations fail with
    `permission denied for schema public` otherwise.
 3. `pg_dump -Fc` before deploying.
-4. Deploy the exact built artifact. `start_backend.sh` migrates to head.
+4. Pull and deploy the exact registry reference from release `provenance.json`.
+   `registry_reference` names the immutable manifest; `image_id` is the Docker
+   config digest that must match the running container's `.Image`.
+   `start_backend.sh` migrates to head.
 5. Run the single verification command:
    ```bash
    python backend/scripts/verify_deployment.py --url URL \
      --database-url ... --expect-revision ... \
-     --container ... --expect-source-revision "$(git rev-parse HEAD)"
+     --container ... --expect-source-revision "$(git rev-parse HEAD)" \
+     --expect-image-id sha256:... --frontend --packaged-atlas
    ```
 6. Plant a bad release, confirm detection, then restore and redeploy. Record the
    recovery time and what was lost.
 
-`verify_deployment.py` is **interim**. Roadmap record
-`durability-operational-envelope` (06) owns the real operational verification
-contract and should absorb it.
+The release workflow publishes the scanned image to GHCR, then a separate runner
+pulls it by registry digest and starts it against a disposable database. Release
+creation requires that runner's deployment receipt, including exact image identity
+and the frontend served by the container. Dry runs also publish a candidate image
+and verify it, but do not create a GitHub release. Candidate tags identify workflow
+run and attempt; deployments use the immutable digest from provenance.
+
+The image sets `CORVUS_FRONTEND_DIST=/app/frontend/dist`. Source checkouts use
+their sibling `frontend/dist` by default. An explicitly configured directory without
+`index.html` fails startup rather than silently omitting the interface.
+The two committed architecture JSON artifacts are also shipped, with
+`CORVUS_ARCHITECTURE_DIR=/app/architecture`; the release probe checks their API.

@@ -388,12 +388,17 @@ def cmd_provenance(args: argparse.Namespace) -> int:
 
     dockerfile = (REPO_ROOT / "Dockerfile").read_text()
     lock_bytes = LOCK.read_bytes()
+    repository = _git("config", "--get", "remote.origin.url")
+    if repository == "unknown":
+        repository = _git("config", "--get", "remote.private.url")
+    if repository == "unknown" and os.environ.get("GITHUB_REPOSITORY"):
+        repository = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}"
 
     record = {
         "schema_version": 1,
         "artifact": args.image,
         "source": {
-            "repository": _git("config", "--get", "remote.private.url"),
+            "repository": repository,
             "revision": _git("rev-parse", "HEAD"),
             "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
             "dirty": bool(_git("status", "--porcelain")),
@@ -419,8 +424,16 @@ def cmd_provenance(args: argparse.Namespace) -> int:
         },
     }
     if args.image:
-        p = _run(["docker", "inspect", "--format", "{{.Id}}", args.image])
-        record["artifact_digest"] = p.stdout.strip() if p.returncode == 0 else None
+        p = _run(["docker", "image", "inspect", "--format", "{{.Id}}", args.image])
+        if p.returncode or not re.fullmatch(r"sha256:[0-9a-f]{64}", p.stdout.strip()):
+            print("cannot identify the built image; refusing incomplete provenance", file=sys.stderr)
+            return 1
+        # Docker config identity and registry manifest identity are different
+        # digests. The former matches container .Image; the latter is pullable.
+        record["artifact_digest"] = p.stdout.strip()
+        record["image_id"] = p.stdout.strip()
+        if "@sha256:" in args.image:
+            record["registry_reference"] = args.image
 
     out = Path(args.output) if args.output else _artifact_dir() / "provenance.json"
     out.parent.mkdir(parents=True, exist_ok=True)

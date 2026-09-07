@@ -15,11 +15,16 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+from app.config import settings
 
 router = APIRouter(prefix="/admin/architecture", tags=["architecture"])
 
 # routers -> app -> backend -> repo root
-_ARCH_DIR = Path(__file__).resolve().parents[3] / "architecture"
+_ARCH_DIR = (
+    Path(settings.corvus_architecture_dir).expanduser().resolve()
+    if settings.corvus_architecture_dir
+    else Path(__file__).resolve().parents[3] / "architecture"
+)
 
 
 def _load(name: str) -> dict:

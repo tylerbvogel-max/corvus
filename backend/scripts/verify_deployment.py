@@ -37,12 +37,14 @@ from __future__ import annotations
 
 import argparse
 import json
+from html.parser import HTMLParser
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 
 class CheckError(RuntimeError):
@@ -80,6 +82,70 @@ def _post(url: str, payload: dict, timeout: float) -> tuple[int, dict]:
 
 
 # ---- checks -----------------------------------------------------------------
+
+class _FrontendAssets(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.assets = []
+        self.modules = 0
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "script" and attrs.get("type") == "module" and attrs.get("src"):
+            self.modules += 1
+            self.assets.append(attrs["src"])
+        if tag == "link" and attrs.get("rel") == "stylesheet" and attrs.get("href"):
+            self.assets.append(attrs["href"])
+
+
+def check_frontend(url: str, timeout: float) -> tuple[bool, str]:
+    """Check the deployed HTML and its local assets, not a separate Vite build."""
+    try:
+        with urllib.request.urlopen(f"{url}/", timeout=timeout) as response:
+            if response.status != 200 or response.headers.get_content_type() != "text/html":
+                return False, "frontend root did not return HTML"
+            parser = _FrontendAssets()
+            parser.feed(response.read().decode())
+        if not parser.modules:
+            return False, "frontend HTML has no module entrypoint"
+        checked = 0
+        for asset in parser.assets:
+            target = urljoin(f"{url}/", asset)
+            if urlparse(target).netloc != urlparse(url).netloc:
+                continue  # Fonts/CDNs are not artifacts shipped in this image.
+            with urllib.request.urlopen(target, timeout=timeout) as response:
+                if response.status != 200 or response.headers.get_content_type() == "text/html":
+                    return False, f"frontend asset missing or SPA fallback: {asset}"
+                if not response.read(1):
+                    return False, f"empty frontend asset: {asset}"
+            checked += 1
+        if not checked:
+            return False, "frontend contains no local build assets"
+        return True, f"frontend root and {checked} local build assets served"
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return False, f"frontend unavailable: {exc}"
+
+
+def check_image_identity(container: str, expected_image_id: str) -> tuple[bool, str]:
+    proc = subprocess.run(
+        ["docker", "inspect", "--format", "{{.Image}}", container],
+        text=True, capture_output=True,
+    )
+    if proc.returncode:
+        raise CheckError(f"could not inspect {container}: {proc.stderr.strip()}")
+    actual = proc.stdout.strip()
+    if actual != expected_image_id:
+        return False, f"deployed image {actual!r} differs from tested image {expected_image_id!r}"
+    return True, f"deployed image matches tested config digest {actual}"
+
+
+def check_packaged_atlas(url: str, timeout: float) -> tuple[bool, str]:
+    status, payload = _get(f"{url}/admin/architecture", timeout)
+    if status != 200 or not payload.get("boxes") or not payload.get("processes"):
+        return False, f"packaged architecture missing or incomplete (HTTP {status})"
+    if not payload.get("freshness", {}).get("fresh"):
+        return False, "packaged architecture was not current when generated"
+    return True, "packaged architecture includes component and process evidence"
 
 def check_liveness(url: str, timeout: float) -> tuple[bool, str]:
     status, payload = _get(f"{url}/health", timeout)
@@ -222,9 +288,17 @@ def main() -> int:
                         help="repository root, to check architecture atlas freshness")
     parser.add_argument("--container", default="")
     parser.add_argument("--expect-source-revision", default="")
+    parser.add_argument("--expect-image-id", default="",
+                        help="Docker image config digest from release provenance.json (image_id)")
+    parser.add_argument("--frontend", action="store_true",
+                        help="require HTML and local build assets from this deployment")
+    parser.add_argument("--packaged-atlas", action="store_true",
+                        help="require the architecture artifacts served by this deployment")
     parser.add_argument("--json", action="store_true",
                         help="emit machine-readable results for CI artifacts")
     args = parser.parse_args()
+    if args.expect_image_id and not args.container:
+        parser.error("--expect-image-id requires --container")
 
     base = args.url.rstrip("/")
     planned: list[tuple[str, callable]] = [
@@ -242,6 +316,13 @@ def main() -> int:
     if args.container:
         planned.append(("provenance",
                         lambda: check_provenance(args.container, args.expect_source_revision)))
+    if args.expect_image_id:
+        planned.append(("image-identity",
+                        lambda: check_image_identity(args.container, args.expect_image_id)))
+    if args.frontend:
+        planned.append(("frontend", lambda: check_frontend(base, args.timeout)))
+    if args.packaged_atlas:
+        planned.append(("packaged-atlas", lambda: check_packaged_atlas(base, args.timeout)))
 
     results: list[dict] = []
     failed = errored = 0

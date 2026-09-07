@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     database_url: str = ""  # Auto-derived from TENANT_ID if not set
     # Root level for the structured JSON log stream (durability-operational-envelope).
     log_level: str = "INFO"
+    # Packaged deployments set this explicitly; source checkouts use the sibling frontend.
+    corvus_frontend_dist: str = ""
+    corvus_architecture_dir: str = ""
     anthropic_api_key: str = ""
     google_api_key: str = ""
     groq_api_key: str = ""
