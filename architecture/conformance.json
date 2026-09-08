@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 417,
+    "modules": 418,
     "frontend_files": 80,
-    "units": 497,
-    "classified": 497,
+    "units": 498,
+    "classified": 498,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "3f7918e3e9847a38b17517bc457779beb5e7115db32cf1118bb4c6a1603c04de",
-    "current_fingerprint": "3f7918e3e9847a38b17517bc457779beb5e7115db32cf1118bb4c6a1603c04de",
-    "stored_files": 497,
-    "current_files": 497
+    "stored_fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
+    "current_fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
+    "stored_files": 498,
+    "current_files": 498
   },
   "manifest_problems": [],
   "boxes": [
@@ -318,7 +318,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 1663,
+      "loc": 1683,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -674,9 +674,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 128,
+      "module_count": 129,
       "frontend_file_count": 0,
-      "loc": 26759,
+      "loc": 26860,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -752,6 +752,7 @@
         "tests.test_job_serialization",
         "tests.test_kernel_replay_endtoend",
         "tests.test_kernel_replay_fixture_guard",
+        "tests.test_lesson_transaction_ownership",
         "tests.test_live_provider",
         "tests.test_llm_fallback",
         "tests.test_maintenance_outcomes",

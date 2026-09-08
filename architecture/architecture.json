@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "3f7918e3e9847a38b17517bc457779beb5e7115db32cf1118bb4c6a1603c04de",
-    "files": 497
+    "fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
+    "files": 498
   },
   "frontend": {
     "available": true,
@@ -4170,11 +4170,11 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 417,
-    "loc": 94861,
+    "modules": 418,
+    "loc": 94982,
     "routes": 219,
-    "import_edges": 1155,
-    "call_edges": 758,
+    "import_edges": 1156,
+    "call_edges": 759,
     "modules_touching_db": 126,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -20708,7 +20708,7 @@
     "app.services.lesson_store": {
       "path": "backend/app/services/lesson_store.py",
       "module": "app.services.lesson_store",
-      "loc": 437,
+      "loc": 457,
       "imports": [
         "app.config",
         "app.middleware.rbac",
@@ -20841,49 +20841,70 @@
         },
         {
           "kind": "add",
-          "line": 335,
+          "line": 345,
           "in": "save_lesson",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 336,
+          "line": 346,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 361,
+          "line": 371,
           "in": "save_lesson",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "flush",
-          "line": 362,
+          "line": 372,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 394,
+          "line": 405,
+          "in": "save_lesson",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 407,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 408,
+          "line": 422,
+          "in": "save_lesson",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 424,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 430,
+          "line": 447,
+          "in": "save_lesson",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 449,
           "in": "save_lesson",
           "target": "db",
           "model": null
@@ -41441,6 +41462,91 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_lesson_transaction_ownership": {
+      "path": "backend/tests/test_lesson_transaction_ownership.py",
+      "module": "tests.test_lesson_transaction_ownership",
+      "loc": 101,
+      "imports": [
+        "app.services.lesson_store"
+      ],
+      "external_imports": [
+        "json",
+        "pytest",
+        "types",
+        "unittest"
+      ],
+      "functions": {
+        "store": {
+          "name": "store",
+          "line": 12,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "store.flush": {
+          "name": "store.flush",
+          "line": 17,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "arguments": {
+          "name": "arguments",
+          "line": 33,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_routed_save_respects_transaction_owner": {
+          "name": "test_routed_save_respects_transaction_owner",
+          "line": 41,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_near_duplicate_branches_respect_owner": {
+          "name": "test_near_duplicate_branches_respect_owner",
+          "line": 58,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_transaction_mode_rejected_before_any_write": {
+          "name": "test_transaction_mode_rejected_before_any_write",
+          "line": 73,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_staged_assistant_scope_still_escalates_authority": {
+          "name": "test_staged_assistant_scope_still_escalates_authority",
+          "line": 85,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_default_mode_preserves_commit_and_enrichment": {
+          "name": "test_default_mode_preserves_commit_and_enrichment",
+          "line": 96,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_live_provider": {
       "path": "backend/tests/test_live_provider.py",
       "module": "tests.test_live_provider",
@@ -50905,6 +51011,7 @@
       "eval.locomo.run_locomo",
       "eval.locomo.test_lifecycle",
       "scripts.verify_write_authority",
+      "tests.test_lesson_transaction_ownership",
       "tests.test_reconsolidation_kernel",
       "tests.test_write_authority_validation"
     ],
@@ -52553,6 +52660,9 @@
       "app.services.evidence_frame",
       "app.services.reconsolidation.review",
       "tests.kernel_matrix_fixtures"
+    ],
+    "tests.test_lesson_transaction_ownership": [
+      "app.services.lesson_store"
     ],
     "tests.test_live_provider": [
       "app.services.llm_provider"
@@ -66712,6 +66822,16 @@
         "client_for",
         "test_cancellation_releases_owner",
         "test_http_contender_does_not_execute_or_replace_receipt"
+      ]
+    },
+    {
+      "module": "tests.test_lesson_transaction_ownership",
+      "entrypoints": [
+        "test_default_mode_preserves_commit_and_enrichment",
+        "test_near_duplicate_branches_respect_owner",
+        "test_routed_save_respects_transaction_owner",
+        "test_staged_assistant_scope_still_escalates_authority",
+        "test_transaction_mode_rejected_before_any_write"
       ]
     },
     {
