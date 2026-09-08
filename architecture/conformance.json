@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 411,
+    "modules": 413,
     "frontend_files": 80,
-    "units": 491,
-    "classified": 491,
+    "units": 493,
+    "classified": 493,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "b1b262cebfd18d606f7abe7f4bd981891b451a6a7abb7d881ac9d998b08ce944",
-    "current_fingerprint": "b1b262cebfd18d606f7abe7f4bd981891b451a6a7abb7d881ac9d998b08ce944",
-    "stored_files": 491,
-    "current_files": 491
+    "stored_fingerprint": "addf3e9c7eeb540033b9535acc3fc26d99c8bfdc0e65c4b8e090ba472dc3ab06",
+    "current_fingerprint": "addf3e9c7eeb540033b9535acc3fc26d99c8bfdc0e65c4b8e090ba472dc3ab06",
+    "stored_files": 493,
+    "current_files": 493
   },
   "manifest_problems": [],
   "boxes": [
@@ -564,9 +564,9 @@
       "tier": "infra",
       "purpose": "Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.",
       "confidence": "reviewed",
-      "module_count": 76,
+      "module_count": 77,
       "frontend_file_count": 0,
-      "loc": 9414,
+      "loc": 9462,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -614,6 +614,7 @@
         "app.models",
         "app.observability",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.json_logging",
@@ -673,9 +674,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 123,
+      "module_count": 124,
       "frontend_file_count": 0,
-      "loc": 26212,
+      "loc": 26409,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -744,6 +745,7 @@
         "tests.test_input_guard",
         "tests.test_integrity_reconciler_tools",
         "tests.test_job_inventory",
+        "tests.test_job_serialization",
         "tests.test_kernel_replay_endtoend",
         "tests.test_kernel_replay_fixture_guard",
         "tests.test_live_provider",

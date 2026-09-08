@@ -36,6 +36,7 @@ from typing import Any, Iterator
 
 from app.observability.context import bound
 from app.observability.job_outcomes import BatchOutcome, exception_reason, safe_detail
+from app.observability.job_locks import JobBusy, job_run_lock
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +77,13 @@ class ScheduledJob:
 # against the units actually installed, in both directions, so a timer added
 # without an entry fails the suite and an entry whose timer was removed does
 # too.
+HTTP_OVERLAP_POLICY = (
+    "Same-job HTTP runs use a nonblocking OS file lock across workers sharing "
+    "one local receipt directory; contenders get 409 without overwriting "
+    "receipts. Different jobs and direct service calls are not serialized. "
+    "Systemd only serializes its own unit."
+)
+
 JOB_INVENTORY: tuple[ScheduledJob, ...] = (
     ScheduledJob(
         name="distill",
@@ -84,15 +92,12 @@ JOB_INVENTORY: tuple[ScheduledJob, ...] = (
         cadence="every 30 minutes (OnUnitActiveSec=30min, OnBootSec=15min)",
         cadence_seconds=30 * 60,
         endpoint="POST /distill/run",
-        overlap_policy=(
-            "systemd serializes: Type=oneshot on a single unit cannot start "
-            "again while the previous run is active, so a long distill delays "
-            "the next tick rather than doubling up."
-        ),
+        overlap_policy=HTTP_OVERLAP_POLICY,
         retry_contract="No retry. The next tick is the retry, 30 minutes later.",
         idempotence=(
-            "Idempotent by episode watermark: already-distilled sessions are "
-            "skipped, so a repeated run re-reads nothing it has consumed."
+            "Boolean .distilled markers suppress whole sessions, including appended "
+            "content. Database commit and marker writing are not atomic; retry "
+            "idempotence is not established. See checkpoint-integrity follow-up."
         ),
         health_signal="A receipt with outcome=ok written within LATE_MULTIPLIER cadences.",
         remediation=(
@@ -108,7 +113,7 @@ JOB_INVENTORY: tuple[ScheduledJob, ...] = (
         cadence="every 6 hours (OnUnitActiveSec=6h, OnBootSec=30min)",
         cadence_seconds=6 * 3600,
         endpoint="POST /janitor/run",
-        overlap_policy="systemd serializes (Type=oneshot, single unit).",
+        overlap_policy=HTTP_OVERLAP_POLICY,
         retry_contract="No retry; the next 6-hour tick is the retry.",
         idempotence=(
             "Idempotent per pass. Decay and plasticity ride the DISTILLED-SESSION "
@@ -129,7 +134,7 @@ JOB_INVENTORY: tuple[ScheduledJob, ...] = (
         cadence="every 12 hours (OnUnitActiveSec=12h, OnBootSec=45min)",
         cadence_seconds=12 * 3600,
         endpoint="POST /auditor/run?mode=auto",
-        overlap_policy="systemd serializes (Type=oneshot, single unit).",
+        overlap_policy=HTTP_OVERLAP_POLICY,
         retry_contract="No retry; the next 12-hour tick is the retry.",
         idempotence=(
             "Proposes only. The auditor never applies its own findings, so a "
@@ -149,7 +154,7 @@ JOB_INVENTORY: tuple[ScheduledJob, ...] = (
         cadence="every 24 hours (OnUnitActiveSec=24h, OnBootSec=45min)",
         cadence_seconds=24 * 3600,
         endpoint="POST /compile/run",
-        overlap_policy="systemd serializes (Type=oneshot, single unit).",
+        overlap_policy=HTTP_OVERLAP_POLICY,
         retry_contract="No retry; the next daily tick is the retry.",
         idempotence=(
             "Rewrites ~/.claude/skills/mind-* from the current graph. Running "
@@ -289,8 +294,15 @@ def scheduled_http_run(job: str, tenant: str) -> Iterator[dict[str, Any]]:
     from fastapi import HTTPException
 
     try:
-        with scheduled_run(job, tenant) as detail:
-            yield detail
+        if job not in JOBS_BY_NAME:
+            raise ValueError("unsupported scheduled HTTP job")
+        with job_run_lock(job, RECEIPTS_DIR / "locks"):
+            with scheduled_run(job, tenant) as detail:
+                yield detail
+    except JobBusy:
+        # The contender did not run: do not replace the owner's receipt with
+        # a fabricated failure, or conceal its eventual successful completion.
+        raise HTTPException(status_code=409, detail="maintenance-job-busy") from None
     except Exception:
         raise HTTPException(status_code=503, detail="maintenance-job-failed") from None
 
