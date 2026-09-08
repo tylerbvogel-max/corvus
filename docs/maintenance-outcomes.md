@@ -74,8 +74,9 @@ health or `maintenance.outcome`, not HTTP success, as the health signal.
 
 ## Boundaries
 
-Systemd serializes its own service unit only. Manual HTTP calls and multiple
-workers are not serialized by a timer. Receipt replacement, database commits,
+Systemd serializes its own service unit only. The four scheduled HTTP routes
+now additionally use nonblocking OS file locks for same-job exclusion across
+workers sharing one local receipt directory. Receipt replacement, database commits,
 and filesystem markers are not one atomic transaction. This repair does not
 provide leases, duplicate prevention, rollback recovery, or crash-window repair.
 Nor does a returned failure necessarily trigger systemd OnFailure when HTTP
@@ -87,3 +88,32 @@ starts a real ephemeral Uvicorn listener, exercises all four routes with
 synthetic exceptions, captures server logs, checks persisted receipts, and
 proves a subsequent healthy no-work request. It uses neither a database nor
 a provider. Run it outside sandboxes that prohibit loopback listeners.
+
+## Same-job HTTP exclusion
+
+`scheduled_http_run` acquires `<CORVUS_JOB_RECEIPTS_DIR>/locks/<job>.lock`
+before entering the receipt wrapper. A second request for the same job returns
+handled HTTP 409 with `maintenance-job-busy`, without running its batch or
+overwriting the owner's receipt. There is no wait queue or automatic immediate
+retry: an operator may retry after completion; timers retain their cadence.
+`curl --fail` treats contention as a failed invocation and can trigger the
+existing runner alert. Contention does not mean the owning batch failed.
+
+This is POSIX advisory locking on a **shared local filesystem**, tested across
+processes and real HTTP requests. Configure every worker for this operator
+deployment with the same directory and permissions. Separate hosts, unshared
+container directories, network filesystem semantics, direct service calls and
+different-job overlap are outside this guarantee. There is no process-local
+lock described as cross-worker protection, and no distributed lease claim.
+
+The descriptor closes on normal exit, exception and cancellation; the OS
+releases it on process death. Lock files deliberately persist and must never
+be unlinked as a stale-lock cleanup strategy. Their existence is not evidence
+of an active owner. Lock acquisition errors refuse execution through the
+sanitized HTTP boundary; an unavailable receipt directory cannot reliably
+persist its own failure. Symlink lock targets are rejected, not followed.
+
+This does not solve the distiller's boolean-marker suppression of resumed logs,
+the database-commit/marker-write crash window, repeated provider work, or missing
+per-item rollback. The old inventory's claim of an idempotent episode watermark
+was inaccurate and has been corrected. Those defects remain separate work.

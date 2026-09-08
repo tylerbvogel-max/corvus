@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "b1b262cebfd18d606f7abe7f4bd981891b451a6a7abb7d881ac9d998b08ce944",
-    "files": 491
+    "fingerprint": "addf3e9c7eeb540033b9535acc3fc26d99c8bfdc0e65c4b8e090ba472dc3ab06",
+    "files": 493
   },
   "frontend": {
     "available": true,
@@ -4170,11 +4170,11 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 411,
-    "loc": 94260,
+    "modules": 413,
+    "loc": 94505,
     "routes": 219,
-    "import_edges": 1137,
-    "call_edges": 751,
+    "import_edges": 1145,
+    "call_edges": 754,
     "modules_touching_db": 123,
     "modules_touching_llm": 25,
     "parse_errors": 0
@@ -7584,6 +7584,32 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "app.observability.job_locks": {
+      "path": "backend/app/observability/job_locks.py",
+      "module": "app.observability.job_locks",
+      "loc": 36,
+      "imports": [],
+      "external_imports": [
+        "contextlib",
+        "fcntl",
+        "os",
+        "pathlib",
+        "re",
+        "typing"
+      ],
+      "functions": {
+        "job_run_lock": {
+          "name": "job_run_lock",
+          "line": 16,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "app.observability.job_outcomes": {
       "path": "backend/app/observability/job_outcomes.py",
       "module": "app.observability.job_outcomes",
@@ -7665,9 +7691,10 @@
     "app.observability.jobs": {
       "path": "backend/app/observability/jobs.py",
       "module": "app.observability.jobs",
-      "loc": 355,
+      "loc": 367,
       "imports": [
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes"
       ],
       "external_imports": [
@@ -7685,42 +7712,42 @@
       "functions": {
         "ScheduledJob.as_dict": {
           "name": "ScheduledJob.as_dict",
-          "line": 71,
+          "line": 72,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_receipt_path": {
           "name": "_receipt_path",
-          "line": 180,
+          "line": 185,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "read_receipt": {
           "name": "read_receipt",
-          "line": 184,
+          "line": 189,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "write_receipt": {
           "name": "write_receipt",
-          "line": 197,
+          "line": 202,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_now": {
           "name": "_now",
-          "line": 207,
+          "line": 212,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "job_receipt": {
           "name": "job_receipt",
-          "line": 212,
+          "line": 217,
           "is_async": false,
           "calls": [
             "app.observability.job_outcomes::safe_detail",
@@ -7730,7 +7757,7 @@
         },
         "scheduled_run": {
           "name": "scheduled_run",
-          "line": 254,
+          "line": 259,
           "is_async": false,
           "calls": [
             "app.observability.context::bound",
@@ -7740,21 +7767,23 @@
         },
         "scheduled_http_run": {
           "name": "scheduled_http_run",
-          "line": 280,
+          "line": 285,
           "is_async": false,
-          "calls": [],
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
           "is_route": false
         },
         "job_health": {
           "name": "job_health",
-          "line": 298,
+          "line": 310,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "inventory_health": {
           "name": "inventory_health",
-          "line": 341,
+          "line": 353,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -40917,6 +40946,132 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_job_serialization": {
+      "path": "backend/tests/test_job_serialization.py",
+      "module": "tests.test_job_serialization",
+      "loc": 197,
+      "imports": [
+        "app.database",
+        "app.observability.job_locks",
+        "app.observability.jobs",
+        "app.routers.auditor",
+        "app.routers.compile",
+        "app.routers.distill",
+        "app.routers.janitor"
+      ],
+      "external_imports": [
+        "asyncio",
+        "contextlib",
+        "fastapi",
+        "httpx",
+        "os",
+        "pathlib",
+        "pytest",
+        "socket",
+        "subprocess",
+        "sys",
+        "uvicorn"
+      ],
+      "functions": {
+        "client_for": {
+          "name": "client_for",
+          "line": 23,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_http_contender_does_not_execute_or_replace_receipt": {
+          "name": "test_http_contender_does_not_execute_or_replace_receipt",
+          "line": 65,
+          "is_async": true,
+          "calls": [
+            "app.observability.jobs::write_receipt",
+            "app.observability.jobs::read_receipt"
+          ],
+          "is_route": false
+        },
+        "test_http_contender_does_not_execute_or_replace_receipt.batch": {
+          "name": "test_http_contender_does_not_execute_or_replace_receipt.batch",
+          "line": 74,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_http_contender_does_not_execute_or_replace_receipt.fake_db": {
+          "name": "test_http_contender_does_not_execute_or_replace_receipt.fake_db",
+          "line": 85,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_cross_process_exclusion_and_killed_owner_recovery": {
+          "name": "test_cross_process_exclusion_and_killed_owner_recovery",
+          "line": 107,
+          "is_async": false,
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
+          "is_route": false
+        },
+        "test_normal_exception_and_distinct_job_ownership": {
+          "name": "test_normal_exception_and_distinct_job_ownership",
+          "line": 137,
+          "is_async": false,
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
+          "is_route": false
+        },
+        "test_cancellation_releases_owner": {
+          "name": "test_cancellation_releases_owner",
+          "line": 152,
+          "is_async": true,
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
+          "is_route": false
+        },
+        "test_cancellation_releases_owner.owner": {
+          "name": "test_cancellation_releases_owner.owner",
+          "line": 155,
+          "is_async": true,
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
+          "is_route": false
+        },
+        "test_symlink_target_is_not_followed": {
+          "name": "test_symlink_target_is_not_followed",
+          "line": 169,
+          "is_async": false,
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
+          "is_route": false
+        },
+        "test_invalid_identity_rejected_before_file_creation": {
+          "name": "test_invalid_identity_rejected_before_file_creation",
+          "line": 180,
+          "is_async": false,
+          "calls": [
+            "app.observability.job_locks::job_run_lock"
+          ],
+          "is_route": false
+        },
+        "test_lock_io_failure_is_safe_http_error": {
+          "name": "test_lock_io_failure_is_safe_http_error",
+          "line": 187,
+          "is_async": false,
+          "calls": [
+            "app.observability.jobs::scheduled_http_run"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_kernel_replay_endtoend": {
       "path": "backend/tests/test_kernel_replay_endtoend.py",
       "module": "tests.test_kernel_replay_endtoend",
@@ -49762,6 +49917,7 @@
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway",
       "tests.seed_journey_fixture",
+      "tests.test_job_serialization",
       "tests.test_maintenance_outcomes",
       "tests.test_query_transaction_boundary"
     ],
@@ -50019,6 +50175,10 @@
       "tests.test_job_inventory",
       "tests.test_structured_logging"
     ],
+    "app.observability.job_locks": [
+      "app.observability.jobs",
+      "tests.test_job_serialization"
+    ],
     "app.observability.job_outcomes": [
       "app.observability.jobs",
       "app.routers.auditor",
@@ -50035,6 +50195,7 @@
       "app.routers.janitor",
       "app.routers.mind_metrics",
       "tests.test_job_inventory",
+      "tests.test_job_serialization",
       "tests.test_maintenance_outcomes",
       "tests.test_runbooks"
     ],
@@ -50058,15 +50219,18 @@
       "tests.test_architecture_atlas"
     ],
     "app.routers.auditor": [
+      "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
     ],
     "app.routers.chat_sessions": [
       "tests.test_chat_session_title_cleaner"
     ],
     "app.routers.compile": [
+      "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
     ],
     "app.routers.distill": [
+      "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
     ],
     "app.routers.document_ingest": [
@@ -50076,6 +50240,7 @@
       "tests.test_eval_runs"
     ],
     "app.routers.janitor": [
+      "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
     ],
     "app.routers.neurons": [
@@ -51136,6 +51301,7 @@
     ],
     "app.observability.jobs": [
       "app.observability.context",
+      "app.observability.job_locks",
       "app.observability.job_outcomes"
     ],
     "app.observability.json_logging": [
@@ -52072,6 +52238,10 @@
     ],
     "tests.test_job_inventory": [
       "app.observability.context",
+      "app.observability.jobs"
+    ],
+    "tests.test_job_serialization": [
+      "app.observability.job_locks",
       "app.observability.jobs"
     ],
     "tests.test_kernel_replay_fixture_guard": [
@@ -54872,6 +55042,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -54924,6 +55095,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -54988,6 +55160,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55040,6 +55213,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55104,6 +55278,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55156,6 +55331,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55220,6 +55396,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55272,6 +55449,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55928,6 +56106,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -55972,6 +56151,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -56028,6 +56208,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -56072,6 +56253,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -56128,6 +56310,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -56178,6 +56361,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -56240,6 +56424,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -56290,6 +56475,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58477,6 +58663,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58519,6 +58706,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58573,6 +58761,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58615,6 +58804,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58669,6 +58859,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58711,6 +58902,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58765,6 +58957,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58807,6 +59000,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58861,6 +59055,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -58903,6 +59098,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.services.action_bus",
@@ -59091,6 +59287,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59150,6 +59347,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59219,6 +59417,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59278,6 +59477,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59347,6 +59547,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59406,6 +59607,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59475,6 +59677,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59534,6 +59737,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59603,6 +59807,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59662,6 +59867,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59731,6 +59937,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59790,6 +59997,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59859,6 +60067,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59918,6 +60127,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -59987,6 +60197,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60046,6 +60257,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60115,6 +60327,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60174,6 +60387,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60243,6 +60457,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60302,6 +60517,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60371,6 +60587,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60430,6 +60647,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60499,6 +60717,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -60558,6 +60777,7 @@
         "app.middleware.rbac",
         "app.models",
         "app.observability.context",
+        "app.observability.job_locks",
         "app.observability.job_outcomes",
         "app.observability.jobs",
         "app.observability.slo",
@@ -66156,6 +66376,14 @@
         "test_list_pending_contradictions_returns_queued_rows",
         "test_propose_contradiction_resolution_rejects_invalid_resolution",
         "test_propose_contradiction_resolution_rejects_wrong_finding_type"
+      ]
+    },
+    {
+      "module": "tests.test_job_serialization",
+      "entrypoints": [
+        "client_for",
+        "test_cancellation_releases_owner",
+        "test_http_contender_does_not_execute_or_replace_receipt"
       ]
     },
     {
