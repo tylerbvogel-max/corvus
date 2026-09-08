@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 413,
+    "modules": 415,
     "frontend_files": 80,
-    "units": 493,
-    "classified": 493,
+    "units": 495,
+    "classified": 495,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "addf3e9c7eeb540033b9535acc3fc26d99c8bfdc0e65c4b8e090ba472dc3ab06",
-    "current_fingerprint": "addf3e9c7eeb540033b9535acc3fc26d99c8bfdc0e65c4b8e090ba472dc3ab06",
-    "stored_files": 493,
-    "current_files": 493
+    "stored_fingerprint": "5ec54acba4fe8508ac7002ada6df194ff38f25031593f82f5e1de6887b98588a",
+    "current_fingerprint": "5ec54acba4fe8508ac7002ada6df194ff38f25031593f82f5e1de6887b98588a",
+    "stored_files": 495,
+    "current_files": 495
   },
   "manifest_problems": [],
   "boxes": [
@@ -318,7 +318,7 @@
       "confidence": "reviewed",
       "module_count": 5,
       "frontend_file_count": 0,
-      "loc": 1657,
+      "loc": 1663,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -674,9 +674,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 124,
+      "module_count": 126,
       "frontend_file_count": 0,
-      "loc": 26409,
+      "loc": 26624,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -686,6 +686,7 @@
         "scripts.lock_dependencies",
         "scripts.probe_homeostasis",
         "scripts.record_roadmap_strategic_plasticity",
+        "scripts.reproduce_distillation_transactions",
         "scripts.retire_false_neurons",
         "scripts.run_test_lane",
         "scripts.supply_chain",
@@ -725,6 +726,7 @@
         "tests.test_dedup_tools",
         "tests.test_delivery_mode",
         "tests.test_delivery_plasticity",
+        "tests.test_distillation_transactions",
         "tests.test_distiller",
         "tests.test_document_extractor",
         "tests.test_edge_link_action",

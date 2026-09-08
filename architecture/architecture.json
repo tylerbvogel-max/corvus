@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "addf3e9c7eeb540033b9535acc3fc26d99c8bfdc0e65c4b8e090ba472dc3ab06",
-    "files": 493
+    "fingerprint": "5ec54acba4fe8508ac7002ada6df194ff38f25031593f82f5e1de6887b98588a",
+    "files": 495
   },
   "frontend": {
     "available": true,
@@ -4170,12 +4170,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 413,
-    "loc": 94505,
+    "modules": 415,
+    "loc": 94726,
     "routes": 219,
-    "import_edges": 1145,
-    "call_edges": 754,
-    "modules_touching_db": 123,
+    "import_edges": 1150,
+    "call_edges": 756,
+    "modules_touching_db": 125,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -17374,7 +17374,7 @@
     "app.services.distiller": {
       "path": "backend/app/services/distiller.py",
       "module": "app.services.distiller",
-      "loc": 702,
+      "loc": 708,
       "imports": [
         "app.models",
         "app.services.evidence_frame",
@@ -31539,6 +31539,62 @@
       ],
       "llm_sites": []
     },
+    "scripts.reproduce_distillation_transactions": {
+      "path": "backend/scripts/reproduce_distillation_transactions.py",
+      "module": "scripts.reproduce_distillation_transactions",
+      "loc": 103,
+      "imports": [
+        "app.observability.jobs",
+        "app.routers.distill",
+        "app.services.distiller",
+        "app.services.llm_provider"
+      ],
+      "external_imports": [
+        "asyncio",
+        "json",
+        "os",
+        "pathlib",
+        "sqlalchemy",
+        "tempfile",
+        "unittest"
+      ],
+      "functions": {
+        "main": {
+          "name": "main",
+          "line": 21,
+          "is_async": true,
+          "calls": [
+            "app.routers.distill::distill_run"
+          ],
+          "is_route": false
+        },
+        "main.save": {
+          "name": "main.save",
+          "line": 57,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "main.attribute": {
+          "name": "main.attribute",
+          "line": 66,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 55,
+          "in": "main",
+          "target": "connection",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "scripts.retire_false_neurons": {
       "path": "backend/scripts/retire_false_neurons.py",
       "module": "scripts.retire_false_neurons",
@@ -37261,6 +37317,126 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_distillation_transactions": {
+      "path": "backend/tests/test_distillation_transactions.py",
+      "module": "tests.test_distillation_transactions",
+      "loc": 110,
+      "imports": [
+        "app.services.distiller"
+      ],
+      "external_imports": [
+        "pytest",
+        "sqlalchemy",
+        "unittest"
+      ],
+      "functions": {
+        "TransactionSession.__init__": {
+          "name": "TransactionSession.__init__",
+          "line": 12,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "TransactionSession._rollback": {
+          "name": "TransactionSession._rollback",
+          "line": 17,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "TransactionSession.commit": {
+          "name": "TransactionSession.commit",
+          "line": 20,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_recoverable_failure_rolls_back_before_next_item": {
+          "name": "test_recoverable_failure_rolls_back_before_next_item",
+          "line": 27,
+          "is_async": true,
+          "calls": [
+            "app.services.distiller::run_distillation"
+          ],
+          "is_route": false
+        },
+        "test_recoverable_failure_rolls_back_before_next_item.item": {
+          "name": "test_recoverable_failure_rolls_back_before_next_item.item",
+          "line": 31,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_unexpected_failure_rolls_back_then_propagates": {
+          "name": "test_unexpected_failure_rolls_back_then_propagates",
+          "line": 51,
+          "is_async": true,
+          "calls": [
+            "app.services.distiller::run_distillation"
+          ],
+          "is_route": false
+        },
+        "test_unexpected_failure_rolls_back_then_propagates.item": {
+          "name": "test_unexpected_failure_rolls_back_then_propagates.item",
+          "line": 55,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_rollback_failure_aborts_instead_of_continuing": {
+          "name": "test_rollback_failure_aborts_instead_of_continuing",
+          "line": 71,
+          "is_async": true,
+          "calls": [
+            "app.services.distiller::run_distillation"
+          ],
+          "is_route": false
+        },
+        "test_earlier_commit_survives_later_failure": {
+          "name": "test_earlier_commit_survives_later_failure",
+          "line": 84,
+          "is_async": true,
+          "calls": [
+            "app.services.distiller::run_distillation"
+          ],
+          "is_route": false
+        },
+        "test_earlier_commit_survives_later_failure.item": {
+          "name": "test_earlier_commit_survives_later_failure.item",
+          "line": 88,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_healthy_and_no_work_do_not_rollback": {
+          "name": "test_healthy_and_no_work_do_not_rollback",
+          "line": 103,
+          "is_async": true,
+          "calls": [
+            "app.services.distiller::run_distillation"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 37,
+          "in": "test_recoverable_failure_rolls_back_before_next_item.item",
+          "target": "session",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 92,
+          "in": "test_earlier_commit_survives_later_failure.item",
+          "target": "session",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "tests.test_distiller": {
       "path": "backend/tests/test_distiller.py",
       "module": "tests.test_distiller",
@@ -41352,7 +41528,7 @@
     "tests.test_maintenance_outcomes": {
       "path": "backend/tests/test_maintenance_outcomes.py",
       "module": "tests.test_maintenance_outcomes",
-      "loc": 258,
+      "loc": 260,
       "imports": [
         "app.database",
         "app.observability.job_outcomes",
@@ -41459,7 +41635,7 @@
         },
         "test_compiler_counts_failed_composition_without_real_io": {
           "name": "test_compiler_counts_failed_composition_without_real_io",
-          "line": 167,
+          "line": 169,
           "is_async": true,
           "calls": [
             "app.services.skill_compiler::run_compile",
@@ -41469,7 +41645,7 @@
         },
         "test_wrapper_drops_arbitrary_detail_and_exception_content": {
           "name": "test_wrapper_drops_arbitrary_detail_and_exception_content",
-          "line": 185,
+          "line": 187,
           "is_async": false,
           "calls": [
             "app.observability.jobs::scheduled_run",
@@ -41479,7 +41655,7 @@
         },
         "test_non_success_outcome_is_never_healthy": {
           "name": "test_non_success_outcome_is_never_healthy",
-          "line": 196,
+          "line": 198,
           "is_async": false,
           "calls": [
             "app.observability.jobs::job_health"
@@ -41488,7 +41664,7 @@
         },
         "test_real_http_server_never_logs_batch_exception": {
           "name": "test_real_http_server_never_logs_batch_exception",
-          "line": 204,
+          "line": 206,
           "is_async": true,
           "calls": [
             "app.observability.jobs::read_receipt"
@@ -50194,6 +50370,7 @@
       "app.routers.distill",
       "app.routers.janitor",
       "app.routers.mind_metrics",
+      "scripts.reproduce_distillation_transactions",
       "tests.test_job_inventory",
       "tests.test_job_serialization",
       "tests.test_maintenance_outcomes",
@@ -50230,6 +50407,7 @@
       "tests.test_maintenance_outcomes"
     ],
     "app.routers.distill": [
+      "scripts.reproduce_distillation_transactions",
       "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
     ],
@@ -50437,6 +50615,8 @@
       "app.routers.distill",
       "app.routers.mind_metrics",
       "app.services.memory_quality_auditor",
+      "scripts.reproduce_distillation_transactions",
+      "tests.test_distillation_transactions",
       "tests.test_distiller",
       "tests.test_injection_channel",
       "tests.test_maintenance_outcomes",
@@ -50646,6 +50826,7 @@
       "eval.locomo.analysis.step03_conversion_sweep",
       "eval.locomo.analysis.step03_force_probe",
       "eval.locomo.run_locomo",
+      "scripts.reproduce_distillation_transactions",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.replay_auditor_honeypot",
       "tests.test_agents_execute_loop",
@@ -52006,6 +52187,9 @@
       "app.database",
       "app.services.roadmap_ledger"
     ],
+    "scripts.reproduce_distillation_transactions": [
+      "app.routers.distill"
+    ],
     "scripts.retire_false_neurons": [
       "app.database",
       "app.services.action_bus",
@@ -52153,6 +52337,9 @@
       "app.models",
       "app.services.delivery_plasticity",
       "app.services.injection_channel"
+    ],
+    "tests.test_distillation_transactions": [
+      "app.services.distiller"
     ],
     "tests.test_distiller": [
       "app.services.distiller"
@@ -66121,6 +66308,12 @@
       ]
     },
     {
+      "module": "scripts.reproduce_distillation_transactions",
+      "entrypoints": [
+        "main"
+      ]
+    },
+    {
       "module": "scripts.retire_false_neurons",
       "entrypoints": [
         "_no_column",
@@ -66284,6 +66477,16 @@
         "test_unclassified_corpus_never_ships_an_empty_charter",
         "test_unjudged_items_are_counted_not_assumed",
         "test_verdict_changes_are_reported_for_receipts"
+      ]
+    },
+    {
+      "module": "tests.test_distillation_transactions",
+      "entrypoints": [
+        "test_earlier_commit_survives_later_failure",
+        "test_healthy_and_no_work_do_not_rollback",
+        "test_recoverable_failure_rolls_back_before_next_item",
+        "test_rollback_failure_aborts_instead_of_continuing",
+        "test_unexpected_failure_rolls_back_then_propagates"
       ]
     },
     {

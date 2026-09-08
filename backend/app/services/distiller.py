@@ -693,7 +693,13 @@ async def run_distillation(
     for path in ready[:limit]:
         try:
             results.append(await distill_log(db, path))
-        except (OSError, ValueError, AssertionError, RuntimeError) as exc:
+        except Exception as exc:
+            # A failed item may have staged writes or left PostgreSQL's
+            # transaction aborted. Clean up before continuing or propagating.
+            # Rollback failure must abort the batch, never permit another item.
+            await db.rollback()
+            if not isinstance(exc, (OSError, ValueError, AssertionError, RuntimeError)):
+                raise
             # Error prose may contain provider prompts, credentials, or paths.
             # Keep the per-session result useful without copying that content.
             results.append({"session_id": os.path.basename(path),
