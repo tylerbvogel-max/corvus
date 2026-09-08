@@ -307,14 +307,24 @@ async def save_lesson(
     time_scope: str | None = None, context: str | None = None,
     future_use: str | None = None, likely_queries: str | None = None,
     confidence: str | None = None, volatility: str | None = None,
+    commit: bool = True,
 ) -> dict:
-    """Stage a lesson save and route it through the write gate. Commits.
+    """Stage a lesson save and route it through the write gate.
+
+    By default this commits and enriches automatically applied lessons, as
+    before. With commit=False the caller owns commit/rollback. That mode
+    deliberately defers embedding, wiring and runtime-cache publication;
+    its result includes enrichment_pending for a created neuron. The caller
+    must arrange post-commit enrichment separately before claiming parity
+    with the default save path. Review and authority gates are unchanged.
 
     The trailing six arguments are evidence-frame slots
     (mind-neuron-evidence-frame). For durable memory classes they are not
     decoration: `future_use` and `likely_queries` are required, and the
     save raises EvidenceFrameError without them.
     """
+    if type(commit) is not bool:
+        raise ValueError("commit must be a boolean")
     # Reject malformed authority before staging, anchors, embedding or commits.
     rank = authority_rank(authority_level)
     if authority_level is None:
@@ -391,7 +401,10 @@ async def save_lesson(
             f"{proposal.gap_description}"
         )[:2000]
     if disposition == "queue":
-        await db.commit()
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
         logger.info("near-dup gate queued lesson %r (%s lane, sim %.3f vs #%s)",
                     label[:60], near["lane"], near["sim"], near["id"])
         return {
@@ -405,7 +418,10 @@ async def save_lesson(
         }
     if disposition == "skip":
         proposal.state = "rejected"
-        await db.commit()
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
         logger.info("near-dup gate auto-skipped duplicate %r (cosine sim "
                     "%.3f vs #%s)", label[:60], near["sim"], near["id"])
         return {
@@ -425,12 +441,16 @@ async def save_lesson(
     if decision.route == "auto":
         await db.refresh(item)
         neuron_id = item.created_neuron_id
-        if neuron_id is not None:
+        if neuron_id is not None and commit:
             await _embed_and_wire(db, neuron_id)
-    await db.commit()
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
     return {
         "route": decision.route,
         "reason": decision.reason,
         "proposal_id": proposal.id,
         "neuron_id": neuron_id,
+        **({"enrichment_pending": neuron_id is not None} if not commit else {}),
     }

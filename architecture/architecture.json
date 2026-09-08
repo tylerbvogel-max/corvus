@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "5ec54acba4fe8508ac7002ada6df194ff38f25031593f82f5e1de6887b98588a",
-    "files": 495
+    "fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
+    "files": 498
   },
   "frontend": {
     "available": true,
@@ -4170,12 +4170,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 415,
-    "loc": 94726,
+    "modules": 418,
+    "loc": 94982,
     "routes": 219,
-    "import_edges": 1150,
-    "call_edges": 756,
-    "modules_touching_db": 125,
+    "import_edges": 1156,
+    "call_edges": 759,
+    "modules_touching_db": 126,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -20708,7 +20708,7 @@
     "app.services.lesson_store": {
       "path": "backend/app/services/lesson_store.py",
       "module": "app.services.lesson_store",
-      "loc": 437,
+      "loc": 457,
       "imports": [
         "app.config",
         "app.middleware.rbac",
@@ -20841,49 +20841,70 @@
         },
         {
           "kind": "add",
-          "line": 335,
+          "line": 345,
           "in": "save_lesson",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 336,
+          "line": 346,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 361,
+          "line": 371,
           "in": "save_lesson",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "flush",
-          "line": 362,
+          "line": 372,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 394,
+          "line": 405,
+          "in": "save_lesson",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 407,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 408,
+          "line": 422,
+          "in": "save_lesson",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 424,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 430,
+          "line": 447,
+          "in": "save_lesson",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 449,
           "in": "save_lesson",
           "target": "db",
           "model": null
@@ -31539,6 +31560,77 @@
       ],
       "llm_sites": []
     },
+    "scripts.reproduce_distillation_checkpoints": {
+      "path": "backend/scripts/reproduce_distillation_checkpoints.py",
+      "module": "scripts.reproduce_distillation_checkpoints",
+      "loc": 111,
+      "imports": [
+        "app.observability.jobs",
+        "app.routers.distill",
+        "app.services.distiller",
+        "app.services.llm_provider"
+      ],
+      "external_imports": [
+        "asyncio",
+        "builtins",
+        "json",
+        "os",
+        "pathlib",
+        "sqlalchemy",
+        "tempfile",
+        "unittest"
+      ],
+      "functions": {
+        "disposable_url": {
+          "name": "disposable_url",
+          "line": 24,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "run_case": {
+          "name": "run_case",
+          "line": 35,
+          "is_async": true,
+          "calls": [
+            "app.routers.distill::distill_run"
+          ],
+          "is_route": false
+        },
+        "run_case.save": {
+          "name": "run_case.save",
+          "line": 50,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "run_case.marker_fault": {
+          "name": "run_case.marker_fault",
+          "line": 54,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "main": {
+          "name": "main",
+          "line": 97,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 48,
+          "in": "run_case",
+          "target": "connection",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "scripts.reproduce_distillation_transactions": {
       "path": "backend/scripts/reproduce_distillation_transactions.py",
       "module": "scripts.reproduce_distillation_transactions",
@@ -35693,6 +35785,40 @@
           "is_async": true,
           "calls": [
             "app.services.pipeline.stages::CheapClassifyStage"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_checkpoint_probe_targets": {
+      "path": "backend/tests/test_checkpoint_probe_targets.py",
+      "module": "tests.test_checkpoint_probe_targets",
+      "loc": 24,
+      "imports": [
+        "scripts.reproduce_distillation_checkpoints"
+      ],
+      "external_imports": [
+        "pytest"
+      ],
+      "functions": {
+        "test_reject_non_disposable_target": {
+          "name": "test_reject_non_disposable_target",
+          "line": 16,
+          "is_async": false,
+          "calls": [
+            "scripts.reproduce_distillation_checkpoints::disposable_url"
+          ],
+          "is_route": false
+        },
+        "test_accept_explicit_disposable_asyncpg_target": {
+          "name": "test_accept_explicit_disposable_asyncpg_target",
+          "line": 22,
+          "is_async": false,
+          "calls": [
+            "scripts.reproduce_distillation_checkpoints::disposable_url"
           ],
           "is_route": false
         }
@@ -41328,6 +41454,91 @@
           "is_async": false,
           "calls": [
             "app.services.evidence_frame::validate_fusion_frame"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "tests.test_lesson_transaction_ownership": {
+      "path": "backend/tests/test_lesson_transaction_ownership.py",
+      "module": "tests.test_lesson_transaction_ownership",
+      "loc": 101,
+      "imports": [
+        "app.services.lesson_store"
+      ],
+      "external_imports": [
+        "json",
+        "pytest",
+        "types",
+        "unittest"
+      ],
+      "functions": {
+        "store": {
+          "name": "store",
+          "line": 12,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "store.flush": {
+          "name": "store.flush",
+          "line": 17,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "arguments": {
+          "name": "arguments",
+          "line": 33,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_routed_save_respects_transaction_owner": {
+          "name": "test_routed_save_respects_transaction_owner",
+          "line": 41,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_near_duplicate_branches_respect_owner": {
+          "name": "test_near_duplicate_branches_respect_owner",
+          "line": 58,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_transaction_mode_rejected_before_any_write": {
+          "name": "test_transaction_mode_rejected_before_any_write",
+          "line": 73,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_staged_assistant_scope_still_escalates_authority": {
+          "name": "test_staged_assistant_scope_still_escalates_authority",
+          "line": 85,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_default_mode_preserves_commit_and_enrichment": {
+          "name": "test_default_mode_preserves_commit_and_enrichment",
+          "line": 96,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
           ],
           "is_route": false
         }
@@ -50370,6 +50581,7 @@
       "app.routers.distill",
       "app.routers.janitor",
       "app.routers.mind_metrics",
+      "scripts.reproduce_distillation_checkpoints",
       "scripts.reproduce_distillation_transactions",
       "tests.test_job_inventory",
       "tests.test_job_serialization",
@@ -50407,6 +50619,7 @@
       "tests.test_maintenance_outcomes"
     ],
     "app.routers.distill": [
+      "scripts.reproduce_distillation_checkpoints",
       "scripts.reproduce_distillation_transactions",
       "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
@@ -50615,6 +50828,7 @@
       "app.routers.distill",
       "app.routers.mind_metrics",
       "app.services.memory_quality_auditor",
+      "scripts.reproduce_distillation_checkpoints",
       "scripts.reproduce_distillation_transactions",
       "tests.test_distillation_transactions",
       "tests.test_distiller",
@@ -50797,6 +51011,7 @@
       "eval.locomo.run_locomo",
       "eval.locomo.test_lifecycle",
       "scripts.verify_write_authority",
+      "tests.test_lesson_transaction_ownership",
       "tests.test_reconsolidation_kernel",
       "tests.test_write_authority_validation"
     ],
@@ -50826,6 +51041,7 @@
       "eval.locomo.analysis.step03_conversion_sweep",
       "eval.locomo.analysis.step03_force_probe",
       "eval.locomo.run_locomo",
+      "scripts.reproduce_distillation_checkpoints",
       "scripts.reproduce_distillation_transactions",
       "tests.benchmarks.eval_token_assembly_triangle",
       "tests.replay_auditor_honeypot",
@@ -51384,6 +51600,9 @@
       "tests.test_capability_composition",
       "tests.test_composition_snapshot",
       "tests.test_eval_runs"
+    ],
+    "scripts.reproduce_distillation_checkpoints": [
+      "tests.test_checkpoint_probe_targets"
     ],
     "tests.golden_frames": [
       "tests.kernel_matrix_fixtures",
@@ -52187,6 +52406,9 @@
       "app.database",
       "app.services.roadmap_ledger"
     ],
+    "scripts.reproduce_distillation_checkpoints": [
+      "app.routers.distill"
+    ],
     "scripts.reproduce_distillation_transactions": [
       "app.routers.distill"
     ],
@@ -52294,6 +52516,9 @@
       "app.services.pipeline.stages",
       "app.services.pipeline.state",
       "app.services.scoring_engine"
+    ],
+    "tests.test_checkpoint_probe_targets": [
+      "scripts.reproduce_distillation_checkpoints"
     ],
     "tests.test_citation_hopping": [
       "app.models",
@@ -52435,6 +52660,9 @@
       "app.services.evidence_frame",
       "app.services.reconsolidation.review",
       "tests.kernel_matrix_fixtures"
+    ],
+    "tests.test_lesson_transaction_ownership": [
+      "app.services.lesson_store"
     ],
     "tests.test_live_provider": [
       "app.services.llm_provider"
@@ -66308,6 +66536,13 @@
       ]
     },
     {
+      "module": "scripts.reproduce_distillation_checkpoints",
+      "entrypoints": [
+        "main",
+        "run_case"
+      ]
+    },
+    {
       "module": "scripts.reproduce_distillation_transactions",
       "entrypoints": [
         "main"
@@ -66587,6 +66822,16 @@
         "client_for",
         "test_cancellation_releases_owner",
         "test_http_contender_does_not_execute_or_replace_receipt"
+      ]
+    },
+    {
+      "module": "tests.test_lesson_transaction_ownership",
+      "entrypoints": [
+        "test_default_mode_preserves_commit_and_enrichment",
+        "test_near_duplicate_branches_respect_owner",
+        "test_routed_save_respects_transaction_owner",
+        "test_staged_assistant_scope_still_escalates_authority",
+        "test_transaction_mode_rejected_before_any_write"
       ]
     },
     {
