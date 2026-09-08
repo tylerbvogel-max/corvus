@@ -157,7 +157,9 @@ def test_malformed_reports_fail_closed(job, report):
 async def test_distiller_sanitizes_caught_session_failure(monkeypatch):
     monkeypatch.setattr(distiller, "find_ready_logs", Mock(return_value=["synthetic.jsonl"]))
     monkeypatch.setattr(distiller, "distill_log", AsyncMock(side_effect=RuntimeError(CANARY)))
-    report = await distiller.run_distillation(object(), limit=1)
+    db = SimpleNamespace(rollback=AsyncMock())
+    report = await distiller.run_distillation(db, limit=1)
+    db.rollback.assert_awaited_once()
     assert report["results"][0]["error"] == "session-processing-failed"
     assert CANARY not in json.dumps(report)
 
