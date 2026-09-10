@@ -37,3 +37,24 @@ catch-all object response did not satisfy that contract on the phone home screen
 
 These views do not authorize public exposure of the personal backend, new
 telemetry collectors, provider expenditure, or a security-certification claim.
+
+## Integrated memory map correction
+
+The primary map now has its own sizing and flow controls. Its backend perimeter
+is computed from all backend/cache slab face vertices in the same isometric
+coordinate plane, including extrusion and padding; it is not a separate guessed
+diamond. Tests check model geometry and rendered SVG face containment.
+
+Primary-map area represents **exclusive evidence-linked source file count**,
+not complete zone ownership, LOC, RAM or storage. References are deduplicated by
+file; files referenced by multiple zones are listed in one shared pool and never
+silently apportioned or counted twice. A 20.25% minimum visible area preserves
+selectability. Exact counts and file lists are available; equal-area mode remains.
+The separate component LOC lens retains its different, explicitly labeled basis.
+
+Inter-zone arrows are reviewed data/control flows with source pointers. Capture,
+recall and maintenance filters operate on the same map. Selecting a zone limits
+connections to its neighbors; selecting a connection explains its direction,
+transport and boundary semantics. Database-read arrows denote data direction,
+not the side initiating SQL. These are not observed traffic or a mechanically
+extracted call graph. Missing endpoints are not invented.

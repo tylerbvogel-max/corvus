@@ -12,7 +12,7 @@
 .iso-map__header h3 { font-size: clamp(22px, 3vw, 34px); font-weight: 500; letter-spacing: -.04em; margin: 9px 0 0; }
 .iso-map__stamp { padding: 9px 11px; border: 1px solid var(--iso-line); white-space: nowrap; color: var(--iso-accent); }
 .iso-map__stamp--stale { color: var(--mm-warn, #e5b574); }
-.iso-map__layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); }
+.iso-map__layout { display: grid; grid-template-columns: minmax(0, 1fr); }
 .iso-map__field { min-width: 0; background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--iso-accent) 8%, transparent), transparent 65%); }
 .iso-map__coordinates { padding: 16px 20px; display: flex; justify-content: space-between; gap: 12px; font-size: 9px; }
 .iso-map__field svg { display: block; width: 100%; overflow: visible; }
@@ -61,3 +61,24 @@
   .iso-map__field svg { animation: iso-map-reveal .45s ease-out both; }
   @keyframes iso-map-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 }
+.iso-map__controls { display: flex; flex-wrap: wrap; gap: 16px 24px; padding: 18px 24px 0; }
+.iso-map__controls label { display: grid; gap: 8px; color: var(--iso-dim); font: 11px var(--ui-mono, monospace); min-width: 0; }
+.iso-map__controls select { background: var(--bg); color: var(--iso-ink); border: 1px solid var(--iso-line); padding: 10px; min-height: 44px; max-width: 100%; font: 11px var(--ui-mono, monospace); }
+.iso-map__perimeter { fill: color-mix(in srgb, var(--iso-accent) 3%, transparent); stroke: var(--iso-accent); stroke-width: 1; stroke-dasharray: 6 5; opacity: .7; }
+.iso-map__flow > path { fill: none; stroke: var(--iso-accent); stroke-width: 1.6; opacity: .65; }
+.iso-map__flow > .iso-map__flow-hit { stroke: transparent; stroke-width: 18; cursor: pointer; pointer-events: stroke; }
+.iso-map__flow text { fill: var(--iso-dim); font: 9px var(--ui-mono, monospace); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.iso-map__flow.is-selected > path:first-child { stroke-width: 3; opacity: 1; }
+.iso-map__flow:focus-within > path:first-child { stroke-width: 3; opacity: 1; }
+.iso-map__flow-buttons { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 20px; }
+.iso-map__flow-buttons button { min-height: 44px; padding: 8px 10px; color: var(--iso-dim); border: 1px solid var(--iso-line); background: transparent; cursor: pointer; font: 10px var(--ui-mono, monospace); }
+.iso-map__flow-detail { border-bottom: 1px solid var(--iso-line); padding-bottom: 16px; margin-bottom: 24px; }
+.iso-map__sizing-detail { margin: 18px 0; font: 11px var(--ui-mono, monospace); }
+.iso-map summary { cursor: pointer; line-height: 1.6; }
+@media(max-width: 600px) { .iso-map__controls { padding-inline: 18px; } .iso-map__controls label { width: 100%; } }
+
+/* Keep the drawing readable; narrow screens pan instead of shrinking labels. */
+.atlas-lenses svg:has(.iso-map__perimeter) { width: 100%; min-width: 820px; height: auto; display: block; }
+.atlas-lenses :has(> svg .iso-map__perimeter) { min-width: 0; overflow-x: auto; }
+.iso-map__flow text { display: none; }
+.iso-map__flow:hover text, .iso-map__flow:focus-within text, .iso-map__flow:has([aria-pressed="true"]) text { display: block; }
