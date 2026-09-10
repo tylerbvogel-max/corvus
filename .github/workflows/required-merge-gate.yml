@@ -176,7 +176,9 @@ jobs:
       - name: Install architecture browser verifier
         run: npx playwright install --with-deps chromium
       - name: Verify packaged architecture lenses with synthetic receipts
-        run: node scripts/verify-architecture-lenses.mjs
+        run: |
+          node --experimental-strip-types --test scripts/test-isometric-model.mjs
+          node scripts/verify-architecture-lenses.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -59,7 +59,42 @@ try {
     await openArchitecture();
     const lens = page.locator('.atlas-lenses__tabs');
     await expect(page.locator('.iso-map')).toContainText('BACKEND PROCESS / MODULAR MONOLITH');
+    async function checkMapContainment() {
+      const failures = await page.locator('.iso-map__field svg').evaluate(svg => {
+        const polygon = svg.querySelector('.iso-map__perimeter');
+        const points = Array.from(polygon.points).map(p => new DOMPoint(p.x, p.y).matrixTransform(polygon.getScreenCTM()));
+        const inside = p => {
+          const sides = points.map((a, i) => { const b = points[(i + 1) % points.length]; return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x); });
+          return sides.every(n => n >= -.01) || sides.every(n => n <= .01);
+        };
+        const failures = [];
+        for (const tile of svg.querySelectorAll('.iso-map__tile[data-boundary="backend"], .iso-map__tile[data-boundary="cache"]')) {
+          for (const face of tile.querySelectorAll('.iso-map__top, .iso-map__wall')) {
+            for (let i = 0; i <= 40; i++) {
+              const p = face.getPointAtLength(face.getTotalLength() * i / 40);
+              if (!inside(new DOMPoint(p.x, p.y).matrixTransform(face.getScreenCTM()))) failures.push(tile.dataset.zone);
+            }
+          }
+        }
+        return failures;
+      });
+      expect(failures).toEqual([]);
+    }
+    await checkMapContainment();
+    expect(new Set(await page.locator('.iso-map__tile').evaluateAll(nodes => nodes.map(n => n.dataset.scale))).size).toBeGreaterThan(1);
+    await page.getByLabel('Slab sizing').selectOption('equal');
+    await checkMapContainment();
+    expect(await page.locator('.iso-map__tile').evaluateAll(nodes => nodes.every(n => n.dataset.scale === '1'))).toBe(true);
+    await page.getByLabel('Slab sizing').selectOption('evidence');
+    await page.getByLabel('Visible flows').selectOption('recall');
+    await expect(page.locator('.iso-map__flow')).toHaveCount(5);
+    await page.locator('.iso-map__flow-buttons').getByRole('button', { name: 'Canonical reads', exact: true }).click();
+    await expect(page.locator('.iso-map__flow-detail')).toContainText('data movement');
+    await page.getByLabel('Visible flows').selectOption('all');
+    const allFlows = await page.locator('.iso-map__flow').count();
+    expect(allFlows).toBeGreaterThan(5);
     await page.locator('.iso-map__zone-buttons button').nth(1).click();
+    expect(await page.locator('.iso-map__flow').count()).toBeLessThan(allFlows);
     await expect(page.locator('.iso-map__inspector')).toContainText('Responsibility inside the shared backend');
     await lens.getByRole('button', { name: 'Process paths' }).click();
     const selected = model.processes.find(item => item.id === 'episode-distillation');

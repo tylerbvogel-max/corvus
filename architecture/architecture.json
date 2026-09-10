@@ -3,14 +3,14 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
-    "files": 506
+    "fingerprint": "ec8e937bcbe81a8c2bc0d03a36f393f463e6e0d38fd5d02bf903330df9c17e84",
+    "files": 507
   },
   "frontend": {
     "available": true,
     "totals": {
-      "files": 82,
-      "loc": 45102,
+      "files": 83,
+      "loc": 45233,
       "files_calling_api": 43,
       "files_using_fetch": 10,
       "distinct_urls": 205
@@ -1354,11 +1354,16 @@
       },
       "frontend/src/components/IsometricMemoryMap.tsx": {
         "path": "frontend/src/components/IsometricMemoryMap.tsx",
-        "loc": 129,
+        "loc": 170,
         "imports": [
-          "frontend/src/components/IsometricMemoryMap.tsx"
+          "frontend/src/components/IsometricMemoryMap.tsx",
+          "frontend/src/components/isometricModel.ts"
         ],
-        "named_imports": {},
+        "named_imports": {
+          "layoutZones": "frontend/src/components/isometricModel.ts",
+          "reviewedFlows": "frontend/src/components/isometricModel.ts",
+          "flowCurve": "frontend/src/components/isometricModel.ts"
+        },
         "urls_direct": [],
         "exports_with_urls": {},
         "uses_fetch": false,
@@ -2141,6 +2146,17 @@
           "resetWakeSettings": "frontend/src/wakeSettings.ts",
           "type WakeSettings": "frontend/src/wakeSettings.ts"
         },
+        "urls_direct": [],
+        "exports_with_urls": {},
+        "uses_fetch": false,
+        "urls_via_imports": [],
+        "urls_all": []
+      },
+      "frontend/src/components/isometricModel.ts": {
+        "path": "frontend/src/components/isometricModel.ts",
+        "loc": 90,
+        "imports": [],
+        "named_imports": {},
         "urls_direct": [],
         "exports_with_urls": {},
         "uses_fetch": false,

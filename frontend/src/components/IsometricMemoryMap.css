@@ -61,3 +61,18 @@
   .iso-map__field svg { animation: iso-map-reveal .45s ease-out both; }
   @keyframes iso-map-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 }
+.iso-map__controls { display: flex; flex-wrap: wrap; gap: 16px 24px; padding: 18px 24px 0; }
+.iso-map__controls label { display: grid; gap: 8px; color: var(--iso-dim); font: 11px var(--ui-mono, monospace); min-width: 0; }
+.iso-map__controls select { background: var(--bg); color: var(--iso-ink); border: 1px solid var(--iso-line); padding: 10px; min-height: 44px; max-width: 100%; font: 11px var(--ui-mono, monospace); }
+.iso-map__perimeter { fill: color-mix(in srgb, var(--iso-accent) 3%, transparent); stroke: var(--iso-accent); stroke-width: 1; stroke-dasharray: 6 5; opacity: .7; }
+.iso-map__flow > path { fill: none; stroke: var(--iso-accent); stroke-width: 1.6; opacity: .65; }
+.iso-map__flow > .iso-map__flow-hit { stroke: transparent; stroke-width: 18; cursor: pointer; pointer-events: stroke; }
+.iso-map__flow text { fill: var(--iso-dim); font: 9px var(--ui-mono, monospace); paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; pointer-events: none; }
+.iso-map__flow.is-selected > path:first-child { stroke-width: 3; opacity: 1; }
+.iso-map__flow:focus-within > path:first-child { stroke-width: 3; opacity: 1; }
+.iso-map__flow-buttons { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 20px; }
+.iso-map__flow-buttons button { min-height: 44px; padding: 8px 10px; color: var(--iso-dim); border: 1px solid var(--iso-line); background: transparent; cursor: pointer; font: 10px var(--ui-mono, monospace); }
+.iso-map__flow-detail { border-bottom: 1px solid var(--iso-line); padding-bottom: 16px; margin-bottom: 24px; }
+.iso-map__sizing-detail { margin: 18px 0; font: 11px var(--ui-mono, monospace); }
+.iso-map summary { cursor: pointer; line-height: 1.6; }
+@media(max-width: 600px) { .iso-map__controls { padding-inline: 18px; } .iso-map__controls label { width: 100%; } }
