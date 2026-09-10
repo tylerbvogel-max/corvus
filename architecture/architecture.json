@@ -3,8 +3,8 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "a85b5a13302a4e9146a01397ed6b90d31f72bbd159b6303b920044deeb5c14fd",
-    "files": 498
+    "fingerprint": "9500ee72e778251a7497e66f4bd1086e9a6218c6b2b64923d927790ab673b38f",
+    "files": 504
   },
   "frontend": {
     "available": true,
@@ -4170,12 +4170,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 418,
-    "loc": 95054,
+    "modules": 424,
+    "loc": 96042,
     "routes": 219,
-    "import_edges": 1156,
-    "call_edges": 759,
-    "modules_touching_db": 126,
+    "import_edges": 1183,
+    "call_edges": 774,
+    "modules_touching_db": 128,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -5197,6 +5197,35 @@
         "downgrade": {
           "name": "downgrade",
           "line": 91,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "alembic.versions.028_distillation_checkpoints": {
+      "path": "backend/alembic/versions/028_distillation_checkpoints.py",
+      "module": "alembic.versions.028_distillation_checkpoints",
+      "loc": 29,
+      "imports": [],
+      "external_imports": [
+        "alembic",
+        "sqlalchemy"
+      ],
+      "functions": {
+        "upgrade": {
+          "name": "upgrade",
+          "line": 17,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "downgrade": {
+          "name": "downgrade",
+          "line": 26,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -7515,7 +7544,7 @@
     "app.models": {
       "path": "backend/app/models.py",
       "module": "app.models",
-      "loc": 1354,
+      "loc": 1363,
       "imports": [],
       "external_imports": [
         "datetime",
@@ -7691,7 +7720,7 @@
     "app.observability.jobs": {
       "path": "backend/app/observability/jobs.py",
       "module": "app.observability.jobs",
-      "loc": 367,
+      "loc": 370,
       "imports": [
         "app.observability.context",
         "app.observability.job_locks",
@@ -7719,35 +7748,35 @@
         },
         "_receipt_path": {
           "name": "_receipt_path",
-          "line": 185,
+          "line": 188,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "read_receipt": {
           "name": "read_receipt",
-          "line": 189,
+          "line": 192,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "write_receipt": {
           "name": "write_receipt",
-          "line": 202,
+          "line": 205,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_now": {
           "name": "_now",
-          "line": 212,
+          "line": 215,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "job_receipt": {
           "name": "job_receipt",
-          "line": 217,
+          "line": 220,
           "is_async": false,
           "calls": [
             "app.observability.job_outcomes::safe_detail",
@@ -7757,7 +7786,7 @@
         },
         "scheduled_run": {
           "name": "scheduled_run",
-          "line": 259,
+          "line": 262,
           "is_async": false,
           "calls": [
             "app.observability.context::bound",
@@ -7767,7 +7796,7 @@
         },
         "scheduled_http_run": {
           "name": "scheduled_http_run",
-          "line": 285,
+          "line": 288,
           "is_async": false,
           "calls": [
             "app.observability.job_locks::job_run_lock"
@@ -7776,14 +7805,14 @@
         },
         "job_health": {
           "name": "job_health",
-          "line": 310,
+          "line": 313,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "inventory_health": {
           "name": "inventory_health",
-          "line": 353,
+          "line": 356,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -7860,7 +7889,7 @@
     "app.observability.slo": {
       "path": "backend/app/observability/slo.py",
       "module": "app.observability.slo",
-      "loc": 265,
+      "loc": 273,
       "imports": [
         "app.observability.jobs"
       ],
@@ -7879,28 +7908,28 @@
         },
         "_dig": {
           "name": "_dig",
-          "line": 173,
+          "line": 175,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "collect_signals": {
           "name": "collect_signals",
-          "line": 182,
+          "line": 184,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "evaluate": {
           "name": "evaluate",
-          "line": 219,
+          "line": 227,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "slo_report": {
           "name": "slo_report",
-          "line": 237,
+          "line": 245,
           "is_async": true,
           "calls": [
             "app.observability.jobs::inventory_health"
@@ -7909,7 +7938,7 @@
         },
         "slo_report._safe": {
           "name": "slo_report._safe",
-          "line": 248,
+          "line": 256,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -10035,11 +10064,12 @@
     "app.routers.distill": {
       "path": "backend/app/routers/distill.py",
       "module": "app.routers.distill",
-      "loc": 43,
+      "loc": 44,
       "imports": [
         "app.database",
         "app.observability.job_outcomes",
         "app.observability.jobs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.tenant"
       ],
@@ -10050,16 +10080,16 @@
       "functions": {
         "distill_status": {
           "name": "distill_status",
-          "line": 22,
+          "line": 24,
           "is_async": true,
           "calls": [
-            "app.services.distiller::find_ready_logs"
+            "app.services.distillation_progress::progress_status"
           ],
           "is_route": true
         },
         "distill_run": {
           "name": "distill_run",
-          "line": 30,
+          "line": 31,
           "is_async": true,
           "calls": [
             "app.observability.jobs::scheduled_run",
@@ -10077,7 +10107,7 @@
           "full_path": "/distill/status",
           "mounted_on": "router",
           "handler": "distill_status",
-          "line": 22
+          "line": 24
         },
         {
           "method": "POST",
@@ -10086,7 +10116,7 @@
           "full_path": "/distill/run",
           "mounted_on": "router",
           "handler": "distill_run",
-          "line": 30
+          "line": 31
         }
       ],
       "db_writes": [],
@@ -11727,7 +11757,7 @@
     "app.routers.mind_metrics": {
       "path": "backend/app/routers/mind_metrics.py",
       "module": "app.routers.mind_metrics",
-      "loc": 214,
+      "loc": 215,
       "imports": [
         "app.database",
         "app.models",
@@ -11736,6 +11766,7 @@
         "app.services.claude_usage",
         "app.services.codex_usage",
         "app.services.delivery_plasticity",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.injection_channel",
         "app.services.locomo_run_status",
@@ -11845,13 +11876,13 @@
           "calls": [
             "app.observability.slo::slo_report",
             "app.services.mind_metrics::collect_all",
-            "app.services.distiller::find_ready_logs"
+            "app.services.distillation_progress::progress_status"
           ],
           "is_route": true
         },
         "mind_delivery_pathways": {
           "name": "mind_delivery_pathways",
-          "line": 151,
+          "line": 152,
           "is_async": true,
           "calls": [
             "app.services.delivery_plasticity::false_kill_receipts"
@@ -11860,7 +11891,7 @@
         },
         "mind_skills": {
           "name": "mind_skills",
-          "line": 205,
+          "line": 206,
           "is_async": true,
           "calls": [
             "app.services.mind_metrics::skills_report",
@@ -11967,7 +11998,7 @@
           "full_path": "/metrics/mind/delivery-pathways",
           "mounted_on": "router",
           "handler": "mind_delivery_pathways",
-          "line": 151
+          "line": 152
         },
         {
           "method": "GET",
@@ -11976,7 +12007,7 @@
           "full_path": "/metrics/mind/skills",
           "mounted_on": "router",
           "handler": "mind_skills",
-          "line": 205
+          "line": 206
         }
       ],
       "db_writes": [],
@@ -17371,12 +17402,193 @@
       ],
       "llm_sites": []
     },
+    "app.services.distillation_inputs": {
+      "path": "backend/app/services/distillation_inputs.py",
+      "module": "app.services.distillation_inputs",
+      "loc": 94,
+      "imports": [],
+      "external_imports": [
+        "__future__",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib"
+      ],
+      "functions": {
+        "source_id": {
+          "name": "source_id",
+          "line": 15,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "read_prefix": {
+          "name": "read_prefix",
+          "line": 19,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "records": {
+          "name": "records",
+          "line": 36,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "capture": {
+          "name": "capture",
+          "line": 48,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "materialize": {
+          "name": "materialize",
+          "line": 83,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
+    "app.services.distillation_progress": {
+      "path": "backend/app/services/distillation_progress.py",
+      "module": "app.services.distillation_progress",
+      "loc": 187,
+      "imports": [
+        "app.models",
+        "app.services.adjacency_cache",
+        "app.services.distillation_inputs",
+        "app.services.lesson_store",
+        "app.services.mind_corpus",
+        "app.services.semantic_prefilter"
+      ],
+      "external_imports": [
+        "__future__",
+        "datetime",
+        "fcntl",
+        "hashlib",
+        "json",
+        "os",
+        "pathlib",
+        "sqlalchemy",
+        "tempfile",
+        "time"
+      ],
+      "functions": {
+        "_locked_checkpoint": {
+          "name": "_locked_checkpoint",
+          "line": 26,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "_write_marker": {
+          "name": "_write_marker",
+          "line": 33,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_deliver_action": {
+          "name": "_deliver_action",
+          "line": 49,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_finish": {
+          "name": "_finish",
+          "line": 84,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::stage_lesson_enrichment",
+            "app.services.semantic_prefilter::invalidate_cache",
+            "app.services.adjacency_cache::invalidate_adjacency_cache"
+          ],
+          "is_route": false
+        },
+        "run_checkpointed": {
+          "name": "run_checkpointed",
+          "line": 111,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_inputs::source_id",
+            "app.services.distillation_inputs::capture",
+            "app.services.distillation_inputs::materialize",
+            "app.models::DistillationCheckpoint"
+          ],
+          "is_route": false
+        },
+        "progress_status": {
+          "name": "progress_status",
+          "line": 151,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_inputs::source_id",
+            "app.services.distillation_inputs::capture"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "flush",
+          "line": 41,
+          "in": "_write_marker",
+          "target": "stream",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 72,
+          "in": "_deliver_action",
+          "target": "stream",
+          "model": null
+        },
+        {
+          "kind": "flush",
+          "line": 80,
+          "in": "_deliver_action",
+          "target": "stream",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 97,
+          "in": "_finish",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 139,
+          "in": "run_checkpointed",
+          "target": "db",
+          "model": "DistillationCheckpoint"
+        },
+        {
+          "kind": "commit",
+          "line": 142,
+          "in": "run_checkpointed",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
     "app.services.distiller": {
       "path": "backend/app/services/distiller.py",
       "module": "app.services.distiller",
-      "loc": 708,
+      "loc": 724,
       "imports": [
         "app.models",
+        "app.services.distillation_progress",
         "app.services.evidence_frame",
         "app.services.injection_channel",
         "app.services.lesson_store",
@@ -17472,29 +17684,45 @@
         },
         "_apply_attributions": {
           "name": "_apply_attributions",
-          "line": 498,
+          "line": 499,
           "is_async": true,
           "calls": [
-            "app.models::SynapticLearningEvent",
-            "app.services.mind_corpus::_log_action"
+            "app.models::SynapticLearningEvent"
+          ],
+          "is_route": false
+        },
+        "_distill_snapshot": {
+          "name": "_distill_snapshot",
+          "line": 575,
+          "is_async": true,
+          "calls": [
+            "app.services.recurrence_watch::withheld_for_trial",
+            "app.services.llm_provider::llm_chat",
+            "app.services.recurrence_watch::verify_recurrence"
           ],
           "is_route": false
         },
         "distill_log": {
           "name": "distill_log",
-          "line": 574,
+          "line": 687,
           "is_async": true,
           "calls": [
-            "app.services.recurrence_watch::withheld_for_trial",
-            "app.services.llm_provider::llm_chat",
-            "app.services.recurrence_watch::verify_recurrence",
-            "app.services.recurrence_watch::log_recurrence"
+            "app.services.distillation_progress::run_checkpointed"
+          ],
+          "is_route": false
+        },
+        "ready_logs": {
+          "name": "ready_logs",
+          "line": 694,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::progress_status"
           ],
           "is_route": false
         },
         "run_distillation": {
           "name": "run_distillation",
-          "line": 684,
+          "line": 700,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -17511,24 +17739,17 @@
         },
         {
           "kind": "add",
-          "line": 553,
+          "line": 554,
           "in": "_apply_attributions",
           "target": "db",
           "model": "SynapticLearningEvent"
-        },
-        {
-          "kind": "commit",
-          "line": 645,
-          "in": "distill_log",
-          "target": "db",
-          "model": null
         }
       ],
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 624,
-          "in": "distill_log"
+          "line": 627,
+          "in": "_distill_snapshot"
         }
       ]
     },
@@ -20708,7 +20929,7 @@
     "app.services.lesson_store": {
       "path": "backend/app/services/lesson_store.py",
       "module": "app.services.lesson_store",
-      "loc": 457,
+      "loc": 473,
       "imports": [
         "app.config",
         "app.middleware.rbac",
@@ -20781,16 +21002,25 @@
           ],
           "is_route": false
         },
+        "stage_lesson_enrichment": {
+          "name": "stage_lesson_enrichment",
+          "line": 196,
+          "is_async": true,
+          "calls": [
+            "app.services.seeding_service::wire_neuron_knn_edges"
+          ],
+          "is_route": false
+        },
         "label_exists": {
           "name": "label_exists",
-          "line": 195,
+          "line": 211,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_nearest_active_lesson": {
           "name": "_nearest_active_lesson",
-          "line": 208,
+          "line": 224,
           "is_async": true,
           "calls": [
             "app.services.reconsolidation.inheritance::embedding_input",
@@ -20803,14 +21033,14 @@
         },
         "_near_dup_disposition": {
           "name": "_near_dup_disposition",
-          "line": 271,
+          "line": 287,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_embed_and_wire": {
           "name": "_embed_and_wire",
-          "line": 286,
+          "line": 302,
           "is_async": true,
           "calls": [
             "app.services.seeding_service::wire_neuron_knn_edges"
@@ -20819,7 +21049,7 @@
         },
         "save_lesson": {
           "name": "save_lesson",
-          "line": 300,
+          "line": 316,
           "is_async": true,
           "calls": [
             "app.services.write_gate::authority_rank",
@@ -20841,70 +21071,70 @@
         },
         {
           "kind": "add",
-          "line": 345,
+          "line": 361,
           "in": "save_lesson",
           "target": "db",
           "model": "AutopilotProposal"
         },
         {
           "kind": "flush",
-          "line": 346,
+          "line": 362,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 371,
+          "line": 387,
           "in": "save_lesson",
           "target": "db",
           "model": "ProposalItem"
         },
         {
           "kind": "flush",
-          "line": 372,
+          "line": 388,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 405,
+          "line": 421,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 407,
+          "line": 423,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 422,
+          "line": 438,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 424,
+          "line": 440,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 447,
+          "line": 463,
           "in": "save_lesson",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 449,
+          "line": 465,
           "in": "save_lesson",
           "target": "db",
           "model": null
@@ -37443,6 +37673,405 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_distillation_checkpoint_database": {
+      "path": "backend/tests/test_distillation_checkpoint_database.py",
+      "module": "tests.test_distillation_checkpoint_database",
+      "loc": 475,
+      "imports": [
+        "app.database",
+        "app.models",
+        "app.observability.slo",
+        "app.routers.distill",
+        "app.routers.mind_metrics",
+        "app.services.action_bus",
+        "app.services.actions.init_registry",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
+        "app.services.distiller",
+        "app.services.embedding_service",
+        "app.services.lesson_store",
+        "app.services.llm_provider",
+        "app.services.mind_corpus",
+        "app.services.mind_metrics",
+        "app.services.semantic_prefilter"
+      ],
+      "external_imports": [
+        "asyncio",
+        "fastapi",
+        "httpx",
+        "json",
+        "os",
+        "pathlib",
+        "pytest",
+        "pytest_asyncio",
+        "sqlalchemy",
+        "sys",
+        "time",
+        "unittest",
+        "uuid"
+      ],
+      "functions": {
+        "event_log": {
+          "name": "event_log",
+          "line": 33,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "case": {
+          "name": "case",
+          "line": 39,
+          "is_async": true,
+          "calls": [
+            "app.services.action_bus::_ActionRegistry"
+          ],
+          "is_route": false
+        },
+        "case.stage": {
+          "name": "case.stage",
+          "line": 63,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "effects": {
+          "name": "effects",
+          "line": 75,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_precommit_failure_rolls_back_effect_and_checkpoint": {
+          "name": "test_precommit_failure_rolls_back_effect_and_checkpoint",
+          "line": 81,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed",
+            "app.services.distillation_inputs::source_id"
+          ],
+          "is_route": false
+        },
+        "test_precommit_failure_rolls_back_effect_and_checkpoint.fail": {
+          "name": "test_precommit_failure_rolls_back_effect_and_checkpoint.fail",
+          "line": 84,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_postcommit_marker_failure_never_repeats_memory_writes": {
+          "name": "test_postcommit_marker_failure_never_repeats_memory_writes",
+          "line": 98,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed",
+            "app.services.distillation_inputs::source_id",
+            "app.services.distillation_progress::progress_status"
+          ],
+          "is_route": false
+        },
+        "test_postcommit_marker_failure_never_repeats_memory_writes.fail": {
+          "name": "test_postcommit_marker_failure_never_repeats_memory_writes.fail",
+          "line": 102,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_append_advances_once_without_replaying_committed_events": {
+          "name": "test_append_advances_once_without_replaying_committed_events",
+          "line": 120,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed",
+            "app.services.distillation_progress::progress_status"
+          ],
+          "is_route": false
+        },
+        "test_concurrent_connection_cannot_enter_same_source": {
+          "name": "test_concurrent_connection_cannot_enter_same_source",
+          "line": 135,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed"
+          ],
+          "is_route": false
+        },
+        "test_concurrent_connection_cannot_enter_same_source.paused": {
+          "name": "test_concurrent_connection_cannot_enter_same_source.paused",
+          "line": 139,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_enrichment_failure_preserves_memory_and_retries_only_pending_work": {
+          "name": "test_enrichment_failure_preserves_memory_and_retries_only_pending_work",
+          "line": 160,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed",
+            "app.services.distillation_progress::progress_status",
+            "app.services.distillation_inputs::source_id"
+          ],
+          "is_route": false
+        },
+        "test_enrichment_failure_preserves_memory_and_retries_only_pending_work.needs_enrichment": {
+          "name": "test_enrichment_failure_preserves_memory_and_retries_only_pending_work.needs_enrichment",
+          "line": 163,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_action_delivery_survives_lost_ack_without_duplicate_record": {
+          "name": "test_action_delivery_survives_lost_ack_without_duplicate_record",
+          "line": 180,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed"
+          ],
+          "is_route": false
+        },
+        "test_action_delivery_survives_lost_ack_without_duplicate_record.with_action": {
+          "name": "test_action_delivery_survives_lost_ack_without_duplicate_record.with_action",
+          "line": 185,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_action_delivery_survives_lost_ack_without_duplicate_record.lost_ack": {
+          "name": "test_action_delivery_survives_lost_ack_without_duplicate_record.lost_ack",
+          "line": 189,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_legacy_marker_is_preserved_and_explicitly_blocked": {
+          "name": "test_legacy_marker_is_preserved_and_explicitly_blocked",
+          "line": 208,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::progress_status",
+            "app.services.distillation_progress::run_checkpointed"
+          ],
+          "is_route": false
+        },
+        "test_changed_prefix_cannot_advance_or_repeat_effects": {
+          "name": "test_changed_prefix_cannot_advance_or_repeat_effects",
+          "line": 222,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed",
+            "app.services.distillation_progress::progress_status"
+          ],
+          "is_route": false
+        },
+        "test_real_distiller_keeps_auto_queue_and_attribution_once_on_marker_retry": {
+          "name": "test_real_distiller_keeps_auto_queue_and_attribution_once_on_marker_retry",
+          "line": 235,
+          "is_async": true,
+          "calls": [
+            "app.services.actions.init_registry::init_actions_registry",
+            "app.services.lesson_store::save_lesson",
+            "app.services.distiller::distill_log"
+          ],
+          "is_route": false
+        },
+        "test_real_distiller_keeps_auto_queue_and_attribution_once_on_marker_retry.fail": {
+          "name": "test_real_distiller_keeps_auto_queue_and_attribution_once_on_marker_retry.fail",
+          "line": 266,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication": {
+          "name": "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication",
+          "line": 286,
+          "is_async": true,
+          "calls": [
+            "app.services.actions.init_registry::init_actions_registry",
+            "app.services.distillation_progress::run_checkpointed",
+            "app.services.distillation_inputs::source_id"
+          ],
+          "is_route": false
+        },
+        "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication.save": {
+          "name": "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication.save",
+          "line": 300,
+          "is_async": true,
+          "calls": [
+            "app.services.lesson_store::save_lesson"
+          ],
+          "is_route": false
+        },
+        "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication.save_candidate": {
+          "name": "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication.save_candidate",
+          "line": 311,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication.embed": {
+          "name": "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication.embed",
+          "line": 316,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_process_death_releases_source_and_preserves_only_committed_proposals": {
+          "name": "test_process_death_releases_source_and_preserves_only_committed_proposals",
+          "line": 345,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed"
+          ],
+          "is_route": false
+        },
+        "test_process_death_releases_source_and_preserves_only_committed_proposals.checkpoint_ready": {
+          "name": "test_process_death_releases_source_and_preserves_only_committed_proposals.checkpoint_ready",
+          "line": 391,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_http_checkpoint_status_and_slo_lifecycle": {
+          "name": "test_http_checkpoint_status_and_slo_lifecycle",
+          "line": 419,
+          "is_async": true,
+          "calls": [
+            "app.services.distillation_progress::run_checkpointed"
+          ],
+          "is_route": false
+        },
+        "test_http_checkpoint_status_and_slo_lifecycle.isolated_db": {
+          "name": "test_http_checkpoint_status_and_slo_lifecycle.isolated_db",
+          "line": 441,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        },
+        "test_http_checkpoint_status_and_slo_lifecycle.observe": {
+          "name": "test_http_checkpoint_status_and_slo_lifecycle.observe",
+          "line": 450,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [
+        {
+          "kind": "commit",
+          "line": 59,
+          "in": "case",
+          "target": "connection",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 247,
+          "in": "test_real_distiller_keeps_auto_queue_and_attribution_once_on_marker_retry",
+          "target": "db",
+          "model": null
+        },
+        {
+          "kind": "commit",
+          "line": 309,
+          "in": "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication",
+          "target": "db",
+          "model": null
+        }
+      ],
+      "llm_sites": []
+    },
+    "tests.test_distillation_inputs": {
+      "path": "backend/tests/test_distillation_inputs.py",
+      "module": "tests.test_distillation_inputs",
+      "loc": 92,
+      "imports": [
+        "app.services.distillation_inputs"
+      ],
+      "external_imports": [
+        "json",
+        "pathlib",
+        "pytest"
+      ],
+      "functions": {
+        "write": {
+          "name": "write",
+          "line": 11,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_appended_events_and_transcript_exclude_committed_evidence": {
+          "name": "test_appended_events_and_transcript_exclude_committed_evidence",
+          "line": 15,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::capture"
+          ],
+          "is_route": false
+        },
+        "test_committed_prefix_cannot_be_truncated_or_rewritten": {
+          "name": "test_committed_prefix_cannot_be_truncated_or_rewritten",
+          "line": 34,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::capture"
+          ],
+          "is_route": false
+        },
+        "test_partial_trailing_record_is_not_consumed": {
+          "name": "test_partial_trailing_record_is_not_consumed",
+          "line": 43,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::read_prefix",
+            "app.services.distillation_inputs::records"
+          ],
+          "is_route": false
+        },
+        "test_malformed_complete_record_is_not_silently_consumed": {
+          "name": "test_malformed_complete_record_is_not_silently_consumed",
+          "line": 52,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::records"
+          ],
+          "is_route": false
+        },
+        "test_frozen_parsers_cannot_read_later_live_transcript_content": {
+          "name": "test_frozen_parsers_cannot_read_later_live_transcript_content",
+          "line": 57,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::capture",
+            "app.services.distillation_inputs::materialize"
+          ],
+          "is_route": false
+        },
+        "test_changed_transcript_identity_requires_explicit_repair": {
+          "name": "test_changed_transcript_identity_requires_explicit_repair",
+          "line": 70,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::capture"
+          ],
+          "is_route": false
+        },
+        "test_episode_named_transcript_does_not_overwrite_frozen_transcript": {
+          "name": "test_episode_named_transcript_does_not_overwrite_frozen_transcript",
+          "line": 81,
+          "is_async": false,
+          "calls": [
+            "app.services.distillation_inputs::capture",
+            "app.services.distillation_inputs::materialize"
+          ],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_distillation_transactions": {
       "path": "backend/tests/test_distillation_transactions.py",
       "module": "tests.test_distillation_transactions",
@@ -40301,7 +40930,7 @@
     "tests.test_injection_channel": {
       "path": "backend/tests/test_injection_channel.py",
       "module": "tests.test_injection_channel",
-      "loc": 501,
+      "loc": 503,
       "imports": [
         "app.services.distiller",
         "app.services.injection_channel",
@@ -40569,7 +41198,7 @@
         },
         "test_label_delivered_by_both_channels_is_not_credited_to_one": {
           "name": "test_label_delivered_by_both_channels_is_not_credited_to_one",
-          "line": 483,
+          "line": 485,
           "is_async": true,
           "calls": [
             "app.services.distiller::_apply_attributions"
@@ -47776,6 +48405,38 @@
       "db_writes": [],
       "llm_sites": []
     },
+    "tests.test_slo_checkpoint_backlog": {
+      "path": "backend/tests/test_slo_checkpoint_backlog.py",
+      "module": "tests.test_slo_checkpoint_backlog",
+      "loc": 55,
+      "imports": [
+        "app.observability.slo"
+      ],
+      "external_imports": [
+        "pytest"
+      ],
+      "functions": {
+        "test_checkpoint_backlog_report": {
+          "name": "test_checkpoint_backlog_report",
+          "line": 29,
+          "is_async": true,
+          "calls": [
+            "app.observability.slo::slo_report"
+          ],
+          "is_route": false
+        },
+        "test_checkpoint_backlog_report.distill_loader": {
+          "name": "test_checkpoint_backlog_report.distill_loader",
+          "line": 35,
+          "is_async": true,
+          "calls": [],
+          "is_route": false
+        }
+      },
+      "routes": [],
+      "db_writes": [],
+      "llm_sites": []
+    },
     "tests.test_spread_activation": {
       "path": "backend/tests/test_spread_activation.py",
       "module": "tests.test_spread_activation",
@@ -50362,6 +51023,7 @@
       "tests.replay_auditor_honeypot",
       "tests.replay_nvm_throwaway",
       "tests.seed_journey_fixture",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_job_serialization",
       "tests.test_maintenance_outcomes",
       "tests.test_query_transaction_boundary"
@@ -50517,6 +51179,7 @@
       "app.services.consolidation",
       "app.services.delivery_mode",
       "app.services.delivery_plasticity",
+      "app.services.distillation_progress",
       "app.services.distiller",
       "app.services.document_extractor",
       "app.services.edge_tier",
@@ -50592,6 +51255,7 @@
       "tests.test_dedup_tools",
       "tests.test_delivery_mode",
       "tests.test_delivery_plasticity",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_document_extractor",
       "tests.test_fusion_plan",
       "tests.test_fusionplan_render",
@@ -50652,8 +51316,10 @@
     ],
     "app.observability.slo": [
       "app.routers.mind_metrics",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_maintenance_outcomes",
-      "tests.test_slo"
+      "tests.test_slo",
+      "tests.test_slo_checkpoint_backlog"
     ],
     "app.operations.router": [
       "app.operations",
@@ -50679,6 +51345,7 @@
     "app.routers.distill": [
       "scripts.reproduce_distillation_checkpoints",
       "scripts.reproduce_distillation_transactions",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
     ],
@@ -50691,6 +51358,9 @@
     "app.routers.janitor": [
       "tests.test_job_serialization",
       "tests.test_maintenance_outcomes"
+    ],
+    "app.routers.mind_metrics": [
+      "tests.test_distillation_checkpoint_database"
     ],
     "app.routers.neurons": [
       "tests.test_graph_replay"
@@ -50751,7 +51421,8 @@
       "app.services.skill_compiler",
       "scripts.retire_false_neurons",
       "tests.replay_nvm_throwaway",
-      "tests.test_concept_governance"
+      "tests.test_concept_governance",
+      "tests.test_distillation_checkpoint_database"
     ],
     "app.services.actions.edge_link": [
       "app.services.actions.init_registry",
@@ -50778,7 +51449,8 @@
       "scripts.retire_false_neurons",
       "scripts.verify_write_authority",
       "tests.replay_auditor_honeypot",
-      "tests.replay_nvm_throwaway"
+      "tests.replay_nvm_throwaway",
+      "tests.test_distillation_checkpoint_database"
     ],
     "app.services.actions.neuron_create": [
       "app.services.actions.init_registry"
@@ -50805,6 +51477,7 @@
       "app.routers.admin_graph_maintenance",
       "app.routers.proposals",
       "app.services.concept_service",
+      "app.services.distillation_progress",
       "app.services.executor",
       "app.services.neuron_service",
       "app.services.pipeline.stages.engram_edge_boost_stage",
@@ -50882,12 +51555,24 @@
       "app.services.mind_janitors",
       "tests.test_delivery_plasticity"
     ],
+    "app.services.distillation_inputs": [
+      "app.services.distillation_progress",
+      "tests.test_distillation_checkpoint_database",
+      "tests.test_distillation_inputs"
+    ],
+    "app.services.distillation_progress": [
+      "app.routers.distill",
+      "app.routers.mind_metrics",
+      "app.services.distiller",
+      "tests.test_distillation_checkpoint_database"
+    ],
     "app.services.distiller": [
       "app.routers.distill",
       "app.routers.mind_metrics",
       "app.services.memory_quality_auditor",
       "scripts.reproduce_distillation_checkpoints",
       "scripts.reproduce_distillation_transactions",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_distillation_transactions",
       "tests.test_distiller",
       "tests.test_injection_channel",
@@ -50940,7 +51625,8 @@
       "app.services.structural_resolver",
       "eval.locomo.analysis.step04_live_janitor_probe",
       "eval.locomo.analysis.step04_live_janitor_probe2",
-      "tests.replay_auditor_honeypot"
+      "tests.replay_auditor_honeypot",
+      "tests.test_distillation_checkpoint_database"
     ],
     "app.services.engram_service": [
       "app.routers.engrams",
@@ -51063,12 +51749,14 @@
     "app.services.lesson_store": [
       "app.routers.recall",
       "app.services.capability_capsule",
+      "app.services.distillation_progress",
       "app.services.distiller",
       "app.services.memory_quality_auditor",
       "app.services.reference_ingest",
       "eval.locomo.run_locomo",
       "eval.locomo.test_lifecycle",
       "scripts.verify_write_authority",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_lesson_transaction_ownership",
       "tests.test_reconsolidation_kernel",
       "tests.test_write_authority_validation"
@@ -51105,6 +51793,7 @@
       "tests.replay_auditor_honeypot",
       "tests.test_agents_execute_loop",
       "tests.test_chat_session",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_live_provider",
       "tests.test_llm_fallback",
       "tests.test_primary_answer_overrides",
@@ -51130,6 +51819,7 @@
       "app.routers.admin_graph_maintenance",
       "app.services.delivery_mode",
       "app.services.delivery_plasticity",
+      "app.services.distillation_progress",
       "app.services.distiller",
       "app.services.injection_channel",
       "app.services.mind_janitors",
@@ -51138,6 +51828,7 @@
       "app.services.recurrence_watch",
       "app.services.skill_compiler",
       "app.services.synaptic_homeostasis",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_injection_channel",
       "tests.test_maintenance_substrate",
       "tests.test_recurrence_watch",
@@ -51170,7 +51861,8 @@
       "tests.test_mind_lint"
     ],
     "app.services.mind_metrics": [
-      "app.routers.mind_metrics"
+      "app.routers.mind_metrics",
+      "tests.test_distillation_checkpoint_database"
     ],
     "app.services.model_usage_ledger": [
       "app.routers.admin",
@@ -51573,11 +52265,13 @@
       "app.services.actions.neuron_refine",
       "app.services.actions.neuron_stats_rebuild",
       "app.services.concept_service",
+      "app.services.distillation_progress",
       "app.services.lesson_store",
       "app.services.recall_primitives",
       "app.services.reference_ingest",
       "app.services.structural_resolver",
       "tests.replay_auditor_honeypot",
+      "tests.test_distillation_checkpoint_database",
       "tests.test_horizontal_scaling"
     ],
     "app.services.skill_compiler": [
@@ -51819,6 +52513,7 @@
     "app.routers.distill": [
       "app.observability.job_outcomes",
       "app.observability.jobs",
+      "app.services.distillation_progress",
       "app.services.distiller"
     ],
     "app.routers.document_ingest": [
@@ -51873,7 +52568,7 @@
       "app.services.claude_usage",
       "app.services.codex_usage",
       "app.services.delivery_plasticity",
-      "app.services.distiller",
+      "app.services.distillation_progress",
       "app.services.injection_channel",
       "app.services.locomo_run_status",
       "app.services.mind_metrics"
@@ -52032,8 +52727,16 @@
       "app.services.mind_corpus",
       "app.services.recurrence_watch"
     ],
+    "app.services.distillation_progress": [
+      "app.models",
+      "app.services.adjacency_cache",
+      "app.services.distillation_inputs",
+      "app.services.lesson_store",
+      "app.services.semantic_prefilter"
+    ],
     "app.services.distiller": [
       "app.models",
+      "app.services.distillation_progress",
       "app.services.injection_channel",
       "app.services.lesson_store",
       "app.services.llm_provider",
@@ -52621,6 +53324,17 @@
       "app.services.delivery_plasticity",
       "app.services.injection_channel"
     ],
+    "tests.test_distillation_checkpoint_database": [
+      "app.services.action_bus",
+      "app.services.actions.init_registry",
+      "app.services.distillation_inputs",
+      "app.services.distillation_progress",
+      "app.services.distiller",
+      "app.services.lesson_store"
+    ],
+    "tests.test_distillation_inputs": [
+      "app.services.distillation_inputs"
+    ],
     "tests.test_distillation_transactions": [
       "app.services.distiller"
     ],
@@ -52891,6 +53605,9 @@
       "app.services.skill_signpost"
     ],
     "tests.test_slo": [
+      "app.observability.slo"
+    ],
+    "tests.test_slo_checkpoint_backlog": [
       "app.observability.slo"
     ],
     "tests.test_spread_activation": [
@@ -55524,6 +56241,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55577,6 +56296,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55642,6 +56363,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55695,6 +56418,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55760,6 +56485,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55813,6 +56540,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55878,6 +56607,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -55931,6 +56662,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -56774,7 +57507,7 @@
       "full_path": "/distill/run",
       "mounted_on": "router",
       "handler": "distill_run",
-      "line": 30,
+      "line": 31,
       "module": "app.routers.distill",
       "file": "backend/app/routers/distill.py",
       "imports_reachable": [
@@ -56792,6 +57525,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -56843,6 +57578,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -56888,7 +57625,7 @@
       "full_path": "/distill/status",
       "mounted_on": "router",
       "handler": "distill_status",
-      "line": 22,
+      "line": 24,
       "module": "app.routers.distill",
       "file": "backend/app/routers/distill.py",
       "imports_reachable": [
@@ -56906,6 +57643,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -56957,6 +57696,8 @@
         "app.services.clustering",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -59772,6 +60513,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -59832,6 +60575,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -59881,7 +60626,7 @@
       "full_path": "/metrics/mind/delivery-pathways",
       "mounted_on": "router",
       "handler": "mind_delivery_pathways",
-      "line": 151,
+      "line": 152,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -59902,6 +60647,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -59962,6 +60709,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60032,6 +60781,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60092,6 +60843,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60162,6 +60915,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60222,6 +60977,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60292,6 +61049,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60352,6 +61111,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60422,6 +61183,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60482,6 +61245,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60552,6 +61317,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60612,6 +61379,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60661,7 +61430,7 @@
       "full_path": "/metrics/mind/skills",
       "mounted_on": "router",
       "handler": "mind_skills",
-      "line": 205,
+      "line": 206,
       "module": "app.routers.mind_metrics",
       "file": "backend/app/routers/mind_metrics.py",
       "imports_reachable": [
@@ -60682,6 +61451,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60742,6 +61513,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60812,6 +61585,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60872,6 +61647,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -60942,6 +61719,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -61002,6 +61781,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -61072,6 +61853,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -61132,6 +61915,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -61202,6 +61987,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -61262,6 +62049,8 @@
         "app.services.codex_usage",
         "app.services.delivery_mode",
         "app.services.delivery_plasticity",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.edge_tier",
         "app.services.embedding_service",
@@ -66773,6 +67562,25 @@
       ]
     },
     {
+      "module": "tests.test_distillation_checkpoint_database",
+      "entrypoints": [
+        "case",
+        "effects",
+        "test_action_delivery_survives_lost_ack_without_duplicate_record",
+        "test_append_advances_once_without_replaying_committed_events",
+        "test_changed_prefix_cannot_advance_or_repeat_effects",
+        "test_concurrent_connection_cannot_enter_same_source",
+        "test_enrichment_failure_preserves_memory_and_retries_only_pending_work",
+        "test_http_checkpoint_status_and_slo_lifecycle",
+        "test_legacy_marker_is_preserved_and_explicitly_blocked",
+        "test_postcommit_marker_failure_never_repeats_memory_writes",
+        "test_precommit_failure_rolls_back_effect_and_checkpoint",
+        "test_process_death_releases_source_and_preserves_only_committed_proposals",
+        "test_real_distiller_keeps_auto_queue_and_attribution_once_on_marker_retry",
+        "test_real_enrichment_commits_vectors_and_edges_without_staged_cache_publication"
+      ]
+    },
+    {
       "module": "tests.test_distillation_transactions",
       "entrypoints": [
         "test_earlier_commit_survives_later_failure",
@@ -66966,6 +67774,12 @@
       "module": "tests.test_retention",
       "entrypoints": [
         "test_disabled_retention_purges_nothing_without_touching_db"
+      ]
+    },
+    {
+      "module": "tests.test_slo_checkpoint_backlog",
+      "entrypoints": [
+        "test_checkpoint_backlog_report"
       ]
     },
     {

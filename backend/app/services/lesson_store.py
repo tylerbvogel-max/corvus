@@ -170,7 +170,7 @@ def _lesson_spec(
     }
 
 
-async def _embed_created(db: AsyncSession, neuron_id: int) -> None:
+async def _embed_created(db: AsyncSession, neuron_id: int, *, publish_cache: bool = True) -> None:
     """Embed a newly created neuron and refresh its semantic-cache entry.
 
     Creates via the Action Bus don't embed (embeddings are normally a
@@ -189,7 +189,23 @@ async def _embed_created(db: AsyncSession, neuron_id: int) -> None:
     assert len(vec) > 0, "embedding must be non-empty"
     neuron.embedding = json.dumps(vec)
     await db.flush()
-    await update_cache_incremental(db, [neuron_id], "neuron")
+    if publish_cache:
+        await update_cache_incremental(db, [neuron_id], "neuron")
+
+
+async def stage_lesson_enrichment(db: AsyncSession, neuron_id: int) -> None:
+    """Stage repeatable embedding/edge writes; the checkpoint owner commits.
+
+    Unlike the legacy convenience path, failures propagate and no semantic
+    cache entry is published before commit. Edge upserts retain organic edges.
+    """
+    from app.services.seeding_service import wire_neuron_knn_edges
+
+    neuron = await db.get(Neuron, neuron_id)
+    if neuron is None or not neuron.is_active:
+        return  # subsequent retirement/deletion must not be undone by recovery
+    await _embed_created(db, neuron_id, publish_cache=False)
+    await wire_neuron_knn_edges(db, neuron_id)
 
 
 async def label_exists(db: AsyncSession, label: str) -> bool:

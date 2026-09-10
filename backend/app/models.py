@@ -51,6 +51,15 @@ ABSTRACTION_BY_NODE_TYPE = MappingProxyType({
 })
 
 
+class DistillationCheckpoint(Base):
+    """Committed input boundary and recoverable post-commit work, never raw logs."""
+
+    __tablename__ = "distillation_checkpoints"
+
+    source_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    state: Mapped[dict] = mapped_column(JSONB, nullable=False)
+
+
 class Neuron(Base):
     __tablename__ = "neurons"
     __table_args__ = (

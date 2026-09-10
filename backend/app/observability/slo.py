@@ -137,7 +137,9 @@ OBJECTIVES: tuple[Objective, ...] = (
         ),
         owner="memory-ingestion",
         first_response=(
-            "Check whether the distiller is failing or merely slow: "
+            "Check GET /distill/status for blocked inputs first: blocked or "
+            "invalid input counts make the backlog unknown, not healthy. "
+            "Then check whether the distiller is failing or merely slow: "
             "GET /metrics/mind/jobs for the distill receipt, then the structured "
             "logs for job=distill. Opus spend through the Claude CLI is the usual "
             "bottleneck."
@@ -194,6 +196,12 @@ def collect_signals(
     window = _dig(mind_metrics or {}, "recall", "performance_window")
     lifetime = _dig(mind_metrics or {}, "recall", "total")
     backlog = _dig(distill_status or {}, "ready")
+    # Blocked sources have no trustworthy unprocessed-session count. Do not
+    # equate the eligible subset with the complete backlog or fabricate a
+    # threshold breach. Older reports omit `blocked` and remain compatible.
+    blocked = distill_status.get("blocked", 0) if isinstance(distill_status, dict) else None
+    if type(backlog) is not int or backlog < 0 or type(blocked) is not int or blocked != 0:
+        backlog = None
 
     # FRESH IS NOT BROKEN. Found by the release dry-run: a just-deployed
     # instance has served zero queries, and reporting that as a BREACH made an

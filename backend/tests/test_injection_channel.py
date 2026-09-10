@@ -446,9 +446,8 @@ async def test_attribution_tallies_verdicts_per_channel(monkeypatch, tmp_path):
     from app.services import distiller, mind_corpus
 
     logged = []
-    # The distiller resolves _log_action from the substrate module
-    # (mind_corpus) since the recurrence-watch cycle break; the test
-    # seam patches where the callee actually looks.
+    # Attribution stages its projection for the checkpoint owner. No action
+    # log may claim the change before the memory transaction commits.
     monkeypatch.setattr(mind_corpus, "_log_action",
                         lambda action, payload: logged.append((action, payload)))
     injections = [
@@ -472,8 +471,11 @@ async def test_attribution_tallies_verdicts_per_channel(monkeypatch, tmp_path):
         "rewarded": 1, "penalized": 0, "unused": 0}
     assert counts["by_channel"][RETRIEVED] == {
         "rewarded": 0, "penalized": 1, "unused": 1}
-    # Provenance is on the log line too, so the split reads without a join.
-    by_neuron = {p["neuron_id"]: p for _a, p in logged}
+    assert logged == []
+    assert {a["action"] for a in counts["_actions"]} == {
+        "attribution.reward", "attribution.penalty"}
+    # Deferred log payloads retain the same delivery provenance.
+    by_neuron = {a["detail"]["neuron_id"]: a["detail"] for a in counts["_actions"]}
     assert by_neuron[1]["channel"] == STANDING
     assert by_neuron[1]["trigger"] == "capsule:mind-charter"
     assert by_neuron[7]["channel"] == RETRIEVED

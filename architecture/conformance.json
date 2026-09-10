@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 418,
+    "modules": 424,
     "frontend_files": 80,
-    "units": 498,
-    "classified": 498,
+    "units": 504,
+    "classified": 504,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "a85b5a13302a4e9146a01397ed6b90d31f72bbd159b6303b920044deeb5c14fd",
-    "current_fingerprint": "a85b5a13302a4e9146a01397ed6b90d31f72bbd159b6303b920044deeb5c14fd",
-    "stored_files": 498,
-    "current_files": 498
+    "stored_fingerprint": "9500ee72e778251a7497e66f4bd1086e9a6218c6b2b64923d927790ab673b38f",
+    "current_fingerprint": "9500ee72e778251a7497e66f4bd1086e9a6218c6b2b64923d927790ab673b38f",
+    "stored_files": 504,
+    "current_files": 504
   },
   "manifest_problems": [],
   "boxes": [
@@ -316,12 +316,14 @@
       "tier": "background",
       "purpose": "Convert redacted session evidence or explicit saves into self-contained, evidence-framed candidate memories.",
       "confidence": "reviewed",
-      "module_count": 5,
+      "module_count": 7,
       "frontend_file_count": 0,
-      "loc": 1683,
+      "loc": 1997,
       "routes": 2,
       "modules": [
         "app.routers.distill",
+        "app.services.distillation_inputs",
+        "app.services.distillation_progress",
         "app.services.distiller",
         "app.services.evidence_frame",
         "app.services.lesson_store",
@@ -521,7 +523,7 @@
       "confidence": "reviewed",
       "module_count": 31,
       "frontend_file_count": 0,
-      "loc": 6365,
+      "loc": 6366,
       "routes": 19,
       "modules": [
         "app.routers.eval_runs",
@@ -564,9 +566,9 @@
       "tier": "infra",
       "purpose": "Select the tenant, configure/database the process, migrate and seed state, enforce middleware, serve the application, and expose the operator-facing read side of what that middleware and tenant config produce.",
       "confidence": "reviewed",
-      "module_count": 77,
+      "module_count": 78,
       "frontend_file_count": 0,
-      "loc": 9462,
+      "loc": 9511,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -596,6 +598,7 @@
         "alembic.versions.025_standard_date_seed",
         "alembic.versions.026_delivery_pathways",
         "alembic.versions.027_synaptic_homeostasis",
+        "alembic.versions.028_distillation_checkpoints",
         "alembic.versions.ae144af9c1e1_initial_schema_baseline",
         "app",
         "app.config",
@@ -674,9 +677,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 129,
+      "module_count": 132,
       "frontend_file_count": 0,
-      "loc": 26932,
+      "loc": 27556,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -728,6 +731,8 @@
         "tests.test_dedup_tools",
         "tests.test_delivery_mode",
         "tests.test_delivery_plasticity",
+        "tests.test_distillation_checkpoint_database",
+        "tests.test_distillation_inputs",
         "tests.test_distillation_transactions",
         "tests.test_distiller",
         "tests.test_document_extractor",
@@ -795,6 +800,7 @@
         "tests.test_scoring_engine",
         "tests.test_skill_signpost",
         "tests.test_slo",
+        "tests.test_slo_checkpoint_backlog",
         "tests.test_spread_activation",
         "tests.test_spread_overrides",
         "tests.test_spread_vectorized",
@@ -1222,7 +1228,7 @@
         "boundary": "backend",
         "purpose": "Convert situated evidence into typed candidates and decide whether any durable mutation is authorized.",
         "details": [
-          "A systemd timer offers distillation every 30 minutes; only quiescent undistilled logs run, bounded to five sessions by default.",
+          "A systemd timer offers distillation every 30 minutes; quiescent appended inputs and pending checkpoint recovery are bounded by the per-run limit.",
           "Distillation requests the opus capability grade, which resolves to Codex Sol by default and falls back to Anthropic Opus.",
           "Evidence framing, near-duplicate routing, tiered write gates, reviewed proposals, and typed Action Bus handlers fail durable writes closed."
         ],
@@ -4129,16 +4135,25 @@
         {
           "actor": "distiller",
           "component": "memory-ingestion",
-          "does": "Commit and write a .distilled marker only after the session completes successfully.",
-          "state_change": "The log leaves the ready queue; failures without markers retry later.",
-          "guardrail": "Per-log failure does not stop other ready logs.",
+          "does": "Commit memory and its input checkpoint atomically, then recover enrichment and action-log and marker projections.",
+          "state_change": "Database prefix boundaries govern processed evidence; appended input and pending recovery remain eligible.",
+          "guardrail": "Transaction-scoped source locks exclude cooperating concurrent writers; legacy markers never authorize inferred replay.",
           "evidence": [
-            "backend/app/services/distiller.py::run_distillation"
+            "backend/app/services/distiller.py::run_distillation",
+            "backend/app/services/distillation_progress.py::run_checkpointed"
           ],
           "index": 7,
           "evidence_results": [
             {
               "evidence": "backend/app/services/distiller.py::run_distillation",
+              "exists": true,
+              "actual_component": "memory-ingestion",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/distillation_progress.py::run_checkpointed",
               "exists": true,
               "actual_component": "memory-ingestion",
               "component_ok": true,
@@ -7067,16 +7082,25 @@
         {
           "actor": "distiller",
           "component": "memory-ingestion",
-          "does": "Commit and write a .distilled marker only after the session completes successfully.",
-          "state_change": "The log leaves the ready queue; failures without markers retry later.",
-          "guardrail": "Per-log failure does not stop other ready logs.",
+          "does": "Commit memory and its input checkpoint atomically, then recover enrichment and action-log and marker projections.",
+          "state_change": "Database prefix boundaries govern processed evidence; appended input and pending recovery remain eligible.",
+          "guardrail": "Transaction-scoped source locks exclude cooperating concurrent writers; legacy markers never authorize inferred replay.",
           "evidence": [
-            "backend/app/services/distiller.py::run_distillation"
+            "backend/app/services/distiller.py::run_distillation",
+            "backend/app/services/distillation_progress.py::run_checkpointed"
           ],
           "index": 7,
           "evidence_results": [
             {
               "evidence": "backend/app/services/distiller.py::run_distillation",
+              "exists": true,
+              "actual_component": "memory-ingestion",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/distillation_progress.py::run_checkpointed",
               "exists": true,
               "actual_component": "memory-ingestion",
               "component_ok": true,

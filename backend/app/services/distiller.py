@@ -472,6 +472,7 @@ async def _validate_and_save(
                 source_origin="agent-derived" if agent_derived else "distiller",
                 gap_source="distiller",
                 project=project if scope == "Projects" else None,
+                commit=False,
             )
         except EvidenceFrameError as exc:
             counts["unframed"] += 1
@@ -504,7 +505,6 @@ async def _apply_attributions(
     A SynapticLearningEvent is written when the injection recorded its
     recall query_id, so the Evaluate pages see the reinforcement."""
     from app.models import Neuron, SynapticLearningEvent
-    from app.services.mind_corpus import _log_action
 
     # One verdict per label per session, so repeat deliveries of a label
     # collapse to a single attribution unit. Its channel is unambiguous
@@ -520,6 +520,7 @@ async def _apply_attributions(
                             if len(entry["channels"]) == 1 else "ambiguous")
 
     counts = {"rewarded": 0, "penalized": 0, "unused": 0}
+    actions: list[dict] = []
     by_channel: dict[str, dict] = {}
     for v in verdicts:
         verdict = str(v.get("verdict", "unused"))
@@ -559,7 +560,7 @@ async def _apply_attributions(
                 combined_score=0.0, attribution_weight=1.0,
                 outcome=outcome, winner_mode="mind_attribution",
             ))
-        _log_action(f"attribution.{event_type}", {
+        actions.append({"action": f"attribution.{event_type}", "detail": {
             "neuron_id": neuron.id, "label": neuron.label,
             "old_utility": round(old, 3),
             "new_utility": round(neuron.avg_utility, 3),
@@ -567,19 +568,20 @@ async def _apply_attributions(
             # Delivery provenance: makes the channel split readable
             # straight from the log, with no marker-timestamp join.
             "channel": channel, "trigger": source.get("trigger"),
-        })
-    return {**counts, "by_channel": by_channel}
+        }})
+    return {**counts, "by_channel": by_channel, "_actions": actions}
 
 
-async def distill_log(db: AsyncSession, path: str) -> dict:
-    """Distill one ready episode log; writes a .distilled marker on success."""
+async def _distill_snapshot(db: AsyncSession, path: str, *,
+                            known_labels: list[str], delivered_ids: set[int]) -> dict:
+    """Stage one immutable input delta; the checkpoint owner commits it."""
     from datetime import datetime, timezone
     from app.services.llm_provider import llm_chat
 
     session_id = os.path.basename(path).removesuffix(".jsonl")
     events, injections, transcript = _load_log(path)
     assert len(events) > 0, f"log {path} has no parseable events"
-    injected = [i["label"] for i in injections]
+    injected = list(dict.fromkeys(known_labels + [i["label"] for i in injections]))
     user_msgs = _extract_user_messages(transcript)
     assistant_msgs = _extract_assistant_messages(transcript)
     agent_reports = _extract_agent_reports(events)
@@ -590,6 +592,7 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     # beside a delivered copy is contradiction evidence, not trial harm.
     from app.services import recurrence_watch
     withheld_entries, _delivered = recurrence_watch.withheld_for_trial(events)
+    withheld_entries = [e for e in withheld_entries if e["neuron_id"] not in delivered_ids]
     withheld_by_label: dict[str, dict] = {}
     withheld_lessons: list[tuple[str, str]] = []
     if withheld_entries:
@@ -642,7 +645,7 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
     counts = await _validate_and_save(db, candidates, injected, session_id,
                                       project=dominant, events=events)
     attribution = await _apply_attributions(db, verdicts, injections)
-    await db.commit()
+    actions = attribution.pop("_actions", [])
 
     # THE GATE IS THE FEATURE, again: the model only NOMINATES recurrences;
     # each is admitted solely with a cited, token-verified event that both
@@ -658,9 +661,11 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
             continue
         recurrence["verified"] += 1
         for pw in entry["pathways"]:
-            recurrence_watch.log_recurrence(
-                session_id, pw["neuron_id"], pw["trigger"], pw["tool"],
-                label=str(nom.get("label", "")), citation=citation)
+            actions.append({"action": recurrence_watch.RECURRENCE_ACTION, "detail": {
+                "session_id": session_id, "neuron_id": pw["neuron_id"],
+                "trigger": pw["trigger"], "tool": pw["tool"] or None,
+                "label": str(nom.get("label", ""))[:120], "citation": citation[:300],
+            }})
 
     marker = {
         "distilled_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -676,9 +681,20 @@ async def distill_log(db: AsyncSession, path: str) -> dict:
         "model_version": reply.get("model_version"),
         "cost_usd": reply.get("cost_usd"), "attribution": attribution, **counts,
     }
-    with open(path + ".distilled", "w", encoding="utf-8") as fh:
-        json.dump(marker, fh, indent=2)
-    return {"session_id": session_id, **marker}
+    return {"session_id": session_id, **marker, "_actions": actions}
+
+
+async def distill_log(db: AsyncSession, path: str) -> dict:
+    """Commit memory and its input checkpoint together, then finish projections."""
+    from app.services.distillation_progress import run_checkpointed
+
+    return await run_checkpointed(db, path, _distill_snapshot)
+
+
+async def ready_logs(db: AsyncSession, min_quiet_minutes: int = 30) -> list[str]:
+    from app.services.distillation_progress import progress_status
+
+    return (await progress_status(db, EPISODE_DIR, min_quiet_minutes))["paths"]
 
 
 async def run_distillation(
@@ -688,7 +704,7 @@ async def run_distillation(
     """Distill up to `limit` ready logs; per-log failures don't stop the run
     (no marker is written, so failed logs retry next run)."""
     assert 1 <= limit <= 10, "limit must be in [1, 10]"
-    ready = find_ready_logs(min_quiet_minutes=min_quiet_minutes)
+    ready = await ready_logs(db, min_quiet_minutes=min_quiet_minutes)
     results: list[dict] = []
     for path in ready[:limit]:
         try:
