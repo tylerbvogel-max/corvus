@@ -29,9 +29,9 @@
   },
   "totals": {
     "modules": 424,
-    "frontend_files": 81,
-    "units": 505,
-    "classified": 505,
+    "frontend_files": 82,
+    "units": 506,
+    "classified": 506,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "cfa118bc28e3f3864a044f033c5311baf5bfa526aa3bc66f206d25959b30c710",
-    "current_fingerprint": "cfa118bc28e3f3864a044f033c5311baf5bfa526aa3bc66f206d25959b30c710",
-    "stored_files": 505,
-    "current_files": 505
+    "stored_fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
+    "current_fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
+    "stored_files": 506,
+    "current_files": 506
   },
   "manifest_problems": [],
   "boxes": [
@@ -115,8 +115,8 @@
       "purpose": "Provide optional observation plus real review, roadmap, agent, document, and integrity controls in desktop and mobile shells.",
       "confidence": "reviewed",
       "module_count": 0,
-      "frontend_file_count": 81,
-      "loc": 44949,
+      "frontend_file_count": 82,
+      "loc": 45102,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -132,6 +132,7 @@
         "frontend/src/chatBus.ts",
         "frontend/src/components/AgentsPage.tsx",
         "frontend/src/components/AppWindow.tsx",
+        "frontend/src/components/ArchitectureLenses.tsx",
         "frontend/src/components/ArchitecturePage.tsx",
         "frontend/src/components/AsciiWake.tsx",
         "frontend/src/components/CarlosLabFrame.tsx",

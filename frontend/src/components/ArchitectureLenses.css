@@ -1,0 +1,38 @@
+.atlas-lenses { color: var(--mm-ink); margin-bottom: 28px; }
+.atlas-lenses__identity { display: flex; flex-wrap: wrap; gap: 10px 24px; padding: 12px 0; font: 10px var(--ui-mono, monospace); color: var(--mm-ink2); overflow-wrap: anywhere; }
+.atlas-lenses__tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
+.atlas-lenses button, .atlas-lenses select { font-family: var(--ui-mono, monospace); }
+.atlas-lenses__tabs button, .atlas-lenses__step-buttons button { min-height: 44px; background: transparent; border: 1px solid var(--mm-border); color: var(--mm-ink2); padding: 10px 14px; cursor: pointer; font-size: 11px; }
+.atlas-lenses button[aria-pressed="true"] { border-color: var(--mm-blue); color: var(--mm-ink); }
+.atlas-lenses button:focus-visible, .atlas-lenses select:focus-visible, .atlas-lenses g[role="button"]:focus-visible { outline: 2px solid var(--mm-blue); outline-offset: 3px; }
+.atlas-lenses__panel { border: 1px solid var(--mm-border); padding: 24px; min-width: 0; }
+.atlas-lenses__panel h3 { font-weight: 500; font-size: 21px; }
+.atlas-lenses__panel p { font-size: 12px; line-height: 1.7; }
+.atlas-lenses__panel .atlas-lenses__note { color: var(--mm-ink2); font-size: 11px; }
+.atlas-lenses__select { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12px; }
+.atlas-lenses__select select { color: var(--mm-ink); background: var(--bg); border: 1px solid var(--mm-border); padding: 12px; max-width: 100%; min-width: 0; }
+.atlas-lenses__trace-scroll { overflow-x: auto; margin: 22px 0; border-block: 1px solid var(--mm-border); background: linear-gradient(135deg, color-mix(in srgb, var(--mm-blue) 5%, transparent), transparent); }
+.atlas-lenses__trace { display: block; width: 100%; color: var(--mm-blue); }
+.atlas-lenses__trace text { fill: var(--mm-ink2); font: 10px var(--ui-mono, monospace); pointer-events: none; }
+.atlas-lenses__trace g[role="button"] { cursor: pointer; }
+.atlas-lenses__slab { fill: color-mix(in srgb, var(--bg) 85%, var(--mm-blue)); stroke: var(--mm-border); }
+.atlas-lenses__slab.selected { stroke: var(--mm-blue); fill: color-mix(in srgb, var(--bg) 65%, var(--mm-blue)); }
+.atlas-lenses__step-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.atlas-lenses__inspector { margin: 20px 0; border-left: 2px solid var(--mm-blue); padding: 2px 20px; }
+.atlas-lenses dl { display: grid; grid-template-columns: minmax(120px, .4fr) minmax(0, 1fr); gap: 10px 20px; font-size: 12px; line-height: 1.6; }
+.atlas-lenses dt { color: var(--mm-ink2); }
+.atlas-lenses dd { margin: 0; overflow-wrap: anywhere; }
+.atlas-lenses__evidence { display: grid; gap: 5px; padding: 10px 0; }
+.atlas-lenses__evidence code { font: 10px/1.6 var(--ui-mono, monospace); overflow-wrap: anywhere; color: var(--mm-ink2); }
+.atlas-lenses__failure { border-top: 1px solid var(--mm-border); padding: 16px 0; font-size: 12px; }
+.atlas-lenses summary { cursor: pointer; min-height: 32px; }
+.atlas-lenses__failure article { margin-left: 16px; padding-bottom: 8px; }
+.atlas-lenses__footprint { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 20px; }
+.atlas-lenses__footprint button { display: grid; align-content: start; gap: 8px; padding: 12px; border: 1px solid var(--mm-border); color: var(--mm-ink); background: transparent; cursor: pointer; min-width: 0; text-align: left; }
+.atlas-lenses__footprint svg { width: 100%; height: 130px; color: var(--mm-blue); }
+.atlas-lenses__footprint strong { font-weight: 500; font-size: 12px; }
+.atlas-lenses__footprint span { font-size: 10px; color: var(--mm-ink2); }
+.atlas-lenses__jobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.atlas-lenses__jobs article { border: 1px solid var(--mm-border); padding: 16px; min-width: 0; }
+.atlas-lenses__jobs h4 { text-transform: uppercase; font: 12px var(--ui-mono, monospace); color: var(--mm-blue); }
+@media(max-width: 600px) { .atlas-lenses__panel { padding: 14px; } .atlas-lenses dl { grid-template-columns: 1fr; gap: 5px; } .atlas-lenses dd { margin-bottom: 10px; } .atlas-lenses__jobs { grid-template-columns: 1fr; } }

@@ -32,11 +32,16 @@ export default function IsometricMemoryMap({ engine, fresh }: { engine: Engine; 
   const active = zones.find(zone => zone.id === selected) ?? zones[0];
   if (!active) return <p className="mm-empty">Memory zone model unavailable.</p>;
 
-  const tiles = zones.map((zone, index) => ({
-    zone, index,
-    x: 450 + ((index % 3) - Math.floor(index / 3)) * 142,
-    y: 90 + ((index % 3) + Math.floor(index / 3)) * 88,
-  }));
+  const internal = zones.filter(zone => ['backend', 'cache'].includes(zone.boundary));
+  const external = zones.filter(zone => !['backend', 'cache'].includes(zone.boundary));
+  const tiles = zones.map((zone, index) => {
+    const inside = internal.indexOf(zone);
+    const position = inside >= 0 ? inside : external.indexOf(zone);
+    return { zone, index,
+      x: inside >= 0 ? 470 + ((position % 2) - Math.floor(position / 2)) * 142 : 60,
+      y: inside >= 0 ? 130 + ((position % 2) + Math.floor(position / 2)) * 88 : 100 + position * 220,
+    };
+  });
   const left = Math.min(...tiles.map(tile => tile.x)) - 150;
   const right = Math.max(...tiles.map(tile => tile.x)) + 150;
   const bottom = Math.max(...tiles.map(tile => tile.y)) + 110;
@@ -60,6 +65,9 @@ export default function IsometricMemoryMap({ engine, fresh }: { engine: Engine; 
               </pattern>
             </defs>
             <rect x={left} width={right - left} height={bottom} fill={`url(#${id}-grid)`} className="iso-map__grid" />
+            <path d={`M470 25L${right - 15} 195L470 ${bottom - 12}L190 195Z`}
+              fill="none" stroke="var(--iso-accent)" strokeDasharray="5 5" opacity=".45" />
+            <text x="470" y="16" textAnchor="middle" className="iso-map__number">BACKEND PROCESS / MODULAR MONOLITH</text>
             {tiles.map(({ zone, index, x, y }) => (
               <g key={zone.id} transform={`translate(${x} ${y})`}
                 className={`iso-map__tile${zone.id === active.id ? ' is-selected' : ''}`}
@@ -96,6 +104,10 @@ export default function IsometricMemoryMap({ engine, fresh }: { engine: Engine; 
           <span className="iso-map__eyebrow">02 / BOUNDARY INSPECTOR</span>
           <div className="iso-map__boundary">{active.boundary}</div>
           <h4>{active.name}</h4>
+          <div className="iso-map__boundary">{active.boundary === 'datastore' ? 'Canonical state boundary'
+            : active.boundary === 'cache' ? 'Derived state / inside backend process'
+            : active.boundary === 'backend' ? 'Responsibility inside the shared backend'
+            : 'Outside the backend process'}</div>
           <p>{active.purpose}</p>
           <ul>{active.details.map(detail => <li key={detail}>{detail}</li>)}</ul>
           <div className="iso-map__evidence-heading">{active.evidence_ok ? 'Source evidence linked' : 'Source evidence gap'}</div>
