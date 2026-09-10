@@ -173,6 +173,10 @@ jobs:
         run: |
           set -o pipefail
           npm run check:bundle 2>&1 | tee ../.artifacts/frontend-bundle-budget.log
+      - name: Install architecture browser verifier
+        run: npx playwright install --with-deps chromium
+      - name: Verify packaged architecture lenses with synthetic receipts
+        run: node scripts/verify-architecture-lenses.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
