@@ -29,9 +29,9 @@
   },
   "totals": {
     "modules": 424,
-    "frontend_files": 80,
-    "units": 504,
-    "classified": 504,
+    "frontend_files": 81,
+    "units": 505,
+    "classified": 505,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "9500ee72e778251a7497e66f4bd1086e9a6218c6b2b64923d927790ab673b38f",
-    "current_fingerprint": "9500ee72e778251a7497e66f4bd1086e9a6218c6b2b64923d927790ab673b38f",
-    "stored_files": 504,
-    "current_files": 504
+    "stored_fingerprint": "cfa118bc28e3f3864a044f033c5311baf5bfa526aa3bc66f206d25959b30c710",
+    "current_fingerprint": "cfa118bc28e3f3864a044f033c5311baf5bfa526aa3bc66f206d25959b30c710",
+    "stored_files": 505,
+    "current_files": 505
   },
   "manifest_problems": [],
   "boxes": [
@@ -115,8 +115,8 @@
       "purpose": "Provide optional observation plus real review, roadmap, agent, document, and integrity controls in desktop and mobile shells.",
       "confidence": "reviewed",
       "module_count": 0,
-      "frontend_file_count": 80,
-      "loc": 44828,
+      "frontend_file_count": 81,
+      "loc": 44949,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -152,6 +152,7 @@
         "frontend/src/components/GroupLandingPage.tsx",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/components/IntegrityPage.tsx",
+        "frontend/src/components/IsometricMemoryMap.tsx",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/components/LayerHeatmap.tsx",
         "frontend/src/components/LocomoRunBeacon.tsx",

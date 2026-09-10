@@ -3,14 +3,14 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "9500ee72e778251a7497e66f4bd1086e9a6218c6b2b64923d927790ab673b38f",
-    "files": 504
+    "fingerprint": "cfa118bc28e3f3864a044f033c5311baf5bfa526aa3bc66f206d25959b30c710",
+    "files": 505
   },
   "frontend": {
     "available": true,
     "totals": {
-      "files": 80,
-      "loc": 44828,
+      "files": 81,
+      "loc": 44949,
       "files_calling_api": 43,
       "files_using_fetch": 10,
       "distinct_urls": 205
@@ -778,9 +778,10 @@
       },
       "frontend/src/components/ArchitecturePage.tsx": {
         "path": "frontend/src/components/ArchitecturePage.tsx",
-        "loc": 1548,
+        "loc": 1552,
         "imports": [
           "frontend/src/api/operator.ts",
+          "frontend/src/components/IsometricMemoryMap.tsx",
           "frontend/src/components/mindUi.tsx"
         ],
         "named_imports": {
@@ -1333,6 +1334,19 @@
           "/v1/agents",
           "/v1/agents/runs/{}"
         ]
+      },
+      "frontend/src/components/IsometricMemoryMap.tsx": {
+        "path": "frontend/src/components/IsometricMemoryMap.tsx",
+        "loc": 117,
+        "imports": [
+          "frontend/src/components/IsometricMemoryMap.tsx"
+        ],
+        "named_imports": {},
+        "urls_direct": [],
+        "exports_with_urls": {},
+        "uses_fetch": false,
+        "urls_via_imports": [],
+        "urls_all": []
       },
       "frontend/src/components/KnowledgeGovernancePage.tsx": {
         "path": "frontend/src/components/KnowledgeGovernancePage.tsx",

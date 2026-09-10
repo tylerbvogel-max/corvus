@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { MindStyle } from './mindUi';
 import { fetchArchitecture } from '../api/operator';
+import IsometricMemoryMap from './IsometricMemoryMap';
 
 type Box = {
   id: string;
@@ -439,12 +440,15 @@ export default function ArchitecturePage() {
       </div>
 
       {view === 'overview' && (
+        <>
+        <IsometricMemoryMap engine={data.memory_engine} fresh={data.freshness?.fresh === true} />
         <SystemOverview
           data={data}
           runtimeById={runtimeById}
           onOpenEngine={() => setView('engine')}
           onOpenProcesses={() => setView('processes')}
         />
+        </>
       )}
 
       {view === 'engine' && <MemoryEngineView engine={data.memory_engine} />}
