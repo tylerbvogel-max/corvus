@@ -32,6 +32,7 @@ import ast
 import json
 import pathlib
 import re
+from types import MappingProxyType
 
 import pytest
 
@@ -123,6 +124,7 @@ def _set_assignments(sql: str) -> list[str]:
 def scan() -> dict[str, dict[str, list]]:
     """Every graph write in app/, classified. The single source of truth here."""
     out: dict[str, dict[str, list]] = {}
+    protected = set(_register()["protected_columns"])
     for p in _modules():
         try:
             tree = ast.parse(p.read_text(encoding="utf-8"))
@@ -142,13 +144,21 @@ def scan() -> dict[str, dict[str, list]]:
                     rec["delete"].append((node.lineno, f"DELETE FROM {m.group(2)}"))
         # Content updates are judged per literal, not per match.
         for node in _sql_literals(tree):
-            protected = set(_register()["protected_columns"])
             hit = sorted(set(_set_assignments(node.value)) & protected)
             if hit:
                 rec["content_update"].append((node.lineno, ",".join(hit)))
         if any(rec.values()):
             out[_rel(p)] = rec
     return out
+
+
+@pytest.fixture(scope="module")
+def repository_scan():
+    """One immutable app snapshot per module; synthetic scans remain uncached."""
+    return MappingProxyType({
+        module: MappingProxyType({kind: tuple(hits) for kind, hits in record.items()})
+        for module, record in scan().items()
+    })
 
 
 def _allowed(kind: str) -> set[str]:
@@ -158,12 +168,12 @@ def _allowed(kind: str) -> set[str]:
 # ── The three rules ────────────────────────────────────────────────────────
 
 @pytest.mark.hermetic
-def test_only_allowlisted_modules_create_graph_rows():
-    found = {m for m, r in scan().items() if r["create"]}
+def test_only_allowlisted_modules_create_graph_rows(repository_scan):
+    found = {m for m, r in repository_scan.items() if r["create"]}
     rogue = sorted(found - _allowed("create"))
     assert not rogue, (
         "ungoverned neuron/edge CREATION in:\n"
-        + "\n".join(f"  - {m}: {scan()[m]['create']}" for m in rogue)
+        + "\n".join(f"  - {m}: {repository_scan[m]['create']}" for m in rogue)
         + "\n\nRoute the write through the action bus, or — if it genuinely "
           "belongs — add it to architecture/graph_writers.json with a reason. "
           "That file is a debt register; adding to it should feel like a cost."
@@ -171,24 +181,24 @@ def test_only_allowlisted_modules_create_graph_rows():
 
 
 @pytest.mark.hermetic
-def test_only_allowlisted_modules_delete_graph_rows():
-    found = {m for m, r in scan().items() if r["delete"]}
+def test_only_allowlisted_modules_delete_graph_rows(repository_scan):
+    found = {m for m, r in repository_scan.items() if r["delete"]}
     rogue = sorted(found - _allowed("delete"))
     assert not rogue, (
         "ungoverned neuron/edge DELETION in:\n"
-        + "\n".join(f"  - {m}: {scan()[m]['delete']}" for m in rogue)
+        + "\n".join(f"  - {m}: {repository_scan[m]['delete']}" for m in rogue)
     )
 
 
 @pytest.mark.hermetic
-def test_no_raw_sql_assigns_authored_content_or_lifecycle():
+def test_no_raw_sql_assigns_authored_content_or_lifecycle(repository_scan):
     """The absolute rule. No allowlist, because there is no good reason.
 
     Authored content and the supersession lifecycle carry the evidence gates.
     A hand-written UPDATE that sets ``is_active`` or ``superseded_by`` would
     retire a memory without passing them, and would look like maintenance.
     """
-    offenders = {m: r["content_update"] for m, r in scan().items() if r["content_update"]}
+    offenders = {m: r["content_update"] for m, r in repository_scan.items() if r["content_update"]}
     assert not offenders, (
         "raw SQL assigns protected content/lifecycle columns:\n"
         + "\n".join(f"  - {m}:{ln} sets {cols}" for m, hits in offenders.items()
@@ -202,13 +212,13 @@ def test_no_raw_sql_assigns_authored_content_or_lifecycle():
 
 @pytest.mark.hermetic
 @pytest.mark.parametrize("kind", ["create", "delete"])
-def test_register_has_no_stale_entries(kind):
+def test_register_has_no_stale_entries(kind, repository_scan):
     """A module that stopped writing must leave the register.
 
     Same reasoning as the cycle allowlist: a stale entry silently reserves a
     slot a future writer could inherit without review.
     """
-    actual = {m for m, r in scan().items() if r[kind]}
+    actual = {m for m, r in repository_scan.items() if r[kind]}
     stale = sorted(_allowed(kind) - actual)
     assert not stale, (
         f"graph_writers.json lists {kind} modules that no longer write: {stale}. "
@@ -217,6 +227,35 @@ def test_register_has_no_stale_entries(kind):
 
 
 # ── Honeypots: the scan must bite, and must not cry wolf ───────────────────
+
+@pytest.mark.hermetic
+def test_repository_scan_is_shared_and_deeply_read_only(repository_scan, request, monkeypatch):
+    def unexpected_scan():
+        pytest.fail("cached fixture must not rescan the repository")
+
+    monkeypatch.setitem(globals(), "scan", unexpected_scan)
+    assert request.getfixturevalue("repository_scan") is repository_scan
+    with pytest.raises(TypeError):
+        repository_scan["synthetic.py"] = {}
+    module, record = next(iter(repository_scan.items()))
+    with pytest.raises(TypeError):
+        record["create"] = ()
+    kind = next(kind for kind, hits in record.items() if hits)
+    with pytest.raises(TypeError):
+        repository_scan[module][kind][0] = (0, "synthetic mutation")
+
+
+@pytest.mark.hermetic
+def test_uncached_scan_detects_changed_source_after_snapshot(repository_scan, tmp_path, monkeypatch):
+    source = tmp_path / "synthetic.py"
+    monkeypatch.setitem(globals(), "_modules", lambda: [source])
+    monkeypatch.setitem(globals(), "_rel", lambda path: path.name)
+    source.write_text("pass\n", encoding="utf-8")
+    assert scan() == {}
+    source.write_text("from app.models import Neuron\nNeuron(label='synthetic')\n", encoding="utf-8")
+    assert scan()["synthetic.py"]["create"] == [(2, "Neuron(...)")]
+    assert "synthetic.py" not in repository_scan
+
 
 @pytest.mark.hermetic
 def test_honeypot_a_planted_ungoverned_writer_is_caught(tmp_path):

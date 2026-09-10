@@ -54,8 +54,8 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
-    "current_fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
+    "stored_fingerprint": "a85b5a13302a4e9146a01397ed6b90d31f72bbd159b6303b920044deeb5c14fd",
+    "current_fingerprint": "a85b5a13302a4e9146a01397ed6b90d31f72bbd159b6303b920044deeb5c14fd",
     "stored_files": 498,
     "current_files": 498
   },
@@ -676,7 +676,7 @@
       "confidence": "reviewed",
       "module_count": 129,
       "frontend_file_count": 0,
-      "loc": 26860,
+      "loc": 26932,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",

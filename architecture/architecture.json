@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "ce26ac1d083df3e2f4296bb557411193a026665c3141680f4454769aa72cb620",
+    "fingerprint": "a85b5a13302a4e9146a01397ed6b90d31f72bbd159b6303b920044deeb5c14fd",
     "files": 498
   },
   "frontend": {
@@ -4171,7 +4171,7 @@
   },
   "totals": {
     "modules": 418,
-    "loc": 94982,
+    "loc": 95054,
     "routes": 219,
     "import_edges": 1156,
     "call_edges": 759,
@@ -39697,7 +39697,7 @@
     "tests.test_graph_writers": {
       "path": "backend/tests/test_graph_writers.py",
       "module": "tests.test_graph_writers",
-      "loc": 310,
+      "loc": 349,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -39705,117 +39705,146 @@
         "json",
         "pathlib",
         "pytest",
-        "re"
+        "re",
+        "types"
       ],
       "functions": {
         "_register": {
           "name": "_register",
-          "line": 49,
+          "line": 50,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_modules": {
           "name": "_modules",
-          "line": 53,
+          "line": 54,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_rel": {
           "name": "_rel",
-          "line": 57,
+          "line": 58,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_sql_literals": {
           "name": "_sql_literals",
-          "line": 61,
+          "line": 62,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_set_assignments": {
           "name": "_set_assignments",
-          "line": 73,
+          "line": 74,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "scan": {
           "name": "scan",
-          "line": 123,
+          "line": 124,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "repository_scan": {
+          "name": "repository_scan",
+          "line": 156,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_allowed": {
           "name": "_allowed",
-          "line": 154,
+          "line": 164,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_only_allowlisted_modules_create_graph_rows": {
           "name": "test_only_allowlisted_modules_create_graph_rows",
-          "line": 161,
+          "line": 171,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_only_allowlisted_modules_delete_graph_rows": {
           "name": "test_only_allowlisted_modules_delete_graph_rows",
-          "line": 174,
+          "line": 184,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_no_raw_sql_assigns_authored_content_or_lifecycle": {
           "name": "test_no_raw_sql_assigns_authored_content_or_lifecycle",
-          "line": 184,
+          "line": 194,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_register_has_no_stale_entries": {
           "name": "test_register_has_no_stale_entries",
-          "line": 205,
+          "line": 215,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_repository_scan_is_shared_and_deeply_read_only": {
+          "name": "test_repository_scan_is_shared_and_deeply_read_only",
+          "line": 232,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_repository_scan_is_shared_and_deeply_read_only.unexpected_scan": {
+          "name": "test_repository_scan_is_shared_and_deeply_read_only.unexpected_scan",
+          "line": 233,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_uncached_scan_detects_changed_source_after_snapshot": {
+          "name": "test_uncached_scan_detects_changed_source_after_snapshot",
+          "line": 249,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_a_planted_ungoverned_writer_is_caught": {
           "name": "test_honeypot_a_planted_ungoverned_writer_is_caught",
-          "line": 222,
+          "line": 261,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_a_planted_lifecycle_update_is_caught": {
           "name": "test_honeypot_a_planted_lifecycle_update_is_caught",
-          "line": 235,
+          "line": 274,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_a_comparison_inside_case_is_not_an_assignment": {
           "name": "test_honeypot_a_comparison_inside_case_is_not_an_assignment",
-          "line": 245,
+          "line": 284,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_sql_in_a_comment_is_not_a_write": {
           "name": "test_honeypot_sql_in_a_comment_is_not_a_write",
-          "line": 285,
+          "line": 324,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_derived_signal_columns_are_deliberately_unprotected": {
           "name": "test_derived_signal_columns_are_deliberately_unprotected",
-          "line": 299,
+          "line": 338,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -43248,7 +43277,7 @@
     "tests.test_pathway_writers": {
       "path": "backend/tests/test_pathway_writers.py",
       "module": "tests.test_pathway_writers",
-      "loc": 158,
+      "loc": 191,
       "imports": [],
       "external_imports": [
         "__future__",
@@ -43256,96 +43285,125 @@
         "json",
         "pathlib",
         "pytest",
-        "re"
+        "re",
+        "types"
       ],
       "functions": {
         "_register": {
           "name": "_register",
-          "line": 31,
+          "line": 32,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_allowed": {
           "name": "_allowed",
-          "line": 35,
+          "line": 36,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_modules": {
           "name": "_modules",
-          "line": 39,
+          "line": 40,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_rel": {
           "name": "_rel",
-          "line": 43,
+          "line": 44,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_writes_in": {
           "name": "_writes_in",
-          "line": 47,
+          "line": 48,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "scan": {
           "name": "scan",
-          "line": 68,
+          "line": 69,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_only_the_sole_writer_touches_delivery_pathways": {
           "name": "test_only_the_sole_writer_touches_delivery_pathways",
-          "line": 82,
+          "line": 83,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_register_has_no_stale_entries": {
           "name": "test_register_has_no_stale_entries",
-          "line": 95,
+          "line": 96,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_the_sole_writer_is_exactly_one_module": {
           "name": "test_the_sole_writer_is_exactly_one_module",
-          "line": 103,
+          "line": 104,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_repository_scan_is_shared_and_read_only": {
+          "name": "test_repository_scan_is_shared_and_read_only",
+          "line": 115,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_repository_scan_is_shared_and_read_only.unexpected_scan": {
+          "name": "test_repository_scan_is_shared_and_read_only.unexpected_scan",
+          "line": 116,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "test_uncached_scan_detects_changed_source_after_snapshot": {
+          "name": "test_uncached_scan_detects_changed_source_after_snapshot",
+          "line": 129,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "repository_scan": {
+          "name": "repository_scan",
+          "line": 141,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_a_planted_ungoverned_writer_is_caught": {
           "name": "test_honeypot_a_planted_ungoverned_writer_is_caught",
-          "line": 114,
+          "line": 147,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_a_planted_raw_sql_update_is_caught": {
           "name": "test_honeypot_a_planted_raw_sql_update_is_caught",
-          "line": 124,
+          "line": 157,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_honeypot_a_read_is_not_a_write": {
           "name": "test_honeypot_a_read_is_not_a_write",
-          "line": 133,
+          "line": 166,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "test_the_apply_dispatcher_never_learned_to_retire_pathways": {
           "name": "test_the_apply_dispatcher_never_learned_to_retire_pathways",
-          "line": 144,
+          "line": 177,
           "is_async": false,
           "calls": [],
           "is_route": false
