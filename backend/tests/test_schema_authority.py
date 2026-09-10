@@ -8,7 +8,7 @@ from app.services.schema_authority import (
 
 
 def test_packaged_schema_has_one_expected_head():
-    assert expected_schema_heads() == ("027_synaptic_homeostasis",)
+    assert expected_schema_heads() == ("028_distillation_checkpoints",)
 
 
 def test_matching_schema_head_is_accepted():

@@ -1,5 +1,5 @@
 {
-  "app_module_count": 90,
+  "app_module_count": 92,
   "app_modules": [
     "app",
     "app.composition",
@@ -50,6 +50,8 @@
     "app.services.capability_capsule",
     "app.services.citation_hopping",
     "app.services.delivery_mode",
+    "app.services.distillation_inputs",
+    "app.services.distillation_progress",
     "app.services.distiller",
     "app.services.ecfr_client",
     "app.services.engram_service",

@@ -1,5 +1,5 @@
 {
-  "app_module_count": 136,
+  "app_module_count": 138,
   "app_modules": [
     "app",
     "app.agents",
@@ -85,6 +85,8 @@
     "app.services.citation_hopping",
     "app.services.commit_verification",
     "app.services.delivery_mode",
+    "app.services.distillation_inputs",
+    "app.services.distillation_progress",
     "app.services.distiller",
     "app.services.document_parser",
     "app.services.ecfr_client",

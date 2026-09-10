@@ -108,6 +108,14 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
       - run: python scripts/run_test_lane.py database
+      - name: Verify durable distillation recovery and HTTP backlog reporting
+        env:
+          TENANT_ID: corvus-mind
+          PYTHONPATH: .
+        run: |
+          DATABASE_URL="$CORVUS_TEST_DATABASE_URL" python -m alembic upgrade head
+          DATABASE_URL="$CORVUS_TEST_DATABASE_URL" python -m alembic check
+          python -m pytest tests/test_distillation_checkpoint_database.py -q
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

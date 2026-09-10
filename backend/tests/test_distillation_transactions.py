@@ -26,7 +26,7 @@ class TransactionSession:
 @pytest.mark.parametrize("failure", [OSError, ValueError, AssertionError, RuntimeError])
 async def test_recoverable_failure_rolls_back_before_next_item(monkeypatch, failure):
     db = TransactionSession()
-    monkeypatch.setattr(distiller, "find_ready_logs", lambda **kw: ["first", "second"])
+    monkeypatch.setattr(distiller, "ready_logs", AsyncMock(return_value=["first", "second"]))
 
     async def item(session, path):
         if path == "first":
@@ -50,7 +50,7 @@ async def test_recoverable_failure_rolls_back_before_next_item(monkeypatch, fail
 @pytest.mark.parametrize("failure", [TypeError("synthetic"), IntegrityError("synthetic", {}, Exception("synthetic"))])
 async def test_unexpected_failure_rolls_back_then_propagates(monkeypatch, failure):
     db = TransactionSession()
-    monkeypatch.setattr(distiller, "find_ready_logs", lambda **kw: ["first", "second"])
+    monkeypatch.setattr(distiller, "ready_logs", AsyncMock(return_value=["first", "second"]))
 
     async def item(session, path):
         session.pending.append(1)
@@ -71,7 +71,7 @@ async def test_unexpected_failure_rolls_back_then_propagates(monkeypatch, failur
 async def test_rollback_failure_aborts_instead_of_continuing(monkeypatch):
     db = TransactionSession()
     db.rollback = AsyncMock(side_effect=RuntimeError("synthetic rollback failure"))
-    monkeypatch.setattr(distiller, "find_ready_logs", lambda **kw: ["first", "second"])
+    monkeypatch.setattr(distiller, "ready_logs", AsyncMock(return_value=["first", "second"]))
     run = AsyncMock(side_effect=OSError("synthetic item failure"))
     monkeypatch.setattr(distiller, "distill_log", run)
     with pytest.raises(RuntimeError, match="synthetic rollback failure"):
@@ -83,7 +83,7 @@ async def test_rollback_failure_aborts_instead_of_continuing(monkeypatch):
 @pytest.mark.asyncio
 async def test_earlier_commit_survives_later_failure(monkeypatch):
     db = TransactionSession()
-    monkeypatch.setattr(distiller, "find_ready_logs", lambda **kw: ["first", "second"])
+    monkeypatch.setattr(distiller, "ready_logs", AsyncMock(return_value=["first", "second"]))
 
     async def item(session, path):
         session.pending.append(1 if path == "first" else 2)
@@ -102,7 +102,7 @@ async def test_earlier_commit_survives_later_failure(monkeypatch):
 @pytest.mark.parametrize("paths", [[], ["first"]])
 async def test_healthy_and_no_work_do_not_rollback(monkeypatch, paths):
     db = TransactionSession()
-    monkeypatch.setattr(distiller, "find_ready_logs", lambda **kw: paths)
+    monkeypatch.setattr(distiller, "ready_logs", AsyncMock(return_value=paths))
     monkeypatch.setattr(distiller, "distill_log", AsyncMock(return_value={"session_id": "first"}))
     report = await distiller.run_distillation(db)
     assert report["processed"] == len(paths)

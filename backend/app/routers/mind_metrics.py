@@ -137,13 +137,14 @@ async def mind_slo(db: AsyncSession = Depends(get_db)):
     hypothesis), an owner, and a first response. Reads signals Corvus already
     produces rather than adding a collection path.
     """
-    from app.services.distiller import find_ready_logs
+    from app.services.distiller import EPISODE_DIR
+    from app.services.distillation_progress import progress_status
     from app.services.mind_metrics import collect_all
     from app.observability.slo import slo_report
 
     return await slo_report(
         metrics_loader=lambda: collect_all(db),
-        distill_loader=lambda: {"ready": len(find_ready_logs(min_quiet_minutes=30))},
+        distill_loader=lambda: progress_status(db, EPISODE_DIR, min_quiet_minutes=30),
     )
 
 

@@ -95,9 +95,12 @@ JOB_INVENTORY: tuple[ScheduledJob, ...] = (
         overlap_policy=HTTP_OVERLAP_POLICY,
         retry_contract="No retry. The next tick is the retry, 30 minutes later.",
         idempotence=(
-            "Boolean .distilled markers suppress whole sessions, including appended "
-            "content. Database commit and marker writing are not atomic; retry "
-            "idempotence is not established. See checkpoint-integrity follow-up."
+            "Database checkpoints commit captured input boundaries with staged "
+            "memory effects. Retries finish pending projections without replaying "
+            "committed extraction; appended input is eligible independently. "
+            "Legacy marker-only or changed-prefix inputs are blocked. Per-source "
+            "transaction locks cover cooperating callers using the same database "
+            "and canonical path; external provider calls are not exactly-once."
         ),
         health_signal="A receipt with outcome=ok written within LATE_MULTIPLIER cadences.",
         remediation=(

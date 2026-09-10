@@ -90,7 +90,7 @@ memory_engine:
       boundary: backend
       purpose: Convert situated evidence into typed candidates and decide whether any durable mutation is authorized.
       details:
-        - A systemd timer offers distillation every 30 minutes; only quiescent undistilled logs run, bounded to five sessions by default.
+        - A systemd timer offers distillation every 30 minutes; quiescent appended inputs and pending checkpoint recovery are bounded by the per-run limit.
         - Distillation requests the opus capability grade, which resolves to Codex Sol by default and falls back to Anthropic Opus.
         - Evidence framing, near-duplicate routing, tiered write gates, reviewed proposals, and typed Action Bus handlers fail durable writes closed.
       evidence:
@@ -1197,6 +1197,8 @@ boxes:
     owns:
       - backend/app/routers/distill.py
       - backend/app/services/distiller.py
+      - backend/app/services/distillation_inputs.py
+      - backend/app/services/distillation_progress.py
       - backend/app/services/lesson_store.py
       - backend/app/services/evidence_frame.py
       - backend/app/services/redaction.py
@@ -1866,11 +1868,12 @@ processes:
           - backend/app/services/recurrence_watch.py::withheld_for_trial
       - actor: distiller
         component: memory-ingestion
-        does: Commit and write a .distilled marker only after the session completes successfully.
-        state_change: The log leaves the ready queue; failures without markers retry later.
-        guardrail: Per-log failure does not stop other ready logs.
+        does: Commit memory and its input checkpoint atomically, then recover enrichment and action-log and marker projections.
+        state_change: Database prefix boundaries govern processed evidence; appended input and pending recovery remain eligible.
+        guardrail: Transaction-scoped source locks exclude cooperating concurrent writers; legacy markers never authorize inferred replay.
         evidence:
           - backend/app/services/distiller.py::run_distillation
+          - backend/app/services/distillation_progress.py::run_checkpointed
 
   - id: skill-compilation
     name: Compile lessons into playbooks and standing policy

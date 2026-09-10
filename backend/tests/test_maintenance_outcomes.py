@@ -155,7 +155,7 @@ def test_malformed_reports_fail_closed(job, report):
 
 @pytest.mark.asyncio
 async def test_distiller_sanitizes_caught_session_failure(monkeypatch):
-    monkeypatch.setattr(distiller, "find_ready_logs", Mock(return_value=["synthetic.jsonl"]))
+    monkeypatch.setattr(distiller, "ready_logs", AsyncMock(return_value=["synthetic.jsonl"]))
     monkeypatch.setattr(distiller, "distill_log", AsyncMock(side_effect=RuntimeError(CANARY)))
     db = SimpleNamespace(rollback=AsyncMock())
     report = await distiller.run_distillation(db, limit=1)
