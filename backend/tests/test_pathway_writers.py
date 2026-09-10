@@ -16,6 +16,7 @@ import ast
 import json
 import pathlib
 import re
+from types import MappingProxyType
 
 import pytest
 
@@ -79,12 +80,12 @@ def scan() -> dict[str, list]:
 
 
 @pytest.mark.hermetic
-def test_only_the_sole_writer_touches_delivery_pathways():
-    found = set(scan())
+def test_only_the_sole_writer_touches_delivery_pathways(repository_scan):
+    found = set(repository_scan)
     rogue = sorted(found - _allowed())
     assert not rogue, (
         "ungoverned delivery_pathways writer in:\n"
-        + "\n".join(f"  - {m}: {scan()[m]}" for m in rogue)
+        + "\n".join(f"  - {m}: {repository_scan[m]}" for m in rogue)
         + "\n\nPathway state changes only inside delivery_plasticity.py, where "
           "the decision rule, exploration floor, countersign guard, and audit "
           "logging live. Route the mutation through there."
@@ -92,10 +93,10 @@ def test_only_the_sole_writer_touches_delivery_pathways():
 
 
 @pytest.mark.hermetic
-def test_register_has_no_stale_entries():
+def test_register_has_no_stale_entries(repository_scan):
     """A module that stopped writing must leave the register — a stale
     entry silently reserves a slot a future writer could inherit."""
-    stale = sorted(_allowed() - set(scan()))
+    stale = sorted(_allowed() - set(repository_scan))
     assert not stale, f"pathway_writers.json lists non-writers: {stale}"
 
 
@@ -109,6 +110,38 @@ def test_the_sole_writer_is_exactly_one_module():
 
 
 # ── Honeypots: the scan must bite, and must not cry wolf ───────────────────
+
+@pytest.mark.hermetic
+def test_repository_scan_is_shared_and_read_only(repository_scan, request, monkeypatch):
+    def unexpected_scan():
+        pytest.fail("cached fixture must not rescan the repository")
+
+    monkeypatch.setitem(globals(), "scan", unexpected_scan)
+    assert request.getfixturevalue("repository_scan") is repository_scan
+    with pytest.raises(TypeError):
+        repository_scan["synthetic.py"] = ()
+    module = next(iter(repository_scan))
+    with pytest.raises(TypeError):
+        repository_scan[module][0] = (0, "synthetic mutation")
+
+
+@pytest.mark.hermetic
+def test_uncached_scan_detects_changed_source_after_snapshot(repository_scan, tmp_path, monkeypatch):
+    source = tmp_path / "synthetic.py"
+    monkeypatch.setitem(globals(), "_modules", lambda: [source])
+    monkeypatch.setitem(globals(), "_rel", lambda path: path.name)
+    source.write_text("pass\n", encoding="utf-8")
+    assert scan() == {}
+    source.write_text("from app.models import DeliveryPathway\nDeliveryPathway(neuron_id=1)\n", encoding="utf-8")
+    assert scan()["synthetic.py"] == [(2, "DeliveryPathway(...)")]
+    assert "synthetic.py" not in repository_scan
+
+
+@pytest.fixture(scope="module")
+def repository_scan():
+    """One immutable app snapshot per module; synthetic scans remain uncached."""
+    return MappingProxyType({module: tuple(hits) for module, hits in scan().items()})
+
 
 @pytest.mark.hermetic
 def test_honeypot_a_planted_ungoverned_writer_is_caught():
