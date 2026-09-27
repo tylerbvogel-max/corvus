@@ -579,12 +579,15 @@ async def run_compile(db: AsyncSession) -> dict:
             "skill": name, "reason": "rendering-missing-on-disk"})
 
     stale = await _stale_entries(db, manifest, clusters)
+    removals: set[str] = set()
+    writes: list[tuple[str, str, str, list[int]]] = []
+    committed_actions: list[tuple[str, dict]] = []
     for entry in stale:
-        _remove_skill(entry["name"])
+        removals.add(entry["name"])
         await _retract_skill_node(db, entry.get("node_id"))
         manifest = [m for m in manifest if m["name"] != entry["name"]]
-        _log_action("compiler.retract", {
-            "skill": entry["name"], "reason": entry["reason"]})
+        committed_actions.append(("compiler.retract", {
+            "skill": entry["name"], "reason": entry["reason"]}))
 
     declined = load_declined()
     candidates = pending_clusters(clusters, manifest, set(declined))
@@ -627,13 +630,13 @@ async def run_compile(db: AsyncSession) -> dict:
             declined[candidate_fingerprint(cluster)] = record
             declined_this_run.append(record)
             if prior is not None:
-                _remove_skill(prior["name"])
+                removals.add(prior["name"])
                 await _retract_skill_node(db, prior.get("node_id"))
                 manifest = [m for m in manifest if m is not prior]
-            _log_action("compiler.decline", declined_this_run[-1])
+            committed_actions.append(("compiler.decline", record))
             continue
         if prior is not None:
-            _remove_skill(prior["name"])
+            removals.add(prior["name"])
             await _retract_skill_node(db, prior.get("node_id"))
             manifest = [m for m in manifest if m is not prior]
         # Name uniqueness: a grown cluster can re-earn an existing name —
@@ -641,14 +644,15 @@ async def run_compile(db: AsyncSession) -> dict:
         # silently overwriting its file beside a duplicate manifest entry.
         clash = next((m for m in manifest if m["name"] == skill["name"]), None)
         if clash is not None:
-            _remove_skill(clash["name"])
+            removals.add(clash["name"])
             await _retract_skill_node(db, clash.get("node_id"))
             manifest = [m for m in manifest if m["name"] != skill["name"]]
-            _log_action("compiler.retract", {
-                "skill": skill["name"], "reason": "name-superseded-by-recompile"})
-        path = _write_skill(skill["name"], skill["description"],
-                            skill["body_markdown"], sorted(ids))
+            committed_actions.append(("compiler.retract", {
+                "skill": skill["name"], "reason": "name-superseded-by-recompile"}))
+        path = os.path.join(SKILLS_DIR, skill["name"], "SKILL.md")
         node_id = await _emit_skill_node(db, skill["name"], skill["description"], cluster)
+        writes.append((skill["name"], skill["description"],
+                       skill["body_markdown"], sorted(ids)))
         entry = {"name": skill["name"], "sources": sorted(ids),
                  "scope": cluster[0].department, "path": path, "node_id": node_id,
                  "synthesis_version": skill["synthesis_version"],
@@ -659,14 +663,22 @@ async def run_compile(db: AsyncSession) -> dict:
                  "compiled_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         manifest.append(entry)
         emitted.append({**entry, "cost_usd": skill.get("cost_usd")})
-        _log_action("compiler.emit", {
-            "skill": skill["name"], "sources": sorted(ids)})
+        committed_actions.append(("compiler.emit", {
+            "skill": skill["name"], "sources": sorted(ids)}))
+    # The graph transaction must be durable before any native skill file is
+    # archived or published. A failed commit leaves the old catalog intact.
+    await db.commit()
+    for name in sorted(removals):
+        _remove_skill(name)
+    for name, description, body, source_ids in writes:
+        _write_skill(name, description, body, source_ids)
     charter = await compile_charter(db)
     manifest = _apply_charter_entry(manifest, charter)
     await _self_model_growth_check(db, manifest)
-    await db.commit()
     _save_manifest(manifest)
     save_declined(declined)
+    for action, payload in committed_actions:
+        _log_action(action, payload)
     return {"lessons": len(lessons), "clusters": len(clusters),
             "composition_attempted": composition_attempted,
             "composition_failed": composition_failed,

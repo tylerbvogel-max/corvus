@@ -207,7 +207,8 @@ async def test_compiler_rejects_receipt_candidate(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_compile_migrates_legacy_bundle_without_leaving_old_copy(tmp_path, monkeypatch):
+@pytest.mark.parametrize("failure_point", [None, "commit", "emit"])
+async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, failure_point):
     from app.services import skill_candidates
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr(skill_compiler, "SKILLS_DIR", str(tmp_path / ".claude/skills"))
@@ -236,11 +237,21 @@ async def test_compile_migrates_legacy_bundle_without_leaving_old_copy(tmp_path,
     async def retract(db, node_id):
         removed_nodes.append(node_id)
     monkeypatch.setattr(skill_compiler, "_retract_skill_node", retract)
-    monkeypatch.setattr(skill_compiler, "_emit_skill_node", AsyncMock(return_value=99))
+    monkeypatch.setattr(skill_compiler, "_emit_skill_node", AsyncMock(
+        side_effect=RuntimeError("emit failed") if failure_point == "emit" else None,
+        return_value=99))
     monkeypatch.setattr(skill_compiler, "compile_charter", AsyncMock(return_value={"skipped": True}))
     monkeypatch.setattr(skill_compiler, "_self_model_growth_check", AsyncMock())
     monkeypatch.setattr(skill_compiler, "_log_action", lambda *_: None)
-    db = SimpleNamespace(commit=AsyncMock())
+    db = SimpleNamespace(commit=AsyncMock(
+        side_effect=RuntimeError("db down") if failure_point == "commit" else None))
+    if failure_point:
+        with pytest.raises(RuntimeError, match="db down|emit failed"):
+            await skill_compiler.run_compile(db)
+        assert old_path.exists()
+        assert not (tmp_path / ".agents/skills/mind-new/SKILL.md").exists()
+        assert json.loads(manifest_path.read_text())[0]["name"] == "mind-old"
+        return
     result = await skill_compiler.run_compile(db)
     entries = json.loads(manifest_path.read_text())
     assert [e["name"] for e in entries] == ["mind-new"]
