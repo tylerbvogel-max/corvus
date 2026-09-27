@@ -188,6 +188,16 @@ async def handle_neuron_refine(
         item.refinement_id = ref.id
         await db.flush()
 
+    # A native SKILL.md is higher-trust than its source lesson. Mark changed
+    # sources while the transaction is open; SkillAwareSession refreshes
+    # their projections only after the outer commit succeeds.
+    if (payload.new_value != payload.old_value
+            and payload.field in {
+                "content", "summary", "label", "department", "node_type",
+                "is_active", "superseded_by",
+            }):
+        db.info.setdefault("skill_source_changed", set()).add(neuron.id)
+
     return {
         "audit": {
             "target_neuron_id": payload.target_neuron_id,

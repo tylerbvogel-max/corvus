@@ -2,6 +2,34 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import settings
 
+
+class SkillAwareSession(AsyncSession):
+    """Refresh native skill projections after committed source changes.
+
+    Action handlers add source IDs to ``info`` while their transaction is
+    open. Disk projections only change after the database commit succeeds.
+    The pending set survives a refresh failure so a later commit can retry.
+    """
+
+    async def commit(self) -> None:
+        await super().commit()
+        changed = sorted(self.info.get("skill_source_changed", ()))
+        if not changed or self.info.get("skill_projection_refreshing"):
+            return
+        from app.services.skill_compiler import refresh_projections_after_reconsolidation
+        self.info["skill_projection_refreshing"] = True
+        try:
+            result = await refresh_projections_after_reconsolidation(self, changed)
+            if result.get("db_changed"):
+                await super().commit()
+            self.info.pop("skill_source_changed", None)
+        finally:
+            self.info.pop("skill_projection_refreshing", None)
+
+    async def rollback(self) -> None:
+        await super().rollback()
+        self.info.pop("skill_source_changed", None)
+
 # A real connection pool. This was NullPool ("fresh connections") for years,
 # which meant EVERY session paid TCP+auth+setup and concurrent batches
 # churned hundreds of connections — a proven contributor to the 30-220s
@@ -16,7 +44,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_recycle=1800,
 )
-async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+async_session = async_sessionmaker(engine, class_=SkillAwareSession, expire_on_commit=False)
 
 
 async def release_connection_before_external_io(db: AsyncSession) -> None:

@@ -2,6 +2,7 @@
 
 import copy
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 from app.services import capability_capsule as cc
@@ -119,9 +120,18 @@ def test_skill_projects_to_every_harness(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
     rendered = "---\nname: mind-probe\ndescription: probe\n---\n\nworks\n"
     outputs = skill_projection.project_skill("mind-probe", rendered)
-    assert set(outputs) == {"canonical", "claude-code", "codex", "opencode"}
+    assert set(outputs) == {"canonical", "claude-code", "codex", "opencode", "agent-discovery"}
     for path in outputs.values():
-        assert open(path, encoding="utf-8").read() == rendered
+        assert Path(path).read_text(encoding="utf-8") == rendered
+
+
+def test_retraction_removes_agent_discovery_copy(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    rendered = "---\nname: mind-probe\ndescription: probe\n---\n\nworks\n"
+    outputs = skill_projection.project_skill("mind-probe", rendered)
+    removed = skill_projection.remove_projected_skill("mind-probe")
+    assert outputs["agent-discovery"] in removed
+    assert not (tmp_path / ".agents/skills/mind-probe/SKILL.md").exists()
 
 
 def test_capsule_digest_is_deterministic():

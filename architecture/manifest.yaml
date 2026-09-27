@@ -1285,12 +1285,14 @@ boxes:
 
   - id: skill-projection
     name: Skill, charter, and self-model projection
-    purpose: Compile trusted lesson clusters into harness playbooks, project them canonically, and keep standing capsules synchronized.
+    purpose: Admit evidence-backed synthesized procedures, project them to harness skill roots, and keep standing capsules synchronized.
     tier: background
     confidence: reviewed
     owns:
       - backend/app/routers/compile.py
       - backend/app/services/skill_compiler.py
+      - backend/app/services/skill_candidates.py
+      - backend/app/services/skill_synthesis.py
       - backend/app/services/skill_projection.py
       - backend/app/services/skill_signpost.py
 
