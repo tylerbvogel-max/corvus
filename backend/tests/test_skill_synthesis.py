@@ -297,3 +297,46 @@ async def test_failed_synthesis_is_quarantined_with_source_receipt(tmp_path, mon
     assert next(iter(reviewed.values()))["source_ids"] == [11, 12, 13]
     assert result["emitted"] == []
     assert pending_clusters([cluster], [], set(reviewed)) == []
+
+
+@pytest.mark.asyncio
+async def test_review_failed_legacy_skill_is_retracted_after_commit(tmp_path, monkeypatch):
+    from app.services import skill_candidates
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr(skill_compiler, "SKILLS_DIR", str(tmp_path / ".claude/skills"))
+    monkeypatch.setattr(skill_compiler, "RETIRED_DIR", str(tmp_path / "retired"))
+    monkeypatch.setattr(skill_compiler, "MANIFEST_PATH", str(tmp_path / "manifest.json"))
+    monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
+    cluster = [SimpleNamespace(id=i, label=f"lesson {i}", content=text,
+                               department="Projects", dormant_at=None)
+               for i, text in SOURCES.items()]
+    old = tmp_path / ".claude/skills/mind-old/SKILL.md"
+    old.parent.mkdir(parents=True)
+    old.write_text("---\nname: mind-old\n---\nlegacy bundle\n")
+    (tmp_path / "manifest.json").write_text(json.dumps([
+        {"name": "mind-old", "sources": [11, 12, 13], "node_id": 55,
+         "path": str(old)}]))
+    fingerprint = skill_candidates.candidate_fingerprint(cluster)
+    (tmp_path / "declined.json").write_text(json.dumps({fingerprint: {
+        "kind": "needs_review", "source_ids": [11, 12, 13],
+        "source_labels": [n.label for n in cluster]}}))
+    monkeypatch.setattr(skill_compiler, "_load_lessons", AsyncMock(return_value=cluster))
+    monkeypatch.setattr(skill_compiler, "find_clusters", lambda lessons: [cluster])
+    monkeypatch.setattr(skill_compiler, "_stale_entries", AsyncMock(return_value=[]))
+    monkeypatch.setattr(skill_compiler, "_compose", AsyncMock())
+    monkeypatch.setattr(skill_candidates, "observed_query_sets", AsyncMock(return_value=[]))
+    removed_nodes = []
+    async def retract(db, node_id):
+        removed_nodes.append(node_id)
+    monkeypatch.setattr(skill_compiler, "_retract_skill_node", retract)
+    monkeypatch.setattr(skill_compiler, "compile_charter", AsyncMock(return_value={"skipped": True}))
+    monkeypatch.setattr(skill_compiler, "_self_model_growth_check", AsyncMock())
+    monkeypatch.setattr(skill_compiler, "_log_action", lambda *_: None)
+    db = SimpleNamespace(commit=AsyncMock())
+    report = await skill_compiler.run_compile(db)
+    db.commit.assert_awaited_once()
+    skill_compiler._compose.assert_not_awaited()
+    assert removed_nodes == [55]
+    assert not old.exists()
+    assert json.loads((tmp_path / "manifest.json").read_text()) == []
+    assert report["retracted"] == ["mind-old"]

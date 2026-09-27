@@ -598,11 +598,27 @@ async def run_compile(db: AsyncSession) -> dict:
             "skill": entry["name"], "reason": entry["reason"]}))
 
     declined = load_declined()
+    by_id = {n.id: n for n in lessons}
+    reviewed_legacy: list[str] = []
+    for entry in list(manifest):
+        if entry.get("designated") or entry.get("synthesis_version", 0) >= 2:
+            continue
+        sources = entry.get("sources", [])
+        if not sources or not set(sources).issubset(by_id):
+            continue
+        cluster = [by_id[nid] for nid in sorted(sources)]
+        if candidate_fingerprint(cluster) not in declined:
+            continue
+        removals.add(entry["name"])
+        await _retract_skill_node(db, entry.get("node_id"))
+        manifest.remove(entry)
+        reviewed_legacy.append(entry["name"])
+        committed_actions.append(("compiler.retract", {
+            "skill": entry["name"], "reason": "failed-synthesis-admission"}))
     candidates = pending_clusters(clusters, manifest, set(declined))
     # Old generated skills may no longer match today's embedding components.
     # Reassess their exact source sets rather than letting an orphaned bundle
     # survive forever because clustering has drifted.
-    by_id = {n.id: n for n in lessons}
     seen_sets = {frozenset(n.id for n in cluster) for cluster in candidates}
     for entry in manifest:
         if entry.get("designated") or entry.get("synthesis_version", 0) >= 2:
@@ -634,6 +650,11 @@ async def run_compile(db: AsyncSession) -> dict:
             }
             declined[candidate_fingerprint(cluster)] = record
             declined_this_run.append(record)
+            if prior is not None:
+                removals.add(prior["name"])
+                await _retract_skill_node(db, prior.get("node_id"))
+                manifest = [m for m in manifest if m is not prior]
+                reviewed_legacy.append(prior["name"])
             committed_actions.append(("compiler.compose_failed", record))
             continue
         if "declined_kind" in skill:
@@ -697,7 +718,7 @@ async def run_compile(db: AsyncSession) -> dict:
     return {"lessons": len(lessons), "clusters": len(clusters),
             "composition_attempted": composition_attempted,
             "composition_failed": composition_failed,
-            "retracted": [e["name"] for e in stale],
+            "retracted": [e["name"] for e in stale] + reviewed_legacy,
             "reconciled_ghosts": ghosts, "charter": charter,
             "emitted": emitted, "declined": declined_this_run,
             "remaining_candidates": max(0, len(candidates) - MAX_COMPILE_PER_RUN),

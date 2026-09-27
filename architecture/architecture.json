@@ -3,7 +3,7 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "a03785c06a5c8d5557a2d2b42f5db4dfec0b52fd77bfb85ad77ec3be0a0461b4",
+    "fingerprint": "bca86e6b2c78c1af94dc2722fbc39294bbd46ceed4dfa7a74abea5e39771bd13",
     "files": 510
   },
   "frontend": {
@@ -4202,7 +4202,7 @@
   },
   "totals": {
     "modules": 428,
-    "loc": 96783,
+    "loc": 96847,
     "routes": 219,
     "import_edges": 1196,
     "call_edges": 783,
@@ -27720,7 +27720,7 @@
     "app.services.skill_compiler": {
       "path": "backend/app/services/skill_compiler.py",
       "module": "app.services.skill_compiler",
-      "loc": 705,
+      "loc": 726,
       "imports": [
         "app.middleware.rbac",
         "app.models",
@@ -27894,8 +27894,8 @@
             "app.services.mind_corpus::_load_lessons",
             "app.services.mind_corpus::_log_action",
             "app.services.skill_candidates::load_declined",
-            "app.services.skill_candidates::pending_clusters",
             "app.services.skill_candidates::candidate_fingerprint",
+            "app.services.skill_candidates::pending_clusters",
             "app.services.skill_candidates::observed_query_sets",
             "app.services.skill_candidates::rank_clusters",
             "app.services.skill_candidates::cofire_strength",
@@ -27915,16 +27915,16 @@
         },
         {
           "kind": "add",
-          "line": 616,
+          "line": 612,
           "in": "run_compile",
-          "target": "seen_sets",
+          "target": "removals",
           "model": null
         },
         {
           "kind": "add",
-          "line": 648,
+          "line": 632,
           "in": "run_compile",
-          "target": "removals",
+          "target": "seen_sets",
           "model": null
         },
         {
@@ -27936,14 +27936,28 @@
         },
         {
           "kind": "add",
-          "line": 662,
+          "line": 669,
+          "in": "run_compile",
+          "target": "removals",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 675,
+          "in": "run_compile",
+          "target": "removals",
+          "model": null
+        },
+        {
+          "kind": "add",
+          "line": 683,
           "in": "run_compile",
           "target": "removals",
           "model": null
         },
         {
           "kind": "commit",
-          "line": 685,
+          "line": 706,
           "in": "run_compile",
           "target": "db",
           "model": null
@@ -48562,7 +48576,7 @@
     "tests.test_skill_synthesis": {
       "path": "backend/tests/test_skill_synthesis.py",
       "module": "tests.test_skill_synthesis",
-      "loc": 300,
+      "loc": 343,
       "imports": [
         "app.services.llm_provider",
         "app.services.skill_candidates",
@@ -48783,6 +48797,23 @@
             "app.services.skill_candidates::load_declined",
             "app.services.skill_candidates::pending_clusters"
           ],
+          "is_route": false
+        },
+        "test_review_failed_legacy_skill_is_retracted_after_commit": {
+          "name": "test_review_failed_legacy_skill_is_retracted_after_commit",
+          "line": 303,
+          "is_async": true,
+          "calls": [
+            "app.services.skill_candidates::candidate_fingerprint",
+            "app.services.skill_compiler::run_compile"
+          ],
+          "is_route": false
+        },
+        "test_review_failed_legacy_skill_is_retracted_after_commit.retract": {
+          "name": "test_review_failed_legacy_skill_is_retracted_after_commit.retract",
+          "line": 329,
+          "is_async": true,
+          "calls": [],
           "is_route": false
         }
       },
@@ -70442,7 +70473,8 @@
         "test_compiler_rejects_receipt_candidate",
         "test_compiler_rejects_unsupported_synthesis",
         "test_compiler_revises_draft_after_critic_finds_gap",
-        "test_failed_synthesis_is_quarantined_with_source_receipt"
+        "test_failed_synthesis_is_quarantined_with_source_receipt",
+        "test_review_failed_legacy_skill_is_retracted_after_commit"
       ]
     },
     {
