@@ -83,6 +83,16 @@ def test_instruction_override_is_rejected():
     assert validate_and_render(draft, SOURCES) is None
 
 
+def test_ephemeral_source_path_stays_in_provenance_not_agent_instruction():
+    sources = {**SOURCES, 11: "Run /tmp/claude-1000/one-shot.py as a historical example."}
+    draft = _draft()
+    draft["facts"][0]["quote"] = sources[11]
+    result = validate_and_render(draft, sources)
+    assert result is not None
+    assert result["source_quotes"][0]["quote"] == sources[11]
+    assert "/tmp/claude-1000" not in result["body_markdown"]
+
+
 def test_observed_joint_use_is_a_signal_not_a_hard_requirement():
     queries = [{11, 12}, {11, 12, 13}, {11, 13}, {44}]
     assert cofire_strength({11, 12, 13}, queries) == 5
@@ -261,3 +271,29 @@ async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, f
     assert list((tmp_path / "retired").glob("mind-old-*.md"))
     assert (tmp_path / ".agents/skills/mind-new/SKILL.md").exists()
     assert result["emitted"][0]["name"] == "mind-new"
+
+
+@pytest.mark.asyncio
+async def test_failed_synthesis_is_quarantined_with_source_receipt(tmp_path, monkeypatch):
+    from app.services import skill_candidates
+    monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
+    cluster = [SimpleNamespace(id=i, label=f"lesson {i}", content=text,
+                               department="Projects", dormant_at=None)
+               for i, text in SOURCES.items()]
+    monkeypatch.setattr(skill_compiler, "_load_lessons", AsyncMock(return_value=cluster))
+    monkeypatch.setattr(skill_compiler, "find_clusters", lambda lessons: [cluster])
+    monkeypatch.setattr(skill_compiler, "_load_manifest", lambda: [])
+    monkeypatch.setattr(skill_compiler, "_stale_entries", AsyncMock(return_value=[]))
+    monkeypatch.setattr(skill_candidates, "observed_query_sets", AsyncMock(return_value=[]))
+    monkeypatch.setattr(skill_compiler, "_compose", AsyncMock(return_value=None))
+    monkeypatch.setattr(skill_compiler, "compile_charter", AsyncMock(return_value={"skipped": True}))
+    monkeypatch.setattr(skill_compiler, "_self_model_growth_check", AsyncMock())
+    monkeypatch.setattr(skill_compiler, "_save_manifest", lambda _: None)
+    monkeypatch.setattr(skill_compiler, "_log_action", lambda *_: None)
+    result = await skill_compiler.run_compile(SimpleNamespace(commit=AsyncMock()))
+    reviewed = load_declined()
+    assert len(reviewed) == 1
+    assert next(iter(reviewed.values()))["kind"] == "needs_review"
+    assert next(iter(reviewed.values()))["source_ids"] == [11, 12, 13]
+    assert result["emitted"] == []
+    assert pending_clusters([cluster], [], set(reviewed)) == []

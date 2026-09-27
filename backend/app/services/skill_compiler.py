@@ -619,7 +619,14 @@ async def run_compile(db: AsyncSession) -> dict:
         skill = await _compose(cluster)
         if skill is None:
             composition_failed += 1
-            _log_action("compiler.compose_failed", {"sources": sorted(ids)})
+            record = {
+                "kind": "needs_review", "source_ids": sorted(ids),
+                "source_labels": [n.label for n in cluster],
+                "reviewed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }
+            declined[candidate_fingerprint(cluster)] = record
+            declined_this_run.append(record)
+            committed_actions.append(("compiler.compose_failed", record))
             continue
         if "declined_kind" in skill:
             record = {

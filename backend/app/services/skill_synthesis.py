@@ -91,9 +91,6 @@ def validate_and_render(draft: dict[str, Any], sources: dict[int, str]) -> dict[
             "This procedure combines verified lessons. Source IDs identify the evidence; "
             "derived checks are hypotheses to verify before acting.\n\n"
             "## Decision procedure\n\n" + "\n\n".join(rendered_steps)
-            + "\n\n## Source evidence\n\n"
-            + "\n".join(f"- [{item['source_id']}] {item['quote']}"
-                        for item in source_quotes)
         )
         return {"name": name, "description": description.strip()[:250],
                 "body_markdown": body, "source_ids": sorted(used_ids),
