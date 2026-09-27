@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 424,
+    "modules": 429,
     "frontend_files": 82,
-    "units": 506,
-    "classified": 506,
+    "units": 511,
+    "classified": 511,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
-    "current_fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
-    "stored_files": 506,
-    "current_files": 506
+    "stored_fingerprint": "9e973c8fd1305475e870f762fbca4cca193f96ffe089f671ddd143ec4404a6d9",
+    "current_fingerprint": "9e973c8fd1305475e870f762fbca4cca193f96ffe089f671ddd143ec4404a6d9",
+    "stored_files": 511,
+    "current_files": 511
   },
   "manifest_problems": [],
   "boxes": [
@@ -69,7 +69,7 @@
       "confidence": "reviewed",
       "module_count": 6,
       "frontend_file_count": 0,
-      "loc": 1755,
+      "loc": 1754,
       "routes": 9,
       "modules": [
         "app.routers.roadmap_ledgers",
@@ -87,9 +87,9 @@
       "tier": "interface",
       "purpose": "Connect coding sessions to memory without importing the backend or loading the embedding model in each session.",
       "confidence": "reviewed",
-      "module_count": 13,
+      "module_count": 14,
       "frontend_file_count": 0,
-      "loc": 2978,
+      "loc": 3284,
       "routes": 4,
       "modules": [
         "app.mcp_http",
@@ -103,6 +103,7 @@
         "harness.claude-code.migrate_native_memory",
         "harness.claude-code.mind_mcp_server",
         "harness.codex.corvus_hook",
+        "harness.codex.test_corvus_hook",
         "harness.parity_probe",
         "harness.verify_transfer_live"
       ],
@@ -320,7 +321,7 @@
       "confidence": "reviewed",
       "module_count": 7,
       "frontend_file_count": 0,
-      "loc": 1997,
+      "loc": 2001,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -364,7 +365,7 @@
       "confidence": "reviewed",
       "module_count": 19,
       "frontend_file_count": 0,
-      "loc": 3010,
+      "loc": 3020,
       "routes": 8,
       "modules": [
         "app.middleware.rbac",
@@ -457,17 +458,19 @@
       "id": "skill-projection",
       "name": "Skill, charter, and self-model projection",
       "tier": "background",
-      "purpose": "Compile trusted lesson clusters into harness playbooks, project them canonically, and keep standing capsules synchronized.",
+      "purpose": "Admit evidence-backed synthesized procedures, project them to harness skill roots, and keep standing capsules synchronized.",
       "confidence": "reviewed",
-      "module_count": 4,
+      "module_count": 6,
       "frontend_file_count": 0,
-      "loc": 816,
+      "loc": 1135,
       "routes": 2,
       "modules": [
         "app.routers.compile",
+        "app.services.skill_candidates",
         "app.services.skill_compiler",
         "app.services.skill_projection",
-        "app.services.skill_signpost"
+        "app.services.skill_signpost",
+        "app.services.skill_synthesis"
       ],
       "frontend_files": []
     },
@@ -570,7 +573,7 @@
       "confidence": "reviewed",
       "module_count": 78,
       "frontend_file_count": 0,
-      "loc": 9511,
+      "loc": 9539,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -679,9 +682,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 132,
+      "module_count": 134,
       "frontend_file_count": 0,
-      "loc": 27556,
+      "loc": 27979,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -800,7 +803,9 @@
         "tests.test_runbooks",
         "tests.test_schema_authority",
         "tests.test_scoring_engine",
+        "tests.test_skill_projection_lifecycle",
         "tests.test_skill_signpost",
+        "tests.test_skill_synthesis",
         "tests.test_slo",
         "tests.test_slo_checkpoint_backlog",
         "tests.test_spread_activation",
