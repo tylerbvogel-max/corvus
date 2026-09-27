@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 429,
+    "modules": 428,
     "frontend_files": 82,
-    "units": 511,
-    "classified": 511,
+    "units": 510,
+    "classified": 510,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "9e973c8fd1305475e870f762fbca4cca193f96ffe089f671ddd143ec4404a6d9",
-    "current_fingerprint": "9e973c8fd1305475e870f762fbca4cca193f96ffe089f671ddd143ec4404a6d9",
-    "stored_files": 511,
-    "current_files": 511
+    "stored_fingerprint": "a03785c06a5c8d5557a2d2b42f5db4dfec0b52fd77bfb85ad77ec3be0a0461b4",
+    "current_fingerprint": "a03785c06a5c8d5557a2d2b42f5db4dfec0b52fd77bfb85ad77ec3be0a0461b4",
+    "stored_files": 510,
+    "current_files": 510
   },
   "manifest_problems": [],
   "boxes": [
@@ -69,7 +69,7 @@
       "confidence": "reviewed",
       "module_count": 6,
       "frontend_file_count": 0,
-      "loc": 1754,
+      "loc": 1755,
       "routes": 9,
       "modules": [
         "app.routers.roadmap_ledgers",
@@ -87,9 +87,9 @@
       "tier": "interface",
       "purpose": "Connect coding sessions to memory without importing the backend or loading the embedding model in each session.",
       "confidence": "reviewed",
-      "module_count": 14,
+      "module_count": 13,
       "frontend_file_count": 0,
-      "loc": 3284,
+      "loc": 2978,
       "routes": 4,
       "modules": [
         "app.mcp_http",
@@ -103,7 +103,6 @@
         "harness.claude-code.migrate_native_memory",
         "harness.claude-code.mind_mcp_server",
         "harness.codex.corvus_hook",
-        "harness.codex.test_corvus_hook",
         "harness.parity_probe",
         "harness.verify_transfer_live"
       ],
@@ -321,7 +320,7 @@
       "confidence": "reviewed",
       "module_count": 7,
       "frontend_file_count": 0,
-      "loc": 2001,
+      "loc": 1997,
       "routes": 2,
       "modules": [
         "app.routers.distill",
@@ -684,7 +683,7 @@
       "confidence": "reviewed",
       "module_count": 134,
       "frontend_file_count": 0,
-      "loc": 27979,
+      "loc": 27940,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
