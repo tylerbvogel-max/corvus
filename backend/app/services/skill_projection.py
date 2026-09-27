@@ -26,6 +26,12 @@ def project_skill(name: str, rendered_markdown: str) -> dict[str, str]:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(rendered_markdown, encoding="utf-8")
         outputs[profile["id"]] = str(target)
+    # Codex also discovers the shared agent-skills root. It is not a
+    # separate harness profile, but must participate in the same lifecycle.
+    discovery = Path(os.path.expanduser("~/.agents/skills")) / name / "SKILL.md"
+    discovery.parent.mkdir(parents=True, exist_ok=True)
+    discovery.write_text(rendered_markdown, encoding="utf-8")
+    outputs["agent-discovery"] = str(discovery)
     return outputs
 
 
@@ -33,6 +39,7 @@ def remove_projected_skill(name: str) -> list[str]:
     removed: list[str] = []
     roots = [Path(os.path.expanduser("~/.corvus-mind/capabilities/skills"))]
     roots += [Path(os.path.expanduser(p["skill_directory"])) for p in profiles()]
+    roots.append(Path(os.path.expanduser("~/.agents/skills")))
     for root in roots:
         path = root / name / "SKILL.md"
         if path.exists():

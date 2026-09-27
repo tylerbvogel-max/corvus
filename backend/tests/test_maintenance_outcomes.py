@@ -17,7 +17,7 @@ from app.observability import jobs
 from app.observability.job_outcomes import BatchOutcome, summarize_report
 from app.observability.slo import collect_signals
 from app.routers import auditor, compile as compiler_route, distill, janitor
-from app.services import distiller, skill_compiler
+from app.services import distiller, skill_candidates, skill_compiler
 
 CANARY = "SYNTHETIC_ONLY_DO_NOT_LOG"
 
@@ -167,7 +167,8 @@ async def test_distiller_sanitizes_caught_session_failure(monkeypatch):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("failed", [True, False])
 async def test_compiler_counts_failed_composition_without_real_io(monkeypatch, failed):
-    lesson = SimpleNamespace(id=1, dormant_at=None, department="Projects")
+    lesson = SimpleNamespace(id=1, label="synthetic", content="synthetic",
+                             dormant_at=None, department="Projects")
     monkeypatch.setattr(skill_compiler, "_load_lessons", AsyncMock(return_value=[lesson]))
     monkeypatch.setattr(skill_compiler, "find_clusters", Mock(return_value=[[lesson]] if failed else []))
     monkeypatch.setattr(skill_compiler, "_load_manifest", Mock(return_value=[]))
@@ -178,6 +179,9 @@ async def test_compiler_counts_failed_composition_without_real_io(monkeypatch, f
     monkeypatch.setattr(skill_compiler, "_self_model_growth_check", AsyncMock())
     monkeypatch.setattr(skill_compiler, "_save_manifest", Mock())
     monkeypatch.setattr(skill_compiler, "_log_action", Mock())
+    monkeypatch.setattr(skill_candidates, "observed_query_sets", AsyncMock(return_value=[]))
+    monkeypatch.setattr(skill_candidates, "load_declined", Mock(return_value={}))
+    monkeypatch.setattr(skill_candidates, "save_declined", Mock())
     report = await skill_compiler.run_compile(AsyncMock())
     batch = summarize_report("compile", report)
     assert batch.failed == int(failed)

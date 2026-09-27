@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 424,
+    "modules": 428,
     "frontend_files": 82,
-    "units": 506,
-    "classified": 506,
+    "units": 510,
+    "classified": 510,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
-    "current_fingerprint": "c1a39711e6b69b6f98ada9e1c96e7f3761884f8a73b49f86a468eca047eed1d0",
-    "stored_files": 506,
-    "current_files": 506
+    "stored_fingerprint": "bca86e6b2c78c1af94dc2722fbc39294bbd46ceed4dfa7a74abea5e39771bd13",
+    "current_fingerprint": "bca86e6b2c78c1af94dc2722fbc39294bbd46ceed4dfa7a74abea5e39771bd13",
+    "stored_files": 510,
+    "current_files": 510
   },
   "manifest_problems": [],
   "boxes": [
@@ -364,7 +364,7 @@
       "confidence": "reviewed",
       "module_count": 19,
       "frontend_file_count": 0,
-      "loc": 3010,
+      "loc": 3020,
       "routes": 8,
       "modules": [
         "app.middleware.rbac",
@@ -457,17 +457,19 @@
       "id": "skill-projection",
       "name": "Skill, charter, and self-model projection",
       "tier": "background",
-      "purpose": "Compile trusted lesson clusters into harness playbooks, project them canonically, and keep standing capsules synchronized.",
+      "purpose": "Admit evidence-backed synthesized procedures, project them to harness skill roots, and keep standing capsules synchronized.",
       "confidence": "reviewed",
-      "module_count": 4,
+      "module_count": 6,
       "frontend_file_count": 0,
-      "loc": 816,
+      "loc": 1156,
       "routes": 2,
       "modules": [
         "app.routers.compile",
+        "app.services.skill_candidates",
         "app.services.skill_compiler",
         "app.services.skill_projection",
-        "app.services.skill_signpost"
+        "app.services.skill_signpost",
+        "app.services.skill_synthesis"
       ],
       "frontend_files": []
     },
@@ -570,7 +572,7 @@
       "confidence": "reviewed",
       "module_count": 78,
       "frontend_file_count": 0,
-      "loc": 9511,
+      "loc": 9539,
       "routes": 3,
       "modules": [
         "alembic.env",
@@ -679,9 +681,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 132,
+      "module_count": 134,
       "frontend_file_count": 0,
-      "loc": 27556,
+      "loc": 27983,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -800,7 +802,9 @@
         "tests.test_runbooks",
         "tests.test_schema_authority",
         "tests.test_scoring_engine",
+        "tests.test_skill_projection_lifecycle",
         "tests.test_skill_signpost",
+        "tests.test_skill_synthesis",
         "tests.test_slo",
         "tests.test_slo_checkpoint_backlog",
         "tests.test_spread_activation",
