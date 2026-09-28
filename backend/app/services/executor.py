@@ -54,66 +54,6 @@ from app.services.recall_primitives import (  # noqa: F401
 )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def _build_neuron_score_dicts(
-    scored: list[NeuronScoreBreakdown],
-    neuron_map: dict[int, Neuron],
-) -> list[dict]:
-    assert isinstance(scored, list), "scored must be a list"
-    assert isinstance(neuron_map, dict), "neuron_map must be a dict"
-    return [
-        {"neuron_id": s.neuron_id, "combined": s.combined, "burst": s.burst,
-         "impact": s.impact, "precision": s.precision, "novelty": s.novelty,
-         "recency": s.recency, "relevance": s.relevance, "spread_boost": s.spread_boost,
-         "label": neuron_map[s.neuron_id].label if s.neuron_id in neuron_map else None,
-         "department": neuron_map[s.neuron_id].department if s.neuron_id in neuron_map else None,
-         "layer": neuron_map[s.neuron_id].layer if s.neuron_id in neuron_map else 0,
-         "parent_id": neuron_map[s.neuron_id].parent_id if s.neuron_id in neuron_map else None,
-         "summary": neuron_map[s.neuron_id].summary if s.neuron_id in neuron_map else None}
-        for s in scored
-    ]
-
-
-async def _resolve_fired_engrams(db, scored_engrams, effective_budget, _emit):
-    """Fetch live regulatory text for fired engrams via eCFR API."""
-    if not scored_engrams or not settings.engram_resolve_enabled:
-        return []
-    from app.services.regulatory_resolve import resolve_engrams
-    from app.models import Engram
-    engram_ids = [s.neuron_id for s in scored_engrams[:10]]
-    engram_rows = (await db.execute(
-        select(Engram).where(Engram.id.in_(engram_ids))
-    )).scalars().all()
-    engram_map = {e.id: e for e in engram_rows}
-    fired_pairs = [
-        (engram_map[s.neuron_id], s.combined)
-        for s in scored_engrams[:10] if s.neuron_id in engram_map
-    ]
-    engram_budget = int(effective_budget * settings.engram_token_budget_fraction)
-    resolved = await resolve_engrams(db, fired_pairs, engram_budget)
-    await _emit("regulatory_resolve", {"status": "done", "detail": {
-        "resolved": len(resolved),
-        "cached": sum(1 for r in resolved if r.source == "cache"),
-        "fallback": sum(1 for r in resolved if r.source == "fallback_summary"),
-    }})
-    return resolved
-
-
 async def prepare_context(
     db: AsyncSession, user_message: str, token_budget: int | None = None,
     top_k: int | None = None, project_path: str | None = None,
@@ -620,47 +560,6 @@ async def _run_direct_call(
         "model_version": result.get("model_version"),
         "session_id": result.get("session_id"),
     }
-
-
-def _populate_query_from_results(
-    query: Query,
-    slot_results: list[dict],
-    all_scored: list[NeuronScoreBreakdown],
-    neuron_map: dict[int, Neuron],
-    classify_result: dict,
-) -> float:
-    assert len(slot_results) > 0, "slot_results must be non-empty"
-    query.results_json = json.dumps(slot_results)
-    if all_scored:
-        query.neuron_scores_json = json.dumps(
-            _build_neuron_score_dicts(all_scored, neuron_map)
-        )
-    for slot in slot_results:
-        if slot["mode"] == "haiku_neuron" and not query.response_text:
-            query.response_text = slot["response"]
-            query.execute_input_tokens = slot.get(
-                "observed_total_input_tokens",
-                slot["input_tokens"] + slot.get("cache_creation_tokens", 0)
-                + slot.get("cache_read_tokens", 0),
-            )
-            query.execute_output_tokens = slot["output_tokens"]
-        elif slot["mode"] == "opus_raw" and not query.opus_response_text:
-            query.opus_response_text = slot["response"]
-            query.opus_input_tokens = slot.get(
-                "observed_total_input_tokens",
-                slot["input_tokens"] + slot.get("cache_creation_tokens", 0)
-                + slot.get("cache_read_tokens", 0),
-            )
-            query.opus_output_tokens = slot["output_tokens"]
-    total_cost = sum(s["cost_usd"] for s in slot_results) + classify_result.get("cost_usd", 0)
-    query.cost_usd = total_cost
-    for slot in slot_results:
-        mv = slot.get("model_version")
-        if mv:
-            query.model_version = mv
-            break
-    assert total_cost >= 0, f"total_cost must be non-negative, got {total_cost}"
-    return total_cost
 
 
 def _build_citation_map(ctx: PreparedContext | None, neuron_map: dict[int, Neuron]) -> dict:
