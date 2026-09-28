@@ -1,5 +1,5 @@
 {
-  "app_module_count": 138,
+  "app_module_count": 140,
   "app_modules": [
     "app",
     "app.agents",
@@ -128,6 +128,8 @@
     "app.services.reference_class",
     "app.services.reference_detector",
     "app.services.reference_hooks",
+    "app.services.reflection_models",
+    "app.services.reflection_review",
     "app.services.region_policy",
     "app.services.roadmap_admission",
     "app.services.roadmap_ledger",

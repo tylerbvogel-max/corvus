@@ -8,10 +8,10 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.services import skill_compiler
+from app.services import reflection_models
 from app.services.skill_synthesis import validate_and_render
 from app.services.skill_candidates import (
-    candidate_fingerprint, cofire_strength, load_declined, pending_clusters,
-    rank_clusters, save_declined,
+    candidate_fingerprint, cofire_strength, pending_clusters, rank_clusters,
 )
 
 
@@ -28,6 +28,12 @@ def _draft():
         "description": "Use when diagnosing a Corvus recall regression.",
         "kind": "procedure",
         "task": "Diagnose a recall regression before changing retrieval code.",
+        "reflection": {
+            "claim": "Channel and probe checks should precede retrieval changes.",
+            "prediction": "When pooled performance hides a channel defect, a trigger-level split will expose a weaker channel.",
+            "falsifier": "Comparable trigger-level results from a verified probe would defeat the hidden-channel explanation.",
+            "probe": "Compare matched trigger-level rates and verify the probe can vary before changing retrieval.",
+        },
         "facts": [
             {"source_id": 11, "quote": "Pooled injection rates hid a failing SessionStart channel."},
             {"source_id": 12, "quote": "A fixture can move during evaluation; inspect migration evidence."},
@@ -51,6 +57,16 @@ def test_cross_source_procedure_renders_with_provenance():
     assert result["source_quotes"][0] == {
         "source_id": 11, "quote": "Pooled injection rates hid a failing SessionStart channel."
     }
+    assert result["reflection"]["prediction"].startswith("When pooled")
+
+
+def test_procedure_requires_falsifiable_reflection_record():
+    draft = _draft()
+    draft.pop("reflection")
+    assert validate_and_render(draft, SOURCES) is None
+    draft = _draft()
+    draft["reflection"]["falsifier"] = ""
+    assert validate_and_render(draft, SOURCES) is None
 
 
 def test_forged_quote_cannot_promote_a_skill():
@@ -125,15 +141,6 @@ def test_declined_cluster_reopens_when_source_changes():
     assert pending_clusters([cluster], [], {prior}) == [cluster]
 
 
-def test_decline_ledger_persists_reason_and_fingerprint(tmp_path, monkeypatch):
-    from app.services import skill_candidates
-    monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
-    item = {"kind": "historical_receipt", "source_ids": [11, 12, 13],
-            "source_labels": ["a", "b", "c"], "reviewed_at": "2026-09-27T00:00:00Z"}
-    save_declined({"abc": item})
-    assert load_declined() == {"abc": item}
-
-
 @pytest.mark.asyncio
 async def test_compiler_promotes_valid_synthesis(monkeypatch):
     calls = 0
@@ -143,6 +150,7 @@ async def test_compiler_promotes_valid_synthesis(monkeypatch):
         if calls == 1:
             assert "source_id: 11" in kwargs["user_message"]
             assert "source_id: 13" in kwargs["user_message"]
+            assert "falsifier" in kwargs["system_prompt"]
             return {"text": __import__("json").dumps(_draft()), "cost_usd": 0.02}
         return {"text": '{"supported": true, "synthesis_gain": true, "issues": []}',
                 "cost_usd": 0.01}
@@ -217,7 +225,7 @@ async def test_compiler_rejects_receipt_candidate(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("failure_point", [None, "commit", "emit"])
+@pytest.mark.parametrize("failure_point", [None, "commit", "emit", "catalog"])
 async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, failure_point):
     from app.services import skill_candidates
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -226,6 +234,7 @@ async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, f
     manifest_path = tmp_path / "compiled-skills.json"
     monkeypatch.setattr(skill_compiler, "MANIFEST_PATH", str(manifest_path))
     monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
+    monkeypatch.setattr(reflection_models, "CATALOG_PATH", tmp_path / "models.json")
     old_path = tmp_path / ".claude/skills/mind-old/SKILL.md"
     old_path.parent.mkdir(parents=True)
     old_path.write_text("---\nname: mind-old\n---\nold bundle\n")
@@ -242,6 +251,7 @@ async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, f
         "name": "mind-new", "description": "Use when testing.", "body_markdown": "# New procedure",
         "synthesis_version": 2, "source_quotes": [], "critic_pass": True,
         "revision_count": 0, "cost_usd": 0.01,
+        "reflection": _draft()["reflection"],
     }))
     removed_nodes = []
     async def retract(db, node_id):
@@ -253,12 +263,15 @@ async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, f
     monkeypatch.setattr(skill_compiler, "compile_charter", AsyncMock(return_value={"skipped": True}))
     monkeypatch.setattr(skill_compiler, "_self_model_growth_check", AsyncMock())
     monkeypatch.setattr(skill_compiler, "_log_action", lambda *_: None)
+    if failure_point == "catalog":
+        monkeypatch.setattr(reflection_models, "save_catalog", lambda *_: (
+            _ for _ in ()).throw(OSError("catalog disk failed")))
     db = SimpleNamespace(commit=AsyncMock(
         side_effect=RuntimeError("db down") if failure_point == "commit" else None))
     if failure_point:
-        with pytest.raises(RuntimeError, match="db down|emit failed"):
+        with pytest.raises((RuntimeError, OSError), match="db down|emit failed|catalog disk failed"):
             await skill_compiler.run_compile(db)
-        assert old_path.exists()
+        assert old_path.exists() is (failure_point != "catalog")
         assert not (tmp_path / ".agents/skills/mind-new/SKILL.md").exists()
         assert json.loads(manifest_path.read_text())[0]["name"] == "mind-old"
         return
@@ -271,12 +284,16 @@ async def test_compile_migrates_only_after_graph_commit(tmp_path, monkeypatch, f
     assert list((tmp_path / "retired").glob("mind-old-*.md"))
     assert (tmp_path / ".agents/skills/mind-new/SKILL.md").exists()
     assert result["emitted"][0]["name"] == "mind-new"
+    record = next(iter(reflection_models.load_catalog().get("records", {}).values()))
+    assert record["status"] == "admitted"
+    assert record["reflection"]["falsifier"]
 
 
 @pytest.mark.asyncio
 async def test_failed_synthesis_is_quarantined_with_source_receipt(tmp_path, monkeypatch):
     from app.services import skill_candidates
     monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
+    monkeypatch.setattr(reflection_models, "CATALOG_PATH", tmp_path / "models.json")
     cluster = [SimpleNamespace(id=i, label=f"lesson {i}", content=text,
                                department="Projects", dormant_at=None)
                for i, text in SOURCES.items()]
@@ -291,9 +308,9 @@ async def test_failed_synthesis_is_quarantined_with_source_receipt(tmp_path, mon
     monkeypatch.setattr(skill_compiler, "_save_manifest", lambda _: None)
     monkeypatch.setattr(skill_compiler, "_log_action", lambda *_: None)
     result = await skill_compiler.run_compile(SimpleNamespace(commit=AsyncMock()))
-    reviewed = load_declined()
+    reviewed = reflection_models.load_catalog()["records"]
     assert len(reviewed) == 1
-    assert next(iter(reviewed.values()))["kind"] == "needs_review"
+    assert next(iter(reviewed.values()))["status"] == "needs_review"
     assert next(iter(reviewed.values()))["source_ids"] == [11, 12, 13]
     assert result["emitted"] == []
     assert pending_clusters([cluster], [], set(reviewed)) == []
@@ -307,6 +324,7 @@ async def test_review_failed_legacy_skill_is_retracted_after_commit(tmp_path, mo
     monkeypatch.setattr(skill_compiler, "RETIRED_DIR", str(tmp_path / "retired"))
     monkeypatch.setattr(skill_compiler, "MANIFEST_PATH", str(tmp_path / "manifest.json"))
     monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
+    monkeypatch.setattr(reflection_models, "CATALOG_PATH", tmp_path / "models.json")
     cluster = [SimpleNamespace(id=i, label=f"lesson {i}", content=text,
                                department="Projects", dormant_at=None)
                for i, text in SOURCES.items()]
@@ -340,3 +358,50 @@ async def test_review_failed_legacy_skill_is_retracted_after_commit(tmp_path, mo
     assert not old.exists()
     assert json.loads((tmp_path / "manifest.json").read_text()) == []
     assert report["retracted"] == ["mind-old"]
+
+
+@pytest.mark.asyncio
+async def test_falsifying_later_evidence_challenges_model_and_retracts_skill(tmp_path, monkeypatch):
+    from app.services import skill_candidates, reflection_review
+    monkeypatch.setattr(reflection_models, "CATALOG_PATH", tmp_path / "models.json")
+    monkeypatch.setattr(skill_candidates, "DECLINED_PATH", str(tmp_path / "declined.json"))
+    monkeypatch.setattr(skill_compiler, "SKILLS_DIR", str(tmp_path / "skills"))
+    monkeypatch.setattr(skill_compiler, "RETIRED_DIR", str(tmp_path / "retired"))
+    monkeypatch.setattr(skill_compiler, "MANIFEST_PATH", str(tmp_path / "manifest.json"))
+    source = [SimpleNamespace(id=i, label=f"lesson {i}", content=text,
+                              department="Projects", dormant_at=None)
+              for i, text in SOURCES.items()]
+    fingerprint = candidate_fingerprint(source)
+    now = "2026-09-26T00:00:00+00:00"
+    record = {"id": fingerprint, "status": "admitted", "name": "mind-old",
+              "scope": "Projects", "source_ids": [11, 12, 13],
+              "source_labels": [n.label for n in source],
+              "reflection": _draft()["reflection"], "last_evidence_at": now,
+              "history": [], "observations": []}
+    reflection_models.save_catalog({"schema_version": 1, "records": {fingerprint: record}})
+    old = tmp_path / "skills/mind-old/SKILL.md"
+    old.parent.mkdir(parents=True)
+    old.write_text("old skill\n")
+    (tmp_path / "manifest.json").write_text(json.dumps([{
+        "name": "mind-old", "sources": [11, 12, 13], "node_id": 55,
+        "synthesis_version": 2, "path": str(old)}]))
+    later = SimpleNamespace(id=44, label="counterexample", content="Comparable rates were verified.",
+                            department="Projects", dormant_at=None)
+    monkeypatch.setattr(skill_compiler, "_load_lessons", AsyncMock(return_value=source + [later]))
+    monkeypatch.setattr(skill_compiler, "find_clusters", lambda lessons: [source])
+    monkeypatch.setattr(skill_compiler, "_stale_entries", AsyncMock(return_value=[]))
+    monkeypatch.setattr(reflection_models, "independent_lessons", lambda *_: [later])
+    monkeypatch.setattr(reflection_review, "judge_new_evidence", AsyncMock(return_value=[{
+        "source_id": 44, "verdict": "falsifies", "quote": later.content,
+        "reason": "The predicted weaker channel was absent."}]))
+    monkeypatch.setattr(skill_candidates, "observed_query_sets", AsyncMock(return_value=[]))
+    monkeypatch.setattr(skill_compiler, "compile_charter", AsyncMock(return_value={"skipped": True}))
+    monkeypatch.setattr(skill_compiler, "_self_model_growth_check", AsyncMock())
+    monkeypatch.setattr(skill_compiler, "_log_action", lambda *_: None)
+    monkeypatch.setattr(skill_compiler, "_retract_skill_node", AsyncMock())
+    db = SimpleNamespace(commit=AsyncMock())
+    report = await skill_compiler.run_compile(db)
+    assert report["challenged"] == ["mind-old"]
+    assert reflection_models.load_catalog()["records"][fingerprint]["status"] == "challenged"
+    assert not old.exists()
+    assert json.loads((tmp_path / "manifest.json").read_text()) == []

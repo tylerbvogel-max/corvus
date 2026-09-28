@@ -1284,8 +1284,8 @@ boxes:
       - backend/app/services/recurrence_watch.py
 
   - id: skill-projection
-    name: Skill, charter, and self-model projection
-    purpose: Admit evidence-backed synthesized procedures, project them to harness skill roots, and keep standing capsules synchronized.
+    name: Reflective models, skill, charter, and self-model projection
+    purpose: Admit falsifiable working models from trusted lessons, review independent later evidence, project admitted procedures to harness skill roots, and keep standing capsules synchronized.
     tier: background
     confidence: reviewed
     owns:
@@ -1293,6 +1293,8 @@ boxes:
       - backend/app/services/skill_compiler.py
       - backend/app/services/skill_candidates.py
       - backend/app/services/skill_synthesis.py
+      - backend/app/services/reflection_models.py
+      - backend/app/services/reflection_review.py
       - backend/app/services/skill_projection.py
       - backend/app/services/skill_signpost.py
 
@@ -1878,12 +1880,12 @@ processes:
           - backend/app/services/distillation_progress.py::run_checkpointed
 
   - id: skill-compilation
-    name: Compile lessons into playbooks and standing policy
+    name: Review working models and compile admitted procedures
     availability: active-scheduled
     trigger: corvus-mind-compile.timer POSTs /compile/run
     cadence: Daily opportunity; bounded new skills per run
-    why: Convert related trusted memories into reusable procedures while keeping graph truth, projections, and harness delivery synchronized.
-    outcome: Stale projections retire to archive; eligible clusters produce mind-* skills and graph-shadow nodes; charter is deterministically rebuilt.
+    why: Turn related trusted memories into falsifiable procedures, challenge them with later independent evidence, and keep graph truth and harness projections synchronized.
+    outcome: Challenged or stale projections retire to archive; admitted models produce mind-* skills and graph-shadow nodes; charter is deterministically rebuilt.
     through: [skill-projection, recall-graph, write-governance]
     steps:
       - actor: skill compiler
@@ -1896,11 +1898,19 @@ processes:
           - backend/app/services/skill_compiler.py::_stale_entries
       - actor: Frontier-grade composer
         component: skill-projection
-        does: Request the opus capability grade to compose one focused name, description, and Markdown playbook from each new eligible cluster; default routing selects Codex Sol with Anthropic Opus fallback.
-        state_change: Model usage is added to the compile report.
-        guardrail: Invalid JSON, non-mind-* names, or missing fields emit no skill.
+        does: Compose a sourced procedure with a conditional claim, prospective prediction, falsifier, and read-only probe; require an independent critic verdict.
+        state_change: Admitted or declined model receipts enter the versioned reflection catalog.
+        guardrail: Invalid JSON, unsupported quotes, absent falsifiers, or failed critique emit no skill.
         evidence:
-          - backend/app/services/skill_compiler.py::_compose
+          - backend/app/services/reflection_review.py::compose_model
+      - actor: reflection reviewer
+        component: skill-projection
+        does: Compare admitted models with later lessons from sessions without recorded source injection or skill exposure; require exact quotes and a second critic.
+        state_change: A validated falsifier challenges the model and retires its skill projection.
+        guardrail: Missing exposure receipts and ambiguous observations cannot confirm a model; skill loads are not outcomes.
+        evidence:
+          - backend/app/services/reflection_models.py::independent_lessons
+          - backend/app/services/reflection_review.py::judge_new_evidence
       - actor: canonical projection
         component: skill-projection
         does: Write generated SKILL.md with source-neuron provenance and project it to supported harnesses.

@@ -180,8 +180,10 @@ async def test_compiler_counts_failed_composition_without_real_io(monkeypatch, f
     monkeypatch.setattr(skill_compiler, "_save_manifest", Mock())
     monkeypatch.setattr(skill_compiler, "_log_action", Mock())
     monkeypatch.setattr(skill_candidates, "observed_query_sets", AsyncMock(return_value=[]))
-    monkeypatch.setattr(skill_candidates, "load_declined", Mock(return_value={}))
-    monkeypatch.setattr(skill_candidates, "save_declined", Mock())
+    from app.services import reflection_models
+    monkeypatch.setattr(reflection_models, "load_catalog", Mock(return_value={
+        "schema_version": 1, "records": {}}))
+    monkeypatch.setattr(reflection_models, "save_catalog", Mock())
     report = await skill_compiler.run_compile(AsyncMock())
     batch = summarize_report("compile", report)
     assert batch.failed == int(failed)

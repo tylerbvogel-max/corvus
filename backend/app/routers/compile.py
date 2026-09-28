@@ -1,12 +1,13 @@
-"""Skill-compiler trigger endpoints.
+"""Reflective-cycle trigger and inspection endpoints.
 
-POST /compile/run is the batch entry point (corvus-mind-compile timer,
-daily) — runs the reverse staleness check, then compiles up to the
-per-run cap of eligible lesson clusters into ~/.claude/skills/mind-*.
-GET /compile/status previews eligibility with no LLM and no writes.
+POST /compile/run is the daily batch entry point. It reviews derived models,
+checks projection staleness, and compiles bounded new lesson clusters.
+GET /compile/status previews eligibility; GET /compile/models inspects model
+admission and challenge receipts. Both reads avoid LLM calls and writes.
 """
 
 from fastapi import APIRouter, Depends
+from collections import Counter
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -14,9 +15,20 @@ from app.observability.jobs import scheduled_http_run as scheduled_run
 from app.observability.job_outcomes import attach_outcome
 from app.services.mind_janitors import _load_lessons
 from app.services.skill_compiler import _load_manifest, find_clusters, run_compile
+from app.services import reflection_models
 from app.tenant import tenant
 
 router = APIRouter(prefix="/compile", tags=["memory"])
+
+
+@router.get("/models")
+async def compile_models():
+    """Inspect derived models, their falsifiers, evidence, and history."""
+    catalog = reflection_models.load_catalog()
+    counts = Counter(record.get("status", "unknown")
+                     for record in catalog["records"].values())
+    return {"schema_version": catalog["schema_version"],
+            "counts": dict(counts), "records": catalog["records"]}
 
 
 @router.get("/status")

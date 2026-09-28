@@ -1,5 +1,5 @@
 {
-  "app_module_count": 92,
+  "app_module_count": 94,
   "app_modules": [
     "app",
     "app.composition",
@@ -85,6 +85,8 @@
     "app.services.reconsolidation.rewiring",
     "app.services.reconsolidation.validators",
     "app.services.redaction",
+    "app.services.reflection_models",
+    "app.services.reflection_review",
     "app.services.region_policy",
     "app.services.schema_authority",
     "app.services.scoring_engine",
