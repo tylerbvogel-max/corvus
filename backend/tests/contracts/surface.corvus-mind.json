@@ -1,6 +1,6 @@
 {
-  "documented_path_count": 200,
-  "method_level_route_count": 215,
+  "documented_path_count": 201,
+  "method_level_route_count": 216,
   "routes": [
     {
       "method": "GET",
@@ -1098,6 +1098,15 @@
       "schema_fingerprint": "7e2a025f9953ea06",
       "tags": [
         "Chat Sessions"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "compile_models_compile_models_get",
+      "path": "/compile/models",
+      "schema_fingerprint": "eb46dfaa65325538",
+      "tags": [
+        "memory"
       ]
     },
     {

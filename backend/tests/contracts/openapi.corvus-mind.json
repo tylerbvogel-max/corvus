@@ -12471,6 +12471,26 @@
         ]
       }
     },
+    "/compile/models": {
+      "get": {
+        "description": "Inspect derived models, their falsifiers, evidence, and history.",
+        "operationId": "compile_models_compile_models_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Compile Models",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/compile/run": {
       "post": {
         "description": "Reverse check + compile eligible clusters (bounded Opus spend).",

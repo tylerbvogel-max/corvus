@@ -7,7 +7,6 @@ import hashlib
 from itertools import combinations
 import json
 import os
-from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,27 +15,6 @@ from app.models import NeuronFiring
 
 
 DECLINED_PATH = os.path.expanduser("~/.corvus-mind/declined-skill-candidates.json")
-
-
-def load_declined() -> dict[str, dict]:
-    try:
-        data = json.loads(Path(DECLINED_PATH).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return {key: value for key, value in data.items()
-            if isinstance(key, str) and isinstance(value, dict)
-            and isinstance(value.get("kind"), str)}
-
-
-def save_declined(entries: dict[str, dict]) -> None:
-    path = Path(DECLINED_PATH)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    staged = path.with_suffix(path.suffix + ".tmp")
-    staged.write_text(json.dumps(entries, sort_keys=True, indent=2) + "\n",
-                      encoding="utf-8")
-    staged.replace(path)
 
 
 def cofire_strength(source_ids: set[int], query_sets: list[set[int]]) -> int:

@@ -151,6 +151,7 @@ export const ROUTE_CONTRACTS: readonly RouteContract[] = [
   { method: 'PATCH', path: '/chat/sessions/{session_id}', capability: 'operator', tenants: ['corvus-mind'] },
   { method: 'POST', path: '/chat/sessions/{session_id}/generate-title', capability: 'operator', tenants: ['corvus-mind'] },
   { method: 'POST', path: '/chat/sessions/{session_id}/messages', capability: 'operator', tenants: ['corvus-mind'] },
+  { method: 'GET', path: '/compile/models', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'POST', path: '/compile/run', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'GET', path: '/compile/status', capability: 'memory', tenants: ['corvus-locomo', 'corvus-mind'] },
   { method: 'POST', path: '/context', capability: 'knowledge_graph', tenants: ['corvus-locomo', 'corvus-mind'] },

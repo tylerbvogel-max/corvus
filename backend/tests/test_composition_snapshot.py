@@ -56,8 +56,9 @@ _EXPECTED_ROUTE_COUNTS = {
     # +1 again: GET /metrics/mind/jobs, the scheduled-job health surface from
     # the same record. Memory-owned, so corvus-locomo gets it too.
     # +1 again: GET /metrics/mind/slo, the objectives surface (criterion 3).
-    "corvus-mind": 215,
-    "corvus-locomo": 82,
+    # +1 in the memory capability: inspectable reflection models.
+    "corvus-mind": 216,
+    "corvus-locomo": 83,
 }
 
 # Re-homed out of routers/compliance.py into app/operations/ by record 04.

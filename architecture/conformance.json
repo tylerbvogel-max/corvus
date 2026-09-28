@@ -28,10 +28,10 @@
     ]
   },
   "totals": {
-    "modules": 428,
+    "modules": 432,
     "frontend_files": 82,
-    "units": 510,
-    "classified": 510,
+    "units": 514,
+    "classified": 514,
     "unclassified": 0,
     "unclassified_py": 0,
     "unclassified_ts": 0,
@@ -54,10 +54,10 @@
   },
   "freshness": {
     "fresh": true,
-    "stored_fingerprint": "bca86e6b2c78c1af94dc2722fbc39294bbd46ceed4dfa7a74abea5e39771bd13",
-    "current_fingerprint": "bca86e6b2c78c1af94dc2722fbc39294bbd46ceed4dfa7a74abea5e39771bd13",
-    "stored_files": 510,
-    "current_files": 510
+    "stored_fingerprint": "b6b227ce4fb1f2f78d05621a8db59b0910168e497c4d35be9f2c89708dd490da",
+    "current_fingerprint": "b6b227ce4fb1f2f78d05621a8db59b0910168e497c4d35be9f2c89708dd490da",
+    "stored_files": 514,
+    "current_files": 514
   },
   "manifest_problems": [],
   "boxes": [
@@ -116,7 +116,7 @@
       "confidence": "reviewed",
       "module_count": 0,
       "frontend_file_count": 82,
-      "loc": 45102,
+      "loc": 45143,
       "routes": 0,
       "modules": [],
       "frontend_files": [
@@ -455,16 +455,18 @@
     },
     {
       "id": "skill-projection",
-      "name": "Skill, charter, and self-model projection",
+      "name": "Reflective models, skill, charter, and self-model projection",
       "tier": "background",
-      "purpose": "Admit evidence-backed synthesized procedures, project them to harness skill roots, and keep standing capsules synchronized.",
+      "purpose": "Admit falsifiable working models from trusted lessons, review independent later evidence, project admitted procedures to harness skill roots, and keep standing capsules synchronized.",
       "confidence": "reviewed",
-      "module_count": 6,
+      "module_count": 8,
       "frontend_file_count": 0,
-      "loc": 1156,
-      "routes": 2,
+      "loc": 1531,
+      "routes": 3,
       "modules": [
         "app.routers.compile",
+        "app.services.reflection_models",
+        "app.services.reflection_review",
         "app.services.skill_candidates",
         "app.services.skill_compiler",
         "app.services.skill_projection",
@@ -681,9 +683,9 @@
       "tier": "eval",
       "purpose": "Verify contracts, run probes, migrate one-off state, and support development without participating in the production request path.",
       "confidence": "reviewed",
-      "module_count": 134,
+      "module_count": 136,
       "frontend_file_count": 0,
-      "loc": 27983,
+      "loc": 28261,
       "routes": 3,
       "modules": [
         "scripts.add_neuron_evidence_frame_record",
@@ -792,6 +794,8 @@
         "tests.test_reconsolidation_kernel",
         "tests.test_recurrence_watch",
         "tests.test_reference_class",
+        "tests.test_reflection_models",
+        "tests.test_reflection_review",
         "tests.test_region_policy",
         "tests.test_regulatory_coverage",
         "tests.test_release_artifact",
@@ -4175,12 +4179,12 @@
     },
     {
       "id": "skill-compilation",
-      "name": "Compile lessons into playbooks and standing policy",
+      "name": "Review working models and compile admitted procedures",
       "availability": "active-scheduled",
       "trigger": "corvus-mind-compile.timer POSTs /compile/run",
       "cadence": "Daily opportunity; bounded new skills per run",
-      "why": "Convert related trusted memories into reusable procedures while keeping graph truth, projections, and harness delivery synchronized.",
-      "outcome": "Stale projections retire to archive; eligible clusters produce mind-* skills and graph-shadow nodes; charter is deterministically rebuilt.",
+      "why": "Turn related trusted memories into falsifiable procedures, challenge them with later independent evidence, and keep graph truth and harness projections synchronized.",
+      "outcome": "Challenged or stale projections retire to archive; admitted models produce mind-* skills and graph-shadow nodes; charter is deterministically rebuilt.",
       "through": [
         "skill-projection",
         "recall-graph",
@@ -4221,16 +4225,47 @@
         {
           "actor": "Frontier-grade composer",
           "component": "skill-projection",
-          "does": "Request the opus capability grade to compose one focused name, description, and Markdown playbook from each new eligible cluster; default routing selects Codex Sol with Anthropic Opus fallback.",
-          "state_change": "Model usage is added to the compile report.",
-          "guardrail": "Invalid JSON, non-mind-* names, or missing fields emit no skill.",
+          "does": "Compose a sourced procedure with a conditional claim, prospective prediction, falsifier, and read-only probe; require an independent critic verdict.",
+          "state_change": "Admitted or declined model receipts enter the versioned reflection catalog.",
+          "guardrail": "Invalid JSON, unsupported quotes, absent falsifiers, or failed critique emit no skill.",
           "evidence": [
-            "backend/app/services/skill_compiler.py::_compose"
+            "backend/app/services/reflection_review.py::compose_model"
           ],
           "index": 2,
           "evidence_results": [
             {
-              "evidence": "backend/app/services/skill_compiler.py::_compose",
+              "evidence": "backend/app/services/reflection_review.py::compose_model",
+              "exists": true,
+              "actual_component": "skill-projection",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "reflection reviewer",
+          "component": "skill-projection",
+          "does": "Compare admitted models with later lessons from sessions without recorded source injection or skill exposure; require exact quotes and a second critic.",
+          "state_change": "A validated falsifier challenges the model and retires its skill projection.",
+          "guardrail": "Missing exposure receipts and ambiguous observations cannot confirm a model; skill loads are not outcomes.",
+          "evidence": [
+            "backend/app/services/reflection_models.py::independent_lessons",
+            "backend/app/services/reflection_review.py::judge_new_evidence"
+          ],
+          "index": 3,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/reflection_models.py::independent_lessons",
+              "exists": true,
+              "actual_component": "skill-projection",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/reflection_review.py::judge_new_evidence",
               "exists": true,
               "actual_component": "skill-projection",
               "component_ok": true,
@@ -4250,7 +4285,7 @@
             "backend/app/services/skill_compiler.py::_write_skill",
             "backend/app/services/skill_projection.py"
           ],
-          "index": 3,
+          "index": 4,
           "evidence_results": [
             {
               "evidence": "backend/app/services/skill_compiler.py::_write_skill",
@@ -4280,7 +4315,7 @@
           "evidence": [
             "backend/app/services/actions/neuron_create.py"
           ],
-          "index": 4,
+          "index": 5,
           "evidence_results": [
             {
               "evidence": "backend/app/services/actions/neuron_create.py",
@@ -4302,7 +4337,7 @@
           "evidence": [
             "backend/app/services/skill_compiler.py::compile_charter"
           ],
-          "index": 5,
+          "index": 6,
           "evidence_results": [
             {
               "evidence": "backend/app/services/skill_compiler.py::compile_charter",
@@ -7122,12 +7157,12 @@
     },
     {
       "id": "skill-compilation",
-      "name": "Compile lessons into playbooks and standing policy",
+      "name": "Review working models and compile admitted procedures",
       "availability": "active-scheduled",
       "trigger": "corvus-mind-compile.timer POSTs /compile/run",
       "cadence": "Daily opportunity; bounded new skills per run",
-      "why": "Convert related trusted memories into reusable procedures while keeping graph truth, projections, and harness delivery synchronized.",
-      "outcome": "Stale projections retire to archive; eligible clusters produce mind-* skills and graph-shadow nodes; charter is deterministically rebuilt.",
+      "why": "Turn related trusted memories into falsifiable procedures, challenge them with later independent evidence, and keep graph truth and harness projections synchronized.",
+      "outcome": "Challenged or stale projections retire to archive; admitted models produce mind-* skills and graph-shadow nodes; charter is deterministically rebuilt.",
       "through": [
         "skill-projection",
         "recall-graph",
@@ -7168,16 +7203,47 @@
         {
           "actor": "Frontier-grade composer",
           "component": "skill-projection",
-          "does": "Request the opus capability grade to compose one focused name, description, and Markdown playbook from each new eligible cluster; default routing selects Codex Sol with Anthropic Opus fallback.",
-          "state_change": "Model usage is added to the compile report.",
-          "guardrail": "Invalid JSON, non-mind-* names, or missing fields emit no skill.",
+          "does": "Compose a sourced procedure with a conditional claim, prospective prediction, falsifier, and read-only probe; require an independent critic verdict.",
+          "state_change": "Admitted or declined model receipts enter the versioned reflection catalog.",
+          "guardrail": "Invalid JSON, unsupported quotes, absent falsifiers, or failed critique emit no skill.",
           "evidence": [
-            "backend/app/services/skill_compiler.py::_compose"
+            "backend/app/services/reflection_review.py::compose_model"
           ],
           "index": 2,
           "evidence_results": [
             {
-              "evidence": "backend/app/services/skill_compiler.py::_compose",
+              "evidence": "backend/app/services/reflection_review.py::compose_model",
+              "exists": true,
+              "actual_component": "skill-projection",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            }
+          ],
+          "evidence_ok": true
+        },
+        {
+          "actor": "reflection reviewer",
+          "component": "skill-projection",
+          "does": "Compare admitted models with later lessons from sessions without recorded source injection or skill exposure; require exact quotes and a second critic.",
+          "state_change": "A validated falsifier challenges the model and retires its skill projection.",
+          "guardrail": "Missing exposure receipts and ambiguous observations cannot confirm a model; skill loads are not outcomes.",
+          "evidence": [
+            "backend/app/services/reflection_models.py::independent_lessons",
+            "backend/app/services/reflection_review.py::judge_new_evidence"
+          ],
+          "index": 3,
+          "evidence_results": [
+            {
+              "evidence": "backend/app/services/reflection_models.py::independent_lessons",
+              "exists": true,
+              "actual_component": "skill-projection",
+              "component_ok": true,
+              "symbol_ok": true,
+              "ok": true
+            },
+            {
+              "evidence": "backend/app/services/reflection_review.py::judge_new_evidence",
               "exists": true,
               "actual_component": "skill-projection",
               "component_ok": true,
@@ -7197,7 +7263,7 @@
             "backend/app/services/skill_compiler.py::_write_skill",
             "backend/app/services/skill_projection.py"
           ],
-          "index": 3,
+          "index": 4,
           "evidence_results": [
             {
               "evidence": "backend/app/services/skill_compiler.py::_write_skill",
@@ -7227,7 +7293,7 @@
           "evidence": [
             "backend/app/services/actions/neuron_create.py"
           ],
-          "index": 4,
+          "index": 5,
           "evidence_results": [
             {
               "evidence": "backend/app/services/actions/neuron_create.py",
@@ -7249,7 +7315,7 @@
           "evidence": [
             "backend/app/services/skill_compiler.py::compile_charter"
           ],
-          "index": 5,
+          "index": 6,
           "evidence_results": [
             {
               "evidence": "backend/app/services/skill_compiler.py::compile_charter",

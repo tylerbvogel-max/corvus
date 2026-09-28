@@ -1,6 +1,6 @@
 {
-  "documented_path_count": 80,
-  "method_level_route_count": 82,
+  "documented_path_count": 81,
+  "method_level_route_count": 83,
   "routes": [
     {
       "method": "GET",
@@ -108,6 +108,15 @@
       "schema_fingerprint": "f59709bfed4cfbf0",
       "tags": [
         "query"
+      ]
+    },
+    {
+      "method": "GET",
+      "operation_id": "compile_models_compile_models_get",
+      "path": "/compile/models",
+      "schema_fingerprint": "eb46dfaa65325538",
+      "tags": [
+        "memory"
       ]
     },
     {

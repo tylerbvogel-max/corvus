@@ -31,16 +31,24 @@ def validate_and_render(draft: dict[str, Any], sources: dict[int, str]) -> dict[
         name = draft["name"]
         description = draft["description"]
         task = draft["task"]
+        reflection = draft["reflection"]
         facts = draft["facts"]
         steps = draft["steps"]
         if (not isinstance(name, str) or not _NAME.fullmatch(name)
                 or draft["kind"] != "procedure"
                 or not isinstance(description, str) or not description.strip()
                 or not isinstance(task, str) or not task.strip()
+                or not isinstance(reflection, dict)
                 or not isinstance(facts, list) or not facts
                 or not isinstance(steps, list) or not steps):
             return None
-        text_fields = [name, description, task]
+        reflection_fields = ("claim", "prediction", "falsifier", "probe")
+        if any(not isinstance(reflection.get(field), str)
+               or len(reflection[field].strip()) < 12
+               for field in reflection_fields):
+            return None
+        reflection = {field: reflection[field].strip() for field in reflection_fields}
+        text_fields = [name, description, task, *reflection.values()]
         quoted_ids: set[int] = set()
         source_quotes: list[dict[str, Any]] = []
         for fact in facts:
@@ -94,6 +102,7 @@ def validate_and_render(draft: dict[str, Any], sources: dict[int, str]) -> dict[
         )
         return {"name": name, "description": description.strip()[:250],
                 "body_markdown": body, "source_ids": sorted(used_ids),
-                "source_quotes": source_quotes, "synthesis_version": 2}
+                "source_quotes": source_quotes, "synthesis_version": 2,
+                "reflection": reflection}
     except (KeyError, TypeError, ValueError):
         return None

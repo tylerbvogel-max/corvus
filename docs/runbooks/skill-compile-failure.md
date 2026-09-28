@@ -11,6 +11,7 @@ on and the projection does not.
 - `GET /metrics/mind/jobs` → `compile` `failing` or `late` (24h cadence)
 - `corvus-job-alert` fires with the exception and remediation
 - `GET /compile/status` shows eligible clusters without a matching manifest
+- `GET /compile/models` shows admitted, challenged, and declined model receipts
 - Structured logs: `job=compile`
 
 ## First response
@@ -25,6 +26,11 @@ on and the projection does not.
 4. A dormant lesson is excluded from compilation by design (synaptic
    downscaling). Missing content is not necessarily a failure — check
    `dormant_at` before treating it as one.
+5. If a skill was archived after a model changed to `challenged`, inspect its
+   exact quoted observation and falsifier in `/compile/models`. It will not
+   republish from the same source fingerprint. A malformed reflection catalog
+   stops publication; restore the last known good catalog rather than deleting
+   it and resetting admission history.
 
 ## NOT DRILLED
 
