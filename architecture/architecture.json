@@ -3,16 +3,16 @@
   "root": ".",
   "source_inventory": {
     "algorithm": "sha256",
-    "fingerprint": "b6b227ce4fb1f2f78d05621a8db59b0910168e497c4d35be9f2c89708dd490da",
-    "files": 514
+    "fingerprint": "3a785e994e0520c815fb7e9c7f3883e53193f0d11c78058305aa9eef5d43d623",
+    "files": 500
   },
   "frontend": {
     "available": true,
     "totals": {
-      "files": 82,
-      "loc": 45143,
-      "files_calling_api": 43,
-      "files_using_fetch": 10,
+      "files": 73,
+      "loc": 42057,
+      "files_calling_api": 38,
+      "files_using_fetch": 9,
       "distinct_urls": 206
     },
     "files": {
@@ -868,36 +868,6 @@
           "/chat/sessions"
         ]
       },
-      "frontend/src/components/ChatNeuronViz.tsx": {
-        "path": "frontend/src/components/ChatNeuronViz.tsx",
-        "loc": 243,
-        "imports": [
-          "frontend/src/api/knowledge_graph.ts",
-          "frontend/src/components/SigmaGraph.tsx",
-          "frontend/src/constants.ts",
-          "frontend/src/types.ts",
-          "frontend/src/utils/graphology-adapter.ts"
-        ],
-        "named_imports": {
-          "fetchSpreadTrail": "frontend/src/api/knowledge_graph.ts",
-          "NeuronScoreResponse": "frontend/src/types.ts",
-          "SpreadTrailResponse": "frontend/src/types.ts",
-          "DEPT_COLORS": "frontend/src/constants.ts",
-          "neuronScoresToGraph": "frontend/src/utils/graphology-adapter.ts"
-        },
-        "urls_direct": [
-          "/neurons/{}"
-        ],
-        "exports_with_urls": {},
-        "uses_fetch": true,
-        "urls_via_imports": [
-          "/neurons/edges/spread-trail"
-        ],
-        "urls_all": [
-          "/neurons/edges/spread-trail",
-          "/neurons/{}"
-        ]
-      },
       "frontend/src/components/CirclePacking.tsx": {
         "path": "frontend/src/components/CirclePacking.tsx",
         "loc": 402,
@@ -924,47 +894,6 @@
         "urls_all": [
           "/neurons/tree{}",
           "/neurons/{}"
-        ]
-      },
-      "frontend/src/components/Dashboard.tsx": {
-        "path": "frontend/src/components/Dashboard.tsx",
-        "loc": 551,
-        "imports": [
-          "frontend/src/api/knowledge_graph.ts",
-          "frontend/src/api/operator.ts",
-          "frontend/src/components/DeptChordDiagram.tsx",
-          "frontend/src/types.ts"
-        ],
-        "named_imports": {
-          "fetchStats": "frontend/src/api/knowledge_graph.ts",
-          "fetchSpreadLog": "frontend/src/api/knowledge_graph.ts",
-          "fetchCostReport": "frontend/src/api/operator.ts",
-          "fetchScoringHealth": "frontend/src/api/operator.ts",
-          "fetchHealthCheck": "frontend/src/api/operator.ts",
-          "acknowledgeAlert": "frontend/src/api/operator.ts",
-          "acknowledgeAllAlerts": "frontend/src/api/operator.ts",
-          "SpreadLogResponse": "frontend/src/api/knowledge_graph.ts",
-          "ScoringHealthResponse": "frontend/src/api/operator.ts",
-          "HealthCheckResponse": "frontend/src/api/operator.ts",
-          "NeuronStats": "frontend/src/types.ts",
-          "CostReport": "frontend/src/types.ts"
-        },
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [
-          "/admin/cost-report",
-          "/admin/health-check",
-          "/admin/scoring-health",
-          "/neurons/edges/spread-log",
-          "/neurons/stats"
-        ],
-        "urls_all": [
-          "/admin/cost-report",
-          "/admin/health-check",
-          "/admin/scoring-health",
-          "/neurons/edges/spread-log",
-          "/neurons/stats"
         ]
       },
       "frontend/src/components/DemoHelper.tsx": {
@@ -998,31 +927,6 @@
         "uses_fetch": false,
         "urls_via_imports": [],
         "urls_all": []
-      },
-      "frontend/src/components/DeptChordDiagram.tsx": {
-        "path": "frontend/src/components/DeptChordDiagram.tsx",
-        "loc": 463,
-        "imports": [
-          "frontend/src/api/knowledge_graph.ts",
-          "frontend/src/constants.ts",
-          "frontend/src/types.ts",
-          "frontend/src/utils.ts"
-        ],
-        "named_imports": {
-          "fetchDeptChord": "frontend/src/api/knowledge_graph.ts",
-          "DeptChordEntry": "frontend/src/types.ts",
-          "DEPT_COLORS": "frontend/src/constants.ts",
-          "escapeHtml": "frontend/src/utils.ts"
-        },
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [
-          "/neurons/edges/department-chord"
-        ],
-        "urls_all": [
-          "/neurons/edges/department-chord"
-        ]
       },
       "frontend/src/components/DocumentIngestPage.tsx": {
         "path": "frontend/src/components/DocumentIngestPage.tsx",
@@ -1187,28 +1091,6 @@
           "/admin/checkpoint",
           "/admin/concept-neurons",
           "/neurons/tree{}"
-        ]
-      },
-      "frontend/src/components/GovernancePage.tsx": {
-        "path": "frontend/src/components/GovernancePage.tsx",
-        "loc": 683,
-        "imports": [
-          "frontend/src/api/operator.ts",
-          "frontend/src/config.ts"
-        ],
-        "named_imports": {
-          "fetchGovernanceDashboard": "frontend/src/api/operator.ts",
-          "GovernanceDashboardResponse": "frontend/src/api/operator.ts",
-          "getTenantConfig": "frontend/src/config.ts"
-        },
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [
-          "/admin/governance-dashboard"
-        ],
-        "urls_all": [
-          "/admin/governance-dashboard"
         ]
       },
       "frontend/src/components/GroupLandingPage.tsx": {
@@ -2004,77 +1886,6 @@
         "uses_fetch": false,
         "urls_via_imports": [],
         "urls_all": []
-      },
-      "frontend/src/components/SecurityPage.tsx": {
-        "path": "frontend/src/components/SecurityPage.tsx",
-        "loc": 218,
-        "imports": [],
-        "named_imports": {},
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [],
-        "urls_all": []
-      },
-      "frontend/src/components/SigmaGraph.tsx": {
-        "path": "frontend/src/components/SigmaGraph.tsx",
-        "loc": 300,
-        "imports": [],
-        "named_imports": {},
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [],
-        "urls_all": []
-      },
-      "frontend/src/components/SigmaGraphPage.tsx": {
-        "path": "frontend/src/components/SigmaGraphPage.tsx",
-        "loc": 209,
-        "imports": [
-          "frontend/src/api/knowledge_graph.ts",
-          "frontend/src/components/SigmaGraph.tsx",
-          "frontend/src/constants.ts",
-          "frontend/src/utils/graphology-adapter.ts"
-        ],
-        "named_imports": {
-          "DEPT_COLORS": "frontend/src/constants.ts",
-          "graph3DToGraphology": "frontend/src/utils/graphology-adapter.ts",
-          "Graph3DResponse": "frontend/src/utils/graphology-adapter.ts",
-          "fetchClusters": "frontend/src/api/knowledge_graph.ts",
-          "fetchGraph3d": "frontend/src/api/knowledge_graph.ts"
-        },
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [],
-        "urls_all": []
-      },
-      "frontend/src/components/SpreadTrail.tsx": {
-        "path": "frontend/src/components/SpreadTrail.tsx",
-        "loc": 69,
-        "imports": [
-          "frontend/src/api/knowledge_graph.ts",
-          "frontend/src/components/SigmaGraph.tsx",
-          "frontend/src/constants.ts",
-          "frontend/src/types.ts",
-          "frontend/src/utils/graphology-adapter.ts"
-        ],
-        "named_imports": {
-          "fetchSpreadTrail": "frontend/src/api/knowledge_graph.ts",
-          "NeuronScoreResponse": "frontend/src/types.ts",
-          "SpreadTrailResponse": "frontend/src/types.ts",
-          "DEPT_COLORS": "frontend/src/constants.ts",
-          "neuronScoresToGraph": "frontend/src/utils/graphology-adapter.ts"
-        },
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [
-          "/neurons/edges/spread-trail"
-        ],
-        "urls_all": [
-          "/neurons/edges/spread-trail"
-        ]
       },
       "frontend/src/components/SynapticLearningPage.tsx": {
         "path": "frontend/src/components/SynapticLearningPage.tsx",
@@ -3122,24 +2933,6 @@
         "urls_via_imports": [],
         "urls_all": []
       },
-      "frontend/src/utils/graphology-adapter.ts": {
-        "path": "frontend/src/utils/graphology-adapter.ts",
-        "loc": 350,
-        "imports": [
-          "frontend/src/constants.ts",
-          "frontend/src/types.ts"
-        ],
-        "named_imports": {
-          "NeuronScoreResponse": "frontend/src/types.ts",
-          "SpreadTrailResponse": "frontend/src/types.ts",
-          "DEPT_COLORS": "frontend/src/constants.ts"
-        },
-        "urls_direct": [],
-        "exports_with_urls": {},
-        "uses_fetch": false,
-        "urls_via_imports": [],
-        "urls_all": []
-      },
       "frontend/src/utils.ts": {
         "path": "frontend/src/utils.ts",
         "loc": 11,
@@ -3266,7 +3059,6 @@
       ],
       "/admin/cost-report": [
         "frontend/src/api/operator.ts",
-        "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3338,13 +3130,11 @@
       ],
       "/admin/governance-dashboard": [
         "frontend/src/api/operator.ts",
-        "frontend/src/components/GovernancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/admin/health-check": [
         "frontend/src/api/operator.ts",
-        "frontend/src/components/Dashboard.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3624,7 +3414,6 @@
       ],
       "/admin/scoring-health": [
         "frontend/src/api/operator.ts",
-        "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
@@ -3983,7 +3772,6 @@
       ],
       "/neurons/edges/department-chord": [
         "frontend/src/api/knowledge_graph.ts",
-        "frontend/src/components/DeptChordDiagram.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -3995,16 +3783,13 @@
       ],
       "/neurons/edges/spread-log": [
         "frontend/src/api/knowledge_graph.ts",
-        "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/PerformancePage.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
       "/neurons/edges/spread-trail": [
         "frontend/src/api/knowledge_graph.ts",
-        "frontend/src/components/ChatNeuronViz.tsx",
         "frontend/src/components/NeuronTreeViz.tsx",
-        "frontend/src/components/SpreadTrail.tsx",
         "frontend/src/contracts/capabilities.ts",
         "frontend/src/contracts/schema.d.ts"
       ],
@@ -4023,7 +3808,6 @@
         "frontend/src/App.tsx",
         "frontend/src/api/knowledge_graph.ts",
         "frontend/src/auth.ts",
-        "frontend/src/components/Dashboard.tsx",
         "frontend/src/components/IntegrityPage.tsx",
         "frontend/src/components/KnowledgeGovernancePage.tsx",
         "frontend/src/components/PerformancePage.tsx",
@@ -4039,7 +3823,6 @@
       ],
       "/neurons/{}": [
         "frontend/src/api/knowledge_graph.ts",
-        "frontend/src/components/ChatNeuronViz.tsx",
         "frontend/src/components/CirclePacking.tsx",
         "frontend/src/components/HomePage.tsx",
         "frontend/src/components/NeuronDetail.tsx",
@@ -4209,12 +3992,12 @@
     "frontend_urls_unmatched": []
   },
   "totals": {
-    "modules": 432,
-    "loc": 97500,
+    "modules": 427,
+    "loc": 95766,
     "routes": 220,
-    "import_edges": 1207,
-    "call_edges": 790,
-    "modules_touching_db": 133,
+    "import_edges": 1204,
+    "call_edges": 788,
+    "modules_touching_db": 132,
     "modules_touching_llm": 25,
     "parse_errors": 0
   },
@@ -6616,97 +6399,6 @@
         "Settings.model_post_init": {
           "name": "Settings.model_post_init",
           "line": 398,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        }
-      },
-      "routes": [],
-      "db_writes": [],
-      "llm_sites": []
-    },
-    "app.data": {
-      "path": "backend/app/data/__init__.py",
-      "module": "app.data",
-      "loc": 1,
-      "imports": [],
-      "external_imports": [],
-      "functions": {},
-      "routes": [],
-      "db_writes": [],
-      "llm_sites": []
-    },
-    "app.data.cmmc_level2_practices": {
-      "path": "backend/app/data/cmmc_level2_practices.py",
-      "module": "app.data.cmmc_level2_practices",
-      "loc": 405,
-      "imports": [],
-      "external_imports": [],
-      "functions": {
-        "get_cmmc_practices": {
-          "name": "get_cmmc_practices",
-          "line": 374,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "get_cmmc_summary": {
-          "name": "get_cmmc_summary",
-          "line": 379,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        }
-      },
-      "routes": [],
-      "db_writes": [],
-      "llm_sites": []
-    },
-    "app.data.fedramp_moderate_baseline": {
-      "path": "backend/app/data/fedramp_moderate_baseline.py",
-      "module": "app.data.fedramp_moderate_baseline",
-      "loc": 642,
-      "imports": [],
-      "external_imports": [
-        "types"
-      ],
-      "functions": {
-        "get_fedramp_controls": {
-          "name": "get_fedramp_controls",
-          "line": 605,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "get_fedramp_summary": {
-          "name": "get_fedramp_summary",
-          "line": 610,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        }
-      },
-      "routes": [],
-      "db_writes": [],
-      "llm_sites": []
-    },
-    "app.data.soc2_type2_criteria": {
-      "path": "backend/app/data/soc2_type2_criteria.py",
-      "module": "app.data.soc2_type2_criteria",
-      "loc": 278,
-      "imports": [],
-      "external_imports": [],
-      "functions": {
-        "get_soc2_criteria": {
-          "name": "get_soc2_criteria",
-          "line": 250,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "get_soc2_summary": {
-          "name": "get_soc2_summary",
-          "line": 255,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -15335,7 +15027,7 @@
     "app.services.action_bus": {
       "path": "backend/app/services/action_bus.py",
       "module": "app.services.action_bus",
-      "loc": 301,
+      "loc": 293,
       "imports": [
         "app.middleware.rbac",
         "app.models"
@@ -15371,37 +15063,23 @@
           "calls": [],
           "is_route": false
         },
-        "_ActionRegistry.known_kinds": {
-          "name": "_ActionRegistry.known_kinds",
-          "line": 97,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
         "register_action": {
           "name": "register_action",
-          "line": 104,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "known_action_kinds": {
-          "name": "known_action_kinds",
-          "line": 114,
+          "line": 100,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_check_idempotency": {
           "name": "_check_idempotency",
-          "line": 120,
+          "line": 112,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "submit": {
           "name": "submit",
-          "line": 141,
+          "line": 133,
           "is_async": true,
           "calls": [
             "app.models::Action"
@@ -15410,21 +15088,21 @@
         },
         "approve": {
           "name": "approve",
-          "line": 203,
+          "line": 195,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "reject": {
           "name": "reject",
-          "line": 229,
+          "line": 221,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_run_handler": {
           "name": "_run_handler",
-          "line": 260,
+          "line": 252,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -15434,42 +15112,42 @@
       "db_writes": [
         {
           "kind": "add",
-          "line": 189,
+          "line": 181,
           "in": "submit",
           "target": "db",
           "model": "Action"
         },
         {
           "kind": "flush",
-          "line": 190,
+          "line": 182,
           "in": "submit",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 224,
+          "line": 216,
           "in": "approve",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 248,
+          "line": 240,
           "in": "reject",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 280,
+          "line": 272,
           "in": "_run_handler",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 293,
+          "line": 285,
           "in": "_run_handler",
           "target": "db",
           "model": null
@@ -16121,7 +15799,7 @@
     "app.services.adjacency_cache": {
       "path": "backend/app/services/adjacency_cache.py",
       "module": "app.services.adjacency_cache",
-      "loc": 437,
+      "loc": 407,
       "imports": [
         "app.config"
       ],
@@ -16181,121 +15859,100 @@
           "calls": [],
           "is_route": false
         },
-        "_AdjacencyCache.remove_edges": {
-          "name": "_AdjacencyCache.remove_edges",
-          "line": 127,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_AdjacencyCache._remove_single_direction": {
-          "name": "_AdjacencyCache._remove_single_direction",
-          "line": 141,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
         "_AdjacencyCache.get_neighbors": {
           "name": "_AdjacencyCache.get_neighbors",
-          "line": 149,
+          "line": 127,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_AdjacencyCache.get_csr": {
           "name": "_AdjacencyCache.get_csr",
-          "line": 174,
+          "line": 152,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "ensure_adjacency_loaded": {
           "name": "ensure_adjacency_loaded",
-          "line": 221,
+          "line": 199,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "engram_id_to_key": {
           "name": "engram_id_to_key",
-          "line": 271,
+          "line": 249,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "key_to_engram_id": {
           "name": "key_to_engram_id",
-          "line": 276,
+          "line": 254,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "is_engram_key": {
           "name": "is_engram_key",
-          "line": 281,
+          "line": 259,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "invalidate_adjacency_cache": {
           "name": "invalidate_adjacency_cache",
-          "line": 286,
+          "line": 264,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "update_adjacency_incremental": {
           "name": "update_adjacency_incremental",
-          "line": 291,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "remove_adjacency_edges": {
-          "name": "remove_adjacency_edges",
-          "line": 301,
+          "line": 269,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "get_cached_neighbors": {
           "name": "get_cached_neighbors",
-          "line": 309,
+          "line": 279,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "get_graph_neighbors": {
           "name": "get_graph_neighbors",
-          "line": 317,
+          "line": 287,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "get_adjacency_csr": {
           "name": "get_adjacency_csr",
-          "line": 393,
+          "line": 363,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "is_adjacency_loaded": {
           "name": "is_adjacency_loaded",
-          "line": 398,
+          "line": 368,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "hop_cap_formula": {
           "name": "hop_cap_formula",
-          "line": 408,
+          "line": 378,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "derived_hop_cap": {
           "name": "derived_hop_cap",
-          "line": 426,
+          "line": 396,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -19097,7 +18754,7 @@
     "app.services.executor": {
       "path": "backend/app/services/executor.py",
       "module": "app.services.executor",
-      "loc": 1634,
+      "loc": 1533,
       "imports": [
         "app.config",
         "app.database",
@@ -19119,7 +18776,6 @@
         "app.services.propagation",
         "app.services.recall_primitives",
         "app.services.regulatory_coverage",
-        "app.services.regulatory_resolve",
         "app.services.scoring_engine",
         "app.services.tier_routing",
         "app.tenant"
@@ -19137,25 +18793,9 @@
         "uuid"
       ],
       "functions": {
-        "_build_neuron_score_dicts": {
-          "name": "_build_neuron_score_dicts",
-          "line": 243,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
-        "_resolve_fired_engrams": {
-          "name": "_resolve_fired_engrams",
-          "line": 92,
-          "is_async": true,
-          "calls": [
-            "app.services.regulatory_resolve::resolve_engrams"
-          ],
-          "is_route": false
-        },
         "prepare_context": {
           "name": "prepare_context",
-          "line": 117,
+          "line": 57,
           "is_async": true,
           "calls": [
             "app.services.pipeline.state::PipelineState",
@@ -19168,7 +18808,7 @@
         },
         "_state_to_prepared_context": {
           "name": "_state_to_prepared_context",
-          "line": 187,
+          "line": 127,
           "is_async": false,
           "calls": [
             "app.services.prepared_context::PreparedContext"
@@ -19177,14 +18817,21 @@
         },
         "_build_model_map": {
           "name": "_build_model_map",
-          "line": 231,
+          "line": 171,
+          "is_async": false,
+          "calls": [],
+          "is_route": false
+        },
+        "_build_neuron_score_dicts": {
+          "name": "_build_neuron_score_dicts",
+          "line": 183,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_prepare_contexts_forked": {
           "name": "_prepare_contexts_forked",
-          "line": 269,
+          "line": 209,
           "is_async": true,
           "calls": [
             "app.services.pipeline.stages::build_default_pipeline",
@@ -19196,21 +18843,21 @@
         },
         "_slot_spread_cfg": {
           "name": "_slot_spread_cfg",
-          "line": 341,
+          "line": 281,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_prepare_slot_contexts": {
           "name": "_prepare_slot_contexts",
-          "line": 360,
+          "line": 300,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_create_query_record": {
           "name": "_create_query_record",
-          "line": 404,
+          "line": 344,
           "is_async": false,
           "calls": [
             "app.models::Query"
@@ -19219,72 +18866,65 @@
         },
         "_packed_ids": {
           "name": "_packed_ids",
-          "line": 448,
+          "line": 388,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_remember_session_context": {
           "name": "_remember_session_context",
-          "line": 452,
+          "line": 392,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_apply_drift_gate": {
           "name": "_apply_drift_gate",
-          "line": 462,
+          "line": 402,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_update_session_context": {
           "name": "_update_session_context",
-          "line": 495,
+          "line": 435,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_session_call_payload": {
           "name": "_session_call_payload",
-          "line": 524,
+          "line": 464,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_run_direct_call": {
           "name": "_run_direct_call",
-          "line": 548,
+          "line": 488,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::llm_chat"
           ],
           "is_route": false
         },
-        "_populate_query_from_results": {
-          "name": "_populate_query_from_results",
-          "line": 625,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
         "_build_citation_map": {
           "name": "_build_citation_map",
-          "line": 666,
+          "line": 565,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_response": {
           "name": "_build_response",
-          "line": 684,
+          "line": 583,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_update_counters_and_fire": {
           "name": "_update_counters_and_fire",
-          "line": 739,
+          "line": 638,
           "is_async": true,
           "calls": [
             "app.services.neuron_service::get_system_state",
@@ -19298,7 +18938,7 @@
         },
         "_apply_primary_overrides": {
           "name": "_apply_primary_overrides",
-          "line": 798,
+          "line": 697,
           "is_async": false,
           "calls": [
             "app.services.llm_provider::get",
@@ -19309,7 +18949,7 @@
         },
         "_primed_ctx": {
           "name": "_primed_ctx",
-          "line": 830,
+          "line": 729,
           "is_async": false,
           "calls": [
             "app.services.prompt_assembler::build_priming_line"
@@ -19318,7 +18958,7 @@
         },
         "_apply_slot_overrides": {
           "name": "_apply_slot_overrides",
-          "line": 855,
+          "line": 754,
           "is_async": false,
           "calls": [
             "app.services.llm_provider::set"
@@ -19327,7 +18967,7 @@
         },
         "_slot_grounding_guards": {
           "name": "_slot_grounding_guards",
-          "line": 886,
+          "line": 785,
           "is_async": true,
           "calls": [
             "app.services.regulatory_coverage::list_ungrounded_refs",
@@ -19338,14 +18978,14 @@
         },
         "_format_slot_result_dict": {
           "name": "_format_slot_result_dict",
-          "line": 932,
+          "line": 831,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_execute_slot": {
           "name": "_execute_slot",
-          "line": 976,
+          "line": 875,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::get"
@@ -19354,7 +18994,7 @@
         },
         "_execute_slot_llm": {
           "name": "_execute_slot_llm",
-          "line": 1071,
+          "line": 970,
           "is_async": true,
           "calls": [
             "app.services.llm_provider::llm_chat"
@@ -19363,21 +19003,21 @@
         },
         "_build_error_slot_result": {
           "name": "_build_error_slot_result",
-          "line": 1124,
+          "line": 1023,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_eval_slot_label": {
           "name": "_eval_slot_label",
-          "line": 1154,
+          "line": 1053,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_repair_citations": {
           "name": "_repair_citations",
-          "line": 1162,
+          "line": 1061,
           "is_async": true,
           "calls": [
             "app.services.citation_hopping::repair_instruction",
@@ -19389,7 +19029,7 @@
         },
         "_clean_answer_citations": {
           "name": "_clean_answer_citations",
-          "line": 1183,
+          "line": 1082,
           "is_async": true,
           "calls": [
             "app.services.citation_hopping::verify_citations",
@@ -19400,7 +19040,7 @@
         },
         "_apply_citation_hop_exit": {
           "name": "_apply_citation_hop_exit",
-          "line": 1211,
+          "line": 1110,
           "is_async": true,
           "calls": [
             "app.services.citation_hopping::extract_citation_tokens",
@@ -19413,7 +19053,7 @@
         },
         "_finalize_query_results": {
           "name": "_finalize_query_results",
-          "line": 1252,
+          "line": 1151,
           "is_async": true,
           "calls": [
             "app.services.regulatory_coverage::record_regulatory_coverage_gaps"
@@ -19422,14 +19062,14 @@
         },
         "_acquire_query_contexts": {
           "name": "_acquire_query_contexts",
-          "line": 1311,
+          "line": 1210,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_decide_primary_tier": {
           "name": "_decide_primary_tier",
-          "line": 1338,
+          "line": 1237,
           "is_async": false,
           "calls": [
             "app.services.tier_routing::decide_tier_escalation"
@@ -19438,14 +19078,14 @@
         },
         "_build_slot_tasks": {
           "name": "_build_slot_tasks",
-          "line": 1355,
+          "line": 1254,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "execute_query": {
           "name": "execute_query",
-          "line": 1383,
+          "line": 1282,
           "is_async": true,
           "calls": [
             "app.database::release_connection_before_external_io"
@@ -19454,21 +19094,21 @@
         },
         "_fetch_regions_for": {
           "name": "_fetch_regions_for",
-          "line": 1482,
+          "line": 1381,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_derive_edge_type": {
           "name": "_derive_edge_type",
-          "line": 1494,
+          "line": 1393,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_batch_update_edges": {
           "name": "_batch_update_edges",
-          "line": 1505,
+          "line": 1404,
           "is_async": true,
           "calls": [
             "app.services.adjacency_cache::is_adjacency_loaded",
@@ -19478,21 +19118,21 @@
         },
         "_find_promoted_pairs": {
           "name": "_find_promoted_pairs",
-          "line": 1553,
+          "line": 1452,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_cofire_promoted": {
           "name": "_cofire_promoted",
-          "line": 1569,
+          "line": 1468,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_cofire_weak": {
           "name": "_cofire_weak",
-          "line": 1599,
+          "line": 1498,
           "is_async": true,
           "calls": [
             "app.services.edge_tier::get_weak_edge",
@@ -19506,35 +19146,35 @@
       "db_writes": [
         {
           "kind": "commit",
-          "line": 792,
+          "line": 691,
           "in": "_update_counters_and_fire",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 1292,
+          "line": 1191,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 1293,
+          "line": 1192,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
         },
         {
           "kind": "add",
-          "line": 1295,
+          "line": 1194,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
         },
         {
           "kind": "flush",
-          "line": 1296,
+          "line": 1195,
           "in": "_finalize_query_results",
           "target": "db",
           "model": null
@@ -19543,27 +19183,27 @@
       "llm_sites": [
         {
           "kind": "llm_chat",
-          "line": 574,
+          "line": 514,
           "in": "_run_direct_call"
         },
         {
           "kind": "llm_chat",
-          "line": 585,
+          "line": 525,
           "in": "_run_direct_call"
         },
         {
           "kind": "llm_chat",
-          "line": 590,
+          "line": 530,
           "in": "_run_direct_call"
         },
         {
           "kind": "llm_chat",
-          "line": 1105,
+          "line": 1004,
           "in": "_execute_slot_llm"
         },
         {
           "kind": "llm_chat",
-          "line": 1169,
+          "line": 1068,
           "in": "_repair_citations"
         }
       ]
@@ -21854,51 +21494,6 @@
         }
       ]
     },
-    "app.services.metrics_aggregator": {
-      "path": "backend/app/services/metrics_aggregator.py",
-      "module": "app.services.metrics_aggregator",
-      "loc": 145,
-      "imports": [
-        "app.models"
-      ],
-      "external_imports": [
-        "datetime",
-        "sqlalchemy"
-      ],
-      "functions": {
-        "get_department_coverage": {
-          "name": "get_department_coverage",
-          "line": 15,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "get_eval_dimension_averages": {
-          "name": "get_eval_dimension_averages",
-          "line": 25,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "get_neuron_utilization_stats": {
-          "name": "get_neuron_utilization_stats",
-          "line": 64,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        },
-        "get_quality_trend": {
-          "name": "get_quality_trend",
-          "line": 102,
-          "is_async": true,
-          "calls": [],
-          "is_route": false
-        }
-      },
-      "routes": [],
-      "db_writes": [],
-      "llm_sites": []
-    },
     "app.services.mind_corpus": {
       "path": "backend/app/services/mind_corpus.py",
       "module": "app.services.mind_corpus",
@@ -22848,7 +22443,7 @@
     "app.services.neuron_index": {
       "path": "backend/app/services/neuron_index.py",
       "module": "app.services.neuron_index",
-      "loc": 326,
+      "loc": 322,
       "imports": [
         "app.config",
         "app.services.neuron_candidate"
@@ -22952,23 +22547,16 @@
           "calls": [],
           "is_route": false
         },
-        "index_is_loaded": {
-          "name": "index_is_loaded",
-          "line": 314,
-          "is_async": false,
-          "calls": [],
-          "is_route": false
-        },
         "get_index": {
           "name": "get_index",
-          "line": 318,
+          "line": 314,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "active_count": {
           "name": "active_count",
-          "line": 322,
+          "line": 318,
           "is_async": false,
           "calls": [],
           "is_route": false
@@ -22996,7 +22584,7 @@
     "app.services.neuron_service": {
       "path": "backend/app/services/neuron_service.py",
       "module": "app.services.neuron_service",
-      "loc": 1622,
+      "loc": 1568,
       "imports": [
         "app.config",
         "app.models",
@@ -23123,19 +22711,9 @@
           "calls": [],
           "is_route": false
         },
-        "_score_single_candidate": {
-          "name": "_score_single_candidate",
-          "line": 297,
-          "is_async": false,
-          "calls": [
-            "app.services.scoring_engine::compute_score",
-            "app.services.scoring_engine::ColdstartInputs"
-          ],
-          "is_route": false
-        },
         "score_candidates": {
           "name": "score_candidates",
-          "line": 351,
+          "line": 297,
           "is_async": true,
           "calls": [
             "app.services.neuron_index::ensure_index_loaded",
@@ -23150,7 +22728,7 @@
         },
         "_batch_coldstart_terms": {
           "name": "_batch_coldstart_terms",
-          "line": 447,
+          "line": 393,
           "is_async": false,
           "calls": [
             "app.services.scoring_engine::calc_coldstart_term_batch"
@@ -23159,7 +22737,7 @@
         },
         "_weight_arrays": {
           "name": "_weight_arrays",
-          "line": 461,
+          "line": 407,
           "is_async": false,
           "calls": [
             "app.services.region_policy::default_weights"
@@ -23168,14 +22746,14 @@
         },
         "_effective_weights": {
           "name": "_effective_weights",
-          "line": 481,
+          "line": 427,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_compute_base_signals": {
           "name": "_compute_base_signals",
-          "line": 503,
+          "line": 449,
           "is_async": false,
           "calls": [
             "app.services.scoring_engine::calc_burst_batch",
@@ -23188,7 +22766,7 @@
         },
         "_resolve_relevance_arr": {
           "name": "_resolve_relevance_arr",
-          "line": 527,
+          "line": 473,
           "is_async": false,
           "calls": [
             "app.services.scoring_engine::calc_relevance"
@@ -23197,14 +22775,14 @@
         },
         "_gated_combined": {
           "name": "_gated_combined",
-          "line": 545,
+          "line": 491,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_build_score_breakdowns": {
           "name": "_build_score_breakdowns",
-          "line": 571,
+          "line": 517,
           "is_async": false,
           "calls": [
             "app.services.scoring_engine::NeuronScoreBreakdown"
@@ -23213,14 +22791,14 @@
         },
         "_score_candidates_vectorized": {
           "name": "_score_candidates_vectorized",
-          "line": 590,
+          "line": 536,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "genesis_scale": {
           "name": "genesis_scale",
-          "line": 634,
+          "line": 580,
           "is_async": false,
           "calls": [
             "app.services.neuron_index::active_count"
@@ -23229,21 +22807,21 @@
         },
         "_compute_edge_activation": {
           "name": "_compute_edge_activation",
-          "line": 650,
+          "line": 596,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_propagate_frontier": {
           "name": "_propagate_frontier",
-          "line": 681,
+          "line": 627,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_fetch_frontier_neighbors_cached": {
           "name": "_fetch_frontier_neighbors_cached",
-          "line": 710,
+          "line": 656,
           "is_async": false,
           "calls": [
             "app.services.adjacency_cache::get_cached_neighbors"
@@ -23252,21 +22830,21 @@
         },
         "_limit_frontier": {
           "name": "_limit_frontier",
-          "line": 719,
+          "line": 665,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_database_genesis_scale": {
           "name": "_database_genesis_scale",
-          "line": 742,
+          "line": 688,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_build_promoted_scores": {
           "name": "_build_promoted_scores",
-          "line": 757,
+          "line": 703,
           "is_async": false,
           "calls": [
             "app.services.scoring_engine::NeuronScoreBreakdown"
@@ -23275,21 +22853,21 @@
         },
         "_merge_promoted_into_scored": {
           "name": "_merge_promoted_into_scored",
-          "line": 793,
+          "line": 739,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_select_promotion_targets": {
           "name": "_select_promotion_targets",
-          "line": 810,
+          "line": 756,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_effective_hop_cap": {
           "name": "_effective_hop_cap",
-          "line": 849,
+          "line": 795,
           "is_async": false,
           "calls": [
             "app.services.adjacency_cache::derived_hop_cap"
@@ -23298,21 +22876,21 @@
         },
         "_spread_should_stop": {
           "name": "_spread_should_stop",
-          "line": 862,
+          "line": 808,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_spread_neighbors_python": {
           "name": "_spread_neighbors_python",
-          "line": 881,
+          "line": 827,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_spread_neighbors_database": {
           "name": "_spread_neighbors_database",
-          "line": 918,
+          "line": 864,
           "is_async": true,
           "calls": [
             "app.services.adjacency_cache::get_graph_neighbors"
@@ -23321,21 +22899,21 @@
         },
         "_spread_edge_gates": {
           "name": "_spread_edge_gates",
-          "line": 987,
+          "line": 933,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_spread_seed_frontier": {
           "name": "_spread_seed_frontier",
-          "line": 1007,
+          "line": 953,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_spread_neighbors_vectorized": {
           "name": "_spread_neighbors_vectorized",
-          "line": 1027,
+          "line": 973,
           "is_async": false,
           "calls": [
             "app.services.adjacency_cache::get_adjacency_csr"
@@ -23344,77 +22922,77 @@
         },
         "spread_activation": {
           "name": "spread_activation",
-          "line": 1092,
+          "line": 1038,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_parse_cross_ref_departments": {
           "name": "_parse_cross_ref_departments",
-          "line": 1152,
+          "line": 1098,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_find_underrepresented_depts": {
           "name": "_find_underrepresented_depts",
-          "line": 1164,
+          "line": 1110,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_collect_diversity_candidates": {
           "name": "_collect_diversity_candidates",
-          "line": 1180,
+          "line": 1126,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_find_displacement_targets": {
           "name": "_find_displacement_targets",
-          "line": 1199,
+          "line": 1145,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "_fetch_cross_ref_depts": {
           "name": "_fetch_cross_ref_depts",
-          "line": 1229,
+          "line": 1175,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_build_dept_maps": {
           "name": "_build_dept_maps",
-          "line": 1246,
+          "line": 1192,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "apply_diversity_floor": {
           "name": "apply_diversity_floor",
-          "line": 1262,
+          "line": 1208,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_load_neuron_meta_cached": {
           "name": "_load_neuron_meta_cached",
-          "line": 1316,
+          "line": 1262,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "_walk_ancestor_chain": {
           "name": "_walk_ancestor_chain",
-          "line": 1340,
+          "line": 1286,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "select_with_hierarchy": {
           "name": "select_with_hierarchy",
-          "line": 1362,
+          "line": 1308,
           "is_async": true,
           "calls": [
             "app.services.scoring_engine::NeuronScoreBreakdown"
@@ -23423,7 +23001,7 @@
         },
         "record_firing": {
           "name": "record_firing",
-          "line": 1423,
+          "line": 1369,
           "is_async": true,
           "calls": [
             "app.models::NeuronFiring",
@@ -23433,21 +23011,21 @@
         },
         "get_neuron_tree": {
           "name": "get_neuron_tree",
-          "line": 1479,
+          "line": 1425,
           "is_async": true,
           "calls": [],
           "is_route": false
         },
         "get_neuron_tree.build_node": {
           "name": "get_neuron_tree.build_node",
-          "line": 1511,
+          "line": 1457,
           "is_async": false,
           "calls": [],
           "is_route": false
         },
         "get_graph_stats": {
           "name": "get_graph_stats",
-          "line": 1544,
+          "line": 1490,
           "is_async": true,
           "calls": [],
           "is_route": false
@@ -23471,14 +23049,14 @@
         },
         {
           "kind": "add",
-          "line": 1409,
+          "line": 1355,
           "in": "select_with_hierarchy",
           "target": "selected_ids",
           "model": null
         },
         {
           "kind": "add",
-          "line": 1456,
+          "line": 1402,
           "in": "record_firing",
           "target": "db",
           "model": "NeuronFiring"
@@ -26196,14 +25774,12 @@
     "app.services.reference_hooks": {
       "path": "backend/app/services/reference_hooks.py",
       "module": "app.services.reference_hooks",
-      "loc": 81,
+      "loc": 15,
       "imports": [
-        "app.models",
         "app.services.reference_detector"
       ],
       "external_imports": [
-        "json",
-        "sqlalchemy"
+        "json"
       ],
       "functions": {
         "populate_external_references": {
@@ -26214,27 +25790,10 @@
             "app.services.reference_detector::detect_neuron_references"
           ],
           "is_route": false
-        },
-        "auto_link_neuron_sources": {
-          "name": "auto_link_neuron_sources",
-          "line": 17,
-          "is_async": true,
-          "calls": [
-            "app.models::NeuronSourceLink"
-          ],
-          "is_route": false
         }
       },
       "routes": [],
-      "db_writes": [
-        {
-          "kind": "add",
-          "line": 75,
-          "in": "auto_link_neuron_sources",
-          "target": "db",
-          "model": "NeuronSourceLink"
-        }
-      ],
+      "db_writes": [],
       "llm_sites": []
     },
     "app.services.reference_ingest": {
@@ -52148,7 +51707,6 @@
       "app.services.lesson_store",
       "app.services.memory_assembly",
       "app.services.memory_quality_auditor",
-      "app.services.metrics_aggregator",
       "app.services.mind_corpus",
       "app.services.mind_janitors",
       "app.services.mind_lint",
@@ -52170,7 +51728,6 @@
       "app.services.reconsolidation.lifecycle",
       "app.services.reconsolidation.loaders",
       "app.services.reference_class",
-      "app.services.reference_hooks",
       "app.services.reference_ingest",
       "app.services.reflection_review",
       "app.services.region_policy",
@@ -53159,7 +52716,6 @@
     ],
     "app.services.regulatory_resolve": [
       "app.services.consolidation",
-      "app.services.executor",
       "app.services.pipeline.stages.regulatory_resolve_stage"
     ],
     "app.services.retention": [
@@ -53773,7 +53329,6 @@
       "app.services.prompt_assembler",
       "app.services.propagation",
       "app.services.regulatory_coverage",
-      "app.services.regulatory_resolve",
       "app.services.tier_routing"
     ],
     "app.services.inhibitory_service": [
@@ -54009,7 +53564,6 @@
       "app.services.mind_corpus"
     ],
     "app.services.reference_hooks": [
-      "app.models",
       "app.services.reference_detector"
     ],
     "app.services.reference_ingest": [
@@ -70986,27 +70540,12 @@
       ]
     },
     {
-      "module": "app.services.metrics_aggregator",
-      "entrypoints": [
-        "get_department_coverage",
-        "get_eval_dimension_averages",
-        "get_neuron_utilization_stats",
-        "get_quality_trend"
-      ]
-    },
-    {
       "module": "app.services.pipeline.runner",
       "entrypoints": [
         "_emit",
         "_run_branch_stage",
         "_run_regular_stage",
         "run_pipeline"
-      ]
-    },
-    {
-      "module": "app.services.reference_hooks",
-      "entrypoints": [
-        "auto_link_neuron_sources"
       ]
     },
     {

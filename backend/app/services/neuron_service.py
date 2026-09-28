@@ -18,8 +18,8 @@ from app.services.neuron_candidate import (  # noqa: F401
     FRESHNESS_SQL,
 )
 from app.services.scoring_engine import (
-    compute_score, calc_relevance, calc_rrf, NeuronScoreBreakdown,
-    ColdstartInputs, apply_score_overrides,
+    calc_relevance, calc_rrf, NeuronScoreBreakdown,
+    apply_score_overrides,
     calc_burst_batch, calc_impact_batch, calc_precision_batch,
     calc_novelty_batch, calc_recency_batch, calc_coldstart_term_batch,
 )
@@ -292,60 +292,6 @@ async def _load_active_overrides(
             "multiplier": ov.multiplier,
         })
     return overrides
-
-
-def _score_single_candidate(
-    neuron: Neuron | NeuronCandidate,
-    total_queries: int,
-    keywords: list[str],
-    burst_map: dict[int, int],
-    neuron_fires_map: dict[int, int],
-    dept_total_map: dict[str, int],
-    last_offset_map: dict[int, int],
-    semantic_map: dict[int, float],
-    classified_departments: list[str] | None,
-    classified_role_keys: list[str] | None,
-    hybrid_map: dict[int, float] | None = None,
-) -> NeuronScoreBreakdown:
-    """Compute score breakdown for a single candidate neuron."""
-    fires_in_window = burst_map.get(neuron.id, 0)
-    dept_fires = neuron_fires_map.get(neuron.id, 0)
-    dept_total = dept_total_map.get(neuron.department, 0)
-    age_queries = total_queries - (neuron.created_at_query_count or 0)
-
-    last_offset = last_offset_map.get(neuron.id)
-    queries_since_last = total_queries - last_offset if last_offset is not None else total_queries
-
-    content = getattr(neuron, 'content', None) or ''
-    neuron_text = f"{neuron.label} {neuron.summary or ''} {content}"
-    dept_match = bool(classified_departments and neuron.department in classified_departments)
-    role_match = bool(classified_role_keys and neuron.role_key in classified_role_keys)
-
-    hybrid_score = hybrid_map.get(neuron.id) if hybrid_map else None
-    authority, freshness, centrality, invocations = _coldstart_fields(neuron)
-    score = compute_score(
-        fires_in_window=fires_in_window,
-        avg_utility=neuron.avg_utility,
-        dept_fires=dept_fires,
-        dept_total_queries=dept_total,
-        age_queries=age_queries,
-        queries_since_last=queries_since_last,
-        keywords=keywords,
-        neuron_text=neuron_text,
-        neuron_id=neuron.id,
-        dept_match=dept_match,
-        role_match=role_match,
-        semantic_similarity=semantic_map.get(neuron.id),
-        hybrid_score=hybrid_score,
-        coldstart=ColdstartInputs(
-            authority_level=authority,
-            freshness_days=freshness,
-            centrality=centrality,
-            invocations=invocations,
-        ),
-    )
-    assert score.combined >= 0, f"Score for neuron {neuron.id} is negative: {score.combined}"
-    return score
 
 
 async def score_candidates(

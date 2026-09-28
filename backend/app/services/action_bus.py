@@ -94,10 +94,6 @@ class _ActionRegistry:
             raise KeyError(f"unregistered action kind: {kind!r}")
         return reg
 
-    def known_kinds(self) -> tuple[str, ...]:
-        return tuple(self._handlers.keys())
-
-
 _action_registry = _ActionRegistry()
 
 
@@ -109,10 +105,6 @@ def register_action(
 ) -> None:
     """Register an action kind. Called once at startup from init_registry."""
     _action_registry.register(kind, schema, handler, requires_approval)
-
-
-def known_action_kinds() -> tuple[str, ...]:
-    return _action_registry.known_kinds()
 
 
 # ── Public submit API ──

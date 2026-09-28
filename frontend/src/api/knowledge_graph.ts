@@ -485,8 +485,8 @@ export function fetchRefinementHistory(params?: {
 }
 
 // ── Engrams (durability-frontend-contracts criterion 7) ──
-// These were called with bare fetch() from EngramPage and SigmaGraphPage,
-// which meant a tenant without the knowledge_graph capability surfaced an
+// These were previously called with bare fetch(), which meant a tenant
+// without the knowledge_graph capability surfaced an
 // unexplained error instead of an honestly absent feature.
 
 export function fetchEngrams<T = unknown>(): Promise<T[]> {

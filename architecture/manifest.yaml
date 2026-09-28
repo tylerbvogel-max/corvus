@@ -1340,7 +1340,6 @@ boxes:
       - backend/app/routers/mind_metrics.py
       - backend/app/routers/eval_runs.py
       - backend/app/routers/labs.py
-      - backend/app/services/metrics_aggregator.py
       - backend/app/services/mind_metrics.py
       - backend/app/services/eval_runs.py
       - backend/app/services/locomo_run_status.py
@@ -1379,7 +1378,6 @@ boxes:
       # backend/app/operations/__init__.py.
       - backend/app/operations/**
       - backend/app/seed/**
-      - backend/app/data/**
       - backend/app/services/bootstrap_service.py
       - backend/app/services/schema_authority.py
       - backend/scripts/start_backend.sh

@@ -311,10 +311,6 @@ def index_on_firing(neuron_id: int, query_id: int, offset: int) -> None:
     _index.on_firing(neuron_id, query_id, offset)
 
 
-def index_is_loaded() -> bool:
-    return _index.is_loaded
-
-
 def get_index() -> _NeuronIndex:
     return _index
 

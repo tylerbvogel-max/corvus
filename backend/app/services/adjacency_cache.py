@@ -124,28 +124,6 @@ class _AdjacencyCache:
                     ]
             self._csr = None
 
-    def remove_edges(
-        self,
-        pairs: list[tuple[int, int]],
-    ) -> None:
-        """Remove specific edges from the cache (e.g. after demotion to JSONB)."""
-        assert isinstance(pairs, list), "pairs must be a list"
-        with self._lock:
-            if not self._loaded:
-                return
-            for src, tgt in pairs:
-                self._remove_single_direction(src, tgt)
-                self._remove_single_direction(tgt, src)
-            self._csr = None
-
-    def _remove_single_direction(self, from_id: int, to_id: int) -> None:
-        """Remove a single direction of an edge. Must hold self._lock."""
-        neighbors = self._adjacency.get(from_id)
-        if neighbors is not None:
-            self._adjacency[from_id] = [
-                (n, w, e) for n, w, e in neighbors if n != to_id
-            ]
-
     def get_neighbors(
         self,
         neuron_ids: set[int],
@@ -296,14 +274,6 @@ def update_adjacency_incremental(
     """Incrementally update the cache after co-firing edge writes."""
     assert len(pairs) > 0, "pairs must not be empty"
     _cache.update_edges(pairs, weights, edge_types)
-
-
-def remove_adjacency_edges(
-    pairs: list[tuple[int, int]],
-) -> None:
-    """Remove specific edges from the cache after demotion to JSONB."""
-    if pairs:
-        _cache.remove_edges(pairs)
 
 
 def get_cached_neighbors(
